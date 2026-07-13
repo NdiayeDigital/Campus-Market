@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Market — La Marketplace des Étudiants</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1D4ED8">
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192x192/1D4ED8/FFFFFF?text=CM">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700&display=swap"
+        rel="stylesheet">
+    <!-- Icones FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Open Graph / WhatsApp Preview -->
+    <meta property="og:title" content="Campus Market — La Marketplace de l'UIDT" />
+    <meta property="og:description" content="Découvrez les meilleurs produits (restauration, vêtements, services) vendus par les étudiants de l'UIDT directement sur le campus !" />
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/1D4ED8/FFFFFF?text=Campus+Market" />
+    <meta property="og:url" content="https://campus-market.uidt.sn" />
+    <meta property="og:type" content="website" />
+</head>
+
+<body class="has-bottom-nav">
+
+    <!-- Modal Onboarding (Choix du Campus) -->
+    <div id="campus-modal" class="campus-modal-overlay">
+        <div class="campus-modal">
+            <h2>Bienvenue sur Campus Market 👋</h2>
+            <p>La marketplace exclusive des étudiants de l'<strong>Université Iba Der Thiam (UIDT)</strong>.</p>
+            <div class="campus-list">
+                <button class="campus-btn" onclick="selectCampus('UIDT')"
+                    style="background-color: var(--color-primary); color: white;">Entrer sur le campus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar Mobile First -->
+    
+    <header class="navbar" style="background: white; border-bottom: none;">
+        <div class="navbar-container" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div class="logo" style="cursor: pointer;" onclick="navigateTo('accueil')">
+                <img src="images/logo.png" alt="Campus Market Logo" style="width: 150px; height: 40px; object-fit: contain; object-position: left center; display: block;">
+            </div>
+            <div class="nav-actions" style="display: flex; gap: 16px; align-items: center;">
+                <button class="icon-btn" onclick="toggleSearch()" style="box-shadow: none; border: none; background: transparent; font-size: 20px; color: var(--color-text-main);">
+                    <i class="fa-solid fa-search"></i>
+                </button>
+                <button class="icon-btn" onclick="navigateTo('notifications')" style="box-shadow: none; border: none; background: transparent; font-size: 20px; color: var(--color-text-main); position: relative;">
+                    <i class="fa-regular fa-bell"></i>
+                    <span id="notif-badge" style="position: absolute; top: -5px; right: -5px; background: #EF4444; color: white; border-radius: 50%; font-size: 10px; font-weight: bold; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">2</span>
+                </button>
+                <button class="icon-btn" onclick="navigateTo('profil')" style="box-shadow: none; border: none; background: transparent; font-size: 20px; color: var(--color-text-main);">
+                    <i class="fa-regular fa-user"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Hidden search bar -->
+        <div id="global-search-container" style="display: none; padding: 0 20px 16px;">
+            <div style="box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 99px; display: flex; align-items: center; background-color: #F8FAFC; padding: 0 16px;">
+                <i class="fa-solid fa-search" style="color: #94A3B8;"></i>
+                <input type="text" id="global-search-input" placeholder="Rechercher..." style="background: transparent; border: none; padding: 12px; width: 100%; outline: none;">
+            </div>
+        </div>
+    </header>
+
+
+    
+<main class="main-content spa-container" id="app-content" style="padding-top: 0; max-width: 100%;">
+    <div id="view-accueil" class="spa-view active">
+        <!-- Hero Section -->
+        <section class="hero-section" style="padding: 20px 24px; background: white; text-align: left;">
+            <div style="display: inline-block; padding: 4px 12px; background-color: #E0E7FF; color: #818CF8; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 16px;">
+                La marketplace exclusive
+            </div>
+
+            <h1 style="font-size: 2.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 16px; color: var(--color-text-main);">
+                Des étudiants,<br><span style="color: var(--color-primary);">Pour les étudiants</span>
+            </h1>
+            
+            <p style="font-size: 0.95rem; color: var(--color-text-muted); margin-bottom: 24px; line-height: 1.5;">
+                Achetez, vendez et faites-vous livrer dans tout le campus de l'UIDT.
+            </p>
+            
+            <div class="search-input-wrapper" style="margin-bottom: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 99px;">
+                <i class="fa-solid fa-search search-icon" style="color: #94A3B8;"></i>
+                <input type="text" id="global-search" placeholder="Rechercher un produit, un vendeur..." style="background-color: #F8FAFC; border: none;">
+            </div>
+        </section>
+
+        <!-- Container centré pour la suite -->
+        <div style="max-width: 1200px; margin: 0 auto; background: var(--color-bg); border-radius: 32px 32px 0 0; padding-top: 24px;">
+
+            <!-- Catégories (Grid) -->
+            <section class="categories-section" style="padding: 0 24px 24px;">
+                <div style="display: flex; justify-content: space-between; text-align: center;">
+                    <div class="category-chip" data-category="plats" style="border:none; background:transparent; padding:0; display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <div style="width: 56px; height: 56px; background: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #EF4444;"><i class="fa-solid fa-bowl-food"></i></div>
+                        <span style="font-size: 0.8rem; font-weight: 600;">Plats</span>
+                    </div>
+                    <div class="category-chip" data-category="fashion" style="border:none; background:transparent; padding:0; display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <div style="width: 56px; height: 56px; background: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #3B82F6;"><i class="fa-solid fa-shirt"></i></div>
+                        <span style="font-size: 0.8rem; font-weight: 600;">Vêtements</span>
+                    </div>
+                    <div class="category-chip" data-category="jewelry" style="border:none; background:transparent; padding:0; display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <div style="width: 56px; height: 56px; background: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #F59E0B;"><i class="fa-solid fa-gem"></i></div>
+                        <span style="font-size: 0.8rem; font-weight: 600;">Bijoux</span>
+                    </div>
+                    <div class="category-chip" data-category="school" style="border:none; background:transparent; padding:0; display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <div style="width: 56px; height: 56px; background: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #10B981;"><i class="fa-solid fa-book"></i></div>
+                        <span style="font-size: 0.8rem; font-weight: 600;">Fournitures</span>
+                    </div>
+                    <div class="category-chip" data-category="all" style="border:none; background:transparent; padding:0; display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <div style="width: 56px; height: 56px; background: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #64748B;"><i class="fa-solid fa-ellipsis"></i></div>
+                        <span style="font-size: 0.8rem; font-weight: 600;">Plus</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="feed-section" style="padding: 0 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="font-size: 1.1rem; font-weight: 800; margin: 0;">Meilleures offres 🔥</h3>
+                    <a href="#" onclick="navigateTo('categories'); return false;" style="color: var(--color-text-muted); font-size: 0.85rem; font-weight: 600;">Voir tout</a>
+                </div>
+
+                <!-- Grille Produits -->
+                <div class="grid-container" id="products-grid" style="grid-template-columns: repeat(2, 1fr); gap: 16px;">
+
+                    <!-- Produit 1 -->
+                    
+
+                    <!-- Produit 2 -->
+                    
+
+                    <!-- Produit 3 -->
+                    
+                    
+                    <!-- Produit 4 -->
+                    
+                </div>
+            </section>
+
+            <!-- Top Shops Section -->
+            <section style="padding: 0 24px; margin-top: 32px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="font-size: 1.1rem; font-weight: 800; margin: 0;">Top Shops 🏆</h3>
+                </div>
+                <div id="top-shops-container" style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; scroll-snap-type: x mandatory;">
+                    <div style="text-align: center; width: 100%; color: #94A3B8;"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                </div>
+            </section>
+
+            <!-- Section "L'Étude" intégrée sur la page d'accueil -->
+            <section
+                style="padding: 60px 20px; margin-top: 40px; background: linear-gradient(180deg, var(--color-surface) 0%, rgba(255,255,255,1) 100%);">
+                <div style="text-align: center; margin-bottom: 48px;">
+                    <span style="display: inline-block; padding: 6px 16px; background-color: var(--color-primary-light); color: var(--color-primary); border-radius: 99px; font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px; text-transform: uppercase;">La Vision</span>
+                    <h2
+                        style="font-size: 2.5rem; color: var(--color-primary-dark); font-weight: 800; letter-spacing: -1px;">
+                        Pourquoi Campus Market ?</h2>
+                    <p style="color: var(--color-text-muted); font-size: 1.1rem; max-width: 600px; margin: 16px auto 0;">
+                        Une plateforme conçue de A à Z pour digitaliser, sécuriser et propulser l'économie étudiante au sein de l'UIDT.
+                    </p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+                    <!-- Le Problème -->
+                    <div style="background: white; padding: 32px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="width: 56px; height: 56px; border-radius: 16px; background: #FEF2F2; color: #EF4444; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 24px;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h3 style="font-size: 1.4rem; margin-bottom: 12px; font-weight: 700;">Le Constat</h3>
+                        <p style="color: var(--color-text-muted); line-height: 1.7; font-size: 0.95rem;">
+                            Suite à l'interdiction de la vente physique dans les pavillons, le commerce étudiant s'est
+                            dispersé sur des groupes informels. Campus Market centralise l'offre pour redonner de la visibilité aux étudiants entrepreneurs.
+                        </p>
+                    </div>
+
+                    <!-- Pour les Vendeurs -->
+                    <div style="background: white; padding: 32px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="width: 56px; height: 56px; border-radius: 16px; background: #EFF6FF; color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 24px;">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                        <h3 style="font-size: 1.4rem; margin-bottom: 12px; font-weight: 700;">Pour les Vendeurs</h3>
+                        <p style="color: var(--color-text-muted); line-height: 1.7; font-size: 0.95rem;">
+                            Un espace numérique légitime pour exposer vos produits 24h/24, avec un tableau de bord intuitif pour gérer vos commandes et notifier vos clients en temps réel.
+                        </p>
+                    </div>
+
+                    <!-- Pour les Acheteurs -->
+                    <div style="background: white; padding: 32px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="width: 56px; height: 56px; border-radius: 16px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 24px;">
+                            <i class="fa-solid fa-basket-shopping"></i>
+                        </div>
+                        <h3 style="font-size: 1.4rem; margin-bottom: 12px; font-weight: 700;">Pour les Acheteurs</h3>
+                        <p style="color: var(--color-text-muted); line-height: 1.7; font-size: 0.95rem;">
+                            Trouvez rapidement un bijou, un t-shirt ou un écouteur sur le campus. Commandez en 3 clics et faites-vous livrer directement dans votre chambre, en toute sécurité.
+                        </p>
+                    </div>
+                </div>
+                <div id="empty-state" class="empty-state" style="display: none; grid-column: 1 / -1;"><i class="fa-solid fa-box-open"></i><h3>Aucun produit trouvé</h3><p>Revenez plus tard ou essayez une autre catégorie.</p></div>
+            </section>
+
+            <!-- Bande glissante (Marquee) -->
+            <div
+                style="background-color: var(--color-primary-dark); color: white; padding: 20px 0; overflow: hidden; white-space: nowrap; margin-top: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+                <div
+                    style="display: inline-block; animation: scrollText 25s linear infinite; font-size: 1.1rem; font-weight: 500;">
+                    <span style="margin-right: 60px;"><i class="fa-solid fa-bag-shopping text-accent"></i> Commandez vos
+                        meilleurs articles dans le campus</span>
+                    <span style="margin-right: 60px;"><i class="fa-solid fa-motorcycle text-accent"></i> Livraison
+                        rapide dans les pavillons</span>
+                    <span style="margin-right: 60px;"><i class="fa-solid fa-shield-halved text-accent"></i> Paiement
+                        sécurisé à la livraison</span>
+                    <span style="margin-right: 60px;"><i class="fa-solid fa-handshake text-accent"></i> Soutenez
+                        l'économie locale étudiante</span>
+
+                    <span style="margin-right: 60px;"><i class="fa-solid fa-bag-shopping text-accent"></i> Commandez vos
+                        meilleurs articles dans le campus</span>
+                    <span style="margin-right: 60px;"><i class="fa-solid fa-motorcycle text-accent"></i> Livraison
+                        rapide dans les pavillons</span>
+                    <span style="margin-right: 60px;"><i class="fa-solid fa-shield-halved text-accent"></i> Paiement
+                        sécurisé à la livraison</span>
+                    <span style="margin-right: 60px;"><i class="fa-solid fa-handshake text-accent"></i> Soutenez
+                        l'économie locale étudiante</span>
+                </div>
+            </div>
+
+            <!-- CTA Devenir Vendeur --><section style="margin: 40px 20px; background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%); border-radius: var(--radius-lg); padding: 40px 24px; text-align: center; color: white; box-shadow: var(--shadow-md);"><div style="width: 80px; height: 80px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 24px;"><i class="fa-solid fa-shop"></i></div><h2 style="font-size: 2rem; margin-bottom: 16px;">Vous avez un talent ou un business ?</h2><p style="font-size: 1.1rem; opacity: 0.9; max-width: 600px; margin: 0 auto 32px;">Rejoignez plus de 50 étudiants vendeurs. Vendez vos vêtements, appareils électroniques ou services directement depuis votre pavillon et gagnez de l'argent !</p><a href="#" onclick="navigateTo('register'); return false;" class="btn" style="background-color: var(--color-accent); color: var(--color-text-main); padding: 16px 32px; font-size: 1.1rem; border-radius: 99px;">Créer ma boutique gratuitement</a></section><!-- Section "Comment ça marche" intégrée -->
+            <section style="padding: 40px 20px; margin-top: 40px;">
+                <h2
+                    style="font-size: 2.5rem; text-align: center; margin-bottom: 32px; color: var(--color-primary-dark);">
+                    Comment ça marche ?</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">
+                    <div
+                        style="background-color: var(--color-surface); padding: 24px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);">
+                        <div
+                            style="width: 64px; height: 64px; background-color: var(--color-primary-light); color: var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 16px;">
+                            1</div>
+                        <h4 style="font-size: 1.2rem; margin-bottom: 8px;">Trouvez</h4>
+                        <p style="color: var(--color-text-muted); font-size: 0.9rem;">Cherchez votre produit ou service
+                            parmi les catégories.</p>
+                    </div>
+                    <div
+                        style="background-color: var(--color-surface); padding: 24px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);">
+                        <div
+                            style="width: 64px; height: 64px; background-color: var(--color-primary-light); color: var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 16px;">
+                            2</div>
+                        <h4 style="font-size: 1.2rem; margin-bottom: 8px;">Commandez</h4>
+                        <p style="color: var(--color-text-muted); font-size: 0.9rem;">Cliquez sur "+" et donnez votre
+                            chambre. Pas de compte requis !</p>
+                    </div>
+                    <div
+                        style="background-color: var(--color-surface); padding: 24px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);">
+                        <div
+                            style="width: 64px; height: 64px; background-color: var(--color-primary-light); color: var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 16px;">
+                            3</div>
+                        <h4 style="font-size: 1.2rem; margin-bottom: 8px;">Récupérez</h4>
+                        <p style="color: var(--color-text-muted); font-size: 0.9rem;">Le vendeur vous livre directement
+                            dans votre pavillon.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================================================================
+                 SECTION : Ils nous font confiance (Logos Marquee)
+                 ================================================================ -->
+            <section id="trust-section" class="trust-section">
+                <div class="trust-header">
+                    <span class="section-eyebrow"><i class="fa-solid fa-handshake"></i> Partenaires</span>
+                    <h2 class="section-heading">Ils nous font confiance</h2>
+                    <p class="section-subtext">Des organisations et associations étudiantes qui croient en notre mission.</p>
+                </div>
+                <div class="trust-marquee-wrapper">
+                    <div class="trust-marquee">
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #1D4ED8, #3B82F6);">
+                                <i class="fa-solid fa-spray-can"></i>
+                            </div>
+                            <span>Sokhna Beauté</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #7C3AED, #A78BFA);">
+                                <i class="fa-solid fa-shirt"></i>
+                            </div>
+                            <span>UIDT Shop</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #059669, #34D399);">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                            <span>Touba Cosmétiques</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #D97706, #FBBF24);">
+                                <i class="fa-solid fa-shoe-prints"></i>
+                            </div>
+                            <span>Moussa Sneakers</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #DC2626, #F87171);">
+                                <i class="fa-solid fa-laptop"></i>
+                            </div>
+                            <span>Modou Électronique</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #0891B2, #22D3EE);">
+                                <i class="fa-solid fa-gem"></i>
+                            </div>
+                            <span>Awa Bijoux</span>
+                        </div>
+                        <!-- Duplicate for seamless loop -->
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #1D4ED8, #3B82F6);">
+                                <i class="fa-solid fa-spray-can"></i>
+                            </div>
+                            <span>Sokhna Beauté</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #7C3AED, #A78BFA);">
+                                <i class="fa-solid fa-shirt"></i>
+                            </div>
+                            <span>UIDT Shop</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #059669, #34D399);">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                            <span>Touba Cosmétiques</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #D97706, #FBBF24);">
+                                <i class="fa-solid fa-shoe-prints"></i>
+                            </div>
+                            <span>Moussa Sneakers</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #DC2626, #F87171);">
+                                <i class="fa-solid fa-laptop"></i>
+                            </div>
+                            <span>Modou Électronique</span>
+                        </div>
+                        <div class="trust-logo-item">
+                            <div class="trust-logo-icon" style="background: linear-gradient(135deg, #0891B2, #22D3EE);">
+                                <i class="fa-solid fa-gem"></i>
+                            </div>
+                            <span>Awa Bijoux</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================================================================
+                 SECTION : Preuve Sociale (Statistiques animées)
+                 ================================================================ -->
+            <section id="social-proof-section" class="social-proof-section">
+                <div class="social-proof-header">
+                    <span class="section-eyebrow"><i class="fa-solid fa-chart-line"></i> Preuve sociale</span>
+                    <h2 class="section-heading">Les chiffres parlent d'eux-mêmes</h2>
+                    <p class="section-subtext">Rejoignez une communauté étudiante en pleine croissance.</p>
+                </div>
+                <div class="social-proof-grid">
+                    <div class="proof-card proof-card-glow" style="--glow-color: rgba(29,78,216,0.15);">
+                        <div class="proof-icon" style="background: linear-gradient(135deg, #1D4ED8, #60A5FA);">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="proof-number" data-target="250">0</div>
+                        <div class="proof-label">Étudiants actifs</div>
+                        <div class="proof-trend"><i class="fa-solid fa-arrow-trend-up"></i> +34% ce mois</div>
+                    </div>
+                    <div class="proof-card proof-card-glow" style="--glow-color: rgba(245,158,11,0.15);">
+                        <div class="proof-icon" style="background: linear-gradient(135deg, #D97706, #FBBF24);">
+                            <i class="fa-solid fa-bag-shopping"></i>
+                        </div>
+                        <div class="proof-number" data-target="120">0</div>
+                        <div class="proof-label">Commandes livrées</div>
+                        <div class="proof-trend"><i class="fa-solid fa-arrow-trend-up"></i> +58% ce mois</div>
+                    </div>
+                    <div class="proof-card proof-card-glow" style="--glow-color: rgba(16,185,129,0.15);">
+                        <div class="proof-icon" style="background: linear-gradient(135deg, #059669, #34D399);">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                        <div class="proof-number" data-target="20">0</div>
+                        <div class="proof-label">Vendeurs certifiés</div>
+                        <div class="proof-trend"><i class="fa-solid fa-arrow-trend-up"></i> +12 nouveaux</div>
+                    </div>
+                    <div class="proof-card proof-card-glow" style="--glow-color: rgba(139,92,246,0.15);">
+                        <div class="proof-icon" style="background: linear-gradient(135deg, #7C3AED, #A78BFA);">
+                            <i class="fa-solid fa-star"></i>
+                        </div>
+                        <div class="proof-number" data-target="4.8" data-decimal="true">0</div>
+                        <div class="proof-label">Note moyenne</div>
+                        <div class="proof-trend"><i class="fa-solid fa-heart" style="color: #EF4444;"></i> 98% satisfaction</div>
+                    </div>
+                </div>
+                <!-- Live Activity Ticker -->
+                <div class="live-activity-bar">
+                    <div class="live-dot"></div>
+                    <span class="live-text">En ce moment : <strong>12 commandes</strong> en cours de livraison sur le campus</span>
+                </div>
+            </section>
+
+            <!-- ================================================================
+                 SECTION : Résultats Utilisateurs
+                 ================================================================ -->
+            <section id="user-results-section" class="user-results-section">
+                <div class="user-results-header">
+                    <span class="section-eyebrow"><i class="fa-solid fa-trophy"></i> Résultats</span>
+                    <h2 class="section-heading">Résultats concrets de nos utilisateurs</h2>
+                    <p class="section-subtext">Des histoires vraies d'étudiants qui ont transformé leur quotidien.</p>
+                </div>
+                <div class="results-grid">
+                    <!-- Result Card 1 -->
+                    <div class="result-card">
+                        <div class="result-avatar">
+                            <img src="images/profile_aissatou.png" alt="Aissatou">
+                            <div class="result-badge-icon"><i class="fa-solid fa-crown"></i></div>
+                        </div>
+                        <h4 class="result-name">Aissatou D.</h4>
+                        <span class="result-role">Vendeuse – Bijoux & Accessoires</span>
+                        <div class="result-stats-row">
+                            <div class="result-stat">
+                                <span class="result-stat-before">15K F</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                                <span class="result-stat-after">85K F</span>
+                            </div>
+                            <span class="result-stat-label">Revenu mensuel</span>
+                        </div>
+                        <div class="result-quote">"En 2 mois, j'ai quintuplé mes revenus sans quitter mon pavillon."</div>
+                        <div class="result-time"><i class="fa-regular fa-clock"></i> Résultat en 2 mois</div>
+                    </div>
+                    <!-- Result Card 2 -->
+                    <div class="result-card">
+                        <div class="result-avatar">
+                            <img src="images/profile_moussa.png" alt="Moussa">
+                            <div class="result-badge-icon" style="background: linear-gradient(135deg, #059669, #34D399);"><i class="fa-solid fa-shoe-prints"></i></div>
+                        </div>
+                        <h4 class="result-name">Moussa K.</h4>
+                        <span class="result-role">Vendeur – Chaussures</span>
+                        <div class="result-stats-row">
+                            <div class="result-stat">
+                                <span class="result-stat-before">2 ventes/m</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                                <span class="result-stat-after">15 ventes/m</span>
+                            </div>
+                            <span class="result-stat-label">Ventes mensuelles</span>
+                        </div>
+                        <div class="result-quote">"Mes sneakers se vendent tout seuls maintenant. La plateforme fait le travail."</div>
+                        <div class="result-time"><i class="fa-regular fa-clock"></i> Résultat en 3 semaines</div>
+                    </div>
+                    <!-- Result Card 3 -->
+                    <div class="result-card">
+                        <div class="result-avatar">
+                            <img src="images/profile_ndeye.png" alt="Ndèye">
+                            <div class="result-badge-icon" style="background: linear-gradient(135deg, #7C3AED, #A78BFA);"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                        </div>
+                        <h4 class="result-name">Ndèye F.</h4>
+                        <span class="result-role">Vendeuse – Cosmétiques</span>
+                        <div class="result-stats-row">
+                            <div class="result-stat">
+                                <span class="result-stat-before">0 client</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                                <span class="result-stat-after">120+</span>
+                            </div>
+                            <span class="result-stat-label">Clients fidèles</span>
+                        </div>
+                        <div class="result-quote">"J'ai lancé mon business sans budget marketing. Campus Market m'a tout donné."</div>
+                        <div class="result-time"><i class="fa-regular fa-clock"></i> Résultat en 6 semaines</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================================================================
+                 SECTION : Tout ce dont vous avez besoin (Features)
+                 ================================================================ -->
+            <section id="features-section" class="features-section">
+                <div class="features-header">
+                    <span class="section-eyebrow"><i class="fa-solid fa-rocket"></i> Fonctionnalités</span>
+                    <h2 class="section-heading">Tout ce dont vous avez besoin</h2>
+                    <p class="section-subtext">Des outils puissants pour vendre, acheter et gérer votre activité sans effort.</p>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper" style="background: linear-gradient(135deg, #EFF6FF, #DBEAFE);">
+                            <i class="fa-solid fa-store" style="color: #1D4ED8;"></i>
+                        </div>
+                        <h4>Vitrine en ligne</h4>
+                        <p>Créez votre boutique en 2 minutes. Ajoutez vos produits, photos et prix en quelques clics.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper" style="background: linear-gradient(135deg, #FEF3C7, #FDE68A);">
+                            <i class="fa-solid fa-bell" style="color: #D97706;"></i>
+                        </div>
+                        <h4>Notifications instantanées</h4>
+                        <p>Recevez chaque commande en temps réel. Ne ratez plus aucune vente.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper" style="background: linear-gradient(135deg, #DCFCE7, #BBF7D0);">
+                            <i class="fa-solid fa-truck-fast" style="color: #059669;"></i>
+                        </div>
+                        <h4>Livraison campus</h4>
+                        <p>Système de livraison pavillon-à-pavillon. Rapide, simple et sans frais cachés.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper" style="background: linear-gradient(135deg, #F3E8FF, #E9D5FF);">
+                            <i class="fa-solid fa-shield-halved" style="color: #7C3AED;"></i>
+                        </div>
+                        <h4>Paiement sécurisé</h4>
+                        <p>Wave, Orange Money ou espèces. Vous choisissez, le client paie en confiance.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper" style="background: linear-gradient(135deg, #FFE4E6, #FECDD3);">
+                            <i class="fa-solid fa-chart-pie" style="color: #DC2626;"></i>
+                        </div>
+                        <h4>Statistiques détaillées</h4>
+                        <p>Suivez vos ventes, vos produits stars et vos revenus en un coup d'œil.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper" style="background: linear-gradient(135deg, #E0F2FE, #BAE6FD);">
+                            <i class="fa-solid fa-comments" style="color: #0284C7;"></i>
+                        </div>
+                        <h4>Chat intégré</h4>
+                        <p>Discutez directement avec vos clients pour personnaliser les commandes.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================================================================
+                 SECTION : Tableau de bord complet (Dashboard Preview)
+                 ================================================================ -->
+            <section id="dashboard-preview-section" class="dashboard-preview-section">
+                <div class="dashboard-preview-container">
+                    <div class="dashboard-text-side">
+                        <span class="section-eyebrow" style="color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.2);"><i class="fa-solid fa-gauge-high"></i> Dashboard</span>
+                        <h2 class="section-heading" style="color: white;">Un tableau de bord complet</h2>
+                        <p class="dashboard-subtitle">pour piloter votre activité au quotidien.</p>
+                        <ul class="dashboard-features-list">
+                            <li><i class="fa-solid fa-circle-check"></i> Vue d'ensemble de vos ventes en temps réel</li>
+                            <li><i class="fa-solid fa-circle-check"></i> Suivi de chaque commande de A à Z</li>
+                            <li><i class="fa-solid fa-circle-check"></i> Gestion des stocks et produits</li>
+                            <li><i class="fa-solid fa-circle-check"></i> Analyses et rapports de performance</li>
+                            <li><i class="fa-solid fa-circle-check"></i> Notifications push pour chaque vente</li>
+                        </ul>
+                        <a href="#" onclick="navigateTo('register'); return false;" class="btn" style="background-color: var(--color-accent); color: #0F172A; padding: 16px 32px; font-size: 1.05rem; border-radius: 99px; margin-top: 8px;">Accéder au dashboard <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></a>
+                    </div>
+                    <div class="dashboard-visual-side">
+                        <div class="dashboard-mockup">
+                            <!-- Mini Dashboard UI -->
+                            <div class="mock-header" style="margin-bottom: 0;">
+                                <div class="mock-dots">
+                                    <span style="background:#EF4444;"></span>
+                                    <span style="background:#FBBF24;"></span>
+                                    <span style="background:#22C55E;"></span>
+                                </div>
+                            </div>
+                            <div style="padding: 16px;">
+                                <div style="margin-bottom: 12px;">
+                                    <h2 style="font-size: 1.1rem; margin:0;">Bonjour, Awa ! 👋</h2>
+                                    <p style="font-size: 0.75rem; color: var(--color-text-muted); margin:0;">Awa Bijoux</p>
+                                </div>
+                                <div style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); border-radius: var(--radius-md); padding: 12px; color: white; margin-bottom: 12px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <div style="font-size: 0.75rem; opacity: 0.9;">Ventes aujourd'hui</div>
+                                        <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: var(--radius-pill); font-size: 0.65rem;">Auj.</span>
+                                    </div>
+                                    <div style="font-size: 1.4rem; font-weight: 700; margin-bottom: 4px;">18 750 F</div>
+                                    <div style="font-size: 0.7rem; color: #BBF7D0;"><i class="fa-solid fa-arrow-trend-up"></i> +24% vs hier</div>
+                                </div>
+                                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                                    <div style="flex: 1; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px; text-align: center;">
+                                        <div style="font-size: 1rem; font-weight: 700;">12</div>
+                                        <div style="font-size: 0.65rem; color: var(--color-text-muted);">Cmds</div>
+                                    </div>
+                                    <div style="flex: 1; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px; text-align: center;">
+                                        <div style="font-size: 1rem; font-weight: 700;">24</div>
+                                        <div style="font-size: 0.65rem; color: var(--color-text-muted);">Prods</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 10px;">Commandes récentes</div>
+                                <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 0.8rem;">#CM-1256</div>
+                                        <div style="font-size: 0.7rem; color: var(--color-text-muted);">A1, Ch. 23</div>
+                                    </div>
+                                    <span style="background: #DBEAFE; color: #1D4ED8; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 600;">En livraison</span>
+                                </div>
+                                <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 0.8rem;">#CM-1255</div>
+                                        <div style="font-size: 0.7rem; color: var(--color-text-muted);">A2, Ch. 16</div>
+                                    </div>
+                                    <span style="background: #FEF3C7; color: #D97706; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 600;">En prép.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Témoignages -->
+            <section style="padding: 40px 20px; margin-top: 40px; overflow: hidden;">
+                <h2 style="font-size: 2.5rem; text-align: center; margin-bottom: 32px; color: var(--color-primary-dark);">Ce qu'en disent les étudiants</h2>
+                <div style="display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 16px; scrollbar-width: none;">
+                    
+                    <div style="scroll-snap-align: center; min-width: 85%; max-width: 350px; background-color: var(--color-surface); padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); flex-shrink: 0;">
+                        <div style="display: flex; gap: 4px; color: var(--color-accent); margin-bottom: 12px; font-size: 0.9rem;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                        <p style="color: var(--color-text-main); font-style: italic; margin-bottom: 16px; min-height: 60px;">"Super pratique ! J'ai commandé un chargeur à 23h, livré en 15 minutes dans ma chambre."</p>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #E2E8F0; overflow: hidden;"><img src="https://i.pravatar.cc/100?img=5" style="width: 100%;"></div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Aminata S.</div>
+                                <div style="font-size: 0.8rem; color: var(--color-text-muted);">Pavillon A, Ch. 12</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="scroll-snap-align: center; min-width: 85%; max-width: 350px; background-color: var(--color-surface); padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); flex-shrink: 0;">
+                        <div style="display: flex; gap: 4px; color: var(--color-accent); margin-bottom: 12px; font-size: 0.9rem;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></div>
+                        <p style="color: var(--color-text-main); font-style: italic; margin-bottom: 16px; min-height: 60px;">"Grâce à Campus Market, j'ai trouvé une clé USB à 22h pour mon exposé. Sauveur !"</p>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #E2E8F0; overflow: hidden;"><img src="https://i.pravatar.cc/100?img=11" style="width: 100%;"></div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Mamadou N.</div>
+                                <div style="font-size: 0.8rem; color: var(--color-text-muted);">Pavillon C, Ch. 05</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="scroll-snap-align: center; min-width: 85%; max-width: 350px; background-color: var(--color-surface); padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); flex-shrink: 0;">
+                        <div style="display: flex; gap: 4px; color: var(--color-accent); margin-bottom: 12px; font-size: 0.9rem;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                        <p style="color: var(--color-text-main); font-style: italic; margin-bottom: 16px; min-height: 60px;">"Je vends des accessoires depuis 1 mois ici et j'ai doublé mes ventes dans le campus !"</p>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #E2E8F0; overflow: hidden;"><img src="https://i.pravatar.cc/100?img=9" style="width: 100%;"></div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Aissatou (Awa Bijoux)</div>
+                                <div style="font-size: 0.8rem; color: var(--color-text-muted);">Pavillon B, Ch. 21</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+            <!-- Section FAQ intégrée -->
+            <section
+                style="padding: 40px 20px; margin-top: 20px; background-color: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+                <h2
+                    style="font-size: 2.5rem; text-align: center; margin-bottom: 32px; color: var(--color-primary-dark);">
+                    Foire Aux Questions</h2>
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div
+                        style="margin-bottom: 24px; border-bottom: 1px solid var(--color-border); padding-bottom: 16px;">
+                        <h4 style="font-size: 1.1rem; margin-bottom: 8px;"><i
+                                class="fa-solid fa-circle-question text-primary"></i> Dois-je créer un compte pour
+                            acheter ?</h4>
+                        <p style="color: var(--color-text-muted); font-size: 0.95rem;">Non, l'achat est direct. Vous
+                            donnez juste votre nom, numéro de chambre et moyen de paiement.</p>
+                    </div>
+                    <div
+                        style="margin-bottom: 24px; border-bottom: 1px solid var(--color-border); padding-bottom: 16px;">
+                        <h4 style="font-size: 1.1rem; margin-bottom: 8px;"><i
+                                class="fa-solid fa-circle-question text-primary"></i> Comment payer ?</h4>
+                        <p style="color: var(--color-text-muted); font-size: 0.95rem;">Vous pouvez payer à la livraison
+                            en espèces ou par Mobile Money (Wave, Orange Money) selon le vendeur.</p>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="font-size: 1.1rem; margin-bottom: 8px;"><i
+                                class="fa-solid fa-circle-question text-primary"></i> Comment devenir vendeur ?</h4>
+                        <p style="color: var(--color-text-muted); font-size: 0.95rem;">Cliquez sur l'icône Profil >
+                            "S'inscrire". Votre compte sera vérifié par l'administration avant d'être actif.</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+    <div id="view-categories" class="spa-view" style="display: none;">
+        <!-- Search -->
+        <div style="padding: 12px 20px;">
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-search search-icon"></i>
+                <input type="text" placeholder="Rechercher produits ou catégories...">
+            </div>
+        </div>
+
+        <!-- Category Chips Filter -->
+        <div style="padding: 0 20px 12px;">
+            <div class="categories-scroll">
+                <button class="category-chip active">Toutes</button>
+                <button class="category-chip">Quick Cook</button>
+                <button class="category-chip">Vie Saine</button>
+            </div>
+        </div>
+
+        <!-- Categories Grid -->
+        <div class="categories-page-grid" id="categories-products-grid">
+            <div style="text-align: center; padding: 40px 20px; color: #94A3B8; width: 100%; grid-column: 1 / -1;">
+                <i class="fa-solid fa-box-open" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>Aucun produit disponible.</p>
+            </div>
+        </div>
+        
+        <!-- Recently Viewed -->
+        <div style="padding: 24px 20px 8px;">
+            <h3 class="section-title">Vus récemment</h3>
+        </div>
+        <div style="display: flex; gap: 12px; overflow-x: auto; padding: 0 20px 24px; scrollbar-width: none;">
+            <div style="min-width: 130px; background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border); padding: 12px; text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 8px;">🍔</div>
+                <div style="font-size: 0.8rem; font-weight: 600;">Burger Maison</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary); margin-top: 4px;">1 500 F</div>
+            </div>
+            <div style="min-width: 130px; background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border); padding: 12px; text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 8px;">💎</div>
+                <div style="font-size: 0.8rem; font-weight: 600;">Collier perles</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary); margin-top: 4px;">2 000 F</div>
+            </div>
+            <div style="min-width: 130px; background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border); padding: 12px; text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 8px;">📚</div>
+                <div style="font-size: 0.8rem; font-weight: 600;">Cahiers TP</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary); margin-top: 4px;">1 200 F</div>
+            </div>
+        </div>
+    </div>
+    <div id="view-panier" class="spa-view" style="display: none;">
+        <!-- Cart Items -->
+        <div class="cart-items">
+            <!-- Item 1 -->
+            <div class="cart-item">
+                <div class="cart-item-img" style="background: #E0E7FF;">
+                    <i class="fa-solid fa-headphones" style="color: #4F46E5;"></i>
+                </div>
+                <div class="cart-item-info">
+                    <div class="cart-item-name">Écouteurs Sans Fil</div>
+                    <div class="cart-item-seller">Par Tech Student</div>
+                    <div class="cart-item-price">2 500 FCFA</div>
+                </div>
+                <div class="cart-qty">
+                    <button onclick="updateQty(this, -1)"><i class="fa-solid fa-minus"></i></button>
+                    <span>1</span>
+                    <button onclick="updateQty(this, 1)"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+
+            <!-- Item 2 -->
+            <div class="cart-item">
+                <div class="cart-item-img" style="background: #DBEAFE;">
+                    <i class="fa-solid fa-shirt" style="color: #1D4ED8;"></i>
+                </div>
+                <div class="cart-item-info">
+                    <div class="cart-item-name">Polo UIDT Bleu marine</div>
+                    <div class="cart-item-seller">Par UIDT Shop</div>
+                    <div class="cart-item-price">4 500 FCFA</div>
+                </div>
+                <div class="cart-qty">
+                    <button onclick="updateQty(this, -1)"><i class="fa-solid fa-minus"></i></button>
+                    <span>1</span>
+                    <button onclick="updateQty(this, 1)"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Banner -->
+        <div style="margin: 0 20px 16px; padding: 14px 16px; background: var(--color-primary-light); border-radius: var(--radius-md); display: flex; align-items: center; gap: 12px; border: 1px solid rgba(29,78,216,0.1);">
+            <div style="width: 36px; height: 36px; background: var(--color-primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: white;">
+                <i class="fa-solid fa-truck-fast"></i>
+            </div>
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 0.85rem;">Livraison pavillon-à-pavillon</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Rapide et sécurisée</div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="cart-summary">
+            <div class="cart-summary-row">
+                <span>Sous-total</span>
+                <span>7 000 FCFA</span>
+            </div>
+            <div class="cart-summary-row">
+                <span>Livraison</span>
+                <span>500 FCFA</span>
+            </div>
+            <div class="cart-summary-row total">
+                <span>Total</span>
+                <span>7 500 FCFA</span>
+            </div>
+        </div>
+
+        <div style="height: 120px;"></div>
+    </div>
+    <div id="view-commandes" class="spa-view" style="display: none;">
+        <!-- Filter Tabs -->
+        <div style="display: flex; gap: 8px; padding: 12px 20px; overflow-x: auto; scrollbar-width: none;">
+            <button class="category-chip active" onclick="filterOrders(this, 'all')">Toutes</button>
+            <button class="category-chip" onclick="filterOrders(this, 'en-cours')">En cours</button>
+            <button class="category-chip" onclick="filterOrders(this, 'terminee')">Terminées</button>
+            <button class="category-chip" onclick="filterOrders(this, 'annulee')">Annulées</button>
+        </div>
+
+        <!-- Order List -->
+        <div id="buyer-orders-list" style="padding: 8px 20px;">
+            <div style="text-align: center; padding: 40px; color: var(--color-text-muted);">
+                <i class="fa-solid fa-box-open" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i>
+                <p>Aucune commande en cours</p>
+            </div>
+        </div>
+    </div>
+    <div id="view-profil" class="spa-view" style="display: none;">
+        <div class="profile-menu" id="profil-auth-menu">
+            <!-- Main Menu -->
+            <div class="profile-menu-group">
+                <a href="#" onclick="navigateTo('commandes'); return false;" class="profile-menu-item">
+                    <i class="fa-solid fa-box"></i>
+                    <span>Mes commandes</span>
+                    <i class="fa-solid fa-chevron-right menu-arrow"></i>
+                </a>
+                <a href="#" onclick="navigateTo('adresses'); return false;" class="profile-menu-item">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Adresses de livraison</span>
+                    <i class="fa-solid fa-chevron-right menu-arrow"></i>
+                </a>
+                <a href="#" onclick="navigateTo('paiements'); return false;" class="profile-menu-item">
+                    <i class="fa-solid fa-credit-card"></i>
+                    <span>Modes de paiement</span>
+                    <i class="fa-solid fa-chevron-right menu-arrow"></i>
+                </a>
+            </div>
+
+            <!-- Secondary Menu -->
+            <div class="profile-menu-group">
+                <a href="#" onclick="navigateTo('favoris'); return false;" class="profile-menu-item">
+                    <i class="fa-solid fa-heart"></i>
+                    <span>Favoris</span>
+                    <i class="fa-solid fa-chevron-right menu-arrow"></i>
+                </a>
+                <a href="#" onclick="navigateTo('avis'); return false;" class="profile-menu-item">
+                    <i class="fa-solid fa-star"></i>
+                    <span>Mes avis</span>
+                    <i class="fa-solid fa-chevron-right menu-arrow"></i>
+                </a>
+            </div>
+
+            <!-- Seller Section -->
+            <div class="profile-menu-group" id="seller-section">
+                <button id="btn-become-seller" class="profile-menu-item" style="background: var(--color-primary-light); border: 1px solid rgba(29,78,216,0.1); border-radius: var(--radius-md); width: 100%; text-align: left; cursor: pointer;" onclick="navigateTo('seller-register')">
+                    <i class="fa-solid fa-store" style="color: var(--color-primary);"></i>
+                    <span style="color: var(--color-primary); font-weight: 600;">Devenir Vendeur</span>
+                    <i class="fa-solid fa-chevron-right menu-arrow" style="color: var(--color-primary);"></i>
+                </button>
+                <button id="btn-seller-dashboard" class="profile-menu-item" style="background: #10B981; border: none; border-radius: var(--radius-md); width: 100%; text-align: left; cursor: pointer; color: white; display: none;" onclick="navigateTo('admin')">
+                    <i class="fa-solid fa-chart-line" style="color: white;"></i>
+                    <span style="color: white; font-weight: 700;">Mon Tableau de Bord Vendeur</span>
+                    <i class="fa-solid fa-chevron-right menu-arrow" style="color: white;"></i>
+                </button>
+            </div>
+
+            <!-- Support -->
+            <div class="profile-menu-group">
+                <a href="#" onclick="navigateTo('support'); return false;" class="profile-menu-item">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <span>Aide & Support</span>
+                    <i class="fa-solid fa-chevron-right menu-arrow"></i>
+                </a>
+            </div>
+
+            <!-- Logout -->
+            <div class="profile-menu-group">
+                <button class="profile-menu-item danger" onclick="logout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Déconnexion</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="view-login" class="spa-view" style="display: none;">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h2>Connexion</h2>
+                <p style="color: var(--color-text-muted); margin-top: 8px;">Accédez à la marketplace étudiante.</p>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Adresse E-mail universitaire</label>
+                    <input type="email" id="email" class="form-control" required placeholder="prenom.nom@uidt.sn">
+                </div>
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" class="form-control" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">Se connecter</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 24px; font-size: 0.9rem;">
+                <p>Pas encore de compte ? <a href="#" onclick="navigateTo('register'); return false;" class="text-primary" style="font-weight: 600;">S'inscrire</a></p>
+            </div>
+        </div>
+    </div>
+    <div id="view-register" class="spa-view" style="display: none;">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h2>Créer un compte</h2>
+                <p style="color: var(--color-text-muted); margin-top: 8px;">Rejoignez la marketplace étudiante.</p>
+            </div>
+            
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="first_name">Prénom</label>
+                    <input type="text" id="first_name" class="form-control" required placeholder="Ex: Moussa">
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Nom</label>
+                    <input type="text" id="last_name" class="form-control" required placeholder="Ex: Diop">
+                </div>
+                <div class="form-group">
+                    <label for="phone">Numéro de téléphone</label>
+                    <input type="tel" id="phone" class="form-control" required placeholder="+221 77 000 00 00">
+                </div>
+                <div class="form-group">
+                    <label for="email">E-mail universitaire</label>
+                    <input type="email" id="email" class="form-control" required placeholder="prenom.nom@uidt.sn">
+                </div>
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" class="form-control" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">S'inscrire</button>
+            </form>
+            
+            <div id="validation-message" style="display: none; background-color: #10B981; color: white; padding: 24px; border-radius: var(--radius-md); margin-top: 24px; text-align: center;">
+                <i class="fa-solid fa-circle-check" style="font-size: 48px; margin-bottom: 16px;"></i>
+                <h4 style="margin-bottom: 8px; font-size: 1.2rem;">Inscription réussie !</h4>
+                <p style="font-size: 0.95rem; line-height: 1.5;">Votre compte a bien été créé. Vous pouvez maintenant accéder à la plateforme.</p>
+                <a href="#" onclick="navigateTo('accueil'); return false;" class="btn" style="background-color: white; color: #10B981; font-weight: 700; margin-top: 16px;">Aller à l'accueil</a>
+            </div>
+            
+            <div style="text-align: center; margin-top: 24px; font-size: 0.9rem;" id="login-link">
+                <p>Déjà un compte ? <a href="#" onclick="navigateTo('login'); return false;" class="text-primary" style="font-weight: 600;">Se connecter</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="view-seller-register" class="spa-view" style="display: none;">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h2>Devenir Vendeur</h2>
+                <p style="color: var(--color-text-muted); margin-top: 8px;">Créez votre boutique sur le campus.</p>
+            </div>
+            
+            <form id="seller-register-form">
+                <div class="form-group">
+                    <label for="shop_name">Nom de la boutique</label>
+                    <input type="text" id="shop_name" class="form-control" required placeholder="Ex: Campus Tech">
+                </div>
+                <div class="form-group">
+                    <label for="seller_last_name">Nom</label>
+                    <input type="text" id="seller_last_name" class="form-control" required placeholder="Ex: Diop">
+                </div>
+                <div class="form-group">
+                    <label for="seller_first_name">Prénom</label>
+                    <input type="text" id="seller_first_name" class="form-control" required placeholder="Ex: Moussa">
+                </div>
+                <div class="form-group">
+                    <label for="seller_pavillon">Numéro de pavillon</label>
+                    <select id="seller_pavillon" class="form-control" required>
+                        <option value="">Sélectionnez un pavillon</option>
+                        <option value="A">Pavillon A</option>
+                        <option value="B">Pavillon B</option>
+                        <option value="C">Pavillon C</option>
+                        <option value="D">Pavillon D</option>
+                        <option value="V">Pavillon V</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="seller_chambre">Numéro de chambre</label>
+                    <input type="text" id="seller_chambre" class="form-control" required placeholder="Ex: 12">
+                </div>
+                <div class="form-group">
+                    <label for="seller_phone">Numéro de téléphone</label>
+                    <input type="tel" id="seller_phone" class="form-control" required placeholder="Ex: +221 77 000 00 00">
+                </div>
+                <div class="form-group">
+                    <label for="shop_desc">Description des produits</label>
+                    <textarea id="shop_desc" class="form-control" required placeholder="Je vends des accessoires informatiques..." style="min-height: 80px;"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">Soumettre ma candidature</button>
+                <button type="button" class="btn" style="width: 100%; margin-top: 12px; background: #E2E8F0; color: #475569;" onclick="navigateTo('profil')">Annuler</button>
+            </form>
+        </div>
+    </div>
+    <div id="view-adresses" class="spa-view" style="display: none;">
+        <div style="padding: 24px 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Adresses de livraison</h2>
+                <button class="icon-btn" onclick="navigateTo('profil')" style="box-shadow: none;"><i class="fa-solid fa-arrow-left"></i></button>
+            </div>
+            
+            <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-location-dot" style="color: var(--color-primary);"></i>
+                        <span style="font-weight: 700;">Adresse Principale</span>
+                    </div>
+                    <span style="background: #E0E7FF; color: var(--color-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">Par défaut</span>
+                </div>
+                <div style="color: var(--color-text-muted); margin-bottom: 16px; font-size: 0.95rem;">
+                    Pavillon A<br>Chambre 12
+                </div>
+                <button class="btn" style="width: 100%; background: transparent; border: 1px solid var(--color-border); color: var(--color-text-main);">Modifier</button>
+            </div>
+            
+            <button class="btn" style="width: 100%; background: #F8FAFC; border: 2px dashed #CBD5E1; color: #64748B; padding: 16px;"><i class="fa-solid fa-plus" style="margin-right: 8px;"></i> Ajouter une nouvelle adresse</button>
+        </div>
+    </div>
+
+    <div id="view-paiements" class="spa-view" style="display: none;">
+        <div style="padding: 24px 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Modes de paiement</h2>
+                <button class="icon-btn" onclick="navigateTo('profil')" style="box-shadow: none;"><i class="fa-solid fa-arrow-left"></i></button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 40px; height: 40px; background: #E0F2FE; color: #0284C7; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fa-solid fa-money-bill-wave"></i></div>
+                        <span style="font-weight: 600;">Espèce (à la livraison)</span>
+                    </div>
+                    <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 20px;"></i>
+                </div>
+                
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 40px; height: 40px; background: #DBEAFE; color: #1D4ED8; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fa-solid fa-water"></i></div>
+                        <span style="font-weight: 600;">Wave</span>
+                    </div>
+                    <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 20px;"></i>
+                </div>
+                
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 40px; height: 40px; background: #FFEDD5; color: #F97316; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fa-solid fa-mobile-screen"></i></div>
+                        <span style="font-weight: 600;">Orange Money</span>
+                    </div>
+                    <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 20px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-favoris" class="spa-view" style="display: none;">
+        <div style="padding: 24px 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Mes Favoris</h2>
+                <button class="icon-btn" onclick="navigateTo('profil')" style="box-shadow: none;"><i class="fa-solid fa-arrow-left"></i></button>
+            </div>
+            
+            <div style="text-align: center; padding: 40px 20px; color: #94A3B8;">
+                <i class="fa-solid fa-heart-crack" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>Aucun produit dans vos favoris pour le moment.</p>
+                <button onclick="navigateTo('accueil')" class="btn btn-primary" style="margin-top: 16px;">Découvrir des produits</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-avis" class="spa-view" style="display: none;">
+        <div style="padding: 24px 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Mes Avis</h2>
+                <button class="icon-btn" onclick="navigateTo('profil')" style="box-shadow: none;"><i class="fa-solid fa-arrow-left"></i></button>
+            </div>
+            
+            <div style="text-align: center; padding: 40px 20px; color: #94A3B8;">
+                <i class="fa-regular fa-comment-dots" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>Vous n'avez pas encore laissé d'avis sur vos commandes.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-notifications" class="spa-view" style="display: none;">
+        <div style="padding: 24px 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Notifications</h2>
+                <button class="icon-btn" onclick="navigateTo('accueil')" style="box-shadow: none;"><i class="fa-solid fa-arrow-left"></i></button>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Notification 1 -->
+                <div style="background: var(--color-surface); border-left: 4px solid var(--color-primary); border-radius: var(--radius-md); padding: 16px; display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: #E0E7FF; color: var(--color-primary); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; font-size: 0.95rem;">Commande Acceptée !</h4>
+                        <p style="margin: 0; color: var(--color-text-muted); font-size: 0.85rem; line-height: 1.4;">Le vendeur "Campus Tech" a accepté votre commande. Elle est en cours de préparation.</p>
+                        <span style="font-size: 0.75rem; color: #94A3B8; margin-top: 8px; display: block;">Il y a 5 min</span>
+                    </div>
+                </div>
+
+                <!-- Notification 2 -->
+                <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px; display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: #FEF3C7; color: #D97706; width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; font-size: 0.95rem;">En route vers le Pavillon A</h4>
+                        <p style="margin: 0; color: var(--color-text-muted); font-size: 0.85rem; line-height: 1.4;">Votre produit est en route. Préparez-vous à le réceptionner.</p>
+                        <span style="font-size: 0.75rem; color: #94A3B8; margin-top: 8px; display: block;">Il y a 2 heures</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-support" class="spa-view" style="display: none;">
+        <div style="padding: 24px 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Aide & Support</h2>
+                <button class="icon-btn" onclick="navigateTo('profil')" style="box-shadow: none;"><i class="fa-solid fa-arrow-left"></i></button>
+            </div>
+            
+            <!-- Contact Rapide -->
+            <div style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); border-radius: var(--radius-lg); padding: 24px; color: white; margin-bottom: 32px; box-shadow: var(--shadow-md);">
+                <h3 style="margin-bottom: 8px; font-size: 1.2rem;">Informations Campus Market</h3>
+                <p style="opacity: 0.9; margin-bottom: 16px; font-size: 0.95rem;">La plateforme étudiante numéro 1 de l'UIDT. Contactez le Super Administrateur pour toute demande (partenariat, problème de compte, etc.).</p>
+                <div style="display: flex; gap: 12px; flex-direction: column;">
+                    <a href="https://wa.me/221784799882" target="_blank" style="background: #25D366; color: white; text-decoration: none; padding: 14px; border-radius: 8px; font-weight: 600; text-align: center; display: block;">
+                        <i class="fa-brands fa-whatsapp" style="margin-right: 8px; font-size: 1.1rem;"></i> Admin: +221 78 479 98 82
+                    </a>
+                    <a href="mailto:admin@campusmarket.uidt.sn" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 14px; border-radius: 8px; font-weight: 600; text-align: center; display: block;">
+                        <i class="fa-solid fa-envelope" style="margin-right: 8px;"></i> admin@campusmarket.uidt.sn
+                    </a>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 16px; font-size: 1.2rem; border-bottom: 2px solid var(--color-primary); padding-bottom: 8px; display: inline-block;">Foire Aux Questions (FAQ)</h3>
+
+            <!-- FAQ Accordion -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <details style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px;">
+                    <summary style="font-weight: 600; cursor: pointer; outline: none; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        Comment payer ma commande ? <i class="fa-solid fa-chevron-down" style="color: var(--color-primary);"></i>
+                    </summary>
+                    <div style="color: var(--color-text-muted); font-size: 0.95rem; margin-top: 12px; line-height: 1.6;">
+                        Vous pouvez payer de plusieurs façons : en espèces à la livraison, ou via Mobile Money (Wave, Orange Money) directement au vendeur lors de la remise de votre colis.
+                    </div>
+                </details>
+                
+                <details style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px;">
+                    <summary style="font-weight: 600; cursor: pointer; outline: none; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        Où puis-je me faire livrer ? <i class="fa-solid fa-chevron-down" style="color: var(--color-primary);"></i>
+                    </summary>
+                    <div style="color: var(--color-text-muted); font-size: 0.95rem; margin-top: 12px; line-height: 1.6;">
+                        La livraison se fait exclusivement au sein du campus de l'UIDT. Il vous suffit de renseigner votre numéro de pavillon (ex: Pavillon A, B, C...) et votre numéro de chambre.
+                    </div>
+                </details>
+                
+                <details style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px;">
+                    <summary style="font-weight: 600; cursor: pointer; outline: none; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        Je souhaite annuler ma commande <i class="fa-solid fa-chevron-down" style="color: var(--color-primary);"></i>
+                    </summary>
+                    <div style="color: var(--color-text-muted); font-size: 0.95rem; margin-top: 12px; line-height: 1.6;">
+                        Vous pouvez annuler votre commande depuis la section "Mes commandes" tant qu'elle est "En attente". Si elle est déjà en préparation ou en livraison, veuillez contacter directement le vendeur ou le support client.
+                    </div>
+                </details>
+                
+                <details style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px;">
+                    <summary style="font-weight: 600; cursor: pointer; outline: none; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        Comment devenir vendeur ? <i class="fa-solid fa-chevron-down" style="color: var(--color-primary);"></i>
+                    </summary>
+                    <div style="color: var(--color-text-muted); font-size: 0.95rem; margin-top: 12px; line-height: 1.6;">
+                        Rendez-vous dans la rubrique Profil, cliquez sur "Devenir Vendeur" et remplissez le formulaire. Notre administration étudiera votre demande et activera votre compte vendeur sous 24h à 48h.
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+</main>
+
+
+    <!-- Modal Détail Produit -->
+    <div id="product-detail-modal" class="campus-modal-overlay" style="display: none;">
+        <div class="campus-modal" style="text-align: left; max-width: 450px; padding: 0; overflow: hidden;">
+            <div style="position: relative; height: 200px;">
+                <img id="detail-img" src="" alt="Produit" style="width: 100%; height: 100%; object-fit: cover;">
+                <button class="icon-btn" onclick="document.getElementById('product-detail-modal').style.display='none'"
+                    style="position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; box-shadow: none; background: white;"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="padding: 24px;">
+                <h2 id="detail-title" style="margin-bottom: 8px;">Titre du produit</h2>
+                <span id="detail-price"
+                    style="font-weight: 700; font-size: 1.2rem; color: var(--color-primary); display: block; margin-bottom: 16px;">Prix</span>
+                <p id="detail-desc"
+                    style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px;">
+                    Description du produit.</p>
+                <div style="display: flex; gap: 8px; flex-direction: column;">
+                    <button class="btn btn-primary" style="width: 100%;"
+                        onclick="document.getElementById('product-detail-modal').style.display='none'; document.getElementById('order-modal').style.display='flex';">Acheter
+                        maintenant</button>
+                    <button id="btn-whatsapp-seller" class="btn" style="width: 100%; background: #25D366; color: white; border: none; font-weight: 600;" onclick="">
+                        <i class="fa-brands fa-whatsapp" style="font-size: 1.1rem; margin-right: 8px;"></i>
+                        Contacter le vendeur
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Commande (Achat) -->
+    <div id="order-modal" class="campus-modal-overlay" style="display: none;">
+        <div class="campus-modal" style="text-align: left; max-width: 450px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="margin: 0;">Passer commande</h2>
+                <button class="icon-btn" onclick="document.getElementById('order-modal').style.display='none'"
+                    style="width: 32px; height: 32px; box-shadow: none;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="color: var(--color-text-muted); margin-bottom: 24px; font-size: 0.9rem;">Finalisez votre achat en
+                30 secondes. Le vendeur sera notifié immédiatement.</p>
+
+            <form id="order-form">
+                <div style="display: flex; gap: 16px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="order_prenom">Prénom</label>
+                        <input type="text" id="order_prenom" class="form-control" required placeholder="Ex: Awa">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="order_nom">Nom</label>
+                        <input type="text" id="order_nom" class="form-control" required placeholder="Ex: Fall">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="order_phone">Numéro de téléphone</label>
+                    <input type="tel" id="order_phone" class="form-control" required placeholder="77 000 00 00">
+                </div>
+                <div style="display: flex; gap: 16px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="order_pavillon">Pavillon</label>
+                        <select id="order_pavillon" class="form-control" required>
+                            <option value="" disabled selected>Choisir...</option>
+                            <option value="Pavillon A">Pavillon A</option>
+                            <option value="Pavillon B">Pavillon B</option>
+                            <option value="Pavillon C">Pavillon C</option>
+                            <option value="Pavillon D">Pavillon D</option>
+                            <option value="Village">Village Univ.</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="order_chambre">Chambre</label>
+                        <input type="text" id="order_chambre" class="form-control" required placeholder="Ex: 15">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="order_payment">Moyen de paiement souhaité</label>
+                    <select id="order_payment" class="form-control" required>
+                        <option value="wave">Wave</option>
+                        <option value="orange_money">Orange Money</option>
+                        <option value="cash">Espèces à la livraison</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">Confirmer
+                    l'achat</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer Simple avec liens utiles -->
+    <footer
+        style="background-color: #0F172A; color: #94A3B8; padding: 40px 20px; text-align: center; margin-top: 40px;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <div style="margin-bottom: 16px;">
+                <img src="images/logo.png" alt="Campus Market Logo" style="width: 250px; height: 60px; object-fit: contain; object-position: center; background: white; padding: 12px; border-radius: 12px; display: block; margin: 0 auto;">
+            </div>
+            <p style="margin-bottom: 24px;">La première marketplace de l'Université Iba Der Thiam.</p>
+            <div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
+                <a href="#" onclick="navigateTo('accueil'); setTimeout(() => { document.getElementById('how-it-works').scrollIntoView({behavior: 'smooth'})}, 100); return false;" style="color: white; text-decoration: none;">Comment ça marche ?</a>
+                <a href="#" onclick="navigateTo('support'); return false;" style="color: white; text-decoration: none;">FAQ</a>
+                <a href="#" onclick="navigateTo('support'); return false;" style="color: white; text-decoration: none;">Contactez-nous</a>
+                <a href="#" onclick="navigateTo('superadmin'); return false;" style="color: #FCD34D; text-decoration: none; font-weight: bold;"><i class="fa-solid fa-lock"></i> Super Admin</a>
+            </div>
+            <div
+                style="margin-top: 32px; font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;">
+                © 2026 Campus Market UIDT. Tous droits réservés.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Conteneur pour les Toasts (Notifications) -->
+    <div id="toast-container"></div>
+
+    <!-- Bottom Navigation Bar -->
+    
+    
+<div id="view-admin" class="spa-view" style="display: none;">
+    <div style="background-color: #F8FAFC; min-height: 100vh; padding-bottom: 80px;">
+        <header style="background: var(--color-primary); color: white; padding: 20px; border-radius: 0 0 24px 24px; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 48px; height: 48px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--color-primary); font-size: 24px;">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <div>
+                        <h1 style="font-size: 1.2rem; font-weight: 700; line-height: 1.2;">Mon Espace Vendeur</h1>
+                        <span style="font-size: 0.8rem; opacity: 0.8;" id="admin-seller-name">Chargement...</span>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <label style="display: inline-flex; align-items: center; cursor: pointer; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 20px;">
+                        <input type="checkbox" id="seller-status-toggle" style="display: none;" onchange="toggleSellerStatus()">
+                        <div id="seller-status-bg" style="width: 36px; height: 20px; background: #10B981; border-radius: 20px; position: relative; transition: background 0.3s;">
+                            <div id="seller-status-circle" style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 18px; transition: left 0.3s;"></div>
+                        </div>
+                        <span id="seller-status-text" style="margin-left: 8px; font-size: 0.8rem; font-weight: bold;">Ouvert</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px;">
+                <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 16px; text-align: center; backdrop-filter: blur(5px);">
+                    <div style="font-size: 1.5rem; font-weight: 700;" id="stat-revenue">0 F</div>
+                    <div style="font-size: 0.75rem; opacity: 0.9; text-transform: uppercase;">Chiffre d'Affaire</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 16px; text-align: center; backdrop-filter: blur(5px);">
+                    <div style="font-size: 1.5rem; font-weight: 700;" id="stat-sales">0</div>
+                    <div style="font-size: 0.75rem; opacity: 0.9; text-transform: uppercase;">Ventes</div>
+                </div>
+            </div>
+        </header>
+
+        <section style="background: white; border-radius: 16px; padding: 20px; margin: 0 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
+                <h3 style="font-size: 1.2rem; font-weight: 700; color: #1e293b;"><i class="fa-solid fa-bell" style="margin-right: 8px; color: #D97706;"></i> Commandes en attente</h3>
+            </div>
+            <div id="seller-orders-pending">
+                <div style="text-align: center; padding: 20px; color: #94A3B8;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
+            </div>
+        </section>
+
+        <section style="background: white; border-radius: 16px; padding: 20px; margin: 0 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
+                <h3 style="font-size: 1.2rem; font-weight: 700; color: #1e293b;"><i class="fa-solid fa-box-open" style="margin-right: 8px; color: #10B981;"></i> Mes Produits</h3>
+                <button onclick="document.getElementById('add-product-form-container').style.display = 'block';" style="background: #1D4ED8; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.8rem;"><i class="fa-solid fa-plus"></i> Ajouter</button>
+            </div>
+            
+            <div id="add-product-form-container" style="display: none; background: #F8FAFC; padding: 16px; border-radius: 12px; margin-bottom: 16px; border: 1px dashed #CBD5E1;">
+                <form id="add-product-form">
+                    <input type="text" id="new_prod_title" placeholder="Titre du produit" required style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                    <input type="number" id="new_prod_price" placeholder="Prix (FCFA)" required style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                    <input type="number" id="new_prod_stock" placeholder="Stock (-1 pour illimité)" value="-1" required style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                    <select id="new_prod_category" required style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                        <option value="tech">Tech</option>
+                        <option value="fashion">Mode</option>
+                        <option value="food">Nourriture</option>
+                        <option value="other">Autre</option>
+                    </select>
+                    <label style="font-size: 0.8rem; color: #64748b;">Image du produit (Optionnelle) :</label>
+                    <input type="file" id="new_prod_image" accept="image/*" style="width: 100%; padding: 8px; margin-bottom: 16px; border-radius: 6px; border: 1px dashed #CBD5E1; background: white;">
+                    <div style="display: flex; gap: 8px;">
+                        <button type="submit" style="flex: 1; background: #10B981; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: 600;">Enregistrer</button>
+                        <button type="button" onclick="document.getElementById('add-product-form-container').style.display = 'none';" style="flex: 1; background: #EF4444; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: 600;">Annuler</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="seller-products-list">
+                <div style="text-align: center; padding: 20px; color: #94A3B8;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div id="view-superadmin" class="spa-view" style="display: none; background: #0f172a; color: white; min-height: 100vh; position: absolute; top: 0; left: 0; width: 100%; z-index: 9999;">    <!-- Login Form -->
+    <div id="superadmin-login" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; padding: 20px;">
+        <img src="images/logo.png" alt="Campus Market Logo" style="width: 250px; height: 80px; margin-bottom: 24px; object-fit: contain; object-position: center; background: white; padding: 16px; border-radius: 16px; display: block;">
+        <h2 style="margin-bottom: 24px;">Connexion Super Admin</h2>
+        <input type="email" id="admin-email" placeholder="Email Administrateur" style="width: 100%; max-width: 300px; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: none; outline: none; color: black;">
+        <input type="password" id="admin-password" placeholder="Mot de passe" style="width: 100%; max-width: 300px; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: none; outline: none; color: black;">
+        <button onclick="loginSuperAdmin()" style="width: 100%; max-width: 300px; padding: 12px; background: #10B981; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Se connecter</button>
+        <p id="login-error" style="color: #EF4444; margin-top: 16px; display: none;">Identifiants incorrects</p>
+    </div>
+
+    <!-- Super Admin Content (Hidden initially) -->
+    <div id="superadmin-content" style="display: none;">
+        <header class="navbar" style="background-color: #1E293B; border-bottom: 1px solid #334155;">
+            <div class="navbar-container" style="padding: 16px 20px; display: flex; justify-content: space-between;">
+                <div class="logo" style="display: flex; align-items: center; gap: 12px;">
+                    <img src="images/logo.png" alt="Campus Market Logo" style="width: 150px; height: 40px; object-fit: contain; object-position: left center; background: white; padding: 4px; border-radius: 6px; display: block;">
+                    <strong style="color: white; font-size: 1.2rem;">SUPER ADMIN</strong>
+                </div>
+                <div class="nav-actions">
+                    <button onclick="logoutSuperAdmin()" class="icon-btn" style="background: transparent; color: white; border: none; font-size: 20px;"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content" style="padding: 24px;">
+            <!-- Stats -->
+            
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 32px;">
+                <div style="background: #1E293B; padding: 16px; border-radius: 12px; border: 1px solid #334155;">
+                    <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px;">Total Vendeurs</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: white;" id="stat-sellers">...</div>
+                </div>
+                <div style="background: #1E293B; padding: 16px; border-radius: 12px; border: 1px solid #334155;">
+                    <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px;">Total Utilisateurs</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: white;" id="stat-users">...</div>
+                </div>
+                <div style="background: #1E293B; padding: 16px; border-radius: 12px; border: 1px solid #334155;">
+                    <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px;">Commandes livrées</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: white;" id="stat-orders">...</div>
+                </div>
+                <div style="background: #1E293B; padding: 16px; border-radius: 12px; border: 1px solid #334155;">
+                    <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px;">Note Moyenne</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: white;" id="stat-rating">4.5 <i class="fa-solid fa-star" style="color: #FCD34D; font-size: 1rem;"></i></div>
+                </div>
+            </div>
+
+                <div style="background: #1E293B; padding: 16px; border-radius: 12px; border: 1px solid #334155; grid-column: span 2;">
+                    <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px;">Chiffre d'affaires global généré</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #10B981;" id="stat-revenue">...</div>
+                </div>
+            </div>
+
+            <h2 style="margin-bottom: 16px; color: white; font-size: 1.2rem;">Demandes Vendeurs en attente</h2>
+            <div id="pending-sellers-list">
+                <div style="text-align: center; padding: 40px; color: #94A3B8;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 32px;"></i>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 32px; margin-bottom: 16px; color: white; font-size: 1.2rem;">Les vendeurs de la plateforme</h2>
+            <div id="active-sellers-list">
+                <div style="text-align: center; padding: 40px; color: #94A3B8;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 32px;"></i>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 32px; margin-bottom: 16px; color: white; font-size: 1.2rem;">Gestion des Étudiants / Utilisateurs</h2>
+            <div id="admin-users-list">
+                <div style="text-align: center; padding: 40px; color: #94A3B8;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 32px;"></i>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 32px; margin-bottom: 16px; color: white; font-size: 1.2rem;">Modération des Produits</h2>
+            <div id="admin-products-list">
+                <div style="text-align: center; padding: 40px; color: #94A3B8;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 32px;"></i>
+                </div>
+            </div>
+        </main>
+
+        <nav class="bottom-nav" style="background-color: #1E293B; border-top: 1px solid #334155; display: flex; justify-content: space-around;">
+            <a href="#" class="bottom-nav-item active" style="color: #FCD34D;">
+                <i class="fa-solid fa-users"></i>
+                <span>Vendeurs</span>
+            </a>
+            <a href="#" onclick="navigateTo('accueil'); return false;" class="bottom-nav-item" style="color: #94A3B8;">
+                <i class="fa-solid fa-house"></i>
+                <span>Retour Accueil</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Scripts -->
+    
+    
+    
+
+    <!-- Review Modal -->
+    <div id="review-modal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: flex-end;">
+        <div style="background: white; width: 100%; max-width: 500px; border-radius: 24px 24px 0 0; padding: 24px; animation: slideUp 0.3s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.2rem;">Noter votre commande</h3>
+                <button onclick="closeReviewModal()" style="background: transparent; border: none; font-size: 1.2rem; color: #94A3B8; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 24px;">Comment s'est passée votre commande ? Votre avis aide la communauté !</p>
+            
+            <form id="review-form">
+                <input type="hidden" id="review_order_id">
+                <input type="hidden" id="review_seller_id">
+                
+                <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 24px;" id="star-rating">
+                    <i class="fa-regular fa-star star-btn" data-value="1" style="font-size: 2rem; color: #FBBF24; cursor: pointer;"></i>
+                    <i class="fa-regular fa-star star-btn" data-value="2" style="font-size: 2rem; color: #FBBF24; cursor: pointer;"></i>
+                    <i class="fa-regular fa-star star-btn" data-value="3" style="font-size: 2rem; color: #FBBF24; cursor: pointer;"></i>
+                    <i class="fa-regular fa-star star-btn" data-value="4" style="font-size: 2rem; color: #FBBF24; cursor: pointer;"></i>
+                    <i class="fa-regular fa-star star-btn" data-value="5" style="font-size: 2rem; color: #FBBF24; cursor: pointer;"></i>
+                </div>
+                <input type="hidden" id="review_rating" value="0">
+                
+                <textarea id="review_comment" placeholder="Laissez un petit commentaire (facultatif)..." style="width: 100%; height: 100px; padding: 12px; border-radius: 12px; border: 1px solid #E2E8F0; margin-bottom: 24px; font-family: inherit; resize: none;"></textarea>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px; border-radius: 12px; font-weight: bold;">Envoyer mon avis</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+<nav class="bottom-nav" id="bottom-nav">
+        <button class="bottom-nav-item active" onclick="navigateTo('accueil')" data-target="accueil">
+            <i class="fa-solid fa-house"></i>
+            <span>Accueil</span>
+        </button>
+        <button class="bottom-nav-item" onclick="navigateTo('categories')" data-target="categories">
+            <i class="fa-solid fa-grid-2"></i>
+            <span>Catégories</span>
+        </button>
+        <button class="bottom-nav-item" onclick="navigateTo('panier')" data-target="panier">
+            <i class="fa-solid fa-bag-shopping"></i>
+            <span>Panier</span>
+        </button>
+        <button class="bottom-nav-item" onclick="navigateTo('commandes')" data-target="commandes">
+            <i class="fa-solid fa-box"></i>
+            <span>Commandes</span>
+        </button>
+        <button class="bottom-nav-item" onclick="navigateTo('profil')" data-target="profil">
+            <i class="fa-solid fa-user"></i>
+            <span>Profil</span>
+        </button>
+    </nav>
+
+
+    <!-- Scripts -->
+    <script>
+        // Logique pour fermer la modale du campus
+        function selectCampus(campusName) {
+            console.log('Campus sélectionné :', campusName);
+            document.getElementById('campus-modal').style.display = 'none';
+            // Plus tard, on sauvegardera ça dans le localStorage
+            // localStorage.setItem('userCampus', campusName);
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/backend.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

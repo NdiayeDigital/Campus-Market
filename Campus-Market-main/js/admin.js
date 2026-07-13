@@ -1,0 +1,670 @@
+﻿// SUPERADMIN LOGIC
+
+        // Check local login securely
+        async function checkSuperAdminSession() {
+            if(!window.supabase) return;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+                if (profile && profile.role === 'superadmin') {
+                    document.getElementById('superadmin-login').style.display = 'none';
+                    document.getElementById('superadmin-content').style.display = 'block';
+                    loadAdminData();
+                    return;
+                }
+            }
+        }
+        checkSuperAdminSession();
+
+        window.loginSuperAdmin = async function() {
+            const email = document.getElementById('admin-email').value.trim().toLowerCase();
+            const pass = document.getElementById('admin-password').value.trim();
+            const errEl = document.getElementById('login-error');
+            errEl.style.display = 'none';
+            
+            if(!window.supabase) return;
+            
+            // Hardcoded credentials for Super Admin (Test Mode)
+            if (email === 'maamin.ndiaye@univ-thies.sn' && (pass === 'Mouhamadou2005' || pass === 'Mouhammadou2005')) {
+                try {
+                    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+                    if (error) {
+                        errEl.innerText = "Erreur de connexion : le compte superadmin doit être créé d'abord dans Supabase !";
+                        errEl.style.display = 'block';
+                        return;
+                    }
+                    document.getElementById('superadmin-login').style.display = 'none';
+                    document.getElementById('superadmin-content').style.display = 'block';
+                    loadAdminData();
+                } catch (e) {
+                    errEl.innerText = "Erreur: " + e.message;
+                    errEl.style.display = 'block';
+                }
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+                if (error) throw error;
+                
+                // Check role
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
+                if (profile && profile.role === 'superadmin') {
+                    document.getElementById('superadmin-login').style.display = 'none';
+                    document.getElementById('superadmin-content').style.display = 'block';
+                    loadAdminData();
+                } else {
+                    errEl.innerText = "Accès refusé. Vous n'êtes pas Super Administrateur.";
+                    errEl.style.display = 'block';
+                    await supabase.auth.signOut();
+                }
+            } catch(e) {
+                errEl.innerText = "Identifiants incorrects";
+                errEl.style.display = 'block';
+            }
+        }
+
+        window.logoutSuperAdmin = async function() {
+            if(window.supabase) await supabase.auth.signOut();
+            document.getElementById('superadmin-content').style.display = 'none';
+            document.getElementById('superadmin-login').style.display = 'flex';
+            document.getElementById('admin-password').value = '';
+        }
+
+        async function loadAdminData() {
+            if(!window.supabase) return;
+            try {
+                // Fetch stats
+                const { data: users, error: err1 } = await supabase.from('profiles').select('*');
+                if (err1) throw err1;
+
+                const { data: orders, error: err2 } = await supabase.from('orders').select('id, seller_id, status, price');
+                if (err2) throw err2;
+                
+                const { data: products, error: err3 } = await supabase.from('products').select('id, title, price, seller_id, seller:seller_id(prenom, nom)');
+                if (err3) console.error("Products fetch error:", err3);
+                
+                if(users) {
+                    const sellers = users.filter(u => u.role === 'vendeur' || u.role === 'vendeur_desactive');
+                    document.getElementById('stat-sellers').innerText = sellers.length;
+                    
+                    let totalRevenue = 0;
+                    if(orders) {
+                        const deliveredOrders = orders.filter(o => o.status === 'delivered');
+                        document.getElementById('stat-orders').innerText = deliveredOrders.length;
+                        deliveredOrders.forEach(o => { totalRevenue += parseFloat(o.price || 0); });
+                    }
+                    const statRev = document.getElementById('stat-revenue');
+                    if(statRev) statRev.innerText = totalRevenue.toLocaleString('fr-FR') + ' FCFA';
+                    
+                    const pending = users.filter(u => u.role === 'vendeur_pending');
+                    renderPendingSellers(pending, users);
+                    renderActiveSellers(sellers, orders || []);
+                    renderAdminUsers(users);
+                    if(products) renderAdminProducts(products);
+                }
+            } catch(e) {
+                console.error("SuperAdmin Data Error:", e);
+                document.getElementById('pending-sellers-list').innerHTML = `<p style="color: #EF4444; padding: 20px;">Erreur de chargement: ${e.message || 'Vérifiez vos permissions RLS'}</p>`;
+                document.getElementById('active-sellers-list').innerHTML = '';
+            }
+        }
+
+        function renderPendingSellers(pendingList, allUsers) {
+            const container = document.getElementById('pending-sellers-list');
+            if(pendingList.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; background: #1E293B; border-radius: 16px;"><i class="fa-solid fa-check-circle" style="font-size: 32px; color: #10B981; margin-bottom: 12px;"></i><p style="color: #94A3B8;">Aucune demande en attente.</p></div>';
+                return;
+            }
+
+            container.innerHTML = pendingList.map(p => `
+                <div style="background: #1E293B; border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-size: 1.1rem; color: white; margin: 0;">${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}</h3>
+                        <span style="background: rgba(217, 119, 6, 0.2); color: #FCD34D; padding: 4px 8px; border-radius: 99px; font-size: 0.8rem; font-weight: 700;">En attente</span>
+                    </div>
+                    <p style="font-size: 0.9rem; color: #94A3B8; margin-bottom: 16px;"><i class="fa-solid fa-phone"></i> ${escapeHTML(p.telephone)}</p>
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="updateSellerRole('${p.id}', 'vendeur')" style="flex: 1; padding: 10px; background: #10B981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;"><i class="fa-solid fa-check"></i> Valider</button>
+                        <button onclick="updateSellerRole('${p.id}', 'acheteur')" style="flex: 1; padding: 10px; background: transparent; color: #EF4444; border: 1px solid #EF4444; border-radius: 8px; font-weight: 600; cursor: pointer;"><i class="fa-solid fa-xmark"></i> Refuser</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderActiveSellers(sellers, orders) {
+            const container = document.getElementById('active-sellers-list');
+            if(!container) return;
+            if(sellers.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; background: #1E293B; border-radius: 16px;"><p style="color: #94A3B8;">Aucun vendeur sur la plateforme.</p></div>';
+                return;
+            }
+
+            container.innerHTML = sellers.map(p => {
+                const sellerOrders = orders.filter(o => o.seller_id === p.id && o.status === 'delivered');
+                let revenue = 0;
+                sellerOrders.forEach(o => revenue += parseFloat(o.price || 0));
+                
+                const isActive = p.role === 'vendeur';
+                const statusBadge = isActive ? 
+                    `<span style="background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 4px 8px; border-radius: 99px; font-size: 0.8rem; font-weight: 700;">Actif</span>` : 
+                    `<span style="background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 4px 8px; border-radius: 99px; font-size: 0.8rem; font-weight: 700;">Désactivé</span>`;
+                
+                const toggleBtn = isActive ? 
+                    `<button onclick="updateSellerRole('${p.id}', 'vendeur_desactive')" style="padding: 6px 12px; background: transparent; color: #EF4444; border: 1px solid #EF4444; border-radius: 8px; font-size: 0.8rem; cursor: pointer;"><i class="fa-solid fa-ban"></i> Désactiver</button>` :
+                    `<button onclick="updateSellerRole('${p.id}', 'vendeur')" style="padding: 6px 12px; background: transparent; color: #10B981; border: 1px solid #10B981; border-radius: 8px; font-size: 0.8rem; cursor: pointer;"><i class="fa-solid fa-check"></i> Activer</button>`;
+
+                return `
+                    <div style="background: #1E293B; border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="font-size: 1.1rem; color: white; margin: 0;">${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}</h3>
+                            ${statusBadge}
+                        </div>
+                        <p style="font-size: 0.9rem; color: #94A3B8; margin-bottom: 16px;"><i class="fa-solid fa-phone"></i> ${escapeHTML(p.telephone)}</p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; background: #0F172A; padding: 12px; border-radius: 8px;">
+                            <div>
+                                <div style="font-size: 0.75rem; color: #94A3B8;">Livrées (Total)</div>
+                                <div style="font-size: 1.1rem; color: white; font-weight: 700;">${sellerOrders.length}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: #94A3B8;">Chiffre d'affaires</div>
+                                <div style="font-size: 1.1rem; color: #10B981; font-weight: 700;">${revenue.toLocaleString('fr-FR')} F</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end;">
+                            ${toggleBtn}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.updateSellerRole = async function(userId, newRole) {
+            try {
+                const { data, error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId).select();
+                if(error) throw error;
+                if(!data || data.length === 0) {
+                    throw new Error("Opération refusée par Supabase (RLS). Assurez-vous d'être bien connecté avec le compte administrateur.");
+                }
+                alert(newRole === 'vendeur' ? 'Compte vendeur activé avec succès !' : 'Mise à jour effectuée.');
+                loadAdminData(); // Refresh list
+            } catch(e) {
+                alert("Erreur lors de la mise à jour : " + e.message);
+            }
+        };
+
+        function renderAdminProducts(products) {
+            const container = document.getElementById('admin-products-list');
+            if(!container) return;
+            if(products.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; background: #1E293B; border-radius: 16px;"><p style="color: #94A3B8;">Aucun produit sur la plateforme.</p></div>';
+                return;
+            }
+
+            container.innerHTML = products.map(p => {
+                const sellerName = p.seller ? `${escapeHTML(p.seller.prenom)} ${escapeHTML(p.seller.nom)}` : 'Inconnu';
+                return `
+                    <div style="background: #1E293B; border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1rem; color: white; margin: 0; margin-bottom: 4px;">${escapeHTML(p.title)}</h3>
+                            <p style="font-size: 0.8rem; color: #94A3B8; margin: 0;">Vendeur : ${sellerName} | Prix: ${p.price} F</p>
+                        </div>
+                        <button onclick="deleteProductAdmin('${p.id}')" style="padding: 8px 12px; background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid #EF4444; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">
+                            <i class="fa-solid fa-trash"></i> Supprimer
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.deleteProductAdmin = async function(productId) {
+            if(!confirm("Voulez-vous vraiment supprimer ce produit de la plateforme ? Cette action est irréversible.")) return;
+            try {
+                const { error } = await supabase.from('products').delete().eq('id', productId);
+                if(error) throw error;
+                alert("Produit supprimé avec succès.");
+                loadAdminData(); // Refresh list
+            } catch(e) {
+                alert("Erreur lors de la suppression. Vérifiez vos permissions RLS.");
+            }
+        };
+
+        function renderAdminUsers(allUsers) {
+            const container = document.getElementById('admin-users-list');
+            if(!container) return;
+            if(allUsers.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; background: #1E293B; border-radius: 16px;"><p style="color: #94A3B8;">Aucun utilisateur inscrit.</p></div>';
+                return;
+            }
+
+            container.innerHTML = allUsers.map(u => {
+                let roleColor = '#94A3B8';
+                if(u.role === 'superadmin') roleColor = '#EF4444';
+                if(u.role === 'vendeur') roleColor = '#10B981';
+                if(u.role === 'vendeur_pending') roleColor = '#F59E0B';
+                
+                const roleBadge = `<span style="background: rgba(255,255,255,0.1); color: ${roleColor}; padding: 2px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${u.role}</span>`;
+                
+                let actionButtons = '';
+                if (u.role !== 'superadmin') {
+                    if (u.role === 'acheteur') {
+                        actionButtons = `<button onclick="updateSellerRole('${u.id}', 'vendeur')" style="padding: 6px 12px; background: #10B981; color: white; border: none; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; font-family: inherit;">Promouvoir Vendeur</button>`;
+                    } else if (u.role === 'vendeur' || u.role === 'vendeur_desactive' || u.role === 'vendeur_pending') {
+                        actionButtons = `<button onclick="updateSellerRole('${u.id}', 'acheteur')" style="padding: 6px 12px; background: #3B82F6; color: white; border: none; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; font-family: inherit;">Rendre Acheteur</button>`;
+                    }
+                }
+                
+                return `
+                    <div style="background: #1E293B; border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1rem; color: white; margin: 0; margin-bottom: 4px;">${escapeHTML(u.prenom)} ${escapeHTML(u.nom)} ${roleBadge}</h3>
+                            <p style="font-size: 0.8rem; color: #94A3B8; margin: 0;"><i class="fa-solid fa-phone"></i> ${escapeHTML(u.telephone || 'Non renseigné')}</p>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            ${actionButtons}
+                            <button onclick="deleteUserAdmin('${u.id}')" style="padding: 6px 10px; background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid #EF4444; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: inherit;">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.deleteUserAdmin = async function(userId) {
+            if(!confirm("Voulez-vous vraiment supprimer cet étudiant ? Cette action est irréversible et supprimera son profil.")) return;
+            try {
+                const { error } = await supabase.from('profiles').delete().eq('id', userId);
+                if (error) throw error;
+                alert("Compte étudiant supprimé avec succès !");
+                loadAdminData();
+            } catch(e) {
+                alert("Erreur lors de la suppression : " + e.message);
+            }
+        };
+
+// ==========================================
+// SELLER DASHBOARD LOGIC
+// ==========================================
+
+window.loadSellerDashboard = async function() {
+    if(!window.supabase) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if(!user) return;
+
+    // Fetch Seller info
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    if(profile && profile.role === 'vendeur') {
+        document.getElementById('admin-seller-name').innerText = escapeHTML(profile.prenom) + " " + escapeHTML(profile.nom);
+        
+        const toggleInput = document.getElementById('seller-status-toggle');
+        const textSpan = document.getElementById('seller-status-text');
+        const bgDiv = document.getElementById('seller-status-bg');
+        const circleDiv = document.getElementById('seller-status-circle');
+        
+        if (toggleInput) {
+            toggleInput.checked = profile.is_open !== false; // Default true
+            if (toggleInput.checked) {
+                textSpan.innerText = "Ouvert";
+                textSpan.style.color = "#10B981";
+                bgDiv.style.background = "#10B981";
+                circleDiv.style.left = "18px";
+            } else {
+                textSpan.innerText = "Fermé";
+                textSpan.style.color = "#EF4444";
+                bgDiv.style.background = "#EF4444";
+                circleDiv.style.left = "2px";
+            }
+        }
+    }
+
+    // Fetch Orders
+    const { data: orders, error } = await supabase
+        .from('orders')
+        .select('id, status, created_at, price, delivery_address, buyer:buyer_id(nom, prenom, telephone), product:product_id(title)')
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if(!error && orders) {
+        const pendingContainer = document.getElementById('seller-orders-pending');
+        const pending = orders.filter(o => o.status === 'pending' || o.status === 'processing' || o.status === 'shipped');
+        
+        let totalRevenue = 0;
+        const delivered = orders.filter(o => o.status === 'delivered');
+        delivered.forEach(o => totalRevenue += o.price);
+        
+        document.getElementById('stat-revenue').innerText = totalRevenue + " F";
+        document.getElementById('stat-sales').innerText = delivered.length;
+
+        if(pending.length > 0) {
+            pendingContainer.innerHTML = pending.map(o => `
+                <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-weight: 700; color: #0f172a;">CMD-${o.id.substring(0,6).toUpperCase()}</span>
+                        <span style="font-size: 0.8rem; color: #64748b;">${new Date(o.created_at).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                    <div style="font-size: 0.9rem; margin-bottom: 8px; color: #334155;">
+                        <strong>${escapeHTML(o.buyer.prenom)} ${escapeHTML(o.buyer.nom)}</strong> - ${escapeHTML(o.delivery_address)}<br>
+                        📞 ${escapeHTML(o.buyer.telephone)}
+                        ${o.buyer.telephone ? `<a href="https://wa.me/${o.buyer.telephone.replace(/[^0-9]/g, '').startsWith('221') ? o.buyer.telephone.replace(/[^0-9]/g, '') : '221' + o.buyer.telephone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Bonjour ${o.buyer.prenom}, je suis le vendeur sur Campus Market concernant votre commande CMD-${o.id.substring(0,6).toUpperCase()}.`)}" target="_blank" style="color: #25D366; text-decoration: none; margin-left: 8px; font-weight: bold;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : ''}
+                    </div>
+                    <div style="font-size: 0.9rem; color: #475569; margin-bottom: 8px;">
+                        1x ${escapeHTML(o.product?.title || 'Produit inconnu')} (${o.price} F)
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 12px;">
+                        ${o.status === 'pending' ? `<button onclick="updateOrderStatus('${o.id}', 'processing')" style="flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #D97706; color: white;">Préparer</button>` : ''}
+                        ${(o.status === 'pending' || o.status === 'processing') ? `<button onclick="updateOrderStatus('${o.id}', 'shipped')" style="flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #3B82F6; color: white;">Envoyer (En route)</button>` : `<div style="flex: 1; text-align: center; color: #3B82F6; font-size: 0.85rem; font-weight: bold; padding: 8px; background: #DBEAFE; border-radius: 8px;">En attente de réception par l'acheteur</div>`}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            pendingContainer.innerHTML = '<p style="color: #64748B; text-align: center;">Aucune commande en attente.</p>';
+        }
+    }
+
+    // Fetch Products
+    const { data: products } = await supabase.from('products').select('*').eq('seller_id', user.id);
+    const prodContainer = document.getElementById('seller-products-list');
+    if(products && products.length > 0) {
+        prodContainer.innerHTML = products.map(p => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px;">
+                <div>
+                    <strong style="display: block; font-size: 0.95rem;">${escapeHTML(p.title)}</strong>
+                    <span style="font-size: 0.8rem; color: #64748b;">${p.price} FCFA - Stock: ${p.stock === -1 || p.stock === undefined ? 'Illimité' : p.stock}</span>
+                </div>
+                <button onclick="deleteSellerProduct('${p.id}')" style="background: transparent; color: #EF4444; border: 1px solid #EF4444; border-radius: 6px; padding: 4px 8px; cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `).join('');
+    } else {
+        prodContainer.innerHTML = '<p style="color: #64748B; text-align: center;">Vous n\'avez pas encore de produit.</p>';
+    }
+};
+
+window.toggleSellerStatus = async function() {
+    if(!window.supabase) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if(!user) return;
+    
+    const toggleInput = document.getElementById('seller-status-toggle');
+    const textSpan = document.getElementById('seller-status-text');
+    const bgDiv = document.getElementById('seller-status-bg');
+    const circleDiv = document.getElementById('seller-status-circle');
+    
+    if(!toggleInput) return;
+    const isOpen = toggleInput.checked;
+    
+    if (isOpen) {
+        textSpan.innerText = "Ouvert";
+        textSpan.style.color = "#10B981";
+        bgDiv.style.background = "#10B981";
+        circleDiv.style.left = "18px";
+    } else {
+        textSpan.innerText = "Fermé";
+        textSpan.style.color = "#EF4444";
+        bgDiv.style.background = "#EF4444";
+        circleDiv.style.left = "2px";
+    }
+
+    try {
+        const { error } = await supabase.from('profiles').update({ is_open: isOpen }).eq('id', user.id);
+        if(error) throw error;
+        if(window.showToast) showToast(isOpen ? "Votre boutique est maintenant ouverte" : "Votre boutique est fermée", "success");
+    } catch(e) {
+        alert('Erreur lors de la mise à jour du statut.');
+        toggleInput.checked = !isOpen;
+        loadSellerDashboard();
+    }
+};
+
+window.updateOrderStatus = async function(orderId, newStatus) {
+    if(!window.supabase) return;
+    try {
+        const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+        if(error) throw error;
+        alert('Statut de la commande mis à jour !');
+        loadSellerDashboard();
+    } catch(e) {
+        alert('Erreur lors de la mise à jour.');
+    }
+};
+
+window.deleteSellerProduct = async function(productId) {
+    if(!confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) return;
+    if(!window.supabase) return;
+    try {
+        const { error } = await supabase.from('products').delete().eq('id', productId);
+        if(error) throw error;
+        alert('Produit supprimé.');
+        loadSellerDashboard();
+    } catch(e) {
+        alert('Erreur lors de la suppression.');
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const addProdForm = document.getElementById('add-product-form');
+    if(addProdForm) {
+        addProdForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!window.supabase) return;
+            const { data: { user } } = await supabase.auth.getUser();
+            if(!user) return;
+
+            const title = document.getElementById('new_prod_title').value;
+            const price = document.getElementById('new_prod_price').value;
+            const stockInput = document.getElementById('new_prod_stock');
+            const stock = stockInput ? parseInt(stockInput.value) : -1;
+            const category = document.getElementById('new_prod_category').value;
+            
+            // Map category to icon roughly
+            let icon = 'fa-box';
+            if(category === 'tech') icon = 'fa-laptop';
+            if(category === 'fashion') icon = 'fa-shirt';
+            if(category === 'food') icon = 'fa-burger';
+
+            // Fonction de compression
+            window.compressImage = function(file, maxWidth = 600, maxHeight = 600, quality = 0.7) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = event => {
+                        const img = new Image();
+                        img.src = event.target.result;
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            if (width > height) {
+                                if (width > maxWidth) { height = Math.round((height *= maxWidth / width)); width = maxWidth; }
+                            } else {
+                                if (height > maxHeight) { width = Math.round((width *= maxHeight / height)); height = maxHeight; }
+                            }
+                            canvas.width = width; canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            resolve(canvas.toDataURL('image/jpeg', quality));
+                        };
+                        img.onerror = error => reject(error);
+                    };
+                    reader.onerror = error => reject(error);
+                });
+            };
+
+            // Helper to convert base64 to Blob for storage upload
+            const dataURLtoBlob = function(dataurl) {
+                var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                    bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+                while(n--){
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                return new Blob([u8arr], {type:mime});
+            };
+
+            try {
+                // Gestion de l'image
+                let image_url = null;
+                const imageInput = document.getElementById('new_prod_image');
+                if (imageInput && imageInput.files.length > 0) {
+                    document.querySelector('#add-product-form button[type="submit"]').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Compression...';
+                    const compressedBase64 = await window.compressImage(imageInput.files[0]);
+                    
+                    document.querySelector('#add-product-form button[type="submit"]').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Téléchargement...';
+                    const blob = dataURLtoBlob(compressedBase64);
+                    const fileExt = imageInput.files[0].name.split('.').pop() || 'jpg';
+                    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('product-images')
+                        .upload(fileName, blob, {
+                            contentType: imageInput.files[0].type || 'image/jpeg'
+                        });
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('product-images')
+                        .getPublicUrl(fileName);
+                    
+                    image_url = publicUrl;
+                }
+
+                document.querySelector('#add-product-form button[type="submit"]').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enregistrement...';
+                
+                const { error } = await supabase.from('products').insert([{
+                    seller_id: user.id,
+                    title: title,
+                    price: price,
+                    category: category,
+                    icon: icon,
+                    image_url: image_url,
+                    stock: isNaN(stock) ? -1 : stock
+                }]);
+                if(error) throw error;
+                
+                if(window.showToast) showToast('Produit ajouté avec succès !', 'success');
+                else alert('Produit ajouté avec succès !');
+                addProdForm.reset();
+                document.getElementById('add-product-form-container').style.display = 'none';
+                document.querySelector('#add-product-form button[type="submit"]').innerHTML = 'Enregistrer';
+                loadSellerDashboard(); // Refresh
+            } catch(e) {
+                document.querySelector('#add-product-form button[type="submit"]').innerHTML = 'Enregistrer';
+                alert('Erreur lors de l\'ajout du produit.');
+            }
+        });
+    }
+});
+
+// Update navigateTo to load seller dashboard
+const sellerNavHook = window.navigateTo;
+window.navigateTo = async function(viewId) {
+    await sellerNavHook(viewId);
+    if(viewId === 'admin') {
+        loadSellerDashboard();
+    }
+};
+
+// ==========================================
+// REAL-TIME NOTIFICATIONS (PUSH & TOASTS)
+// ==========================================
+
+async function setupRealtimeNotifications() {
+    if (!window.supabase) return;
+    
+    // 1. Demander la permission pour les notifications (Push du navigateur)
+    if ("Notification" in window) {
+        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // 2. Abonnement aux changements sur la table orders via Supabase Realtime
+    supabase
+        .channel('public:orders')
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'orders'
+            },
+            (payload) => {
+                handleOrderChange(payload, user.id);
+            }
+        )
+        .subscribe();
+}
+
+function handleOrderChange(payload, currentUserId) {
+    const { eventType, new: newOrder, old: oldOrder } = payload;
+
+    // A. Notification pour le vendeur (Nouvelle commande insérée)
+    if (eventType === 'INSERT' && newOrder.seller_id === currentUserId) {
+        playNotificationSound();
+        showBrowserNotification("Nouvelle Commande !", "Vous avez reçu une nouvelle commande à préparer.");
+        if (window.showToast) showToast("Nouvelle commande reçue !", "success");
+        if (typeof loadSellerDashboard === 'function') loadSellerDashboard();
+    }
+
+    // B. Notification pour l'acheteur (Statut mis à jour)
+    if (eventType === 'UPDATE' && newOrder.buyer_id === currentUserId) {
+        if (newOrder.status !== oldOrder.status) {
+            let msg = "";
+            if (newOrder.status === 'processing') msg = "Votre commande est en cours de préparation.";
+            if (newOrder.status === 'shipped') msg = "Le livreur est en route ! Préparez-vous.";
+            if (newOrder.status === 'delivered') msg = "Commande livrée. Bon appétit !";
+            if (newOrder.status === 'cancelled') msg = "Votre commande a été annulée.";
+            
+            if (msg) {
+                playNotificationSound();
+                showBrowserNotification("Mise à jour de votre commande", msg);
+                if (window.showToast) showToast(msg, "success");
+                if (typeof fetchMyOrders === 'function') fetchMyOrders();
+            }
+        }
+    }
+}
+
+function showBrowserNotification(title, body) {
+    if ("Notification" in window && Notification.permission === "granted") {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, {
+                body: body,
+                icon: '/images/icon-192x192.png',
+                vibrate: [200, 100, 200]
+            });
+        }).catch(() => {
+            new Notification(title, { body: body });
+        });
+    }
+}
+
+function playNotificationSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime); // Note La (A5)
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15); // Bip très court
+    } catch (e) {
+        console.log("Audio not supported or blocked", e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialiser les notifications après un court délai pour s'assurer que l'auth est chargée
+    setTimeout(setupRealtimeNotifications, 1500);
+});
+
+
+window.loadAdminData = loadAdminData;
