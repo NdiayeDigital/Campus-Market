@@ -719,7 +719,9 @@ async function setupRealtimeNotifications() {
 }
 
 function handleOrderChange(payload, currentUserId) {
-    const { eventType, new: newOrder, old: oldOrder } = payload;
+    const eventType = payload.eventType;
+    const newOrder = payload.new;
+    const oldOrder = payload.old;
 
     // A. Notification pour le vendeur (Nouvelle commande insérée)
     if (eventType === 'INSERT' && newOrder.seller_id === currentUserId) {

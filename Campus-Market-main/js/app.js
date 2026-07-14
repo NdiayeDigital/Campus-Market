@@ -429,6 +429,7 @@ function levenshteinDistance(s, t) {
                     arr[i][j - 1] + 1,
                     arr[i - 1][j - 1] + (s[j - 1] === t[i - 1] ? 0 : 1)
                 );
+        }
     }
     return arr[t.length][s.length];
 }
@@ -2133,7 +2134,9 @@ async function setupRealtimeNotifications() {
 }
 
 function handleOrderChange(payload, currentUserId) {
-    const { eventType, new: newOrder, old: oldOrder } = payload;
+    const eventType = payload.eventType;
+    const newOrder = payload.new;
+    const oldOrder = payload.old;
 
     // A. Notification pour le vendeur (Nouvelle commande insérée)
     if (eventType === 'INSERT' && newOrder.seller_id === currentUserId) {
