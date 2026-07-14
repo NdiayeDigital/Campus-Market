@@ -128,16 +128,16 @@ window.updateCartQty = function(id, delta) {
 };
 
 window.openCheckoutModal = async function() {
-    // Vérifier l'authentification
-    const user = await checkAuthState();
-    if (!user) {
-        navigateTo('login');
-        return;
-    }
-    
     const orderModal = document.getElementById('order-modal');
     if (orderModal) {
-        // Pré-remplir avec les infos du profil si dispo
+        const user = await checkAuthState();
+        if (!user) {
+            alert("Pour commander, veuillez créer votre compte acheteur en 30 secondes.");
+            localStorage.setItem('checkout_pending', 'true');
+            window.navigateTo('register');
+            return;
+        }
+
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
         if(profile) {
             document.getElementById('order_prenom').value = profile.prenom || '';
@@ -466,8 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sellerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if(!window.supabase) return;
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            let { data: { user } } = await supabase.auth.getUser();
         
             const btn = sellerForm.querySelector('button[type="submit"]');
             const originalText = btn.innerHTML;
@@ -478,30 +477,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sellerLastName = document.getElementById('seller_last_name').value;
                 const sellerFirstName = document.getElementById('seller_first_name').value;
                 const sellerPhone = document.getElementById('seller_phone').value;
+        
+                if (!user) {
+                    const email = document.getElementById('seller_email').value;
+                    const password = document.getElementById('seller_password').value;
 
-                // Update profile with form data and set role to pending
-                const { error } = await supabase.from('profiles').update({ 
-                    role: 'vendeur_pending',
-                    nom: sellerLastName,
-                    prenom: sellerFirstName,
-                    telephone: sellerPhone
-                }).eq('id', user.id);
-                if (error) throw error;
-                
-                alert("Votre candidature a été envoyée ! Elle sera étudiée par l'administration.");
-                
-                // Update profile UI
-                const btnBecome = document.getElementById('btn-become-seller');
-                if (btnBecome) {
-                    btnBecome.innerHTML = '<i class="fa-solid fa-clock" style="color: #D97706;"></i> <span style="color: #D97706; font-weight: 600;">Demande en attente</span>';
-                    btnBecome.style.background = '#FEF3C7';
-                    btnBecome.style.border = '1px solid rgba(217,119,6,0.2)';
-                    btnBecome.onclick = null;
+                    if (!email || !password) {
+                        throw new Error("Veuillez saisir votre email et votre mot de passe pour créer votre compte.");
+                    }
+                    if (!email.toLowerCase().endsWith('@univ-thies.sn')) {
+                        throw new Error("L'adresse email doit se terminer par @univ-thies.sn");
+                    }
+
+                    // 1. Sign up Auth
+                    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                        email: email,
+                        password: password
+                    });
+                    if (signUpError) throw signUpError;
+                    user = signUpData.user;
+
+                    // 2. Create Profile row with role pending
+                    const { error: profileError } = await supabase.from('profiles').insert([
+                        {
+                            id: user.id,
+                            nom: sellerLastName,
+                            prenom: sellerFirstName,
+                            telephone: sellerPhone,
+                            role: 'vendeur_pending'
+                        }
+                    ]);
+                    if (profileError) throw profileError;
+                } else {
+                    // Update existing profile with form data and set role to pending
+                    const { error } = await supabase.from('profiles').update({ 
+                        role: 'vendeur_pending',
+                        nom: sellerLastName,
+                        prenom: sellerFirstName,
+                        telephone: sellerPhone
+                    }).eq('id', user.id);
+                    if (error) throw error;
                 }
                 
+                alert("Votre boutique a été pré-créée ! Votre compte vendeur sera activé après validation par le Super Admin.");
+                await checkAuthState();
                 window.navigateTo('profil');
             } catch(err) {
-                alert("Une erreur est survenue lors de l'envoi de la candidature.");
+                alert("Erreur : " + err.message);
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;

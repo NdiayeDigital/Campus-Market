@@ -187,9 +187,46 @@ function levenshteinDistance(s, t) {
                     arr[i][j - 1] + 1,
                     arr[i - 1][j - 1] + (s[j - 1] === t[i - 1] ? 0 : 1)
                 );
-        }
     }
     return arr[t.length][s.length];
+}
+
+window.toggleFiltersPanel = function() {
+    const panel = document.getElementById('filters-panel');
+    const chevron = document.getElementById('filters-chevron');
+    if (panel) {
+        const isOpen = panel.style.display === 'block';
+        panel.style.display = isOpen ? 'none' : 'block';
+        if (chevron) {
+            chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    }
+};
+
+window.applyFilters = function() {
+    filterAndRenderProducts();
+};
+
+function populateSellersFilter() {
+    const filterSeller = document.getElementById('filter-seller');
+    if (!filterSeller) return;
+    
+    // Clear except first option
+    filterSeller.innerHTML = '<option value="">Tous les vendeurs</option>';
+    
+    const sellersMap = new Map();
+    globalProducts.forEach(p => {
+        if (p.seller_id && p.seller) {
+            sellersMap.set(p.seller_id, `${p.seller.prenom} ${p.seller.nom}`);
+        }
+    });
+    
+    sellersMap.forEach((name, id) => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.innerText = name;
+        filterSeller.appendChild(opt);
+    });
 }
 
 function filterAndRenderProducts() {
@@ -199,6 +236,14 @@ function filterAndRenderProducts() {
     const activeChip = document.querySelector('.category-chip.active');
     const activeCategory = activeChip ? activeChip.dataset.category : 'all';
 
+    // Advanced filters
+    const maxPriceVal = document.getElementById('filter-price-max')?.value;
+    const maxPrice = maxPriceVal ? parseFloat(maxPriceVal) : null;
+    
+    const selectedSeller = document.getElementById('filter-seller')?.value;
+    
+    const openOnly = document.getElementById('filter-open-only')?.checked;
+
     const filtered = globalProducts.filter(p => {
         const matchesCategory = (activeCategory === 'all' || p.category === activeCategory);
         
@@ -207,10 +252,21 @@ function filterAndRenderProducts() {
         if (searchTerm.length > 0) {
             const words = p.title.toLowerCase().split(' ');
             matchesSearch = p.title.toLowerCase().includes(searchTerm) || 
+                            (p.seller && `${p.seller.prenom} ${p.seller.nom}`.toLowerCase().includes(searchTerm)) ||
                             words.some(w => levenshteinDistance(w, searchTerm) <= 2);
         }
 
-        return matchesCategory && matchesSearch;
+        // Price limit
+        const matchesPrice = (maxPrice === null || p.price <= maxPrice);
+
+        // Seller match
+        const matchesSeller = (!selectedSeller || p.seller_id === selectedSeller);
+
+        // Shop status
+        const isOpen = p.seller ? p.seller.is_open !== false : true;
+        const matchesOpen = (!openOnly || isOpen);
+
+        return matchesCategory && matchesSearch && matchesPrice && matchesSeller && matchesOpen;
     });
 
     renderProducts(filtered);
@@ -222,6 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentProductPage = 0;
     globalProducts = await fetchProductsFromDB(currentProductPage);
     renderProducts(globalProducts);
+    populateSellersFilter();
     
     // Ajouter bouton Voir plus
     const feedSection = document.getElementById('products-grid')?.parentElement;
@@ -240,6 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(newProducts.length > 0) {
                 globalProducts = [...globalProducts, ...newProducts];
                 renderProducts(globalProducts);
+                populateSellersFilter();
                 btn.innerHTML = 'Voir plus de produits';
                 if(newProducts.length < PRODUCTS_PER_PAGE) btn.style.display = 'none';
             } else {

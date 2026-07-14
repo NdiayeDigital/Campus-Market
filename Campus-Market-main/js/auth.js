@@ -73,8 +73,9 @@ async function checkAuthState() {
                     </div>
                     <h3 style="margin-bottom: 12px; font-size: 1.2rem;">Espace Profil</h3>
                     <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 32px;">Gérez vos commandes et vos préférences.</p>
-                    <button onclick="navigateTo('register')" class="btn btn-primary" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: 600;">Créer votre profil</button>
-                    <button onclick="navigateTo('login')" class="btn" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; background: white; color: var(--color-text-main); border: 1px solid var(--color-border);">Connectez-vous à votre profil vendeur</button>
+                    <button onclick="navigateTo('register')" class="btn btn-primary" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: 600;">Créer votre profil Acheteur</button>
+                    <button onclick="navigateTo('seller-register')" class="btn" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: 700; background: #FFFBEB; color: #D97706; border: 1px solid #FCD34D;"><i class="fa-solid fa-store" style="margin-right: 8px;"></i> Devenir Vendeur (Créer une boutique)</button>
+                    <button onclick="navigateTo('login')" class="btn" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; background: white; color: var(--color-text-main); border: 1px solid var(--color-border);">Se connecter</button>
                 `;
                 profilView.insertBefore(unauth, profilView.firstChild);
             }
@@ -95,9 +96,23 @@ window.navigateTo = async function(viewId) {
         return;
     }
 
+    if (viewId === 'seller-register') {
+        const user = await checkAuthState();
+        const authFields = document.getElementById('seller-auth-fields');
+        if (authFields) {
+            if (user) {
+                authFields.style.display = 'none';
+                authFields.querySelectorAll('input').forEach(i => i.removeAttribute('required'));
+            } else {
+                authFields.style.display = 'block';
+                authFields.querySelectorAll('input').forEach(i => i.setAttribute('required', ''));
+            }
+        }
+    }
+
     const mainBottomNav = document.getElementById('bottom-nav');
     if(mainBottomNav) {
-        if(viewId === 'superadmin' || viewId === 'login' || viewId === 'register') {
+        if(viewId === 'superadmin' || viewId === 'login' || viewId === 'register' || viewId === 'seller-register') {
             mainBottomNav.style.display = 'none';
         } else {
             mainBottomNav.style.display = 'flex';
@@ -180,9 +195,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // Connexion automatique et redirection vers l'accueil
+                // Connexion automatique et redirection
                 await checkAuthState();
-                window.navigateTo('accueil');
+                
+                const checkoutPending = localStorage.getItem('checkout_pending');
+                if (checkoutPending === 'true') {
+                    localStorage.removeItem('checkout_pending');
+                    window.navigateTo('panier');
+                    setTimeout(() => {
+                        if (window.openCheckoutModal) window.openCheckoutModal();
+                    }, 500);
+                } else {
+                    window.navigateTo('accueil');
+                }
                 registerForm.reset();
 
             } catch (error) {

@@ -31,7 +31,9 @@ CREATE TABLE IF NOT EXISTS public.products (
 -- Table des Commandes
 CREATE TABLE IF NOT EXISTS public.orders (
     id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
-    buyer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    buyer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    buyer_name TEXT,
+    buyer_phone TEXT,
     seller_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
     price NUMERIC NOT NULL,
@@ -87,15 +89,15 @@ ON public.products FOR DELETE USING (auth.uid() = seller_id);
 
 
 -- POLITIQUES POUR 'orders'
--- a. Un acheteur peut crÃ©er une commande, et son ID doit obligatoirement Ãªtre le sien
-CREATE POLICY "Les acheteurs crÃ©ent des commandes" 
+-- a. Un acheteur peut créer une commande (y compris un invité avec buyer_id NULL)
+CREATE POLICY "Les acheteurs créent des commandes" 
 ON public.orders FOR INSERT 
-WITH CHECK (auth.uid() = buyer_id);
+WITH CHECK (auth.uid() = buyer_id OR buyer_id IS NULL);
 
--- b. Un utilisateur ne peut voir QUE ses propres commandes (soit en tant qu'acheteur, soit en tant que vendeur)
-CREATE POLICY "ConfidentialitÃ© des commandes" 
+-- b. Un utilisateur peut voir ses commandes (les invités peuvent voir les commandes sans compte)
+CREATE POLICY "Confidentialité des commandes" 
 ON public.orders FOR SELECT 
-USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
+USING (auth.uid() = buyer_id OR auth.uid() = seller_id OR buyer_id IS NULL);
 
 -- c. Seul le vendeur concernÃ© (ou l'acheteur pour annuler) peut modifier le statut d'une commande
 CREATE POLICY "Modification des statuts de commandes" 

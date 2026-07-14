@@ -323,7 +323,7 @@ window.loadSellerDashboard = async function() {
     // Fetch Orders
     const { data: orders, error } = await supabase
         .from('orders')
-        .select('id, status, created_at, price, delivery_address, buyer:buyer_id(nom, prenom, telephone), product:product_id(title)')
+        .select('id, status, created_at, price, quantity, delivery_address, buyer_name, buyer_phone, buyer:buyer_id(nom, prenom, telephone), product:product_id(title)')
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -335,30 +335,53 @@ window.loadSellerDashboard = async function() {
         const delivered = orders.filter(o => o.status === 'delivered');
         delivered.forEach(o => totalRevenue += o.price);
         
-        document.getElementById('stat-revenue').innerText = totalRevenue + " F";
+        document.getElementById('stat-revenue').innerText = totalRevenue.toLocaleString('fr-FR') + " F";
         document.getElementById('stat-sales').innerText = delivered.length;
 
+        // Calculs Statistiques avancées
+        const avgOrder = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0;
+        const avgEl = document.getElementById('stat-avg-order');
+        if (avgEl) avgEl.innerText = avgOrder.toLocaleString('fr-FR') + " F";
+
+        const nonCancelled = orders.filter(o => o.status !== 'cancelled').length;
+        const conversionRate = nonCancelled > 0 ? Math.round((delivered.length / nonCancelled) * 100) : 0;
+        const convEl = document.getElementById('stat-conversion');
+        if (convEl) convEl.innerText = conversionRate + "%";
+
+        // Top Produits
+        renderTopProducts(orders);
+
+        // SVG sales chart
+        renderSellerSalesChart(orders);
+
         if(pending.length > 0) {
-            pendingContainer.innerHTML = pending.map(o => `
-                <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <span style="font-weight: 700; color: #0f172a;">CMD-${o.id.substring(0,6).toUpperCase()}</span>
-                        <span style="font-size: 0.8rem; color: #64748b;">${new Date(o.created_at).toLocaleDateString('fr-FR')}</span>
+            pendingContainer.innerHTML = pending.map(o => {
+                const buyerName = o.buyer ? `${o.buyer.prenom} ${o.buyer.nom}` : (o.buyer_name || 'Client Invité');
+                const buyerPhone = o.buyer ? o.buyer.telephone : (o.buyer_phone || '');
+                const cleanPhone = buyerPhone.replace(/[^0-9]/g, '');
+                const whatsappPhone = cleanPhone.startsWith('221') ? cleanPhone : '221' + cleanPhone;
+
+                return `
+                    <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span style="font-weight: 700; color: #0f172a;">CMD-${o.id.substring(0,6).toUpperCase()}</span>
+                            <span style="font-size: 0.8rem; color: #64748b;">${new Date(o.created_at).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                        <div style="font-size: 0.9rem; margin-bottom: 8px; color: #334155;">
+                            <strong>${escapeHTML(buyerName)}</strong> - ${escapeHTML(o.delivery_address)}<br>
+                            📞 ${escapeHTML(buyerPhone)}
+                            ${buyerPhone ? `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`Bonjour ${buyerName}, je suis le vendeur sur Campus Market concernant votre commande CMD-${o.id.substring(0,6).toUpperCase()}.`)}" target="_blank" style="color: #25D366; text-decoration: none; margin-left: 8px; font-weight: bold;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : ''}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #475569; margin-bottom: 8px;">
+                            ${o.quantity || 1}x ${escapeHTML(o.product?.title || 'Produit inconnu')} (${o.price} F)
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 12px;">
+                            ${o.status === 'pending' ? `<button onclick="updateOrderStatus('${o.id}', 'processing')" style="flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #D97706; color: white;">Préparer</button>` : ''}
+                            ${(o.status === 'pending' || o.status === 'processing') ? `<button onclick="updateOrderStatus('${o.id}', 'shipped')" style="flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #3B82F6; color: white;">Envoyer (En route)</button>` : `<div style="flex: 1; text-align: center; color: #3B82F6; font-size: 0.85rem; font-weight: bold; padding: 8px; background: #DBEAFE; border-radius: 8px;">En attente de réception par l'acheteur</div>`}
+                        </div>
                     </div>
-                    <div style="font-size: 0.9rem; margin-bottom: 8px; color: #334155;">
-                        <strong>${escapeHTML(o.buyer.prenom)} ${escapeHTML(o.buyer.nom)}</strong> - ${escapeHTML(o.delivery_address)}<br>
-                        📞 ${escapeHTML(o.buyer.telephone)}
-                        ${o.buyer.telephone ? `<a href="https://wa.me/${o.buyer.telephone.replace(/[^0-9]/g, '').startsWith('221') ? o.buyer.telephone.replace(/[^0-9]/g, '') : '221' + o.buyer.telephone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Bonjour ${o.buyer.prenom}, je suis le vendeur sur Campus Market concernant votre commande CMD-${o.id.substring(0,6).toUpperCase()}.`)}" target="_blank" style="color: #25D366; text-decoration: none; margin-left: 8px; font-weight: bold;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : ''}
-                    </div>
-                    <div style="font-size: 0.9rem; color: #475569; margin-bottom: 8px;">
-                        1x ${escapeHTML(o.product?.title || 'Produit inconnu')} (${o.price} F)
-                    </div>
-                    <div style="display: flex; gap: 8px; margin-top: 12px;">
-                        ${o.status === 'pending' ? `<button onclick="updateOrderStatus('${o.id}', 'processing')" style="flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #D97706; color: white;">Préparer</button>` : ''}
-                        ${(o.status === 'pending' || o.status === 'processing') ? `<button onclick="updateOrderStatus('${o.id}', 'shipped')" style="flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #3B82F6; color: white;">Envoyer (En route)</button>` : `<div style="flex: 1; text-align: center; color: #3B82F6; font-size: 0.85rem; font-weight: bold; padding: 8px; background: #DBEAFE; border-radius: 8px;">En attente de réception par l'acheteur</div>`}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         } else {
             pendingContainer.innerHTML = '<p style="color: #64748B; text-align: center;">Aucune commande en attente.</p>';
         }
@@ -381,6 +404,101 @@ window.loadSellerDashboard = async function() {
         prodContainer.innerHTML = '<p style="color: #64748B; text-align: center;">Vous n\'avez pas encore de produit.</p>';
     }
 };
+
+function renderTopProducts(orders) {
+    const container = document.getElementById('seller-top-products');
+    if (!container) return;
+
+    const delivered = orders.filter(o => o.status === 'delivered');
+    if (delivered.length === 0) {
+        container.innerHTML = '<div style="font-size: 0.85rem; color: #94A3B8; text-align: center;">Aucun produit vendu pour l\'instant.</div>';
+        return;
+    }
+
+    const counts = {};
+    delivered.forEach(o => {
+        const title = o.product?.title || 'Produit inconnu';
+        counts[title] = (counts[title] || 0) + (o.quantity || 1);
+    });
+
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+    container.innerHTML = sorted.map(([title, qty]) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #F8FAFC; border-radius: 8px; padding: 10px 14px; border: 1px solid #E2E8F0; font-size: 0.85rem;">
+            <span style="font-weight: 600; color: #1E293B;">${escapeHTML(title)}</span>
+            <span style="background: #DBEAFE; color: #1D4ED8; padding: 2px 8px; border-radius: 99px; font-weight: 700; font-size: 0.75rem;">${qty} vendus</span>
+        </div>
+    `).join('');
+}
+
+function renderSellerSalesChart(orders) {
+    const container = document.getElementById('seller-chart-container');
+    if (!container) return;
+
+    // Get sales for the last 7 days
+    const days = [];
+    const salesByDay = {};
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        days.push(dateStr);
+        salesByDay[dateStr] = 0;
+    }
+
+    // Filter delivered orders
+    const delivered = orders.filter(o => o.status === 'delivered');
+    delivered.forEach(o => {
+        const dateStr = new Date(o.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        if (salesByDay[dateStr] !== undefined) {
+            salesByDay[dateStr] += o.price;
+        }
+    });
+
+    const data = days.map(day => salesByDay[day]);
+    const maxVal = Math.max(...data, 1000); // minimum scale
+
+    // Build SVG
+    const width = 320;
+    const height = 120;
+    const padding = 20;
+
+    const points = data.map((val, index) => {
+        const x = padding + (index * (width - 2 * padding) / (data.length - 1));
+        const y = height - padding - (val * (height - 2 * padding) / maxVal);
+        return { x, y, val, label: days[index] };
+    });
+
+    let pathD = `M ${points[0].x} ${points[0].y} `;
+    for (let i = 1; i < points.length; i++) {
+        pathD += `L ${points[i].x} ${points[i].y} `;
+    }
+
+    // Area under curve
+    let areaD = pathD + `L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+
+    const dotsHtml = points.map(p => `
+        <circle cx="${p.x}" cy="${p.y}" r="4" fill="#1D4ED8" stroke="white" stroke-width="1.5" />
+        <text x="${p.x}" y="${p.y - 8}" font-size="8" font-weight="bold" fill="#1E293B" text-anchor="middle">${p.val > 0 ? p.val + 'F' : ''}</text>
+        <text x="${p.x}" y="${height - 5}" font-size="8" fill="#94A3B8" text-anchor="middle">${p.label}</text>
+    `).join('');
+
+    container.innerHTML = `
+        <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" style="overflow: visible;">
+            <!-- Grid Lines -->
+            <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#E2E8F0" stroke-width="1" />
+            
+            <!-- Fill Area -->
+            <path d="${areaD}" fill="rgba(29, 78, 216, 0.08)" />
+            
+            <!-- Line Path -->
+            <path d="${pathD}" fill="none" stroke="#1D4ED8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            
+            <!-- Interactive Dots & Labels -->
+            ${dotsHtml}
+        </svg>
+    `;
+}
 
 window.toggleSellerStatus = async function() {
     if(!window.supabase) return;
