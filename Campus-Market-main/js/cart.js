@@ -170,19 +170,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!user) throw new Error("Vous devez être connecté.");
 
                 const pavillon = document.getElementById('order_pavillon').value;
-                const chambre = document.getElementById('order_chambre').value;
-                const payment = document.getElementById('order_payment').value;
-                const fullAddress = `${pavillon}, Chambre ${chambre} [Paiement: ${payment}]`;
-
-                // Bloquer les commandes de produits de démonstration (id commençant par 'm' ou sans seller_id)
-                const hasMockProducts = cart.some(item => !item.seller_id || String(item.id).startsWith('m'));
-                if (hasMockProducts) {
-                    throw new Error("Vous ne pouvez pas commander des produits de démonstration. Veuillez vider votre panier et ajouter de vrais produits.");
+                let detail = '';
+                if (pavillon === 'Jardin social') {
+                    detail = '';
+                } else if (pavillon === 'Bibliothèque universitaire') {
+                    detail = ', ' + document.getElementById('order_etage').value;
+                } else if (pavillon === 'Salle de cours') {
+                    detail = ', ' + document.getElementById('order_chambre').value;
+                } else { // Pavillon A ou B
+                    detail = ', Chambre ' + document.getElementById('order_chambre').value;
                 }
+                const payment = document.getElementById('order_payment').value;
+                const fullAddress = `${pavillon}${detail} [Paiement: ${payment}]`;
+
+                // Fetch buyer profile metadata
+                const { data: profile } = await supabase.from('profiles').select('prenom, nom, telephone').eq('id', user.id).single();
+                const buyerName = profile ? `${profile.prenom} ${profile.nom}` : '';
+                const buyerPhone = profile ? profile.telephone : '';
 
                 // Créer une commande par article dans le panier
                 const ordersToInsert = cart.map(item => ({
                     buyer_id: user.id,
+                    buyer_name: buyerName,
+                    buyer_phone: buyerPhone,
                     seller_id: item.seller_id,
                     product_id: item.id,
                     price: item.price * item.quantity,

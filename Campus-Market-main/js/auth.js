@@ -85,6 +85,9 @@ async function checkAuthState() {
             if(authMenu) authMenu.style.display = 'none';
         }
     }
+    if (user) {
+        if (typeof setupRealtimeNotifications === 'function') setupRealtimeNotifications();
+    }
     return user;
 }
 

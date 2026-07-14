@@ -657,6 +657,9 @@ async function checkAuthState() {
             if(authMenu) authMenu.style.display = 'none';
         }
     }
+    if (user) {
+        if (typeof setupRealtimeNotifications === 'function') setupRealtimeNotifications();
+    }
     return user;
 }
 
@@ -1037,19 +1040,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!user) throw new Error("Vous devez être connecté.");
 
                 const pavillon = document.getElementById('order_pavillon').value;
-                const chambre = document.getElementById('order_chambre').value;
-                const payment = document.getElementById('order_payment').value;
-                const fullAddress = `${pavillon}, Chambre ${chambre} [Paiement: ${payment}]`;
-
-                // Bloquer les commandes de produits de démonstration (id commençant par 'm' ou sans seller_id)
-                const hasMockProducts = cart.some(item => !item.seller_id || String(item.id).startsWith('m'));
-                if (hasMockProducts) {
-                    throw new Error("Vous ne pouvez pas commander des produits de démonstration. Veuillez vider votre panier et ajouter de vrais produits.");
+                let detail = '';
+                if (pavillon === 'Jardin social') {
+                    detail = '';
+                } else if (pavillon === 'Bibliothèque universitaire') {
+                    detail = ', ' + document.getElementById('order_etage').value;
+                } else if (pavillon === 'Salle de cours') {
+                    detail = ', ' + document.getElementById('order_chambre').value;
+                } else { // Pavillon A ou B
+                    detail = ', Chambre ' + document.getElementById('order_chambre').value;
                 }
+                const payment = document.getElementById('order_payment').value;
+                const fullAddress = `${pavillon}${detail} [Paiement: ${payment}]`;
+
+                // Fetch buyer profile metadata
+                const { data: profile } = await supabase.from('profiles').select('prenom, nom, telephone').eq('id', user.id).single();
+                const buyerName = profile ? `${profile.prenom} ${profile.nom}` : '';
+                const buyerPhone = profile ? profile.telephone : '';
 
                 // Créer une commande par article dans le panier
                 const ordersToInsert = cart.map(item => ({
                     buyer_id: user.id,
+                    buyer_name: buyerName,
+                    buyer_phone: buyerPhone,
                     seller_id: item.seller_id,
                     product_id: item.id,
                     price: item.price * item.quantity,
@@ -2166,15 +2179,32 @@ function showBrowserNotification(title, body) {
 function playNotificationSound() {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime); // Note La (A5)
-        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15); // Bip très court
+        
+        // Premier bip (A5)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(880, ctx.currentTime); // A5
+        gain1.gain.setValueAtTime(0, ctx.currentTime);
+        gain1.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start();
+        osc1.stop(ctx.currentTime + 0.3);
+
+        // Deuxième bip plus aigu (C6) après 150ms
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.15); // C6
+        gain2.gain.setValueAtTime(0, ctx.currentTime + 0.15);
+        gain2.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.2);
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start();
+        osc2.stop(ctx.currentTime + 0.45);
     } catch (e) {
         console.log("Audio not supported or blocked", e);
     }

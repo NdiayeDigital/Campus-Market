@@ -1586,20 +1586,23 @@
                 </div>
                 <div style="display: flex; gap: 16px;">
                     <div class="form-group" style="flex: 1;">
-                        <label for="order_pavillon">Pavillon</label>
-                        <select id="order_pavillon" class="form-control" required>
+                        <label for="order_pavillon">Lieu de livraison</label>
+                        <select id="order_pavillon" class="form-control" required onchange="handleLocationChange()">
                             <option value="" disabled selected>Choisir...</option>
                             <option value="Pavillon A">Pavillon A</option>
                             <option value="Pavillon B">Pavillon B</option>
-                            <option value="Pavillon C">Pavillon C</option>
-                            <option value="Pavillon D">Pavillon D</option>
-                            <option value="Village">Village Univ.</option>
-                            <option value="Autre">Autre</option>
+                            <option value="Jardin social">Jardin social</option>
+                            <option value="Bibliothèque universitaire">Bibliothèque universitaire</option>
+                            <option value="Salle de cours">Salle de cours</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="order_chambre">Chambre</label>
+                    <div class="form-group" style="flex: 1;" id="order-detail-container">
+                        <label for="order_chambre" id="order-detail-label">Chambre</label>
                         <input type="text" id="order_chambre" class="form-control" required placeholder="Ex: 15">
+                        <select id="order_etage" class="form-control" style="display: none;">
+                            <option value="1er étage">1er étage</option>
+                            <option value="2e étage">2e étage</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-group">
