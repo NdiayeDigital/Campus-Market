@@ -1,4 +1,5 @@
-﻿// SUPERADMIN LOGIC
+// SUPERADMIN LOGIC
+const { supabase, escapeHTML } = window;
 
         // Check local login securely
         async function checkSuperAdminSession() {
@@ -764,9 +765,53 @@ function showBrowserNotification(title, body) {
     }
 }
 
+let audioEnabled = false;
+let audioCtx: AudioContext | null = null;
+
+(window as any).enableAudioAlerts = async function() {
+    const btn = document.getElementById('btn-audio-enable');
+    const icon = document.getElementById('audio-enable-icon');
+    const text = document.getElementById('audio-enable-text');
+    if (!btn || !icon || !text) return;
+
+    if (!audioEnabled) {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            audioEnabled = true;
+            
+            // Jouer un son de test pour confirmer
+            playNotificationSound();
+
+            // Mettre à jour l'interface
+            icon.className = 'fa-solid fa-volume-high';
+            text.innerText = 'Alertes actives';
+            btn.style.background = '#10B981'; // Vert
+            if (window.showToast) window.showToast("Alertes sonores activées ! 🔊");
+        } catch (e) {
+            console.error("Failed to enable AudioContext:", e);
+            alert("Erreur d'activation audio. Veuillez interagir avec la page.");
+        }
+    } else {
+        audioEnabled = false;
+        icon.className = 'fa-solid fa-volume-xmark';
+        text.innerText = 'Alertes muettes';
+        btn.style.background = 'rgba(255,255,255,0.2)'; // Gris transparent
+        if (window.showToast) window.showToast("Alertes sonores désactivées. 🔇");
+    }
+};
+
 function playNotificationSound() {
+    if (!audioEnabled || !audioCtx) return;
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = audioCtx;
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
         
         // Premier bip (A5)
         const osc1 = ctx.createOscillator();

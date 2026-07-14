@@ -1,5 +1,6 @@
-﻿// SUPABASE AUTHENTICATION & STATE MANAGEMENT
+// SUPABASE AUTHENTICATION & STATE MANAGEMENT
 // ==========================================
+const { supabase, escapeHTML } = window;
 
 async function checkAuthState() {
     if (!window.supabase) return null;

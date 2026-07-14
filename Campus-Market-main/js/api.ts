@@ -1,5 +1,6 @@
-﻿// --- SUPABASE INTEGRATION (PROFESSIONAL BACKEND) ---
-let globalProducts = [];
+// --- SUPABASE INTEGRATION (PROFESSIONAL BACKEND) ---
+const { supabase, escapeHTML } = window;
+window.globalProducts = [];
 
 window.fetchTopShops = async function() {
     const container = document.getElementById('top-shops-container');
@@ -29,13 +30,13 @@ window.fetchTopShops = async function() {
         container.innerHTML = topSellers.map(s => {
             let initiales = ((s.prenom?.[0] || '') + (s.nom?.[0] || '')).toUpperCase() || 'V';
             return `
-                <div style="min-width: 140px; scroll-snap-align: start; background: white; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--color-border); cursor: pointer;" onclick="document.getElementById('global-search').value = '${escapeHTML(s.prenom)}'; document.getElementById('global-search').dispatchEvent(new Event('input'));">
-                    <div style="width: 64px; height: 64px; background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 0 auto 12px;">
+                <div class="top-shop-card" onclick="document.getElementById('global-search').value = '${escapeHTML(s.prenom)}'; document.getElementById('global-search').dispatchEvent(new Event('input'));">
+                    <div class="top-shop-avatar">
                         ${initiales}
                     </div>
-                    <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-text-main);">${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}</h4>
-                    <div style="color: #F59E0B; font-size: 0.8rem; font-weight: bold;">
-                        <i class="fa-solid fa-star"></i> ${s.avgRating.toFixed(1)} <span style="color: #94A3B8; font-weight: normal;">(${s.reviewCount})</span>
+                    <h4 class="top-shop-name">${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}</h4>
+                    <div class="top-shop-rating">
+                        <i class="fa-solid fa-star"></i> ${s.avgRating.toFixed(1)} <span class="top-shop-review-count">(${s.reviewCount})</span>
                     </div>
                 </div>
             `;
@@ -46,14 +47,61 @@ window.fetchTopShops = async function() {
     }
 }
 
+// --- INDEXEDDB CACHING FOR OFFLINE ---
+function initIndexedDB(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('CampusMarketDB', 1);
+        request.onupgradeneeded = (e: any) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('products')) {
+                db.createObjectStore('products', { keyPath: 'id' });
+            }
+        };
+        request.onsuccess = (e: any) => resolve(e.target.result);
+        request.onerror = (e: any) => reject(e.target.error);
+    });
+}
+
+async function saveProductsToIndexedDB(products: any[]) {
+    try {
+        const db = await initIndexedDB();
+        const tx = db.transaction('products', 'readwrite');
+        const store = tx.objectStore('products');
+        products.forEach(p => {
+            if (p.id) store.put(p);
+        });
+        return new Promise<void>((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        console.error("Failed to save products to IndexedDB:", e);
+    }
+}
+
+async function loadProductsFromIndexedDB(): Promise<any[]> {
+    try {
+        const db = await initIndexedDB();
+        const tx = db.transaction('products', 'readonly');
+        const store = tx.objectStore('products');
+        const request = store.getAll();
+        return new Promise<any[]>((resolve, reject) => {
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = () => reject(request.error);
+        });
+    } catch (e) {
+        console.error("Failed to load products from IndexedDB:", e);
+        return [];
+    }
+}
+
 // Fonction professionnelle pour récupérer les produits depuis Supabase
-let currentProductPage = 0;
+window.currentProductPage = 0;
 const PRODUCTS_PER_PAGE = 20;
 
 async function fetchProductsFromDB(page = 0) {
     if (!supabase) {
-        // Fallback temporaire pour la maquette si Supabase n'est pas encore lié
-        return []; 
+        return loadProductsFromIndexedDB(); 
     }
     
     try {
@@ -83,12 +131,22 @@ async function fetchProductsFromDB(page = 0) {
                     color: colors[Math.floor(Math.random() * colors.length)]
                 });
             }
+            await saveProductsToIndexedDB(mockData);
             return mockData;
         }
+        
+        // Cache success data
+        await saveProductsToIndexedDB(data);
         return data;
     } catch (error) {
-        console.error("Erreur DB:", error.message);
-        // Si la connexion échoue ou si la table n'existe pas, on charge les mocks pour ne pas bloquer l'interface
+        console.warn("Erreur Supabase, tentative de chargement hors-ligne depuis IndexedDB:", error.message);
+        
+        const cachedProducts = await loadProductsFromIndexedDB();
+        if (cachedProducts && cachedProducts.length > 0) {
+            return cachedProducts;
+        }
+        
+        // Fallback ultime en cas de cache vide
         return [
             { id: 'm1', title: 'Ordinateur Portable HP', price: 150000, category: 'tech', image_url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=200&fit=crop' },
             { id: 'm2', title: 'Clé USB 64Go', price: 5000, category: 'tech', image_url: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=300&h=200&fit=crop' },
@@ -116,43 +174,43 @@ function renderProducts(products) {
 
     products.forEach(p => {
         const oldPriceVal = p.old_price ? p.old_price : p.oldPrice; // Handle both DB and mock cases
-        const hasOldPrice = oldPriceVal ? `<span style="font-size: 0.75rem; color: #94A3B8; text-decoration: line-through;">${oldPriceVal} FCFA</span>` : '';
+        const hasOldPrice = oldPriceVal ? `<span class="product-card-old-price">${oldPriceVal} FCFA</span>` : '';
         
         const isOpen = p.seller ? p.seller.is_open !== false : true;
         const isOutOfStock = p.stock === 0;
         
         let buttonHtml = '';
         if (!isOpen) {
-            buttonHtml = `<div style="text-align: center; color: #EF4444; font-size: 0.85rem; font-weight: bold; padding: 8px; background: #FEE2E2; border-radius: 8px;">Boutique fermée</div>`;
+            buttonHtml = `<div class="badge-closed">Boutique fermée</div>`;
         } else if (isOutOfStock) {
-            buttonHtml = `<div style="text-align: center; color: #EF4444; font-size: 0.85rem; font-weight: bold; padding: 8px; background: #FEE2E2; border-radius: 8px;">Rupture de stock</div>`;
+            buttonHtml = `<div class="badge-outofstock">Rupture de stock</div>`;
         } else {
-            buttonHtml = `<button class="btn-add" onclick="addToCart('${p.id}')" style="width: 100%; border-radius: 8px; background: var(--color-bg); color: var(--color-text-main); border: 1px solid var(--color-border); padding: 8px; font-size: 0.85rem; height: auto; cursor:pointer; font-weight: 600;">
+            buttonHtml = `<button class="btn-add btn-add-to-cart" onclick="addToCart('${p.id}')">
                 <i class="fa-solid fa-plus"></i> Ajouter
             </button>`;
         }
         
-        const stockBadge = (p.stock !== undefined && p.stock !== -1) ? `<div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; z-index: 10;">Stock: ${p.stock}</div>` : '';
+        const stockBadge = (p.stock !== undefined && p.stock !== -1) ? `<div class="badge-stock">Stock: ${p.stock}</div>` : '';
 
         let imageContent = '';
         if (p.image_url) {
             imageContent = `<img src="${p.image_url}" alt="${p.title}" style="width: 100%; height: 100%; object-fit: cover;">`;
         } else if (p.icon) {
-            imageContent = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: ${p.color || 'var(--color-primary)'}; color: white; font-size: 3rem;"><i class="fa-solid ${p.icon}"></i></div>`;
+            imageContent = `<div class="product-card-icon-container" style="background-color: ${p.color || 'var(--color-primary)'};"><i class="fa-solid ${p.icon}"></i></div>`;
         } else {
             imageContent = `<img src="https://via.placeholder.com/300x200?text=Produit" alt="${p.title}" style="width: 100%; height: 100%; object-fit: cover;">`;
         }
 
         const card = `
-            <article class="product-card" style="border-radius: 16px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 12px; background: white; position: relative; ${(!isOpen || isOutOfStock) ? 'opacity: 0.6;' : ''}">
+            <article class="product-card product-card-custom ${(!isOpen || isOutOfStock) ? 'disabled' : ''}">
                 ${stockBadge}
-                <div style="height: 120px; background: #F8FAFC; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 12px;">
+                <div class="product-card-img-container">
                     ${imageContent}
                 </div>
                 <div class="product-info">
-                    <h4 class="product-title" style="font-size: 0.85rem; margin-bottom: 4px;">${p.title}</h4>
-                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
-                        <span class="product-price" style="font-size: 0.95rem; font-weight: 700; color: var(--color-text-main);">${p.price} FCFA</span>
+                    <h4 class="product-card-title">${p.title}</h4>
+                    <div class="product-card-price-row">
+                        <span class="product-card-price">${p.price} FCFA</span>
                         ${hasOldPrice}
                     </div>
                     ${buttonHtml}

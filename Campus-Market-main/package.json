@@ -1,0 +1,15 @@
+{
+  "name": "campus-market",
+  "version": "1.0.0",
+  "description": "La Marketplace des Étudiants de l'UIDT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  }
+}

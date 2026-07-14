@@ -1,4 +1,4 @@
-﻿
+
 // SECURITY: Helper function to prevent XSS (Cross-Site Scripting)
 window.escapeHTML = function(str) {
     if (str === null || str === undefined) return '';
@@ -214,12 +214,31 @@ window.notifyBuyerWhatsApp = function(phone, orderId, status) {
     const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
 };
-// SPA Navigation Logic
+// SPA Navigation Logic (Hash Routing)
 window.navigateTo = function(viewId) {
-    document.querySelectorAll('.spa-view').forEach(view => { view.style.display = 'none'; view.classList.remove('active'); });
+    // 1. Mettre à jour l'ancre (hash) si elle diffère pour supporter l'historique et le rechargement
+    if (window.location.hash !== '#' + viewId) {
+        window.location.hash = viewId;
+    }
+
+    // 2. Manipulation DOM classique d'affichage
+    document.querySelectorAll('.spa-view').forEach(view => { 
+        view.style.display = 'none'; 
+        view.classList.remove('active'); 
+    });
+    
     const targetView = document.getElementById('view-' + viewId);
-    if (targetView) { targetView.style.display = 'block'; targetView.classList.add('active'); }
-    document.querySelectorAll('.bottom-nav-item').forEach(btn => { btn.classList.remove('active'); if (btn.dataset.target === viewId) { btn.classList.add('active'); } });
+    if (targetView) { 
+        targetView.style.display = 'block'; 
+        targetView.classList.add('active'); 
+    }
+    
+    document.querySelectorAll('.bottom-nav-item').forEach(btn => { 
+        btn.classList.remove('active'); 
+        if (btn.getAttribute('data-target') === viewId) { 
+            btn.classList.add('active'); 
+        } 
+    });
     
     const bottomNav = document.getElementById('bottom-nav');
     if(bottomNav) {
@@ -230,7 +249,28 @@ window.navigateTo = function(viewId) {
         }
     }
     window.scrollTo(0, 0);
-}
+};
+
+// Écouter le changement d'ancre dans l'URL pour la navigation historique (précédent/suivant)
+window.addEventListener('hashchange', () => {
+    const route = window.location.hash.substring(1) || 'accueil';
+    const targetView = document.getElementById('view-' + route);
+    if (targetView && !targetView.classList.contains('active')) {
+        window.navigateTo(route);
+    }
+});
+
+// Restaurer la bonne vue au rechargement de la page
+window.addEventListener('DOMContentLoaded', () => {
+    const route = window.location.hash.substring(1) || 'accueil';
+    const targetView = document.getElementById('view-' + route);
+    if (targetView) {
+        // Laisser les wrappers asynchrones (auth, cart) se charger et configurer le statut
+        setTimeout(() => {
+            window.navigateTo(route);
+        }, 100);
+    }
+});
 function toggleSearch() {
     const searchContainer = document.getElementById('global-search-container');
     if (searchContainer.style.display === 'none') {

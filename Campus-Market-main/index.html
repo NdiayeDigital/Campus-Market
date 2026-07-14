@@ -1668,7 +1668,7 @@
                             <span style="font-size: 0.8rem; opacity: 0.8;" id="admin-seller-name">Chargement...</span>
                         </div>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                         <label
                             style="display: inline-flex; align-items: center; cursor: pointer; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 20px;">
                             <input type="checkbox" id="seller-status-toggle" style="display: none;"
@@ -1682,6 +1682,10 @@
                             <span id="seller-status-text"
                                 style="margin-left: 8px; font-size: 0.8rem; font-weight: bold;">Ouvert</span>
                         </label>
+                        <button id="btn-audio-enable" onclick="enableAudioAlerts()"
+                            style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: rgba(255,255,255,0.2); color: white; border: none; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; transition: background 0.2s;">
+                            <i class="fa-solid fa-volume-xmark" id="audio-enable-icon"></i> <span id="audio-enable-text">Alertes muettes</span>
+                        </button>
                     </div>
                 </div>
 
@@ -1999,8 +2003,7 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
-    <script src="js/backend.js"></script>
-    <script src="js/app.js"></script>
+    <script type="module" src="js/main.ts"></script>
 </body>
 
 </html>

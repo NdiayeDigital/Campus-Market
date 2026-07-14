@@ -1,7 +1,6 @@
-﻿// PANIER & COMMANDES (CART & ORDERS LOGIC)
-// ==========================================
+const { supabase, escapeHTML, globalProducts } = window;
 
-let cart = JSON.parse(localStorage.getItem('campus_cart')) || [];
+window.cart = JSON.parse(localStorage.getItem('campus_cart')) || [];
 
 function saveCart() {
     localStorage.setItem('campus_cart', JSON.stringify(cart));
@@ -42,8 +41,7 @@ window.renderCart = function() {
     const summaryContainer = document.querySelector('.cart-summary');
     if (!cartContainer || !summaryContainer) return;
     
-    if (cart.length === 0) {
-        cartContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #94A3B8;"><i class="fa-solid fa-cart-shopping" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i><p>Panier vide.</p><button onclick="navigateTo(\'accueil\')" class="btn btn-primary" style="margin-top: 16px;">Découvrir les offres</button></div>';
+        cartContainer.innerHTML = '<div class="cart-empty"><i class="fa-solid fa-cart-shopping cart-empty-icon"></i><p>Panier vide.</p><button onclick="navigateTo(\'accueil\')" class="btn btn-primary cart-empty-btn">Découvrir les offres</button></div>';
         summaryContainer.style.display = 'none';
         
         // Hide checkout button if exists
@@ -61,17 +59,17 @@ window.renderCart = function() {
         subtotal += item.price * item.quantity;
         html += `
             <div class="cart-item">
-                <div class="cart-item-img" style="background: #F8FAFC; color: ${item.color || '#1D4ED8'}; display:flex; align-items:center; justify-content:center; font-size: 24px;">
+                <div class="cart-item-img cart-item-avatar" style="color: ${item.color || '#1D4ED8'};">
                     <i class="fa-solid ${escapeHTML(item.icon || 'fa-box')}"></i>
                 </div>
                 <div class="cart-item-info">
                     <div class="cart-item-name">${escapeHTML(item.title)}</div>
                     <div class="cart-item-price">${item.price} FCFA</div>
                 </div>
-                <div class="cart-qty" style="display: flex; align-items: center; gap: 12px; background: #F8FAFC; padding: 4px 12px; border-radius: 99px;">
-                    <button onclick="updateCartQty('${item.id}', -1)" style="border:none; background:transparent; font-size:16px; cursor:pointer; color: #64748B;"><i class="fa-solid fa-minus"></i></button>
-                    <span style="font-weight: 700; font-size: 0.95rem;">${item.quantity}</span>
-                    <button onclick="updateCartQty('${item.id}', 1)" style="border:none; background:transparent; font-size:16px; cursor:pointer; color: #10B981;"><i class="fa-solid fa-plus"></i></button>
+                <div class="cart-qty cart-qty-control">
+                    <button onclick="updateCartQty('${item.id}', -1)" class="cart-qty-btn-minus"><i class="fa-solid fa-minus"></i></button>
+                    <span class="cart-qty-value">${item.quantity}</span>
+                    <button onclick="updateCartQty('${item.id}', 1)" class="cart-qty-btn-plus"><i class="fa-solid fa-plus"></i></button>
                 </div>
             </div>
         `;
@@ -88,7 +86,7 @@ window.renderCart = function() {
         </div>
         <div class="cart-summary-row">
             <span>Livraison (Campus)</span>
-            <span style="color: #10B981; font-weight: 600;">Gratuite</span>
+            <span class="cart-summary-free-shipping">Gratuite</span>
         </div>
         <div class="cart-summary-row total">
             <span>Total</span>
@@ -101,8 +99,7 @@ window.renderCart = function() {
     if(!btnCheckout) {
         btnCheckout = document.createElement('button');
         btnCheckout.id = 'btn-checkout-panier';
-        btnCheckout.className = 'btn btn-primary';
-        btnCheckout.style = "width: calc(100% - 40px); margin: 0 20px 20px; padding: 16px; border-radius: 12px; font-size: 1.05rem; font-weight: 700; position: sticky; bottom: 80px; z-index: 10;";
+        btnCheckout.className = 'btn btn-primary btn-checkout-panier-custom';
         btnCheckout.innerHTML = 'Commander maintenant';
         btnCheckout.onclick = openCheckoutModal;
         document.getElementById('view-panier').appendChild(btnCheckout);
@@ -122,7 +119,7 @@ window.updateCartQty = function(id, delta) {
     
     item.quantity = newQty;
     if (item.quantity <= 0) {
-        cart = cart.filter(p => p.id !== id);
+        window.cart = window.cart.filter(p => p.id !== id);
     }
     saveCart();
 };
@@ -208,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Succès
-                cart = []; // Vider le panier
+                window.cart = []; // Vider le panier
                 saveCart();
                 document.getElementById('order-modal').style.display = 'none';
                 
