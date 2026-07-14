@@ -65,6 +65,7 @@ USING (
 -- ------------------------------------------------------------------------------------
 -- Suppression de l'ancienne politique qui permettait à tout utilisateur authentifié d'uploader
 DROP POLICY IF EXISTS "Uploads authentifiés" ON storage.objects;
+DROP POLICY IF EXISTS "Uploads réservés aux vendeurs" ON storage.objects;
 
 -- Nouvelle politique : Seuls les vendeurs et superadmins peuvent uploader des images
 CREATE POLICY "Uploads réservés aux vendeurs" 
