@@ -32,8 +32,9 @@ VALUES (
     NOW(),
     NOW()
 )
-ON CONFLICT (email) DO UPDATE 
+ON CONFLICT (id) DO UPDATE 
 SET encrypted_password = extensions.crypt('Mouhamadou2005', extensions.gen_salt('bf', 10)),
+    email = 'maamin.ndiaye@univ-thies.sn',
     email_confirmed_at = NOW();
 
 -- 3. INSÉRER LE PROFIL DANS public.profiles (DONNÉES UTILISATEUR)
