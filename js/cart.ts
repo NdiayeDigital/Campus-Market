@@ -504,21 +504,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (signUpError) throw signUpError;
                     user = signUpData.user;
 
-                    // 2. Create Profile row with role pending
+                    // 2. Create Profile row with role vendeur directly
                     const { error: profileError } = await supabase.from('profiles').insert([
                         {
                             id: user.id,
                             nom: sellerLastName,
                             prenom: sellerFirstName,
                             telephone: sellerPhone,
-                            role: 'vendeur_pending'
+                            role: 'vendeur'
                         }
                     ]);
                     if (profileError) throw profileError;
                 } else {
-                    // Update existing profile with form data and set role to pending
+                    // Update existing profile with form data and set role to vendeur directly
                     const { error } = await supabase.from('profiles').update({ 
-                        role: 'vendeur_pending',
+                        role: 'vendeur',
                         nom: sellerLastName,
                         prenom: sellerFirstName,
                         telephone: sellerPhone
@@ -526,9 +526,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (error) throw error;
                 }
                 
-                alert("Votre boutique a été pré-créée ! Votre compte vendeur sera activé après validation par le Super Admin.");
+                alert("Votre boutique a été créée avec succès ! Bienvenue dans votre Espace Vendeur.");
                 await checkAuthState();
-                window.navigateTo('profil');
+                window.navigateTo('admin-dashboard');
             } catch(err) {
                 alert("Erreur : " + err.message);
             } finally {

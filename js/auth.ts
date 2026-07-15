@@ -283,8 +283,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
                 
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
+                
                 await checkAuthState();
-                window.navigateTo('accueil');
+                
+                if (profile && profile.role === 'vendeur') {
+                    window.navigateTo('admin-dashboard');
+                } else {
+                    window.navigateTo('accueil');
+                }
                 
                 // Fetch user orders if any
             } catch (error) {
