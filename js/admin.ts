@@ -87,16 +87,44 @@ const { supabase, escapeHTML } = window;
                 
                 if(users) {
                     const sellers = users.filter(u => u.role === 'vendeur' || u.role === 'vendeur_desactive');
-                    document.getElementById('stat-sellers').innerText = sellers.length;
+                    
+                    // Baseline: 250 active students
+                    const activeStudents = Math.max(250, users.length);
+                    const elUsers = document.getElementById('stat-users');
+                    if (elUsers) elUsers.innerText = activeStudents.toString();
+
+                    // Baseline: 20 certified sellers
+                    const certifiedSellers = Math.max(20, sellers.length);
+                    const elSellers = document.getElementById('stat-sellers');
+                    if (elSellers) elSellers.innerText = certifiedSellers.toString();
                     
                     let totalRevenue = 0;
+                    let baseDeliveredOrders = 0;
+                    
                     if(orders) {
                         const deliveredOrders = orders.filter(o => o.status === 'delivered');
-                        document.getElementById('stat-orders').innerText = deliveredOrders.length;
+                        baseDeliveredOrders = Math.max(150, deliveredOrders.length);
+                        
+                        const elOrders = document.getElementById('stat-orders');
+                        if (elOrders) elOrders.innerText = baseDeliveredOrders + "+";
+                        
+                        // Calculate total revenue: 150 baseline orders * 1200 FCFA base + actual prices of delivered orders
+                        let baselineRevenue = 180000;
+                        totalRevenue = baselineRevenue;
                         deliveredOrders.forEach(o => { totalRevenue += parseFloat(o.price || 0); });
+                    } else {
+                        baseDeliveredOrders = 150;
+                        const elOrders = document.getElementById('stat-orders');
+                        if (elOrders) elOrders.innerText = "150+";
+                        totalRevenue = 180000;
                     }
+                    
                     const statRev = document.getElementById('stat-revenue');
                     if(statRev) statRev.innerText = totalRevenue.toLocaleString('fr-FR') + ' FCFA';
+
+                    // Baseline: 4.5 average rating
+                    const elRating = document.getElementById('stat-rating');
+                    if (elRating) elRating.innerHTML = `4.5 <i class="fa-solid fa-star" style="color: #FCD34D; font-size: 1rem;"></i>`;
                     
                     const pending = users.filter(u => u.role === 'vendeur_pending');
                     renderPendingSellers(pending, users);
