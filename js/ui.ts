@@ -233,6 +233,7 @@ window.navigateTo = function(viewId) {
     
     // Check if it's a seller subview
     if (viewId.startsWith('admin-')) {
+        document.body.classList.add('seller-pro-theme');
         const targetView = document.getElementById('view-admin');
         if (targetView) {
             targetView.style.display = 'block';
@@ -251,6 +252,7 @@ window.navigateTo = function(viewId) {
             targetSubview.style.display = 'block';
         }
     } else {
+        document.body.classList.remove('seller-pro-theme');
         const targetView = document.getElementById('view-' + viewId);
         if (targetView) { 
             targetView.style.display = 'block'; 
@@ -258,6 +260,14 @@ window.navigateTo = function(viewId) {
         }
     }
     
+    // Update active state on seller tabs
+    document.querySelectorAll('.seller-nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.getAttribute('data-target') === viewId) {
+            tab.classList.add('active');
+        }
+    });
+
     document.querySelectorAll('.bottom-nav-item').forEach(btn => { 
         btn.classList.remove('active'); 
         if (btn.getAttribute('data-target') === viewId) { 

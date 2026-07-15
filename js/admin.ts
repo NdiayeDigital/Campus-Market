@@ -378,8 +378,8 @@ window.loadSellerDashboard = async function() {
         .order('created_at', { ascending: false });
 
     if(!error && orders) {
-        const pendingContainer = document.getElementById('seller-orders-pending');
-        const pending = orders.filter(o => o.status === 'pending' || o.status === 'processing' || o.status === 'shipped');
+        // Save to global cache
+        (window as any).lastFetchedOrders = orders;
         
         let totalRevenue = 0;
         const delivered = orders.filter(o => o.status === 'delivered');
@@ -393,15 +393,26 @@ window.loadSellerDashboard = async function() {
         const avgEl = document.getElementById('stat-avg-order');
         if (avgEl) avgEl.innerText = avgOrder.toLocaleString('fr-FR') + " F";
 
-        const pendingOrdersEl = document.getElementById('stat-pending-orders');
-        if (pendingOrdersEl) pendingOrdersEl.innerText = pending.length.toString();
-
         const nonCancelled = orders.filter(o => o.status !== 'cancelled').length;
         const conversionRate = nonCancelled > 0 ? Math.round((delivered.length / nonCancelled) * 100) : 0;
         const convEl = document.getElementById('stat-conversion');
         if (convEl) convEl.innerText = conversionRate + "%";
 
-        // --- NOUVEAU RENDU DU DASHBOARD (Power BI Style) ---
+        // Power BI style target variance
+        const targetRevenue = 100000;
+        const variance = totalRevenue - targetRevenue;
+        const varEl = document.getElementById('stat-variance');
+        if (varEl) {
+            if (variance >= 0) {
+                varEl.innerText = "+" + variance.toLocaleString('fr-FR') + " F";
+                varEl.style.color = "#10B981";
+            } else {
+                varEl.innerText = variance.toLocaleString('fr-FR') + " F";
+                varEl.style.color = "#EF4444";
+            }
+        }
+
+        // --- RENDU DU DASHBOARD VENDEUR ---
 
         // 1. Panel 1 : Ventes par Catégorie (Horizontal bar chart)
         const catRevenue: { [key: string]: number } = { food: 0, tech: 0, fashion: 0, services: 0 };
@@ -423,12 +434,12 @@ window.loadSellerDashboard = async function() {
                 const color = catColors[cat] || '#8B5CF6';
                 const label = catLabels[cat] || cat;
                 return `
-                    <div style="font-size: 0.75rem; text-align: left;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; color: #475569;">
+                    <div style="font-size: 0.75rem; text-align: left; margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; color: #94A3B8;">
                             <span>${label}</span>
-                            <span style="font-weight: 700; color: #0F172A;">${rev.toLocaleString('fr-FR')} F</span>
+                            <span style="font-weight: 700; color: #F8FAFC;">${rev.toLocaleString('fr-FR')} F</span>
                         </div>
-                        <div style="width: 100%; height: 6px; background: #F1F5F9; border-radius: 99px; overflow: hidden;">
+                        <div style="width: 100%; height: 6px; background: #0F172A; border-radius: 99px; overflow: hidden; border: 1px solid #334155;">
                             <div style="width: ${pct}%; height: 100%; background: ${color}; border-radius: 99px;"></div>
                         </div>
                     </div>
@@ -439,11 +450,12 @@ window.loadSellerDashboard = async function() {
         // 2. Panel 2 : Répartition Donut
         const totalCount = orders.length;
         const deliveredCount = delivered.length;
-        const pendingCount = pending.length;
+        const pendingCount = orders.filter(o => o.status === 'pending').length;
+        const processingCount = orders.filter(o => o.status === 'processing' || o.status === 'shipped').length;
         const cancelledCount = orders.filter(o => o.status === 'cancelled').length;
 
         const delPct = totalCount > 0 ? Math.round((deliveredCount / totalCount) * 100) : 0;
-        const penPct = totalCount > 0 ? Math.round((pendingCount / totalCount) * 100) : 0;
+        const penPct = totalCount > 0 ? Math.round(((pendingCount + processingCount) / totalCount) * 100) : 0;
         const canPct = totalCount > 0 ? Math.round((cancelledCount / totalCount) * 100) : 0;
 
         const totalCountEl = document.getElementById('seller-total-orders-count');
@@ -466,16 +478,14 @@ window.loadSellerDashboard = async function() {
         }
 
         // 3. Panel 3 : Objectifs & Performances (Produits, notes et objectifs financiers)
-        // Récupérer le stock des produits
         const { data: products } = await supabase.from('products').select('id, stock').eq('seller_id', user.id);
         let stockPct = 100;
         let inStockCount = 0;
         if (products && products.length > 0) {
-            inStockCount = products.filter(p => p.stock > 0).length;
+            inStockCount = products.filter(p => p.stock > 0 || p.stock === -1).length;
             stockPct = Math.round((inStockCount / products.length) * 100);
         }
 
-        // Récupérer la note moyenne
         const { data: reviews } = await supabase.from('reviews').select('rating').eq('seller_id', user.id);
         let avgRating = 5.0;
         let ratingPct = 100;
@@ -490,45 +500,45 @@ window.loadSellerDashboard = async function() {
             const targetRev = 100000;
             const revGoalPct = Math.min(Math.round((totalRevenue / targetRev) * 100), 100);
             goalsContainer.innerHTML = `
-                <div style="font-size: 0.75rem; text-align: left;">
-                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #475569; margin-bottom: 3px;">
-                        <span>Revenu (Cible: 100k F)</span>
-                        <span style="color: #0F172A; font-weight: 700;">${revGoalPct}%</span>
+                <div style="font-size: 0.75rem; text-align: left; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #94A3B8; margin-bottom: 3px;">
+                        <span>Revenu (Objectif: 100k F)</span>
+                        <span style="color: #F8FAFC; font-weight: 700;">${revGoalPct}%</span>
                     </div>
-                    <div style="width: 100%; height: 5px; background: #F1F5F9; border-radius: 99px; overflow: hidden; margin-bottom: 2px;">
+                    <div style="width: 100%; height: 5px; background: #0F172A; border-radius: 99px; overflow: hidden; margin-bottom: 2px; border: 1px solid #334155;">
                         <div style="width: ${revGoalPct}%; height: 100%; background: #F59E0B; border-radius: 99px;"></div>
                     </div>
                     <div style="font-size: 0.6rem; color: #94A3B8;">${totalRevenue.toLocaleString('fr-FR')} F / ${targetRev.toLocaleString('fr-FR')} F</div>
                 </div>
 
-                <div style="font-size: 0.75rem; text-align: left;">
-                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #475569; margin-bottom: 3px;">
-                        <span>Livraison (Cible: 90%)</span>
-                        <span style="color: #0F172A; font-weight: 700;">${conversionRate}%</span>
+                <div style="font-size: 0.75rem; text-align: left; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #94A3B8; margin-bottom: 3px;">
+                        <span>Livraison (Objectif: 90%)</span>
+                        <span style="color: #F8FAFC; font-weight: 700;">${conversionRate}%</span>
                     </div>
-                    <div style="width: 100%; height: 5px; background: #F1F5F9; border-radius: 99px; overflow: hidden; margin-bottom: 2px;">
+                    <div style="width: 100%; height: 5px; background: #0F172A; border-radius: 99px; overflow: hidden; margin-bottom: 2px; border: 1px solid #334155;">
                         <div style="width: ${conversionRate}%; height: 100%; background: #10B981; border-radius: 99px;"></div>
                     </div>
                     <div style="font-size: 0.6rem; color: #94A3B8;">${deliveredCount} livrées / ${nonCancelled} actives</div>
                 </div>
 
-                <div style="font-size: 0.75rem; text-align: left;">
-                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #475569; margin-bottom: 3px;">
+                <div style="font-size: 0.75rem; text-align: left; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #94A3B8; margin-bottom: 3px;">
                         <span>Disponibilité du Stock</span>
-                        <span style="color: #0F172A; font-weight: 700;">${stockPct}%</span>
+                        <span style="color: #F8FAFC; font-weight: 700;">${stockPct}%</span>
                     </div>
-                    <div style="width: 100%; height: 5px; background: #F1F5F9; border-radius: 99px; overflow: hidden; margin-bottom: 2px;">
+                    <div style="width: 100%; height: 5px; background: #0F172A; border-radius: 99px; overflow: hidden; margin-bottom: 2px; border: 1px solid #334155;">
                         <div style="width: ${stockPct}%; height: 100%; background: #3B82F6; border-radius: 99px;"></div>
                     </div>
                     <div style="font-size: 0.6rem; color: #94A3B8;">${inStockCount} en stock / ${products ? products.length : 0} articles</div>
                 </div>
 
                 <div style="font-size: 0.75rem; text-align: left;">
-                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #475569; margin-bottom: 3px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #94A3B8; margin-bottom: 3px;">
                         <span>Note Moyenne (${avgRating}/5 ★)</span>
-                        <span style="color: #0F172A; font-weight: 700;">${ratingPct}%</span>
+                        <span style="color: #F8FAFC; font-weight: 700;">${ratingPct}%</span>
                     </div>
-                    <div style="width: 100%; height: 5px; background: #F1F5F9; border-radius: 99px; overflow: hidden; margin-bottom: 2px;">
+                    <div style="width: 100%; height: 5px; background: #0F172A; border-radius: 99px; overflow: hidden; margin-bottom: 2px; border: 1px solid #334155;">
                         <div style="width: ${ratingPct}%; height: 100%; background: #8B5CF6; border-radius: 99px;"></div>
                     </div>
                     <div style="font-size: 0.6rem; color: #94A3B8;">Basé sur ${reviews ? reviews.length : 0} retours</div>
@@ -536,57 +546,56 @@ window.loadSellerDashboard = async function() {
             `;
         }
 
-        // SVG sales chart
-        renderSellerSalesChart(orders);
+        // Render current tab orders
+        if (window.renderSellerOrdersList) {
+            window.renderSellerOrdersList(orders);
+        }
+    }
 
-        if(pending.length > 0) {
-            pendingContainer.innerHTML = pending.map(o => {
-                const buyerName = o.buyer ? `${o.buyer.prenom} ${o.buyer.nom}` : (o.buyer_name || 'Client Invité');
-                const buyerPhone = o.buyer ? o.buyer.telephone : (o.buyer_phone || '');
-                const cleanPhone = buyerPhone.replace(/[^0-9]/g, '');
-                const whatsappPhone = cleanPhone.startsWith('221') ? cleanPhone : '221' + cleanPhone;
+    // Fetch and render Products
+    const { data: products } = await supabase.from('products').select('*').eq('seller_id', user.id);
+    (window as any).lastFetchedProducts = products;
+    const prodContainer = document.getElementById('seller-products-list');
+    if (prodContainer) {
+        if(products && products.length > 0) {
+            prodContainer.innerHTML = products.map(p => {
+                let stockBadgeHtml = '';
+                if (p.stock === -1 || p.stock === undefined) {
+                    stockBadgeHtml = `<span class="stock-badge-pro in-stock">Illimité</span>`;
+                } else if (p.stock === 0) {
+                    stockBadgeHtml = `<span class="stock-badge-pro out-of-stock">Épuisé</span>`;
+                } else if (p.stock <= 5) {
+                    stockBadgeHtml = `<span class="stock-badge-pro low-stock">Faible (${p.stock})</span>`;
+                } else {
+                    stockBadgeHtml = `<span class="stock-badge-pro in-stock">Disponible (${p.stock})</span>`;
+                }
 
                 return `
-                    <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <span style="font-weight: 700; color: #0f172a;">CMD-${o.id.substring(0,6).toUpperCase()}</span>
-                            <span style="font-size: 0.8rem; color: #64748b;">${new Date(o.created_at).toLocaleDateString('fr-FR')}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #334155; border-radius: 12px; margin-bottom: 10px; background: #1E293B;">
+                        <div>
+                            <strong style="display: block; font-size: 0.9rem; color: #F8FAFC;">${escapeHTML(p.title)}</strong>
+                            <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+                                <span>${p.price.toLocaleString('fr-FR')} F</span>
+                                <span>•</span>
+                                ${stockBadgeHtml}
+                            </div>
                         </div>
-                        <div style="font-size: 0.9rem; margin-bottom: 8px; color: #334155;">
-                            <strong>${escapeHTML(buyerName)}</strong> - ${escapeHTML(o.delivery_address)}<br>
-                            📞 ${escapeHTML(buyerPhone)}
-                            ${buyerPhone ? `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`Bonjour ${buyerName}, je suis le vendeur sur Campus Market concernant votre commande CMD-${o.id.substring(0,6).toUpperCase()}.`)}" target="_blank" style="color: #25D366; text-decoration: none; margin-left: 8px; font-weight: bold;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : ''}
-                        </div>
-                        <div style="font-size: 0.9rem; color: #475569; margin-bottom: 8px;">
-                            ${o.quantity || 1}x ${escapeHTML(o.product?.title || 'Produit inconnu')} (${o.price} F)
-                        </div>
-                        <div style="display: flex; gap: 8px; margin-top: 12px;">
-                            ${o.status === 'pending' ? `<button onclick="updateOrderStatus('${o.id}', 'processing')" style="flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #D97706; color: white;">Préparer</button>` : ''}
-                            ${(o.status === 'pending' || o.status === 'processing') ? `<button onclick="updateOrderStatus('${o.id}', 'shipped')" style="flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #3B82F6; color: white;">Envoyer (En route)</button>` : `<div style="flex: 1; text-align: center; color: #3B82F6; font-size: 0.85rem; font-weight: bold; padding: 8px; background: #DBEAFE; border-radius: 8px;">En attente de réception par l'acheteur</div>`}
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <!-- Stock Controller -->
+                            <div class="quick-stock-control">
+                                <button onclick="updateProductStock('${p.id}', -1)" class="quick-stock-btn">-</button>
+                                <span class="quick-stock-value">${p.stock === -1 ? '∞' : p.stock}</span>
+                                <button onclick="updateProductStock('${p.id}', 1)" class="quick-stock-btn">+</button>
+                            </div>
+                            <!-- Delete button -->
+                            <button onclick="deleteSellerProduct('${p.id}')" style="background: rgba(239,68,68,0.15); color: #EF4444; border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 6px 10px; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                 `;
             }).join('');
         } else {
-            pendingContainer.innerHTML = '<p style="color: #64748B; text-align: center;">Aucune commande en attente.</p>';
+            prodContainer.innerHTML = '<p style="color: #94A3B8; text-align: center; padding: 40px;">Vous n\'avez pas encore de produit.</p>';
         }
-    }
-
-    // Fetch Products
-    const { data: products } = await supabase.from('products').select('*').eq('seller_id', user.id);
-    const prodContainer = document.getElementById('seller-products-list');
-    if(products && products.length > 0) {
-        prodContainer.innerHTML = products.map(p => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px;">
-                <div>
-                    <strong style="display: block; font-size: 0.95rem;">${escapeHTML(p.title)}</strong>
-                    <span style="font-size: 0.8rem; color: #64748b;">${p.price} FCFA - Stock: ${p.stock === -1 || p.stock === undefined ? 'Illimité' : p.stock}</span>
-                </div>
-                <button onclick="deleteSellerProduct('${p.id}')" style="background: transparent; color: #EF4444; border: 1px solid #EF4444; border-radius: 6px; padding: 4px 8px; cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
-            </div>
-        `).join('');
-    } else {
-        prodContainer.innerHTML = '<p style="color: #64748B; text-align: center;">Vous n\'avez pas encore de produit.</p>';
     }
 };
 
@@ -766,6 +775,29 @@ window.deleteSellerProduct = async function(productId) {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Product Image Preview Setup
+    const imgInput = document.getElementById('new_prod_image') as HTMLInputElement;
+    const previewContainer = document.getElementById('new_prod_image_preview_container');
+    const previewImg = document.getElementById('new_prod_image_preview') as HTMLImageElement;
+    
+    if (imgInput && previewContainer && previewImg) {
+        imgInput.addEventListener('change', () => {
+            const file = imgInput.files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (e.target?.result) {
+                        previewImg.src = e.target.result as string;
+                        previewContainer.style.display = 'block';
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                previewContainer.style.display = 'none';
+            }
+        });
+    }
+
     const addProdForm = document.getElementById('add-product-form');
     if(addProdForm) {
         addProdForm.addEventListener('submit', async (e) => {
@@ -868,6 +900,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(window.showToast) showToast('Produit ajouté avec succès !', 'success');
                 else alert('Produit ajouté avec succès !');
                 addProdForm.reset();
+                if ((window as any).clearProductImagePreview) {
+                    (window as any).clearProductImagePreview();
+                }
                 document.getElementById('add-product-form-container').style.display = 'none';
                 document.querySelector('#add-product-form button[type="submit"]').innerHTML = 'Enregistrer';
                 loadSellerDashboard(); // Refresh
@@ -975,7 +1010,7 @@ let audioCtx: AudioContext | null = null;
     const btn = document.getElementById('btn-audio-enable');
     const icon = document.getElementById('audio-enable-icon');
     const text = document.getElementById('audio-enable-text');
-    if (!btn || !icon || !text) return;
+    if (!btn || !icon) return;
 
     if (!audioEnabled) {
         try {
@@ -992,8 +1027,9 @@ let audioCtx: AudioContext | null = null;
 
             // Mettre à jour l'interface
             icon.className = 'fa-solid fa-volume-high';
-            text.innerText = 'Alertes actives';
-            btn.style.background = '#10B981'; // Vert
+            icon.style.color = '#10B981';
+            btn.style.background = 'rgba(16, 185, 129, 0.15)';
+            if (text) text.innerText = 'Alertes actives';
             if (window.showToast) window.showToast("Alertes sonores activées ! 🔊");
         } catch (e) {
             console.error("Failed to enable AudioContext:", e);
@@ -1002,8 +1038,9 @@ let audioCtx: AudioContext | null = null;
     } else {
         audioEnabled = false;
         icon.className = 'fa-solid fa-volume-xmark';
-        text.innerText = 'Alertes muettes';
-        btn.style.background = 'rgba(255,255,255,0.2)'; // Gris transparent
+        icon.style.color = '#EF4444';
+        btn.style.background = 'rgba(255,255,255,0.15)';
+        if (text) text.innerText = 'Alertes muettes';
         if (window.showToast) window.showToast("Alertes sonores désactivées. 🔇");
     }
 };
@@ -1053,3 +1090,179 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 window.loadAdminData = loadAdminData;
+
+// ==========================================
+// SELLER PRO INTERACTION HELPERS
+// ==========================================
+(window as any).currentOrderTab = 'pending';
+(window as any).lastFetchedOrders = null;
+(window as any).lastFetchedProducts = null;
+
+(window as any).switchOrderTab = function(tab: string) {
+    (window as any).currentOrderTab = tab;
+    document.querySelectorAll('.order-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeTabBtn = document.getElementById('tab-orders-' + tab);
+    if (activeTabBtn) activeTabBtn.classList.add('active');
+    
+    // Update subview title
+    const titleEl = document.getElementById('orders-current-title');
+    if (titleEl) {
+        if (tab === 'pending') {
+            titleEl.innerHTML = `<i class="fa-solid fa-bell" style="margin-right: 8px; color: #10B981;"></i> Nouvelles Commandes (À Traiter)`;
+        } else if (tab === 'processing') {
+            titleEl.innerHTML = `<i class="fa-solid fa-clock" style="margin-right: 8px; color: #F59E0B;"></i> Commandes en Cours`;
+        } else {
+            titleEl.innerHTML = `<i class="fa-solid fa-folder-open" style="margin-right: 8px; color: #94A3B8;"></i> Historique des Commandes`;
+        }
+    }
+    
+    if ((window as any).lastFetchedOrders) {
+        (window as any).renderSellerOrdersList((window as any).lastFetchedOrders);
+    }
+};
+
+(window as any).renderSellerOrdersList = function(orders: any[]) {
+    const listContainer = document.getElementById('seller-orders-list');
+    if (!listContainer) return;
+
+    // Filter based on active tab
+    let filteredOrders = [];
+    const currentTab = (window as any).currentOrderTab;
+    if (currentTab === 'pending') {
+        filteredOrders = orders.filter(o => o.status === 'pending');
+    } else if (currentTab === 'processing') {
+        filteredOrders = orders.filter(o => o.status === 'processing' || o.status === 'shipped');
+    } else {
+        filteredOrders = orders.filter(o => o.status === 'delivered' || o.status === 'cancelled');
+    }
+
+    // Render badge counts
+    const pendingCount = orders.filter(o => o.status === 'pending').length;
+    const processingCount = orders.filter(o => o.status === 'processing' || o.status === 'shipped').length;
+
+    const pendingBadge = document.getElementById('badge-orders-pending');
+    if (pendingBadge) {
+        if (pendingCount > 0) {
+            pendingBadge.innerText = pendingCount.toString();
+            pendingBadge.style.display = 'inline-block';
+        } else {
+            pendingBadge.style.display = 'none';
+        }
+    }
+
+    const processingBadge = document.getElementById('badge-orders-processing');
+    if (processingBadge) {
+        if (processingCount > 0) {
+            processingBadge.innerText = processingCount.toString();
+            processingBadge.style.display = 'inline-block';
+        } else {
+            processingBadge.style.display = 'none';
+        }
+    }
+
+    if (filteredOrders.length === 0) {
+        let emptyMsg = "Aucune commande à traiter.";
+        if (currentTab === 'processing') emptyMsg = "Aucune commande en cours.";
+        if (currentTab === 'completed') emptyMsg = "Aucun historique disponible.";
+        listContainer.innerHTML = `<p style="color: #94A3B8; text-align: center; padding: 40px; font-size: 0.85rem;">${emptyMsg}</p>`;
+        return;
+    }
+
+    listContainer.innerHTML = filteredOrders.map(o => {
+        const buyerName = o.buyer ? `${o.buyer.prenom} ${o.buyer.nom}` : (o.buyer_name || 'Client Invité');
+        const buyerPhone = o.buyer ? o.buyer.telephone : (o.buyer_phone || '');
+        const cleanPhone = buyerPhone.replace(/[^0-9]/g, '');
+        const whatsappPhone = cleanPhone.startsWith('221') ? cleanPhone : '221' + cleanPhone;
+
+        let actionButtonsHtml = '';
+        if (o.status === 'pending') {
+            actionButtonsHtml = `
+                <button onclick="updateOrderStatus('${o.id}', 'processing')" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; background: #10B981; color: white;">
+                    <i class="fa-solid fa-play"></i> Préparer
+                </button>
+                <button onclick="updateOrderStatus('${o.id}', 'cancelled')" style="padding: 10px; border-radius: 8px; border: 1px solid #EF4444; font-weight: 700; cursor: pointer; background: transparent; color: #EF4444;">
+                    Rejeter
+                </button>
+            `;
+        } else if (o.status === 'processing') {
+            actionButtonsHtml = `
+                <button onclick="updateOrderStatus('${o.id}', 'shipped')" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; background: #3B82F6; color: white;">
+                    <i class="fa-solid fa-truck"></i> Expédier (En route)
+                </button>
+            `;
+        } else if (o.status === 'shipped') {
+            actionButtonsHtml = `
+                <button onclick="updateOrderStatus('${o.id}', 'delivered')" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; background: #10B981; color: white;">
+                    <i class="fa-solid fa-circle-check"></i> Livré
+                </button>
+            `;
+        } else {
+            let statusText = o.status === 'delivered' ? 'Livré' : 'Annulé';
+            let statusColor = o.status === 'delivered' ? '#10B981' : '#EF4444';
+            let statusBg = o.status === 'delivered' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+            actionButtonsHtml = `
+                <div style="flex: 1; text-align: center; color: ${statusColor}; font-size: 0.85rem; font-weight: 800; padding: 8px; background: ${statusBg}; border-radius: 8px; text-transform: uppercase;">
+                    ${statusText}
+                </div>
+            `;
+        }
+
+        return `
+            <div style="border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 12px; background: #1E293B;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-weight: 800; color: #10B981; font-size: 0.85rem;">CMD-${o.id.substring(0,6).toUpperCase()}</span>
+                    <span style="font-size: 0.75rem; color: #94A3B8;">${new Date(o.created_at).toLocaleDateString('fr-FR')} ${new Date(o.created_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+                <div style="font-size: 0.85rem; margin-bottom: 8px; color: #F8FAFC; line-height: 1.4;">
+                    <strong>👤 ${escapeHTML(buyerName)}</strong><br>
+                    📍 Pavillon / Chambre : ${escapeHTML(o.delivery_address)}<br>
+                    📞 ${escapeHTML(buyerPhone)}
+                    ${buyerPhone ? `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`Bonjour ${buyerName}, je suis le vendeur sur Campus Market concernant votre commande CMD-${o.id.substring(0,6).toUpperCase()}.`)}" target="_blank" style="color: #25D366; text-decoration: none; margin-left: 8px; font-weight: bold;"><i class="fa-brands fa-whatsapp"></i> Contacter</a>` : ''}
+                </div>
+                <div style="font-size: 0.85rem; color: #94A3B8; margin-bottom: 12px; border-top: 1px dashed #334155; padding-top: 8px;">
+                    🛒 ${o.quantity || 1}x <strong>${escapeHTML(o.product?.title || 'Produit inconnu')}</strong> (${o.price} F)
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    ${actionButtonsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+(window as any).updateProductStock = async function(productId: string, delta: number) {
+    const products = (window as any).lastFetchedProducts;
+    if (!products) return;
+    
+    const product = products.find((p: any) => p.id === productId);
+    if (!product) return;
+
+    if (product.stock === -1) {
+        product.stock = 10; // Valeur initiale par défaut si on modifie un stock illimité
+    } else {
+        product.stock = Math.max(0, product.stock + delta);
+    }
+    
+    try {
+        const { error } = await supabase.from('products').update({ stock: product.stock }).eq('id', productId);
+        if (error) throw error;
+        
+        // Recharger le tableau de bord vendeur
+        window.loadSellerDashboard();
+    } catch (e) {
+        console.error("Error updating stock:", e);
+        alert("Erreur de mise à jour du stock.");
+    }
+};
+
+(window as any).clearProductImagePreview = function() {
+    const imgInput = document.getElementById('new_prod_image') as HTMLInputElement;
+    const previewContainer = document.getElementById('new_prod_image_preview_container');
+    const previewImg = document.getElementById('new_prod_image_preview') as HTMLImageElement;
+    
+    if (imgInput) imgInput.value = '';
+    if (previewImg) previewImg.src = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+};
