@@ -324,7 +324,7 @@ window.loadSellerDashboard = async function() {
     // Fetch Orders
     const { data: orders, error } = await supabase
         .from('orders')
-        .select('id, status, created_at, price, quantity, delivery_address, buyer_name, buyer_phone, buyer:buyer_id(nom, prenom, telephone), product:product_id(title)')
+        .select('id, status, created_at, price, quantity, delivery_address, buyer_name, buyer_phone, buyer:buyer_id(nom, prenom, telephone), product:product_id(title, category)')
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -336,21 +336,156 @@ window.loadSellerDashboard = async function() {
         const delivered = orders.filter(o => o.status === 'delivered');
         delivered.forEach(o => totalRevenue += o.price);
         
+        // Mettre à jour les indicateurs du dashboard
         document.getElementById('stat-revenue').innerText = totalRevenue.toLocaleString('fr-FR') + " F";
-        document.getElementById('stat-sales').innerText = delivered.length;
+        document.getElementById('stat-sales').innerText = delivered.length.toString();
 
-        // Calculs Statistiques avancées
         const avgOrder = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0;
         const avgEl = document.getElementById('stat-avg-order');
         if (avgEl) avgEl.innerText = avgOrder.toLocaleString('fr-FR') + " F";
+
+        const pendingOrdersEl = document.getElementById('stat-pending-orders');
+        if (pendingOrdersEl) pendingOrdersEl.innerText = pending.length.toString();
 
         const nonCancelled = orders.filter(o => o.status !== 'cancelled').length;
         const conversionRate = nonCancelled > 0 ? Math.round((delivered.length / nonCancelled) * 100) : 0;
         const convEl = document.getElementById('stat-conversion');
         if (convEl) convEl.innerText = conversionRate + "%";
 
-        // Top Produits
-        renderTopProducts(orders);
+        // --- NOUVEAU RENDU DU DASHBOARD (Power BI Style) ---
+
+        // 1. Panel 1 : Ventes par Catégorie (Horizontal bar chart)
+        const catRevenue: { [key: string]: number } = { food: 0, tech: 0, fashion: 0, services: 0 };
+        const catLabels: { [key: string]: string } = { food: 'Restauration', tech: 'Technologie', fashion: 'Mode', services: 'Services' };
+        const catColors: { [key: string]: string } = { food: '#10B981', tech: '#3B82F6', fashion: '#F59E0B', services: '#8B5CF6' };
+        
+        delivered.forEach(o => {
+            const cat = o.product?.category || 'services';
+            if (catRevenue[cat] !== undefined) {
+                catRevenue[cat] += o.price;
+            }
+        });
+
+        const maxCatRev = Math.max(...Object.values(catRevenue), 1);
+        const categoriesChartEl = document.getElementById('seller-categories-chart');
+        if (categoriesChartEl) {
+            categoriesChartEl.innerHTML = Object.entries(catRevenue).map(([cat, rev]) => {
+                const pct = Math.round((rev / maxCatRev) * 100);
+                const color = catColors[cat] || '#8B5CF6';
+                const label = catLabels[cat] || cat;
+                return `
+                    <div style="font-size: 0.75rem; text-align: left;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; color: #475569;">
+                            <span>${label}</span>
+                            <span style="font-weight: 700; color: #0F172A;">${rev.toLocaleString('fr-FR')} F</span>
+                        </div>
+                        <div style="width: 100%; height: 6px; background: #F1F5F9; border-radius: 99px; overflow: hidden;">
+                            <div style="width: ${pct}%; height: 100%; background: ${color}; border-radius: 99px;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 2. Panel 2 : Répartition Donut
+        const totalCount = orders.length;
+        const deliveredCount = delivered.length;
+        const pendingCount = pending.length;
+        const cancelledCount = orders.filter(o => o.status === 'cancelled').length;
+
+        const delPct = totalCount > 0 ? Math.round((deliveredCount / totalCount) * 100) : 0;
+        const penPct = totalCount > 0 ? Math.round((pendingCount / totalCount) * 100) : 0;
+        const canPct = totalCount > 0 ? Math.round((cancelledCount / totalCount) * 100) : 0;
+
+        const totalCountEl = document.getElementById('seller-total-orders-count');
+        if (totalCountEl) totalCountEl.innerText = totalCount.toString();
+        
+        const pctDelEl = document.getElementById('donut-pct-delivered');
+        if (pctDelEl) pctDelEl.innerText = delPct + "%";
+        
+        const pctPenEl = document.getElementById('donut-pct-pending');
+        if (pctPenEl) pctPenEl.innerText = penPct + "%";
+        
+        const pctCanEl = document.getElementById('donut-pct-cancelled');
+        if (pctCanEl) pctCanEl.innerText = canPct + "%";
+
+        const donutChart = document.getElementById('seller-donut-chart');
+        if (donutChart) {
+            const c1 = delPct;
+            const c2 = delPct + penPct;
+            donutChart.style.background = `conic-gradient(#10B981 0% ${c1}%, #F59E0B ${c1}% ${c2}%, #EF4444 ${c2}% 100%)`;
+        }
+
+        // 3. Panel 3 : Objectifs & Performances (Produits, notes et objectifs financiers)
+        // Récupérer le stock des produits
+        const { data: products } = await supabase.from('products').select('id, stock').eq('seller_id', user.id);
+        let stockPct = 100;
+        let inStockCount = 0;
+        if (products && products.length > 0) {
+            inStockCount = products.filter(p => p.stock > 0).length;
+            stockPct = Math.round((inStockCount / products.length) * 100);
+        }
+
+        // Récupérer la note moyenne
+        const { data: reviews } = await supabase.from('reviews').select('rating').eq('seller_id', user.id);
+        let avgRating = 5.0;
+        let ratingPct = 100;
+        if (reviews && reviews.length > 0) {
+            const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+            avgRating = Math.round((sum / reviews.length) * 10) / 10;
+            ratingPct = Math.round((avgRating / 5) * 100);
+        }
+
+        const goalsContainer = document.getElementById('seller-goals-container');
+        if (goalsContainer) {
+            const targetRev = 100000;
+            const revGoalPct = Math.min(Math.round((totalRevenue / targetRev) * 100), 100);
+            goalsContainer.innerHTML = `
+                <div style="font-size: 0.75rem; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #475569; margin-bottom: 3px;">
+                        <span>Revenu (Cible: 100k F)</span>
+                        <span style="color: #0F172A; font-weight: 700;">${revGoalPct}%</span>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: #F1F5F9; border-radius: 99px; overflow: hidden; margin-bottom: 2px;">
+                        <div style="width: ${revGoalPct}%; height: 100%; background: #F59E0B; border-radius: 99px;"></div>
+                    </div>
+                    <div style="font-size: 0.6rem; color: #94A3B8;">${totalRevenue.toLocaleString('fr-FR')} F / ${targetRev.toLocaleString('fr-FR')} F</div>
+                </div>
+
+                <div style="font-size: 0.75rem; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #475569; margin-bottom: 3px;">
+                        <span>Livraison (Cible: 90%)</span>
+                        <span style="color: #0F172A; font-weight: 700;">${conversionRate}%</span>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: #F1F5F9; border-radius: 99px; overflow: hidden; margin-bottom: 2px;">
+                        <div style="width: ${conversionRate}%; height: 100%; background: #10B981; border-radius: 99px;"></div>
+                    </div>
+                    <div style="font-size: 0.6rem; color: #94A3B8;">${deliveredCount} livrées / ${nonCancelled} actives</div>
+                </div>
+
+                <div style="font-size: 0.75rem; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #475569; margin-bottom: 3px;">
+                        <span>Disponibilité du Stock</span>
+                        <span style="color: #0F172A; font-weight: 700;">${stockPct}%</span>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: #F1F5F9; border-radius: 99px; overflow: hidden; margin-bottom: 2px;">
+                        <div style="width: ${stockPct}%; height: 100%; background: #3B82F6; border-radius: 99px;"></div>
+                    </div>
+                    <div style="font-size: 0.6rem; color: #94A3B8;">${inStockCount} en stock / ${products ? products.length : 0} articles</div>
+                </div>
+
+                <div style="font-size: 0.75rem; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600; color: #475569; margin-bottom: 3px;">
+                        <span>Note Moyenne (${avgRating}/5 ★)</span>
+                        <span style="color: #0F172A; font-weight: 700;">${ratingPct}%</span>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: #F1F5F9; border-radius: 99px; overflow: hidden; margin-bottom: 2px;">
+                        <div style="width: ${ratingPct}%; height: 100%; background: #8B5CF6; border-radius: 99px;"></div>
+                    </div>
+                    <div style="font-size: 0.6rem; color: #94A3B8;">Basé sur ${reviews ? reviews.length : 0} retours</div>
+                </div>
+            `;
+        }
 
         // SVG sales chart
         renderSellerSalesChart(orders);
