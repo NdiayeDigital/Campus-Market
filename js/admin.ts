@@ -300,14 +300,25 @@ window.loadSellerDashboard = async function() {
     if(profile && profile.role === 'vendeur') {
         document.getElementById('admin-seller-name').innerText = escapeHTML(profile.prenom) + " " + escapeHTML(profile.nom);
         
+        const adminProfileNameEl = document.getElementById('admin-profile-name');
+        if (adminProfileNameEl) adminProfileNameEl.innerText = escapeHTML(profile.prenom) + " " + escapeHTML(profile.nom);
+        const adminProfilePhoneEl = document.getElementById('admin-profile-phone');
+        if (adminProfilePhoneEl) adminProfilePhoneEl.innerText = escapeHTML(profile.telephone);
+
         const toggleInput = document.getElementById('seller-status-toggle');
+        const toggleInputProfil = document.getElementById('seller-status-toggle-profil');
         const textSpan = document.getElementById('seller-status-text');
         const bgDiv = document.getElementById('seller-status-bg');
         const circleDiv = document.getElementById('seller-status-circle');
+        const bgDivProfil = document.getElementById('seller-status-bg-profil');
+        const circleDivProfil = document.getElementById('seller-status-circle-profil');
+        
+        const openVal = profile.is_open !== false;
+        if (toggleInput) toggleInput.checked = openVal;
+        if (toggleInputProfil) toggleInputProfil.checked = openVal;
         
         if (toggleInput) {
-            toggleInput.checked = profile.is_open !== false; // Default true
-            if (toggleInput.checked) {
+            if (openVal) {
                 textSpan.innerText = "Ouvert";
                 textSpan.style.color = "#10B981";
                 bgDiv.style.background = "#10B981";
@@ -317,6 +328,16 @@ window.loadSellerDashboard = async function() {
                 textSpan.style.color = "#EF4444";
                 bgDiv.style.background = "#EF4444";
                 circleDiv.style.left = "2px";
+            }
+        }
+
+        if (toggleInputProfil) {
+            if (openVal) {
+                bgDivProfil.style.background = "#10B981";
+                circleDivProfil.style.left = "18px";
+            } else {
+                bgDivProfil.style.background = "#EF4444";
+                circleDivProfil.style.left = "2px";
             }
         }
     }
@@ -642,23 +663,32 @@ window.toggleSellerStatus = async function() {
     if(!user) return;
     
     const toggleInput = document.getElementById('seller-status-toggle');
+    const toggleInputProfil = document.getElementById('seller-status-toggle-profil');
     const textSpan = document.getElementById('seller-status-text');
     const bgDiv = document.getElementById('seller-status-bg');
     const circleDiv = document.getElementById('seller-status-circle');
+    const bgDivProfil = document.getElementById('seller-status-bg-profil');
+    const circleDivProfil = document.getElementById('seller-status-circle-profil');
     
     if(!toggleInput) return;
     const isOpen = toggleInput.checked;
+
+    if (toggleInputProfil) toggleInputProfil.checked = isOpen;
     
     if (isOpen) {
         textSpan.innerText = "Ouvert";
         textSpan.style.color = "#10B981";
         bgDiv.style.background = "#10B981";
         circleDiv.style.left = "18px";
+        if (bgDivProfil) bgDivProfil.style.background = "#10B981";
+        if (circleDivProfil) circleDivProfil.style.left = "18px";
     } else {
         textSpan.innerText = "Fermé";
         textSpan.style.color = "#EF4444";
         bgDiv.style.background = "#EF4444";
         circleDiv.style.left = "2px";
+        if (bgDivProfil) bgDivProfil.style.background = "#EF4444";
+        if (circleDivProfil) circleDivProfil.style.left = "2px";
     }
 
     try {
@@ -668,7 +698,17 @@ window.toggleSellerStatus = async function() {
     } catch(e) {
         alert('Erreur lors de la mise à jour du statut.');
         toggleInput.checked = !isOpen;
+        if (toggleInputProfil) toggleInputProfil.checked = !isOpen;
         loadSellerDashboard();
+    }
+};
+
+window.toggleSellerStatusProfil = async function() {
+    const toggleInput = document.getElementById('seller-status-toggle');
+    const toggleInputProfil = document.getElementById('seller-status-toggle-profil');
+    if (toggleInputProfil && toggleInput) {
+        toggleInput.checked = toggleInputProfil.checked;
+        window.toggleSellerStatus();
     }
 };
 

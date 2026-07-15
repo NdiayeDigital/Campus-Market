@@ -216,6 +216,10 @@ window.notifyBuyerWhatsApp = function(phone, orderId, status) {
 };
 // SPA Navigation Logic (Hash Routing)
 window.navigateTo = function(viewId) {
+    if (viewId === 'admin') {
+        viewId = 'admin-dashboard';
+    }
+
     // 1. Mettre à jour l'ancre (hash) si elle diffère pour supporter l'historique et le rechargement
     if (window.location.hash !== '#' + viewId) {
         window.location.hash = viewId;
@@ -227,10 +231,31 @@ window.navigateTo = function(viewId) {
         view.classList.remove('active'); 
     });
     
-    const targetView = document.getElementById('view-' + viewId);
-    if (targetView) { 
-        targetView.style.display = 'block'; 
-        targetView.classList.add('active'); 
+    // Check if it's a seller subview
+    if (viewId.startsWith('admin-')) {
+        const targetView = document.getElementById('view-admin');
+        if (targetView) {
+            targetView.style.display = 'block';
+            targetView.classList.add('active');
+        }
+
+        // Hide all admin subviews
+        document.querySelectorAll('.admin-subview').forEach(sub => {
+            (sub as HTMLElement).style.display = 'none';
+        });
+
+        // Show the active subview
+        const subviewId = viewId.replace('admin-', '');
+        const targetSubview = document.getElementById('admin-subview-' + subviewId);
+        if (targetSubview) {
+            targetSubview.style.display = 'block';
+        }
+    } else {
+        const targetView = document.getElementById('view-' + viewId);
+        if (targetView) { 
+            targetView.style.display = 'block'; 
+            targetView.classList.add('active'); 
+        }
     }
     
     document.querySelectorAll('.bottom-nav-item').forEach(btn => { 
@@ -253,8 +278,11 @@ window.navigateTo = function(viewId) {
 
 // Écouter le changement d'ancre dans l'URL pour la navigation historique (précédent/suivant)
 window.addEventListener('hashchange', () => {
-    const route = window.location.hash.substring(1) || 'accueil';
-    const targetView = document.getElementById('view-' + route);
+    let route = window.location.hash.substring(1) || 'accueil';
+    if (route === 'admin') route = 'admin-dashboard';
+    const isSubview = route.startsWith('admin-');
+    const checkId = isSubview ? 'view-admin' : ('view-' + route);
+    const targetView = document.getElementById(checkId);
     if (targetView && !targetView.classList.contains('active')) {
         window.navigateTo(route);
     }
@@ -262,8 +290,11 @@ window.addEventListener('hashchange', () => {
 
 // Restaurer la bonne vue au rechargement de la page
 window.addEventListener('DOMContentLoaded', () => {
-    const route = window.location.hash.substring(1) || 'accueil';
-    const targetView = document.getElementById('view-' + route);
+    let route = window.location.hash.substring(1) || 'accueil';
+    if (route === 'admin') route = 'admin-dashboard';
+    const isSubview = route.startsWith('admin-');
+    const checkId = isSubview ? 'view-admin' : ('view-' + route);
+    const targetView = document.getElementById(checkId);
     if (targetView) {
         // Laisser les wrappers asynchrones (auth, cart) se charger et configurer le statut
         setTimeout(() => {
@@ -271,6 +302,55 @@ window.addEventListener('DOMContentLoaded', () => {
         }, 100);
     }
 });
+
+window.updateBottomNavigation = function(role) {
+    const bottomNav = document.getElementById('bottom-nav');
+    if (!bottomNav) return;
+
+    if (role === 'vendeur') {
+        bottomNav.innerHTML = `
+            <button class="bottom-nav-item" onclick="navigateTo('admin-dashboard')" data-target="admin-dashboard">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('admin-orders')" data-target="admin-orders">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <span>Mes Commandes</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('admin-products')" data-target="admin-products">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <span>Mes Produits</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('admin-profil')" data-target="admin-profil">
+                <i class="fa-solid fa-user-gear"></i>
+                <span>Profil</span>
+            </button>
+        `;
+    } else {
+        bottomNav.innerHTML = `
+            <button class="bottom-nav-item" onclick="navigateTo('accueil')" data-target="accueil">
+                <i class="fa-solid fa-house"></i>
+                <span>Accueil</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('categories')" data-target="categories">
+                <i class="fa-solid fa-grid-2"></i>
+                <span>Catégories</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('panier')" data-target="panier">
+                <i class="fa-solid fa-bag-shopping"></i>
+                <span>Panier</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('commandes')" data-target="commandes">
+                <i class="fa-solid fa-box"></i>
+                <span>Commandes</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('profil')" data-target="profil">
+                <i class="fa-solid fa-user"></i>
+                <span>Profil</span>
+            </button>
+        `;
+    }
+};
 function toggleSearch() {
     const searchContainer = document.getElementById('global-search-container');
     if (searchContainer.style.display === 'none') {

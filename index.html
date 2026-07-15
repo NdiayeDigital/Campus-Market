@@ -1748,146 +1748,188 @@
                         <span style="font-size: 0.65rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Livraison</span>
                         <span style="font-size: 0.55rem; background: #FCE7F3; color: #DB2777; padding: 1px 4px; border-radius: 3px; font-weight: 800; text-transform: uppercase;">%</span>
                     </div>
-                    <div style="font-size: 1.2rem; font-weight: 800; color: #0F172A; line-height: 1.1;" id="stat-conversion">0%</div>
-                    <div style="font-size: 0.6rem; color: #EC4899; margin-top: 4px; font-weight: 600;">
-                        Objectif: &ge; 90%
-                    </div>
-                </div>
-            </div>
-
-            <!-- GRILLE DE 3 PANNEAUX D'ANALYSES ET OBJECTIFS -->
-            <div class="seller-dashboard-panels" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 0 20px 20px; font-family: 'Outfit', sans-serif;">
-                
-                <!-- Panel 1: Ventes par Catégorie -->
-                <div style="background: white; border-radius: 12px; padding: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F1F5F9;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1.5px solid #F1F5F9; padding-bottom: 6px;">
-                        <h3 style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Ventes par Catégorie</h3>
-                        <span style="font-size: 0.6rem; background: #F1F5F9; color: #475569; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">Volume</span>
-                    </div>
-                    <div id="seller-categories-chart" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
-                        <!-- Généré dynamiquement en JS (ressemble à la barre de dépenses) -->
-                        <div style="font-size: 0.8rem; color: #94A3B8; text-align: center;">Chargement...</div>
-                    </div>
-                </div>
-
-                <!-- Panel 2: Répartition des Commandes -->
-                <div style="background: white; border-radius: 12px; padding: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F1F5F9; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
+                    <div style="font-size: 1.2rem; font-weight: 800; color            <!-- SUBVIEW 1: DASHBOARD -->
+            <div id="admin-subview-dashboard" class="admin-subview">
+                <!-- GRILLE DE 3 PANNEAUX D'ANALYSES ET OBJECTIFS -->
+                <div class="seller-dashboard-panels" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 0 20px 20px; font-family: 'Outfit', sans-serif;">
+                    
+                    <!-- Panel 1: Ventes par Catégorie -->
+                    <div style="background: white; border-radius: 12px; padding: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F1F5F9;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1.5px solid #F1F5F9; padding-bottom: 6px;">
-                            <h3 style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Statut des Commandes</h3>
-                            <span style="font-size: 0.6rem; background: #F1F5F9; color: #475569; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">Répartition</span>
+                            <h3 style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Ventes par Catégorie</h3>
+                            <span style="font-size: 0.6rem; background: #F1F5F9; color: #475569; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">Volume</span>
                         </div>
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin: 12px 0;">
-                            <div id="seller-donut-chart" style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#10B981 0% 100%); display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.04); flex-shrink: 0;">
-                                <div style="width: 66px; height: 66px; border-radius: 50%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute;">
-                                    <span style="font-size: 0.55rem; color: #64748B; text-transform: uppercase; font-weight: bold;">Total</span>
-                                    <strong style="font-size: 1rem; color: #0F172A; font-weight: 800;" id="seller-total-orders-count">0</strong>
+                        <div id="seller-categories-chart" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                            <!-- Généré dynamiquement en JS (ressemble à la barre de dépenses) -->
+                            <div style="font-size: 0.8rem; color: #94A3B8; text-align: center;">Chargement...</div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 2: Répartition des Commandes -->
+                    <div style="background: white; border-radius: 12px; padding: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F1F5F9; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1.5px solid #F1F5F9; padding-bottom: 6px;">
+                                <h3 style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Statut des Commandes</h3>
+                                <span style="font-size: 0.6rem; background: #F1F5F9; color: #475569; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">Répartition</span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin: 12px 0;">
+                                <div id="seller-donut-chart" style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#10B981 0% 100%); display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.04); flex-shrink: 0;">
+                                    <div style="width: 66px; height: 66px; border-radius: 50%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute;">
+                                        <span style="font-size: 0.55rem; color: #64748B; text-transform: uppercase; font-weight: bold;">Total</span>
+                                        <strong style="font-size: 1rem; color: #0F172A; font-weight: 800;" id="seller-total-orders-count">0</strong>
+                                    </div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; flex-grow: 1;">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></div>
+                                        <span style="font-weight: 600; color: #334155;">Livré</span>
+                                        <span style="color: #64748B; margin-left: auto;" id="donut-pct-delivered">0%</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B;"></div>
+                                        <span style="font-weight: 600; color: #334155;">En cours</span>
+                                        <span style="color: #64748B; margin-left: auto;" id="donut-pct-pending">0%</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div style="width: 8px; height: 8px; border-radius: 50%; background: #EF4444;"></div>
+                                        <span style="font-weight: 600; color: #334155;">Annulé</span>
+                                        <span style="color: #64748B; margin-left: auto;" id="donut-pct-cancelled">0%</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; flex-grow: 1;">
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></div>
-                                    <span style="font-weight: 600; color: #334155;">Livré</span>
-                                    <span style="color: #64748B; margin-left: auto;" id="donut-pct-delivered">0%</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B;"></div>
-                                    <span style="font-weight: 600; color: #334155;">En cours</span>
-                                    <span style="color: #64748B; margin-left: auto;" id="donut-pct-pending">0%</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #EF4444;"></div>
-                                    <span style="font-weight: 600; color: #334155;">Annulé</span>
-                                    <span style="color: #64748B; margin-left: auto;" id="donut-pct-cancelled">0%</span>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 3: Objectifs et Performance du Magasin -->
+                    <div style="background: white; border-radius: 12px; padding: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F1F5F9;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1.5px solid #F1F5F9; padding-bottom: 6px;">
+                            <h3 style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Objectifs & Performances</h3>
+                            <span style="font-size: 0.6rem; background: #F1F5F9; color: #475569; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">Mise à jour</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 12px;" id="seller-goals-container">
+                            <!-- Généré dynamiquement en JS (ressemble aux objectifs d'épargne) -->
+                            <div style="font-size: 0.8rem; color: #94A3B8; text-align: center;">Chargement...</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Panel 3: Objectifs et Performance du Magasin -->
-                <div style="background: white; border-radius: 12px; padding: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F1F5F9;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1.5px solid #F1F5F9; padding-bottom: 6px;">
-                        <h3 style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Objectifs & Performances</h3>
-                        <span style="font-size: 0.6rem; background: #F1F5F9; color: #475569; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">Mise à jour</span>
+                <!-- ÉVOLUTION HEBDOMADAIRE DU CHIFFRE D'AFFAIRES -->
+                <div style="background: white; border-radius: 12px; padding: 18px; margin: 0 20px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F1F5F9; font-family: 'Outfit', sans-serif;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1.5px solid #F1F5F9; padding-bottom: 6px;">
+                        <h3 style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Évolution du Chiffre d'Affaires</h3>
+                        <span style="font-size: 0.6rem; background: #E8F0FE; color: #1D4ED8; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">SVG Chart</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 12px;" id="seller-goals-container">
-                        <!-- Généré dynamiquement en JS (ressemble aux objectifs d'épargne) -->
-                        <div style="font-size: 0.8rem; color: #94A3B8; text-align: center;">Chargement...</div>
+                    <div id="seller-chart-container" style="background: #F8FAFC; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: center; height: 160px; position: relative;">
+                        <!-- Graphique SVG généré dynamiquement -->
                     </div>
                 </div>
             </div>
 
-            <!-- ÉVOLUTION HEBDOMADAIRE DU CHIFFRE D'AFFAIRES -->
-            <div style="background: white; border-radius: 12px; padding: 18px; margin: 0 20px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F1F5F9; font-family: 'Outfit', sans-serif;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1.5px solid #F1F5F9; padding-bottom: 6px;">
-                    <h3 style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Évolution du Chiffre d'Affaires</h3>
-                    <span style="font-size: 0.6rem; background: #E8F0FE; color: #1D4ED8; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">SVG Chart</span>
-                </div>
-                <div id="seller-chart-container" style="background: #F8FAFC; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: center; height: 160px; position: relative;">
-                    <!-- Graphique SVG généré dynamiquement -->
-                </div>
+            <!-- SUBVIEW 2: COMMANDES REÇUES -->
+            <div id="admin-subview-commandes" class="admin-subview" style="display: none;">
+                <section
+                    style="background: white; border-radius: 16px; padding: 20px; margin: 0 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
+                        <h3 style="font-size: 1.2rem; font-weight: 700; color: #1e293b;"><i class="fa-solid fa-bell"
+                                style="margin-right: 8px; color: #D97706;"></i> Commandes en attente</h3>
+                    </div>
+                    <div id="seller-orders-pending">
+                        <div style="text-align: center; padding: 20px; color: #94A3B8;"><i
+                                class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
+                    </div>
+                </section>
             </div>
 
-            <section
-                style="background: white; border-radius: 16px; padding: 20px; margin: 0 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
-                    <h3 style="font-size: 1.2rem; font-weight: 700; color: #1e293b;"><i class="fa-solid fa-bell"
-                            style="margin-right: 8px; color: #D97706;"></i> Commandes en attente</h3>
-                </div>
-                <div id="seller-orders-pending">
-                    <div style="text-align: center; padding: 20px; color: #94A3B8;"><i
-                            class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
-                </div>
-            </section>
+            <!-- SUBVIEW 3: GESTION PRODUITS -->
+            <div id="admin-subview-produits" class="admin-subview" style="display: none;">
+                <section
+                    style="background: white; border-radius: 16px; padding: 20px; margin: 0 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
+                        <h3 style="font-size: 1.2rem; font-weight: 700; color: #1e293b;"><i class="fa-solid fa-box-open"
+                                style="margin-right: 8px; color: #10B981;"></i> Mes Produits</h3>
+                        <button onclick="document.getElementById('add-product-form-container').style.display = 'block';"
+                            style="background: #1D4ED8; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.8rem;"><i
+                                class="fa-solid fa-plus"></i> Ajouter</button>
+                    </div>
 
-            <section
-                style="background: white; border-radius: 16px; padding: 20px; margin: 0 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
-                    <h3 style="font-size: 1.2rem; font-weight: 700; color: #1e293b;"><i class="fa-solid fa-box-open"
-                            style="margin-right: 8px; color: #10B981;"></i> Mes Produits</h3>
-                    <button onclick="document.getElementById('add-product-form-container').style.display = 'block';"
-                        style="background: #1D4ED8; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.8rem;"><i
-                            class="fa-solid fa-plus"></i> Ajouter</button>
-                </div>
+                    <div id="add-product-form-container"
+                        style="display: none; background: #F8FAFC; padding: 16px; border-radius: 12px; margin-bottom: 16px; border: 1px dashed #CBD5E1;">
+                        <form id="add-product-form">
+                            <input type="text" id="new_prod_title" placeholder="Titre du produit" required
+                                style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                            <input type="number" id="new_prod_price" placeholder="Prix (FCFA)" required
+                                style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                            <input type="number" id="new_prod_stock" placeholder="Stock (-1 pour illimité)" value="-1"
+                                required
+                                style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                            <select id="new_prod_category" required
+                                style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                                <option value="tech">Tech</option>
+                                <option value="fashion">Mode</option>
+                                <option value="food">Nourriture</option>
+                                <option value="other">Autre</option>
+                            </select>
+                            <label style="font-size: 0.8rem; color: #64748b;">Image du produit (Optionnelle) :</label>
+                            <input type="file" id="new_prod_image" accept="image/*"
+                                style="width: 100%; padding: 8px; margin-bottom: 16px; border-radius: 6px; border: 1px dashed #CBD5E1; background: white;">
+                            <div style="display: flex; gap: 8px;">
+                                <button type="submit"
+                                    style="flex: 1; background: #10B981; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: 600;">Enregistrer</button>
+                                <button type="button"
+                                    onclick="document.getElementById('add-product-form-container').style.display = 'none';"
+                                    style="flex: 1; background: #EF4444; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: 600;">Annuler</button>
+                            </div>
+                        </form>
+                    </div>
 
-                <div id="add-product-form-container"
-                    style="display: none; background: #F8FAFC; padding: 16px; border-radius: 12px; margin-bottom: 16px; border: 1px dashed #CBD5E1;">
-                    <form id="add-product-form">
-                        <input type="text" id="new_prod_title" placeholder="Titre du produit" required
-                            style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
-                        <input type="number" id="new_prod_price" placeholder="Prix (FCFA)" required
-                            style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
-                        <input type="number" id="new_prod_stock" placeholder="Stock (-1 pour illimité)" value="-1"
-                            required
-                            style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
-                        <select id="new_prod_category" required
-                            style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
-                            <option value="tech">Tech</option>
-                            <option value="fashion">Mode</option>
-                            <option value="food">Nourriture</option>
-                            <option value="other">Autre</option>
-                        </select>
-                        <label style="font-size: 0.8rem; color: #64748b;">Image du produit (Optionnelle) :</label>
-                        <input type="file" id="new_prod_image" accept="image/*"
-                            style="width: 100%; padding: 8px; margin-bottom: 16px; border-radius: 6px; border: 1px dashed #CBD5E1; background: white;">
-                        <div style="display: flex; gap: 8px;">
-                            <button type="submit"
-                                style="flex: 1; background: #10B981; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: 600;">Enregistrer</button>
-                            <button type="button"
-                                onclick="document.getElementById('add-product-form-container').style.display = 'none';"
-                                style="flex: 1; background: #EF4444; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: 600;">Annuler</button>
+                    <div id="seller-products-list">
+                        <div style="text-align: center; padding: 20px; color: #94A3B8;"><i
+                                class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- SUBVIEW 4: PROFIL VENDEUR -->
+            <div id="admin-subview-profil" class="admin-subview" style="display: none;">
+                <section style="background: white; border-radius: 16px; padding: 24px; margin: 0 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: center; font-family: 'Outfit', sans-serif;">
+                    <div style="width: 72px; height: 72px; border-radius: 50%; background: #E6F4EA; color: #10B981; font-size: 28px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; border: 2px solid #10B981;">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800; color: #0F172A;" id="admin-profile-name">Vendeur</h3>
+                    <p style="color: #64748B; font-size: 0.95rem; margin-top: 4px;" id="admin-profile-phone">Téléphone</p>
+                    
+                    <div style="margin-top: 24px; border-top: 1px solid #F1F5F9; padding-top: 20px; text-align: left;">
+                        <h4 style="font-size: 0.85rem; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 16px;">Paramètres de la Boutique</h4>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #F8FAFC; border-radius: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
+                            <div>
+                                <span style="font-weight: 700; color: #334155; font-size: 0.85rem; display: block;">Statut de la Boutique</span>
+                                <span style="font-size: 0.75rem; color: #64748B;">Ouvert ou fermé aux commandes</span>
+                            </div>
+                            <label style="display: inline-flex; align-items: center; cursor: pointer; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 20px;">
+                                <input type="checkbox" id="seller-status-toggle-profil" style="display: none;" onchange="toggleSellerStatusProfil()">
+                                <div id="seller-status-bg-profil" style="width: 36px; height: 20px; background: #10B981; border-radius: 20px; position: relative; transition: background 0.3s;">
+                                    <div id="seller-status-circle-profil" style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 18px; transition: left 0.3s;"></div>
+                                </div>
+                            </label>
                         </div>
-                    </form>
-                </div>
 
-                <div id="seller-products-list">
-                    <div style="text-align: center; padding: 20px; color: #94A3B8;"><i
-                            class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
-                </div>
-            </section>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #F8FAFC; border-radius: 12px; margin-bottom: 24px; border: 1px solid #E2E8F0;">
+                            <div>
+                                <span style="font-weight: 700; color: #334155; font-size: 0.85rem; display: block;">Mode Client</span>
+                                <span style="font-size: 0.75rem; color: #64748B;">Retourner faire des achats</span>
+                            </div>
+                            <button onclick="window.navigateTo('accueil')" style="background: #E8F0FE; color: #1A73E8; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.8rem;">Basculer</button>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #F1F5F9; padding-top: 20px;">
+                        <button onclick="logout()" class="btn" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: 700; background: #FEF2F2; color: #EF4444; border: 1px solid #FEE2E2; cursor: pointer;"><i class="fa-solid fa-right-from-bracket" style="margin-right: 8px;"></i> Se déconnecter</button>
+                    </div>
+                </section>
+            </div>
         </div>
     </div>
 

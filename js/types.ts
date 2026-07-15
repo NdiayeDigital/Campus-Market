@@ -64,6 +64,8 @@ declare global {
     openReviewModal: (orderId: string, sellerId: string) => void;
     updateOrderStatus: (orderId: string, status: string) => void;
     navigateTo: (viewId: string) => void;
+    updateBottomNavigation: (role: string | null) => void;
+    toggleSellerStatusProfil: () => Promise<void>;
     showToast: (msg: string) => void;
     initSuperAdmin: () => Promise<void>;
     loginSuperAdmin: () => Promise<void>;

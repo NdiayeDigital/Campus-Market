@@ -12,6 +12,19 @@ async function checkAuthState() {
             // Logged in
             const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
             if (profile) {
+                if (window.updateBottomNavigation) {
+                    window.updateBottomNavigation(profile.role);
+                }
+
+                if (profile.role === 'vendeur') {
+                    const currentHash = window.location.hash;
+                    if (currentHash === '' || currentHash === '#' || currentHash === '#accueil' || currentHash === '#categories' || currentHash === '#panier') {
+                        setTimeout(() => {
+                            window.navigateTo('admin-dashboard');
+                        }, 50);
+                    }
+                }
+
                 let header = document.getElementById('profil-header');
                 if (!header) {
                     header = document.createElement('div');
@@ -60,6 +73,9 @@ async function checkAuthState() {
             }
         } else {
             // Not logged in
+            if (window.updateBottomNavigation) {
+                window.updateBottomNavigation(null);
+            }
             const header = document.getElementById('profil-header');
             if(header) header.remove();
             
@@ -98,6 +114,19 @@ window.navigateTo = async function(viewId) {
     if (!window.supabase) {
         if(originalNavigateTo) originalNavigateTo(viewId);
         return;
+    }
+
+    if (viewId.startsWith('admin-')) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            if(originalNavigateTo) originalNavigateTo('login');
+            return;
+        }
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!profile || profile.role !== 'vendeur') {
+            if(originalNavigateTo) originalNavigateTo('accueil');
+            return;
+        }
     }
 
     if (viewId === 'seller-register') {
