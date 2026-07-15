@@ -13,7 +13,6 @@ INSERT INTO auth.users (
     email,
     encrypted_password,
     email_confirmed_at,
-    confirmed_at,
     raw_app_meta_data,
     raw_user_meta_data,
     role,
@@ -26,7 +25,6 @@ VALUES (
     'maamin.ndiaye@univ-thies.sn',
     extensions.crypt('Mouhamadou2005', extensions.gen_salt('bf', 10)),
     NOW(),
-    NOW(),
     '{"provider":"email","providers":["email"]}',
     '{}',
     'authenticated',
@@ -36,8 +34,7 @@ VALUES (
 )
 ON CONFLICT (email) DO UPDATE 
 SET encrypted_password = extensions.crypt('Mouhamadou2005', extensions.gen_salt('bf', 10)),
-    email_confirmed_at = NOW(),
-    confirmed_at = NOW();
+    email_confirmed_at = NOW();
 
 -- 3. INSÉRER LE PROFIL DANS public.profiles (DONNÉES UTILISATEUR)
 -- Si le profil existe déjà pour cet ID, il sera mis à jour avec le rôle 'superadmin'
