@@ -41,6 +41,7 @@ window.renderCart = function() {
     const summaryContainer = document.querySelector('.cart-summary');
     if (!cartContainer || !summaryContainer) return;
     
+    if (window.cart.length === 0) {
         cartContainer.innerHTML = '<div class="cart-empty"><i class="fa-solid fa-cart-shopping cart-empty-icon"></i><p>Panier vide.</p><button onclick="navigateTo(\'accueil\')" class="btn btn-primary cart-empty-btn">Découvrir les offres</button></div>';
         summaryContainer.style.display = 'none';
         
