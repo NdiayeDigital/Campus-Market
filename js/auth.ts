@@ -18,10 +18,13 @@ async function checkAuthState() {
 
                 if (profile.role === 'vendeur') {
                     const currentHash = window.location.hash;
-                    if (currentHash === '' || currentHash === '#' || currentHash === '#accueil' || currentHash === '#categories' || currentHash === '#panier') {
-                        setTimeout(() => {
-                            window.navigateTo('admin-dashboard');
-                        }, 50);
+                    if (!(window as any).initialRedirectDone) {
+                        (window as any).initialRedirectDone = true;
+                        if (currentHash === '' || currentHash === '#' || currentHash === '#accueil' || currentHash === '#categories' || currentHash === '#panier' || currentHash === '#profil') {
+                            setTimeout(() => {
+                                window.navigateTo('admin-dashboard');
+                            }, 50);
+                        }
                     }
                 }
 
@@ -89,10 +92,11 @@ async function checkAuthState() {
                         <i class="fa-solid fa-user-lock"></i>
                     </div>
                     <h3 style="margin-bottom: 12px; font-size: 1.2rem;">Espace Profil</h3>
-                    <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 32px;">Gérez vos commandes et vos préférences.</p>
-                    <button onclick="navigateTo('register')" class="btn btn-primary" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: 600;">Créer votre profil Acheteur</button>
+                    <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 24px;">Gérez vos commandes, votre boutique et vos préférences.</p>
+                    <button onclick="navigateTo('register')" class="btn btn-primary" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: 600;">Créer un profil Acheteur</button>
                     <button onclick="navigateTo('seller-register')" class="btn" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: 700; background: #FFFBEB; color: #D97706; border: 1px solid #FCD34D;"><i class="fa-solid fa-store" style="margin-right: 8px;"></i> Devenir Vendeur (Créer une boutique)</button>
-                    <button onclick="navigateTo('login')" class="btn" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; background: white; color: var(--color-text-main); border: 1px solid var(--color-border);">Se connecter</button>
+                    <button onclick="navigateTo('login')" class="btn" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: 600; background: white; color: var(--color-text-main); border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="fa-solid fa-user"></i> Se connecter (Acheteur)</button>
+                    <button onclick="navigateTo('login')" class="btn" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: 700; background: #E6F4EA; color: #137333; border: 1px solid #A3E635; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="fa-solid fa-store"></i> Se connecter en tant que vendeur</button>
                 `;
                 profilView.insertBefore(unauth, profilView.firstChild);
             }
@@ -307,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.logout = async function() {
         if(!window.supabase) return;
         await supabase.auth.signOut();
+        delete (window as any).initialRedirectDone;
         const header = document.getElementById('profil-header');
         if(header) header.remove();
         window.navigateTo('login');
