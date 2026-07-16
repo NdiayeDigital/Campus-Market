@@ -380,6 +380,18 @@ window.loadSellerDashboard = async function() {
     if(!error && orders) {
         // Save to global cache
         (window as any).lastFetchedOrders = orders;
+
+        // Gérer la répétition de l'alerte sonore pour les commandes en attente
+        const hasPending = orders.some(o => o.status === 'pending');
+        if (hasPending) {
+            if (typeof (window as any).startPendingOrdersSoundLoop === 'function') {
+                (window as any).startPendingOrdersSoundLoop();
+            }
+        } else {
+            if (typeof (window as any).stopPendingOrdersSoundLoop === 'function') {
+                (window as any).stopPendingOrdersSoundLoop();
+            }
+        }
         
         let totalRevenue = 0;
         const delivered = orders.filter(o => o.status === 'delivered');
@@ -859,10 +871,16 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // Gestion de l'image
                 let image_url = null;
-                const imageInput = document.getElementById('new_prod_image');
-                if (imageInput && imageInput.files.length > 0) {
+                const imageInput = document.getElementById('new_prod_image') as HTMLInputElement;
+                if (imageInput && imageInput.files && imageInput.files.length > 0) {
+                    const file = imageInput.files[0];
+                    const maxSize = 8 * 1024 * 1024; // 8 MB
+                    if (file.size > maxSize) {
+                        alert("Le fichier est trop volumineux (max 8 Mo). Veuillez réduire la taille de l'image.");
+                        return;
+                    }
                     document.querySelector('#add-product-form button[type="submit"]').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Compression...';
-                    const compressedBase64 = await window.compressImage(imageInput.files[0]);
+                    const compressedBase64 = await window.compressImage(file);
                     
                     document.querySelector('#add-product-form button[type="submit"]').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Téléchargement...';
                     const blob = dataURLtoBlob(compressedBase64);
@@ -927,6 +945,29 @@ window.navigateTo = async function(viewId) {
 // REAL-TIME NOTIFICATIONS (PUSH & TOASTS)
 // ==========================================
 
+let pendingOrdersInterval: any = null;
+
+(window as any).startPendingOrdersSoundLoop = function() {
+    if (pendingOrdersInterval) return;
+    pendingOrdersInterval = setInterval(() => {
+        const orders = (window as any).lastFetchedOrders;
+        const hasPending = orders && orders.some((o: any) => o.status === 'pending');
+        if (hasPending) {
+            playNotificationSound();
+            if (window.showToast) window.showToast("Vous avez des commandes en attente à traiter ! 🔔", "info");
+        } else {
+            (window as any).stopPendingOrdersSoundLoop();
+        }
+    }, 30000); // Répéter toutes les 30 secondes
+};
+
+(window as any).stopPendingOrdersSoundLoop = function() {
+    if (pendingOrdersInterval) {
+        clearInterval(pendingOrdersInterval);
+        pendingOrdersInterval = null;
+    }
+};
+
 async function setupRealtimeNotifications() {
     if (!window.supabase) return;
     
@@ -940,21 +981,86 @@ async function setupRealtimeNotifications() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // 2. Abonnement aux changements sur la table orders via Supabase Realtime
-    supabase
-        .channel('public:orders')
-        .on(
-            'postgres_changes',
-            {
-                event: '*',
-                schema: 'public',
-                table: 'orders'
-            },
-            (payload) => {
-                handleOrderChange(payload, user.id);
-            }
-        )
-        .subscribe();
+    // Récupérer le rôle pour configurer l'abonnement
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!profile) return;
+
+    // 2. Abonnement personnalisé selon le rôle
+    if (profile.role === 'vendeur') {
+        supabase
+            .channel('public:orders')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `seller_id=eq.${user.id}`
+                },
+                (payload) => {
+                    handleOrderChange(payload, user.id);
+                }
+            )
+            .subscribe();
+    } else if (profile.role === 'acheteur') {
+        supabase
+            .channel('public:orders')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `buyer_id=eq.${user.id}`
+                },
+                (payload) => {
+                    handleOrderChange(payload, user.id);
+                }
+            )
+            .subscribe();
+    } else if (profile.role === 'superadmin') {
+        // Notification pour le superadmin en cas de demande vendeur en attente
+        supabase
+            .channel('public:profiles')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles'
+                },
+                (payload) => {
+                    const newProfile = payload.new;
+                    if (newProfile && newProfile.role === 'vendeur_pending') {
+                        playNotificationSound();
+                        showBrowserNotification("Nouvelle demande vendeur !", `L'étudiant ${newProfile.prenom} ${newProfile.nom} souhaite devenir vendeur.`);
+                        if (window.showToast) showToast(`Nouvelle demande vendeur de ${newProfile.prenom} ${newProfile.nom} !`, "info");
+                        if (typeof (window as any).loadAdminData === 'function') {
+                            (window as any).loadAdminData();
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        // Rafraîchir les données globales de l'admin en temps réel
+        supabase
+            .channel('public:orders')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'orders'
+                },
+                (payload) => {
+                    if (typeof (window as any).loadAdminData === 'function') {
+                        (window as any).loadAdminData();
+                    }
+                }
+            )
+            .subscribe();
+    }
 }
 
 function handleOrderChange(payload, currentUserId) {
@@ -972,7 +1078,7 @@ function handleOrderChange(payload, currentUserId) {
 
     // B. Notification pour l'acheteur (Statut mis à jour)
     if (eventType === 'UPDATE' && newOrder.buyer_id === currentUserId) {
-        if (newOrder.status !== oldOrder.status) {
+        if (!oldOrder || newOrder.status !== oldOrder.status) {
             let msg = "";
             if (newOrder.status === 'processing') msg = "Votre commande est en cours de préparation.";
             if (newOrder.status === 'shipped') msg = "Le livreur est en route ! Préparez-vous.";

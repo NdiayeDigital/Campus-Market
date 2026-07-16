@@ -52,7 +52,7 @@
             style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
             <div class="logo" style="cursor: pointer;" onclick="navigateTo('accueil')">
                 <img src="assets/logo.png" alt="Campus Market Logo"
-                    style="width: 150px; height: 40px; object-fit: contain; object-position: left center; display: block;">
+                    style="width: 190px; height: 50px; object-fit: contain; object-position: left center; display: block;">
             </div>
             <div class="nav-actions" style="display: flex; gap: 16px; align-items: center;">
                 <button class="icon-btn" onclick="toggleSearch()"
@@ -362,7 +362,7 @@
                     <p style="font-size: 1.1rem; opacity: 0.9; max-width: 600px; margin: 0 auto 32px;">Rejoignez plus de
                         50 étudiants vendeurs. Vendez vos vêtements, appareils électroniques ou services directement
                         depuis votre pavillon et gagnez de l'argent !</p><a href="#"
-                        onclick="navigateTo('register'); return false;" class="btn"
+                        onclick="navigateTo('seller-register'); return false;" class="btn"
                         style="background-color: var(--color-accent); color: var(--color-text-main); padding: 16px 32px; font-size: 1.1rem; border-radius: 99px;">Créer
                         ma boutique gratuitement</a>
                 </section><!-- Section "Comment ça marche" intégrée -->
@@ -1845,7 +1845,7 @@
             </div>
 
             <!-- SUBVIEW 2: COMMANDES VENDEUR -->
-            <div id="admin-subview-commandes" class="admin-subview" style="display: none;">
+            <div id="admin-subview-orders" class="admin-subview" style="display: none;">
                 <!-- Onglets de workflow -->
                 <div class="order-tabs-container">
                     <div class="order-tab-btn active" id="tab-orders-pending" onclick="switchOrderTab('pending')">
@@ -1876,7 +1876,7 @@
             </div>
 
             <!-- SUBVIEW 3: GESTION PRODUITS -->
-            <div id="admin-subview-produits" class="admin-subview" style="display: none;">
+            <div id="admin-subview-products" class="admin-subview" style="display: none;">
                 <section
                     style="background: white; border-radius: 16px; padding: 20px; margin: 0 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                     <div

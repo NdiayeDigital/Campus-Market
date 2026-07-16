@@ -120,6 +120,16 @@ window.navigateTo = async function(viewId) {
         return;
     }
 
+    if (viewId === 'profil') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+            if (profile && profile.role === 'vendeur') {
+                viewId = 'admin-profil';
+            }
+        }
+    }
+
     if (viewId.startsWith('admin-')) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {

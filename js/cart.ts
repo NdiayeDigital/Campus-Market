@@ -163,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Traitement...';
             btn.disabled = true;
 
+            let ordersToInsert: any[] = [];
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) throw new Error("Vous devez être connecté.");
@@ -187,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const buyerPhone = profile ? profile.telephone : '';
 
                 // Créer une commande par article dans le panier
-                const ordersToInsert = cart.map(item => ({
+                ordersToInsert = cart.map(item => ({
                     buyer_id: user.id,
                     buyer_name: buyerName,
                     buyer_phone: buyerPhone,
@@ -199,8 +200,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     status: 'pending'
                 }));
 
+                if (!navigator.onLine) {
+                    savePendingOrdersLocally(ordersToInsert);
+                    return;
+                }
+
                 const { error } = await supabase.from('orders').insert(ordersToInsert);
                 if (error) {
+                    if (error.message && (error.message.includes('fetch') || error.message.includes('network'))) {
+                        savePendingOrdersLocally(ordersToInsert);
+                        return;
+                    }
                     console.error("Supabase Error:", error);
                     throw new Error(error.message || "Erreur lors de l'insertion de la commande.");
                 }
@@ -214,9 +224,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 navigateTo('commandes');
                 fetchMyOrders(); // Rafraîchir la vue commandes
 
-            } catch (error) {
-                console.error("Catch Error:", error);
-                alert("Erreur : " + error.message);
+            } catch (error: any) {
+                if (error.message && (error.message.includes('fetch') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+                    savePendingOrdersLocally(ordersToInsert);
+                } else {
+                    console.error("Catch Error:", error);
+                    alert("Erreur : " + error.message);
+                }
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -224,9 +238,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    window.addEventListener('online', syncPendingOrders);
+    if (navigator.onLine) {
+        syncPendingOrders();
+    }
+
     // Initialize cart render
     renderCart();
 });
+
+function savePendingOrdersLocally(ordersToInsert: any[]) {
+    localStorage.setItem('pending_sync_orders', JSON.stringify(ordersToInsert));
+    window.cart = []; // Vider le panier
+    if (typeof (window as any).saveCart === 'function') {
+        (window as any).saveCart();
+    }
+    const modal = document.getElementById('order-modal');
+    if (modal) modal.style.display = 'none';
+    alert("Connexion perdue. Votre commande sera envoyée dès que vous serez reconnecté.");
+    window.navigateTo('commandes');
+}
+
+async function syncPendingOrders() {
+    if (!navigator.onLine || !window.supabase) return;
+    const pending = localStorage.getItem('pending_sync_orders');
+    if (!pending) return;
+    try {
+        const ordersToInsert = JSON.parse(pending);
+        if (ordersToInsert.length === 0) {
+            localStorage.removeItem('pending_sync_orders');
+            return;
+        }
+        const { error } = await window.supabase.from('orders').insert(ordersToInsert);
+        if (error) throw error;
+        localStorage.removeItem('pending_sync_orders');
+        if (window.showToast) {
+            window.showToast("🎉 Vos commandes en attente ont été envoyées avec succès !", "success");
+        } else {
+            alert("🎉 Vos commandes en attente ont été envoyées avec succès !");
+        }
+        if (typeof (window as any).fetchMyOrders === 'function') {
+            (window as any).fetchMyOrders();
+        }
+    } catch (e) {
+        console.error("Failed to sync pending orders:", e);
+    }
+}
 
 // Fetch Real Orders for Buyer (view-commandes)
 window.fetchMyOrders = async function() {
