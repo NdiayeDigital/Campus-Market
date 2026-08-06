@@ -116,21 +116,14 @@ async function fetchProductsFromDB(page = 0) {
         if (error) throw error;
         if (!data || data.length === 0) {
             // Génération de 30 produits de simulation si la base est vide
-            const categories = ['food', 'tech', 'fashion', 'services'];
-            const icons = ['fa-burger', 'fa-laptop', 'fa-shirt', 'fa-broom', 'fa-headphones', 'fa-book', 'fa-plug', 'fa-mobile-screen', 'fa-pen'];
-            const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
-            const titles = ['Produit Campus', 'Article UIDT', 'Service Etudiant', 'Offre Spéciale', 'Matériel de cours', 'Snack Campus'];
-            let mockData = [];
-            for (let i = 1; i <= 30; i++) {
-                mockData.push({
-                    id: 'mock-' + i,
-                    title: titles[Math.floor(Math.random() * titles.length)] + ' ' + i,
-                    category: categories[Math.floor(Math.random() * categories.length)],
-                    price: Math.floor(Math.random() * 90 + 10) * 100,
-                    icon: icons[Math.floor(Math.random() * icons.length)],
-                    color: colors[Math.floor(Math.random() * colors.length)]
-                });
-            }
+            const mockData = [
+                { id: 'mock-1', title: 'Thiéboudienne au poisson', category: 'food', price: 2500, oldPrice: 2900, icon: 'fa-bowl-food', color: '#EF4444', seller: { prenom: 'Fatou\'s', nom: 'Kitchen', is_open: true } },
+                { id: 'mock-2', title: 'Polo UIDT Bleu marine', category: 'fashion', price: 4500, icon: 'fa-shirt', color: '#3B82F6', seller: { prenom: 'UIDT', nom: 'Shop', is_open: true } },
+                { id: 'mock-3', title: 'Bracelet perles noires', category: 'jewelry', price: 1500, icon: 'fa-gem', color: '#F59E0B', seller: { prenom: 'Awa', nom: 'Bijoux', is_open: true } },
+                { id: 'mock-4', title: 'Yassa Poulet', category: 'food', price: 2000, icon: 'fa-bowl-food', color: '#EF4444', seller: { prenom: 'Fatou\'s', nom: 'Kitchen', is_open: true } },
+                { id: 'mock-5', title: 'Fascicule Mathématiques UIDT', category: 'school', price: 1000, icon: 'fa-book', color: '#10B981', seller: { prenom: 'Librairie', nom: 'Campus', is_open: true } },
+                { id: 'mock-6', title: 'Écouteurs Bluetooth Pro', category: 'tech', price: 5000, icon: 'fa-headphones', color: '#8B5CF6', seller: { prenom: 'Tech', nom: 'Student', is_open: true } }
+            ];
             await saveProductsToIndexedDB(mockData);
             return mockData;
         }
@@ -148,12 +141,11 @@ async function fetchProductsFromDB(page = 0) {
         
         // Fallback ultime en cas de cache vide
         return [
-            { id: 'm1', title: 'Ordinateur Portable HP', price: 150000, category: 'tech', image_url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=200&fit=crop' },
-            { id: 'm2', title: 'Clé USB 64Go', price: 5000, category: 'tech', image_url: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=300&h=200&fit=crop' },
-            { id: 'm3', title: 'Sandwich Poulet', price: 1000, category: 'food', image_url: 'https://images.unsplash.com/photo-1619881589316-56c7f9e6b587?w=300&h=200&fit=crop' },
-            { id: 'm4', title: 'T-shirt Campus', price: 3500, category: 'fashion', image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=200&fit=crop' },
-            { id: 'm5', title: 'Écouteurs Sans Fil', price: 12000, category: 'tech', image_url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=200&fit=crop' },
-            { id: 'm6', title: 'Hamburger Complet', price: 1500, category: 'food', image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&h=200&fit=crop' }
+            { id: 'm1', title: 'Thiéboudienne au poisson', price: 2500, oldPrice: 2900, category: 'food', icon: 'fa-bowl-food', color: '#EF4444' },
+            { id: 'm2', title: 'Polo UIDT Bleu marine', price: 4500, category: 'fashion', icon: 'fa-shirt', color: '#3B82F6' },
+            { id: 'm3', title: 'Bracelet perles noires', price: 1500, category: 'jewelry', icon: 'fa-gem', color: '#F59E0B' },
+            { id: 'm4', title: 'Yassa Poulet', price: 2000, category: 'food', icon: 'fa-bowl-food', color: '#EF4444' },
+            { id: 'm5', title: 'Écouteurs Sans Fil Pro', price: 5000, category: 'tech', icon: 'fa-headphones', color: '#8B5CF6' }
         ];
     }
 }
@@ -174,7 +166,13 @@ function renderProducts(products) {
 
     products.forEach(p => {
         const oldPriceVal = p.old_price ? p.old_price : p.oldPrice; // Handle both DB and mock cases
-        const hasOldPrice = oldPriceVal ? `<span class="product-card-old-price">${oldPriceVal} FCFA</span>` : '';
+        let hasOldPrice = '';
+        let discountBadge = '';
+        if (oldPriceVal && oldPriceVal > p.price) {
+            hasOldPrice = `<span class="product-old-price">${oldPriceVal} FCFA</span>`;
+            const pct = Math.round(((oldPriceVal - p.price) / oldPriceVal) * 100);
+            discountBadge = `<div class="product-discount-badge">-${pct}%</div>`;
+        }
         
         const isOpen = p.seller ? p.seller.is_open !== false : true;
         const isOutOfStock = p.stock === 0;
@@ -185,7 +183,7 @@ function renderProducts(products) {
         } else if (isOutOfStock) {
             buttonHtml = `<div class="badge-outofstock">Rupture de stock</div>`;
         } else {
-            buttonHtml = `<button class="btn-add btn-add-to-cart" onclick="addToCart('${p.id}')">
+            buttonHtml = `<button class="btn-add btn-add-to-cart" onclick="event.stopPropagation(); addToCart('${p.id}')">
                 <i class="fa-solid fa-plus"></i> Ajouter
             </button>`;
         }
@@ -194,23 +192,26 @@ function renderProducts(products) {
 
         let imageContent = '';
         if (p.image_url) {
-            imageContent = `<img src="${p.image_url}" alt="${p.title}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            imageContent = `<img src="${p.image_url}" alt="${escapeHTML(p.title)}" style="width: 100%; height: 100%; object-fit: cover;">`;
         } else if (p.icon) {
             imageContent = `<div class="product-card-icon-container" style="background-color: ${p.color || 'var(--color-primary)'};"><i class="fa-solid ${p.icon}"></i></div>`;
         } else {
-            imageContent = `<img src="https://via.placeholder.com/300x200?text=Produit" alt="${p.title}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            imageContent = `<img src="https://via.placeholder.com/300x200?text=Produit" alt="${escapeHTML(p.title)}" style="width: 100%; height: 100%; object-fit: cover;">`;
         }
 
+        const sellerName = p.seller ? `${p.seller.prenom} ${p.seller.nom}` : 'Vendeur Campus';
+
         const card = `
-            <article class="product-card product-card-custom ${(!isOpen || isOutOfStock) ? 'disabled' : ''}">
+            <article class="product-card product-card-custom ${(!isOpen || isOutOfStock) ? 'disabled' : ''}" style="position: relative; cursor: pointer;" onclick="openProductDetail('${escapeHTML(p.title)}', '${p.price} FCFA', '${escapeHTML(p.description || 'Délicieux produit préparé avec soin par un étudiant de l\'UIDT. Livraison rapide dans tous les pavillons.')}', '${p.image_url || ''}', '${escapeHTML(sellerName)}', '${oldPriceVal || ''}')">
+                ${discountBadge}
                 ${stockBadge}
                 <div class="product-card-img-container">
                     ${imageContent}
                 </div>
                 <div class="product-info">
-                    <h4 class="product-card-title">${p.title}</h4>
-                    <div class="product-card-price-row">
-                        <span class="product-card-price">${p.price} FCFA</span>
+                    <h4 class="product-card-title">${escapeHTML(p.title)}</h4>
+                    <div class="product-card-price-row" style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                        <span class="product-card-price" style="font-weight: 700; color: var(--color-primary);">${p.price} FCFA</span>
                         ${hasOldPrice}
                     </div>
                     ${buttonHtml}

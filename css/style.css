@@ -2818,3 +2818,234 @@ body.has-bottom-nav footer {
     0% { height: 4px; }
     100% { height: 12px; }
 }
+
+/* ==========================================================================
+   Composants Alignement Maquettes (ChatGPT Images Mockup Design)
+   ========================================================================== */
+
+/* Badges de réduction et prix originaux */
+.product-discount-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #EF4444;
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    z-index: 2;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+
+.product-old-price {
+    text-decoration: line-through;
+    color: #94A3B8;
+    font-size: 0.8rem;
+    font-weight: 400;
+    margin-left: 6px;
+}
+
+/* Pilules de Pavillons */
+.pavillon-chips-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.pavillon-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    background: #F1F5F9;
+    color: #334155;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pavillon-chip:hover {
+    background: #E2E8F0;
+}
+
+.pavillon-chip.active {
+    background: #1D4ED8;
+    color: white;
+    border-color: #1D4ED8;
+    box-shadow: 0 4px 10px rgba(29, 78, 216, 0.25);
+}
+
+/* Stepper de Suivi de Commande */
+.tracking-stepper {
+    position: relative;
+    padding-left: 28px;
+    margin: 20px 0;
+}
+
+.tracking-stepper::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: #E2E8F0;
+}
+
+.tracking-step {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.tracking-step:last-child {
+    margin-bottom: 0;
+}
+
+.tracking-step-node {
+    position: absolute;
+    left: -28px;
+    top: 2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #E2E8F0;
+    color: #94A3B8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.tracking-step.completed .tracking-step-node {
+    background: #10B981;
+    color: white;
+}
+
+.tracking-step.active .tracking-step-node {
+    background: #1D4ED8;
+    color: white;
+    box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.2);
+}
+
+.tracking-step-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #0F172A;
+}
+
+.tracking-step-time {
+    font-size: 0.78rem;
+    color: #64748B;
+    margin-top: 2px;
+}
+
+/* Carte Livreur */
+.delivery-agent-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin: 16px 0;
+}
+
+.delivery-agent-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.delivery-agent-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #CBD5E1;
+}
+
+.delivery-agent-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #0F172A;
+}
+
+.delivery-agent-rating {
+    font-size: 0.8rem;
+    color: #F59E0B;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+/* Modal produit style maquette */
+.product-detail-modal-content {
+    background: white;
+    border-radius: 24px;
+    overflow: hidden;
+    max-width: 480px;
+    width: 100%;
+}
+
+.product-detail-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 10;
+}
+
+.sticky-bottom-action-bar {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #F1F5F9;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.05);
+    z-index: 5;
+}
+
+.qty-selector-pill {
+    display: flex;
+    align-items: center;
+    background: #F1F5F9;
+    border-radius: 99px;
+    padding: 6px 12px;
+    gap: 12px;
+}
+
+.qty-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #0F172A;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    cursor: pointer;
+}
+
+.qty-value {
+    font-weight: 700;
+    font-size: 0.95rem;
+    min-width: 16px;
+    text-align: center;
+}
+

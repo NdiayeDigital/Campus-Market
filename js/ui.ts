@@ -126,13 +126,23 @@ window.showToast = function(message, type = 'success') {
 };
 
 // 6. Product Detail Modal
-window.openProductDetail = function(title, price, desc, img) {
+window.openProductDetail = function(title, price, desc, img, sellerName = 'Fatou\'s Kitchen', oldPrice = '') {
     const modal = document.getElementById('product-detail-modal');
     if(!modal) return;
-    document.getElementById('detail-title').innerText = title;
-    document.getElementById('detail-price').innerText = price;
-    document.getElementById('detail-desc').innerText = desc;
-    document.getElementById('detail-img').src = img;
+    const elTitle = document.getElementById('detail-title');
+    const elPrice = document.getElementById('detail-price');
+    const elDesc = document.getElementById('detail-desc');
+    const elImg = document.getElementById('detail-img') as HTMLImageElement;
+    const elSeller = document.getElementById('detail-seller');
+    const elOldPrice = document.getElementById('detail-old-price');
+    
+    if (elTitle) elTitle.innerText = title;
+    if (elPrice) elPrice.innerText = price;
+    if (elDesc) elDesc.innerText = desc || 'Délicieux produit préparé avec amour ❤️ par un étudiant entrepreneur de l\'UIDT.';
+    if (elImg) elImg.src = img || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=400&fit=crop';
+    if (elSeller) elSeller.innerText = 'Par ' + sellerName;
+    if (elOldPrice) elOldPrice.innerText = oldPrice ? oldPrice + ' FCFA' : '';
+    
     modal.style.display = 'flex';
 };
 
