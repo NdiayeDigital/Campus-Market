@@ -1,3 +1,4 @@
+import './supabase-config';
 import './types';
 import './store';
 import './ui';
