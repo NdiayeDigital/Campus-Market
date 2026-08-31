@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("./types");
+require("./store");
+require("./ui");
+require("./api");
+require("./auth");
+require("./cart");
+require("./admin");
+console.log("Modules chargés avec succès.");

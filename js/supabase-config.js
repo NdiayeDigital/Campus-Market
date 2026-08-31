@@ -1,11 +1,11 @@
 // Configuration Supabase pour Campus Market
-const SUPABASE_URL = 'https://lhrhxgorlynczwbmfwbt.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_mO782vIBENNmrtNsIGiImQ_ubow6b7j';
+const SUPABASE_URL = 'https://fqulqgdjusfzhcjpvyay.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
 
-// Initialisation globale du client Supabase
-if (SUPABASE_URL !== 'VOTRE_SUPABASE_URL') {
-    // On écrase l'objet global supabase par l'instance du client
+// Initialisation directe du client Supabase
+if (window.supabase && typeof window.supabase.createClient === 'function') {
     window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("✅ Supabase connecté avec succès !");
 } else {
-    console.warn("Supabase n'est pas encore configuré. L'application est en mode attente.");
+    console.error("SDK Supabase introuvable sur window.supabase.");
 }

@@ -2167,9 +2167,26 @@
             // localStorage.setItem('userCampus', campusName);
         }
     </script>
+    <!-- 1. SDK Supabase officiel (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- 2. Configuration Supabase et helpers globaux -->
     <script src="js/supabase-config.js"></script>
-    <script type="module" src="js/main.ts"></script>
+
+    <!-- 3. Couche UI de base (définit window.navigateTo, modales, toasts) -->
+    <script src="js/ui.js"></script>
+
+    <!-- 4. Couche API / Données (fetchProductsFromDB, IndexedDB, TopShops) -->
+    <script src="js/api.js"></script>
+
+    <!-- 5. Authentification et gardes de navigation (checkAuthState, hooks) -->
+    <script src="js/auth.js"></script>
+
+    <!-- 6. Panier et commandes (cart, openCheckoutModal, fetchMyOrders) -->
+    <script src="js/cart.js"></script>
+
+    <!-- 7. Espace Vendeur et Super Admin -->
+    <script src="js/admin.js"></script>
 </body>
 
 </html>
