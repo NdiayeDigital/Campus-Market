@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "target": "ES2020",
+    "module": "None",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "strict": false,
     "noImplicitAny": false,
-    "allowJs": true,
-    "esModuleInterop": true,
+    "strictNullChecks": false,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"]
+    "noEmitOnError": false,
+    "types": []
   },
-  "include": ["js/**/*.ts"]
+  "include": ["js/**/*.ts"],
+  "exclude": ["node_modules", "js/**/*.js"]
 }
