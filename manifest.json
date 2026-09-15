@@ -2,7 +2,7 @@
   "name": "Campus Market",
   "short_name": "Campus Market",
   "description": "La marketplace exclusive des étudiants de l'UIDT",
-  "start_url": "/index.html",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#F8FAFC",
   "theme_color": "#1D4ED8",

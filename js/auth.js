@@ -3,77 +3,127 @@
 async function checkAuthState() {
     if (!window.supabase)
         return null;
-    const { data: { user } } = await window.supabase.auth.getUser();
+    let user = null;
+    try {
+        const { data: authData } = await window.supabase.auth.getUser();
+        user = authData?.user || null;
+    }
+    catch (e) {
+        console.warn("Erreur lors de la récupération de la session auth:", e);
+        return null;
+    }
+
     const profilView = document.getElementById('view-profil');
-    if (profilView) {
-        if (user) {
-            // Logged in
-            const { data: profile } = await window.supabase.from('profiles').select('*').eq('id', user.id).single();
-            if (profile) {
-                if (window.updateBottomNavigation) {
-                    window.updateBottomNavigation(profile.role);
-                }
-                if (profile.role === 'vendeur') {
-                    const currentHash = window.location.hash;
-                    if (!window.initialRedirectDone) {
-                        window.initialRedirectDone = true;
-                        if (currentHash === '' || currentHash === '#' || currentHash === '#accueil' || currentHash === '#categories' || currentHash === '#panier' || currentHash === '#profil') {
-                            setTimeout(() => {
-                                window.navigateTo('admin-dashboard');
-                            }, 50);
-                        }
-                    }
-                }
-                let header = document.getElementById('profil-header');
-                if (!header) {
-                    header = document.createElement('div');
-                    header.id = 'profil-header';
-                    header.style = "padding: 24px 20px; background: white; border-bottom: 1px solid var(--color-border); text-align: center;";
-                    profilView.insertBefore(header, profilView.firstChild);
-                }
-                header.innerHTML = `
-                    <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-                    <h3 style="margin: 0; font-size: 1.2rem;">${window.escapeHTML(profile.prenom)} ${window.escapeHTML(profile.nom)}</h3>
-                    <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 4px;">${window.escapeHTML(profile.telephone)}</p>
-                    <div style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: ${profile.role === 'vendeur' ? '#10B981' : '#818CF8'};">
-                        Compte ${profile.role.toUpperCase()}
-                    </div>
-                `;
-                const btnBecomeSeller = document.getElementById('btn-become-seller');
-                const btnSellerDashboard = document.getElementById('btn-seller-dashboard');
-                const logoutSection = document.getElementById('logout-section');
-                if (btnBecomeSeller) {
-                    btnBecomeSeller.style.display = 'block';
-                    const icon = btnBecomeSeller.querySelector('i');
-                    const span = btnBecomeSeller.querySelector('span');
-                    if (profile.role === 'vendeur') {
-                        icon.className = 'fa-solid fa-store-slash';
-                        span.innerText = 'Mode client';
-                        btnBecomeSeller.onclick = () => window.navigateTo('accueil');
-                    }
-                    else if (profile.role === 'vendeur_pending') {
-                        icon.className = 'fa-solid fa-hourglass-half';
-                        span.innerText = 'En attente de confirmation';
-                        btnBecomeSeller.onclick = () => { };
-                    }
-                    else {
-                        icon.className = 'fa-solid fa-store';
-                        span.innerText = 'Devenir Vendeur';
-                        btnBecomeSeller.onclick = () => window.navigateTo('seller-register');
-                    }
-                }
-                if (btnSellerDashboard)
-                    btnSellerDashboard.style.display = profile.role === 'vendeur' ? 'block' : 'none';
-                if (logoutSection)
-                    logoutSection.style.display = (profile.role === 'vendeur' || profile.role === 'superadmin') ? 'block' : 'none';
-                document.getElementById('profil-unauth-state').style.display = 'none';
-                document.getElementById('profil-auth-menu').style.display = 'block';
+    let profile = null;
+
+    if (user) {
+        try {
+            const { data, error } = await window.supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (error) {
+                console.warn("Erreur requête profiles (non-bloquante) :", error.message);
+            }
+            profile = data;
+
+            // Si le profil n'existe pas en base pour cet utilisateur authentifié, création d'un profil par défaut
+            if (!profile) {
+                const meta = user.user_metadata || {};
+                const defaultProfile = {
+                    id: user.id,
+                    prenom: meta.prenom || 'Étudiant',
+                    nom: meta.nom || 'UIDT',
+                    telephone: meta.telephone || '',
+                    role: meta.role || 'acheteur'
+                };
+                const { data: createdProfile } = await window.supabase
+                    .from('profiles')
+                    .insert([defaultProfile])
+                    .select()
+                    .maybeSingle();
+
+                profile = createdProfile || defaultProfile;
             }
         }
+        catch (err) {
+            console.warn("Exception récupération profil (non-fatale) :", err);
+            profile = null;
+        }
+    }
+
+    if (profilView) {
+        if (user && profile) {
+            // Logged in avec profil valide
+            if (window.updateBottomNavigation) {
+                window.updateBottomNavigation(profile.role);
+            }
+            if (profile.role === 'vendeur') {
+                const currentHash = window.location.hash;
+                if (!window.initialRedirectDone) {
+                    window.initialRedirectDone = true;
+                    if (currentHash === '' || currentHash === '#' || currentHash === '#accueil' || currentHash === '#categories' || currentHash === '#panier' || currentHash === '#profil') {
+                        setTimeout(() => {
+                            window.navigateTo('admin-dashboard');
+                        }, 50);
+                    }
+                }
+            }
+            let header = document.getElementById('profil-header');
+            if (!header) {
+                header = document.createElement('div');
+                header.id = 'profil-header';
+                header.style = "padding: 24px 20px; background: white; border-bottom: 1px solid var(--color-border); text-align: center;";
+                profilView.insertBefore(header, profilView.firstChild);
+            }
+            header.innerHTML = `
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <h3 style="margin: 0; font-size: 1.2rem;">${window.escapeHTML(profile.prenom)} ${window.escapeHTML(profile.nom)}</h3>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 4px;">${window.escapeHTML(profile.telephone)}</p>
+                <div style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: ${profile.role === 'vendeur' ? '#10B981' : '#818CF8'};">
+                    Compte ${profile.role.toUpperCase()}
+                </div>
+            `;
+            const btnBecomeSeller = document.getElementById('btn-become-seller');
+            const btnSellerDashboard = document.getElementById('btn-seller-dashboard');
+            const logoutSection = document.getElementById('logout-section');
+            if (btnBecomeSeller) {
+                btnBecomeSeller.style.display = 'block';
+                const icon = btnBecomeSeller.querySelector('i');
+                const span = btnBecomeSeller.querySelector('span');
+                if (profile.role === 'vendeur') {
+                    icon.className = 'fa-solid fa-store-slash';
+                    span.innerText = 'Mode client';
+                    btnBecomeSeller.onclick = () => window.navigateTo('accueil');
+                }
+                else if (profile.role === 'vendeur_pending') {
+                    icon.className = 'fa-solid fa-hourglass-half';
+                    span.innerText = 'En attente de confirmation';
+                    btnBecomeSeller.onclick = () => { };
+                }
+                else {
+                    icon.className = 'fa-solid fa-store';
+                    span.innerText = 'Devenir Vendeur';
+                    btnBecomeSeller.onclick = () => window.navigateTo('seller-register');
+                }
+            }
+            if (btnSellerDashboard)
+                btnSellerDashboard.style.display = profile.role === 'vendeur' ? 'block' : 'none';
+            if (logoutSection)
+                logoutSection.style.display = (profile.role === 'vendeur' || profile.role === 'superadmin') ? 'block' : 'none';
+            const unauthState = document.getElementById('profil-unauth-state');
+            if (unauthState)
+                unauthState.style.display = 'none';
+            const authMenu = document.getElementById('profil-auth-menu');
+            if (authMenu)
+                authMenu.style.display = 'block';
+        }
         else {
-            // Not logged in
+            // Not logged in ou profil introuvable
             if (window.updateBottomNavigation) {
                 window.updateBottomNavigation(null);
             }
@@ -104,7 +154,8 @@ async function checkAuthState() {
                 authMenu.style.display = 'none';
         }
     }
-    if (user) {
+    // Ne lancer setupRealtimeNotifications QUE si l'utilisateur et son profil existent et ont un rôle vendeur ou superadmin
+    if (user && profile && (profile.role === 'vendeur' || profile.role === 'superadmin')) {
         if (typeof setupRealtimeNotifications === 'function')
             setupRealtimeNotifications();
     }
@@ -121,7 +172,7 @@ window.navigateTo = async function (viewId) {
     if (viewId === 'profil') {
         const { data: { user } } = await window.supabase.auth.getUser();
         if (user) {
-            const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).single();
+            const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
             if (profile && profile.role === 'vendeur') {
                 viewId = 'admin-profil';
             }
@@ -134,7 +185,7 @@ window.navigateTo = async function (viewId) {
                 originalNavigateTo('login');
             return;
         }
-        const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).single();
+        const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
         if (!profile || profile.role !== 'vendeur') {
             if (originalNavigateTo)
                 originalNavigateTo('accueil');
@@ -212,43 +263,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             try {
-                // 1. Sign up Auth
+                // 1. Sign up Auth avec métadonnées
                 const { data, error } = await window.supabase.auth.signUp({
                     email: email,
-                    password: password
-                });
-                if (error)
-                    throw error;
-                // 2. Create Profile
-                if (data.user) {
-                    const { error: profileError } = await window.supabase.from('profiles').insert([
-                        {
-                            id: data.user.id,
+                    password: password,
+                    options: {
+                        data: {
                             prenom: prenom,
                             nom: nom,
                             telephone: phone,
                             role: 'acheteur'
                         }
-                    ]);
-                    if (profileError) {
-                        // If it fails due to RLS, it means the user is not logged in (Email confirmation needed)
-                        console.error("Profile creation error:", profileError);
-                        throw new Error(profileError.message);
+                    }
+                });
+                if (error)
+                    throw error;
+
+                // 2. Si une session existe immédiatement après signUp, upsert dans 'profiles' en fallback
+                if (data.session && data.user) {
+                    try {
+                        await window.supabase.from('profiles').upsert([
+                            {
+                                id: data.user.id,
+                                prenom: prenom,
+                                nom: nom,
+                                telephone: phone,
+                                role: 'acheteur'
+                            }
+                        ], { onConflict: 'id' });
+                    }
+                    catch (profileError) {
+                        console.warn("Fallback profiles upsert non-bloquant (trigger DB prioritaire) :", profileError);
                     }
                 }
+
                 // Connexion automatique et redirection
-                await checkAuthState();
-                const checkoutPending = localStorage.getItem('checkout_pending');
-                if (checkoutPending === 'true') {
-                    localStorage.removeItem('checkout_pending');
-                    window.navigateTo('panier');
-                    setTimeout(() => {
-                        if (window.openCheckoutModal)
-                            window.openCheckoutModal();
-                    }, 500);
+                if (data.session) {
+                    await checkAuthState();
+                    const checkoutPending = localStorage.getItem('checkout_pending');
+                    if (checkoutPending === 'true') {
+                        localStorage.removeItem('checkout_pending');
+                        window.navigateTo('panier');
+                        setTimeout(() => {
+                            if (window.openCheckoutModal)
+                                window.openCheckoutModal();
+                        }, 500);
+                    }
+                    else {
+                        window.navigateTo('accueil');
+                    }
                 }
                 else {
-                    window.navigateTo('accueil');
+                    alert("Inscription réussie ! Si la confirmation d'email est activée, veuillez consulter votre boîte de réception avant de vous connecter.");
+                    window.navigateTo('login');
                 }
                 registerForm.reset();
             }
@@ -288,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (error)
                     throw error;
-                const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', data.user.id).single();
+                const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
                 await checkAuthState();
                 if (profile && profile.role === 'vendeur') {
                     window.navigateTo('admin-dashboard');
