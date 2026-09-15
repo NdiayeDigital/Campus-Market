@@ -35,13 +35,18 @@ export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
     // Gestion de l'image ou icône
     let imageContent = '';
     if (product.image_url) {
+        // Remplacement préventif de l'URL Unsplash restreinte par ORB (bracelet)
+        const safeImageUrl = product.image_url.includes('photo-1611591475823-3882f0592965')
+            ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
+            : product.image_url;
+
         imageContent = `
             <img 
-                src="${escapeHTML(product.image_url)}" 
+                src="${escapeHTML(safeImageUrl)}" 
                 alt="${escapeHTML(product.title)}" 
                 loading="lazy"
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=Campus+Market';"
+                onerror="this.onerror=null; this.src='/assets/placeholder.webp';"
             >
         `;
     } else {

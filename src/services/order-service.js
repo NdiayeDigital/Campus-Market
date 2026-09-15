@@ -107,6 +107,58 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Construit les enregistrements de commande strictement conformes aux colonnes réelles de la table `orders`.
+ * Colonnes réelles vérifiées en base :
+ * - buyer_name (concatène prénom et nom)
+ * - buyer_phone
+ * - delivery_address (concatène pavillon et chambre, ex: "Pavillon Jardin Social, Chambre hhdha")
+ * - payment_method (wave | om | cash)
+ * - seller_id (UUID du vendeur de l'article)
+ * - product_id (UUID de l'article)
+ * - price (prix unitaire ou total selon la logique du panier)
+ * - quantity
+ * - status ('pending')
+ * - buyer_id (null si anonyme, ou user.id si connecté)
+ *
+ * @param {Object} params
+ * @returns {Array<Object>}
+ */
+export function buildOrderPayload({
+    clientNom,
+    clientPrenom,
+    clientTelephone,
+    pavillon,
+    chambre,
+    paymentMethod = 'cash',
+    items = [],
+    buyerId = null,
+}) {
+    const buyerName = `${clientPrenom} ${clientNom}`.trim();
+    const fullDeliveryAddress = `${pavillon}, Chambre ${chambre}`.trim();
+
+    const validMethods = ['cash', 'wave', 'om'];
+    const normalizedMethod = typeof paymentMethod === 'string' ? paymentMethod.toLowerCase().trim() : 'cash';
+    const finalPaymentMethod = validMethods.includes(normalizedMethod) ? normalizedMethod : 'cash';
+
+    return items.map((item) => {
+        const quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
+        const unitPrice = Number(item.price) || 0;
+        return {
+            buyer_name: buyerName,
+            buyer_phone: String(clientTelephone).trim(),
+            delivery_address: fullDeliveryAddress,
+            payment_method: finalPaymentMethod,
+            seller_id: item.seller_id || item.seller?.id,
+            product_id: item.id || item.product_id,
+            price: unitPrice * quantity,
+            quantity,
+            status: 'pending',
+            buyer_id: buyerId || null,
+        };
+    });
+}
+
+/**
  * Crée et enregistre une commande pour un panier d'articles.
  *
  * @param {Object} orderData
@@ -141,8 +193,6 @@ export async function createOrder({
     }
 
     const reference = generateOrderReference();
-    const buyerName = `${clientPrenom} ${clientNom}`.trim();
-    const fullDeliveryAddress = `${pavillon}, Chambre ${chambre} [Réf: ${reference}]`;
 
     // Vérification facultative de la session : si l'acheteur est authentifié, on l'associe.
     // S'il n'est pas connecté, buyer_id reste null (AUCUN blocage).
@@ -157,20 +207,17 @@ export async function createOrder({
         buyerId = null;
     }
 
-    // Préparation des lignes de commandes pour Supabase
-    const ordersToInsert = items.map((item) => ({
-        buyer_id: buyerId,
-        buyer_name: buyerName,
-        buyer_phone: clientTelephone,
-        seller_id: item.seller_id,
-        product_id: item.id,
-        price: Number(item.price) * (Number(item.quantity) || 1),
-        quantity: Number(item.quantity) || 1,
-        delivery_address: fullDeliveryAddress,
-        payment_method: paymentMethod,
-        payment_status: 'pending',
-        status: 'pending',
-    }));
+    // Préparation rigoureuse des lignes de commandes pour Supabase (strictement conformes aux 10 colonnes)
+    const ordersToInsert = buildOrderPayload({
+        clientNom,
+        clientPrenom,
+        clientTelephone,
+        pavillon,
+        chambre,
+        paymentMethod,
+        items,
+        buyerId,
+    });
 
     // Gestion du mode hors-ligne immédiat
     if (!navigator.onLine) {
@@ -219,6 +266,7 @@ export async function createOrder({
 
 export default {
     createOrder,
+    buildOrderPayload,
     generateOrderReference,
     syncPendingOrders,
     getPendingOfflineOrders,

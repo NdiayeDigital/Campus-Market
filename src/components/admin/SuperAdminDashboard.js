@@ -326,12 +326,10 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
         containerEl.innerHTML = `
             <div class="w-full max-w-md mx-auto my-12 bg-white rounded-2xl shadow-xl border border-slate-200 p-6 flex flex-col gap-5">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                        <i class="fa-solid fa-lock text-sm"></i>
-                    </div>
+                    <img src="/assets/logo.webp" alt="Campus Market" class="h-10 w-auto object-contain">
                     <div>
-                        <h2 class="font-heading font-extrabold text-lg text-slate-900">Super Administrateur</h2>
-                        <p class="text-xs text-slate-500">Accès sécurisé réservé à l'UIDT</p>
+                        <h2 class="font-heading font-extrabold text-base text-slate-900 leading-tight">Super Administrateur</h2>
+                        <p class="text-[11px] text-slate-500">Accès sécurisé réservé à l'UIDT</p>
                     </div>
                 </div>
 

@@ -164,7 +164,7 @@ export function createProductManager({ sellerId, onProductChanged } = {}) {
                             <!-- Image / Miniature -->
                             <div class="w-14 h-14 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
                                 ${prod.image_url 
-                                    ? `<img src="${escapeHTML(prod.image_url)}" alt="${escapeHTML(prod.title)}" class="w-full h-full object-cover">`
+                                    ? `<img src="${escapeHTML(prod.image_url)}" alt="${escapeHTML(prod.title)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
                                     : `<i class="fa-solid ${escapeHTML(prod.icon || 'fa-box')} text-lg text-primary"></i>`
                                 }
                             </div>

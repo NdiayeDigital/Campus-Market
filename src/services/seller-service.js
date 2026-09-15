@@ -145,14 +145,22 @@ export async function loginSeller({ email, password }) {
  */
 export async function getCurrentSeller() {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((resolve) =>
+            setTimeout(() => resolve({ data: { session: null } }), 2000)
+        );
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
         if (!session?.user) return null;
 
-        const { data: profile } = await supabase
+        const profilePromise = supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .maybeSingle();
+        const profileTimeout = new Promise((resolve) =>
+            setTimeout(() => resolve({ data: null, error: null }), 2000)
+        );
+        const { data: profile } = await Promise.race([profilePromise, profileTimeout]);
 
         if (profile && (profile.role === 'vendeur' || profile.role === 'vendeur_pending')) {
             return { user: session.user, profile };

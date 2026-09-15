@@ -139,7 +139,7 @@ export function createCartModal({ onProceedToCheckout } = {}) {
                 <!-- Image / Icone -->
                 <div class="w-16 h-16 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
                     ${item.image_url 
-                        ? `<img src="${escapeHTML(item.image_url)}" alt="${escapeHTML(item.title)}" class="w-full h-full object-cover">`
+                        ? `<img src="${escapeHTML(item.image_url)}" alt="${escapeHTML(item.title)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
                         : `<i class="fa-solid ${escapeHTML(item.icon || 'fa-box')} text-xl text-primary"></i>`
                     }
                 </div>

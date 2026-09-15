@@ -4,6 +4,7 @@
  */
 
 import { subscribeCart } from '../services/cart-store.js';
+import logoUrl from '../assets/logo.webp';
 
 /**
  * Crée le composant Header.
@@ -23,7 +24,7 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller 
             <!-- Ligne supérieure : Logo & Actions rapides -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3 cursor-pointer group" id="header-logo-btn">
-                    <img src="/assets/logo.webp" alt="Campus Market" class="h-9 w-auto object-contain transition-transform group-hover:scale-105" onerror="this.src='/images/icon-192x192.png'">
+                    <img src="${logoUrl}" alt="Campus Market" class="h-11 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105" onerror="this.src='/assets/logo.webp'">
                     <div class="hidden sm:flex flex-col">
                         <span class="font-heading font-extrabold text-primary text-base tracking-tight leading-none">CAMPUS MARKET</span>
                         <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">UIDT Thiès</span>

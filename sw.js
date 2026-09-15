@@ -14,6 +14,7 @@ const STATIC_PRECACHE = [
     '/index.html',
     '/manifest.json',
     '/assets/logo.webp',
+    '/assets/placeholder.webp',
     '/assets/logo-192x192.png',
     '/assets/logo-512x512.png',
 ];

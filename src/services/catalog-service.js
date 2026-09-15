@@ -6,8 +6,85 @@
 import { supabase } from './supabase.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
 
-// Cache mémoire des produits pour recherche locale instantanée et tolérance offline
+// Clés de persistance locale pour tolérance hors-ligne
+const PRODUCTS_CACHE_KEY = 'campus_market_cached_products';
+const TOPSHOPS_CACHE_KEY = 'campus_market_cached_top_shops';
+
+// Cache mémoire
 let memoryProductsCache = [];
+let memoryTopShopsCache = [];
+
+/**
+ * Récupère les produits persistés en LocalStorage / Mémoire.
+ * @returns {Array}
+ */
+function getLocalCachedProducts() {
+    if (memoryProductsCache.length > 0) return memoryProductsCache;
+    try {
+        if (typeof localStorage !== 'undefined') {
+            const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
+            if (raw) {
+                memoryProductsCache = JSON.parse(raw);
+                return memoryProductsCache;
+            }
+        }
+    } catch (err) {
+        console.warn('[CatalogService] Erreur lecture cache local:', err);
+    }
+    return [];
+}
+
+/**
+ * Sauvegarde les produits en LocalStorage et mémoire.
+ * @param {Array} products
+ */
+function saveLocalCachedProducts(products) {
+    if (!products || !Array.isArray(products) || products.length === 0) return;
+    memoryProductsCache = products;
+    try {
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products));
+        }
+    } catch (err) {
+        console.warn('[CatalogService] Erreur écriture cache local:', err);
+    }
+}
+
+/**
+ * Récupère les top shops depuis le cache local.
+ * @returns {Array}
+ */
+function getLocalCachedTopShops() {
+    if (memoryTopShopsCache.length > 0) return memoryTopShopsCache;
+    try {
+        if (typeof localStorage !== 'undefined') {
+            const raw = localStorage.getItem(TOPSHOPS_CACHE_KEY);
+            if (raw) {
+                memoryTopShopsCache = JSON.parse(raw);
+                return memoryTopShopsCache;
+            }
+        }
+    } catch (err) {
+        console.warn('[CatalogService] Erreur lecture cache top shops:', err);
+    }
+    return [];
+}
+
+/**
+ * Sauvegarde les top shops en LocalStorage et mémoire.
+ * @param {Array} shops
+ */
+function saveLocalCachedTopShops(shops) {
+    if (!shops || !Array.isArray(shops) || shops.length === 0) return;
+    memoryTopShopsCache = shops;
+    try {
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(TOPSHOPS_CACHE_KEY, JSON.stringify(shops));
+        }
+    } catch (err) {
+        console.warn('[CatalogService] Erreur écriture cache top shops:', err);
+    }
+}
 
 /**
  * Catégories officielles de Campus Market
@@ -24,6 +101,9 @@ export const CATEGORIES = [
 
 /**
  * Récupère les produits actifs depuis Supabase avec pagination et jointure vendeur.
+ * Utilise un AbortController avec timeout strict de 10 secondes (optimisé réseau mobile)
+ * et repli automatique sur le cache LocalStorage / mémoire.
+ *
  * @param {Object} [options]
  * @param {string} [options.category='all'] - Catégorie à filtrer
  * @param {number} [options.limit=50] - Nombre maximal de produits
@@ -31,34 +111,59 @@ export const CATEGORIES = [
  * @returns {Promise<Array>}
  */
 export async function fetchActiveProducts({ category = 'all', limit = 50, offset = 0 } = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, 10000); // 10 secondes max pour réseau mobile
+
     try {
         let query = supabase
             .from('products')
             .select('*, seller:seller_id(id, prenom, nom, telephone, is_open)')
             .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1);
+            .range(offset, offset + limit - 1)
+            .abortSignal(controller.signal);
 
         if (category && category !== 'all') {
-            query = query.eq('category', category);
+            const catObj = CATEGORIES.find((c) => c.id === category || c.label === category);
+            if (catObj) {
+                query = query.or(`category.eq."${catObj.id}",category.eq."${catObj.label}"`);
+            } else {
+                query = query.eq('category', category);
+            }
         }
 
         const { data, error } = await query;
+        clearTimeout(timeoutId);
+
         if (error) throw error;
 
         const products = data || [];
-        // Mise à jour du cache mémoire si requête générale
-        if (category === 'all' && offset === 0) {
-            memoryProductsCache = products;
+        if (category === 'all' && offset === 0 && products.length > 0) {
+            saveLocalCachedProducts(products);
         }
 
         return products;
     } catch (err) {
-        console.warn('[CatalogService] Échec requête Supabase, fallback cache mémoire:', err);
-        if (memoryProductsCache.length > 0) {
-            return category === 'all'
-                ? memoryProductsCache
-                : memoryProductsCache.filter((p) => p.category === category);
+        clearTimeout(timeoutId);
+        const isAbort = err.name === 'AbortError' || err.message?.includes('aborted');
+        console.warn(
+            `[CatalogService] ${isAbort ? 'Timeout (10s) réseau mobile atteint' : 'Erreur requête Supabase'}:`,
+            err.message || err
+        );
+
+        // Fallback immédiat sur les données en cache (LocalStorage / Mémoire)
+        const cached = getLocalCachedProducts();
+        if (cached && cached.length > 0) {
+            console.info('[CatalogService] Affichage des données de secours depuis le cache local.');
+            if (category === 'all') return cached;
+            const catObj = CATEGORIES.find((c) => c.id === category || c.label === category);
+            return cached.filter(
+                (p) => p.category === category || (catObj && (p.category === catObj.id || p.category === catObj.label))
+            );
         }
+
+        // Si aucune donnée n'est disponible, renvoie un tableau vide
         return [];
     }
 }
@@ -70,16 +175,20 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
  * @returns {Promise<Array>}
  */
 export async function searchProducts(query = '', category = 'all') {
-    // Si le cache est vide, on le rafraîchit
-    if (memoryProductsCache.length === 0) {
-        await fetchActiveProducts({ category: 'all' });
+    let cache = getLocalCachedProducts();
+    if (!cache || cache.length === 0) {
+        cache = await fetchActiveProducts({ category: 'all' });
     }
 
     const cleanQuery = query.toLowerCase().trim();
+    const catObj = CATEGORIES.find((c) => c.id === category || c.label === category);
 
-    return memoryProductsCache.filter((product) => {
+    return (cache || []).filter((product) => {
         // 1. Filtre catégorie
-        const matchesCategory = category === 'all' || product.category === category;
+        const matchesCategory =
+            category === 'all' ||
+            product.category === category ||
+            (catObj && (product.category === catObj.id || product.category === catObj.label));
         if (!matchesCategory) return false;
 
         // Si aucune recherche texte, on retient tous les produits de la catégorie
@@ -87,11 +196,12 @@ export async function searchProducts(query = '', category = 'all') {
 
         const title = (product.title || '').toLowerCase();
         const sellerName = product.seller
-            ? `${product.seller.prenom} ${product.seller.nom}`.toLowerCase()
+            ? `${product.seller.prenom || ''} ${product.seller.nom || ''}`.toLowerCase()
             : '';
+        const categoryLabel = (product.category || '').toLowerCase();
 
         // Correspondance directe
-        if (title.includes(cleanQuery) || sellerName.includes(cleanQuery)) {
+        if (title.includes(cleanQuery) || sellerName.includes(cleanQuery) || categoryLabel.includes(cleanQuery)) {
             return true;
         }
 
@@ -112,25 +222,33 @@ export async function searchProducts(query = '', category = 'all') {
 
 /**
  * Récupère les meilleurs vendeurs ("Top Shops") certifiés avec leur note moyenne.
+ * Utilise un AbortController avec timeout de 10s et repli sur le cache local.
  * @returns {Promise<Array>}
  */
 export async function fetchTopShops() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, 10000);
+
     try {
-        const { data: sellers, error: errSellers } = await supabase
+        const sellersQuery = supabase
             .from('profiles')
             .select('id, prenom, nom, telephone, is_open')
-            .eq('role', 'vendeur');
+            .eq('role', 'vendeur')
+            .abortSignal(controller.signal);
 
+        const { data: sellers, error: errSellers } = await sellersQuery;
         if (errSellers) throw errSellers;
         if (!sellers || sellers.length === 0) return [];
 
-        const { data: reviews, error: errReviews } = await supabase
+        const reviewsQuery = supabase
             .from('reviews')
-            .select('seller_id, rating');
+            .select('seller_id, rating')
+            .abortSignal(controller.signal);
 
-        if (errReviews) {
-            console.warn('[CatalogService] Erreur récupération reviews:', errReviews);
-        }
+        const { data: reviews } = await reviewsQuery;
+        clearTimeout(timeoutId);
 
         const reviewsList = reviews || [];
 
@@ -152,11 +270,14 @@ export async function fetchTopShops() {
 
         // Tri par note décroissante puis nombre d'avis
         computedSellers.sort((a, b) => b.avgRating - a.avgRating || b.reviewCount - a.reviewCount);
+        const topShops = computedSellers.slice(0, 6);
+        saveLocalCachedTopShops(topShops);
 
-        return computedSellers.slice(0, 6);
+        return topShops;
     } catch (error) {
-        console.error('[CatalogService] Erreur TopShops:', error);
-        return [];
+        clearTimeout(timeoutId);
+        console.warn('[CatalogService] Erreur TopShops, repli sur cache local:', error.message || error);
+        return getLocalCachedTopShops();
     }
 }
 

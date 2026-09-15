@@ -126,5 +126,65 @@ console.assert(nullAdminRole === false, 'verifyAdminRole(null) devrait retourner
 
 console.log('✅ [AdminService] Validation stricte des opérations SuperAdmin validée !');
 
+// 6. Test Order Service Payload (Strict 10 real DB columns)
+import { buildOrderPayload } from '../src/services/order-service.js';
+
+const mockItems = [
+    { id: 'prod-uuid-1', seller_id: 'seller-uuid-1', price: 2500, quantity: 2 },
+    { id: 'prod-uuid-2', seller_id: 'seller-uuid-2', price: 1000, quantity: 1 },
+];
+
+const generatedOrders = buildOrderPayload({
+    clientNom: 'Diallo',
+    clientPrenom: 'Amadou',
+    clientTelephone: ' 77 123 45 67 ',
+    pavillon: 'Pavillon Jardin Social',
+    chambre: 'hhdha',
+    paymentMethod: 'WAVE',
+    items: mockItems,
+    buyerId: null,
+});
+
+console.assert(generatedOrders.length === 2, 'Nombre de commandes générées incorrect');
+
+const expectedColumns = [
+    'buyer_name',
+    'buyer_phone',
+    'delivery_address',
+    'payment_method',
+    'seller_id',
+    'product_id',
+    'price',
+    'quantity',
+    'status',
+    'buyer_id',
+].sort();
+
+const firstOrder = generatedOrders[0];
+const actualKeys = Object.keys(firstOrder).sort();
+
+console.assert(
+    JSON.stringify(actualKeys) === JSON.stringify(expectedColumns),
+    `Colonnes incorrectes ! Attendu: ${expectedColumns.join(', ')} | Reçu: ${actualKeys.join(', ')}`
+);
+
+// Vérification de l'absence de colonnes fantômes
+console.assert(!('reference' in firstOrder), 'Colonne fantôme "reference" détectée !');
+console.assert(!('payment_status' in firstOrder), 'Colonne fantôme "payment_status" détectée !');
+console.assert(!('pavillon' in firstOrder), 'Colonne fantôme "pavillon" détectée !');
+console.assert(!('chambre' in firstOrder), 'Colonne fantôme "chambre" détectée !');
+
+// Vérification des valeurs concaténées et normalisées
+console.assert(firstOrder.buyer_name === 'Amadou Diallo', 'Concaténation buyer_name échouée');
+console.assert(firstOrder.delivery_address === 'Pavillon Jardin Social, Chambre hhdha', 'Format delivery_address incorrect');
+console.assert(firstOrder.payment_method === 'wave', 'Normalisation payment_method échouée');
+console.assert(firstOrder.price === 5000, `Calcul prix total échoué (attendu 5000, obtenu ${firstOrder.price})`);
+console.assert(firstOrder.quantity === 2, 'Quantité incorrecte');
+console.assert(firstOrder.status === 'pending', 'Statut par défaut incorrect');
+console.assert(firstOrder.buyer_id === null, 'buyer_id anonyme non respecté');
+
+console.log('✅ [OrderService] Insertion strictement conforme aux 10 colonnes réelles validée !');
+
 console.log('🎉 Tous les tests unitaires des services de base sont passés avec succès !');
+
 

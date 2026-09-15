@@ -22,6 +22,7 @@ import {
     fetchTopShops,
 } from './services/catalog-service.js';
 import { escapeHTML } from './utils/security.js';
+import logoUrl from './assets/logo.webp';
 
 // État local de l'application
 const appState = {
@@ -85,11 +86,17 @@ async function initApp() {
     const rootWrapper = document.createElement('div');
     rootWrapper.className = 'min-h-screen bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white';
 
-    // Récupération de la session vendeur existante
-    const existingSeller = await getCurrentSeller();
-    if (existingSeller && existingSeller.profile.role === 'vendeur') {
-        appState.currentSeller = existingSeller.profile;
-    }
+    // Récupération asynchrone NON-BLOQUANTE de la session vendeur existante
+    // Garantit que l'initialisation ne freeze jamais pour les acheteurs / utilisateurs anonymes
+    getCurrentSeller()
+        .then((existingSeller) => {
+            if (existingSeller && existingSeller.profile?.role === 'vendeur') {
+                appState.currentSeller = existingSeller.profile;
+            }
+        })
+        .catch((err) => {
+            console.warn('[Main] Session vendeur non bloquante:', err);
+        });
 
     // 1. Modales globales
     const cartModalController = createCartModal({
@@ -177,8 +184,8 @@ async function initApp() {
     footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 text-center mt-auto';
     footerEl.innerHTML = `
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-            <div class="flex items-center gap-2">
-                <img src="/assets/logo.webp" alt="Campus Market" class="h-6 w-auto object-contain">
+            <div class="flex items-center gap-2.5">
+                <img src="${logoUrl}" alt="Campus Market" class="h-10 sm:h-12 w-auto object-contain" onerror="this.src='/assets/logo.webp'">
                 <span class="font-heading font-bold text-slate-800">Campus Market</span>
                 <span>• Université Iba Der Thiam (UIDT)</span>
             </div>
@@ -340,6 +347,7 @@ async function initApp() {
         // État de chargement (Squelettes)
         if (appState.isLoading) {
             const skeletonGrid = document.createElement('div');
+            skeletonGrid.id = 'catalog-loading-skeleton';
             skeletonGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4';
             skeletonGrid.innerHTML = Array(6).fill(0).map(() => `
                 <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col gap-3 animate-pulse">
@@ -353,19 +361,23 @@ async function initApp() {
         }
 
         // Empty state si aucun produit
-        if (appState.products.length === 0) {
+        if (!appState.products || appState.products.length === 0) {
             const emptyEl = document.createElement('div');
             emptyEl.className = 'flex flex-col items-center justify-center text-center py-16 px-4 bg-white rounded-2xl border border-dashed border-slate-300 my-4';
             emptyEl.innerHTML = `
                 <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center text-2xl mb-3">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <i class="fa-solid ${appState.searchQuery ? 'fa-magnifying-glass' : 'fa-wifi'}"></i>
                 </div>
-                <h3 class="font-heading font-bold text-slate-800 text-lg mb-1">Aucun produit trouvé</h3>
+                <h3 class="font-heading font-bold text-slate-800 text-lg mb-1">
+                    ${appState.searchQuery ? 'Aucun produit trouvé' : 'Aucun produit disponible pour le moment (mode hors-ligne)'}
+                </h3>
                 <p class="text-sm text-slate-500 max-w-sm mb-5">
-                    Aucun article ne correspond à votre recherche "${escapeHTML(appState.searchQuery || '')}". Essayez un autre mot-clé ou changez de catégorie.
+                    ${appState.searchQuery 
+                        ? `Aucun article ne correspond à votre recherche "${escapeHTML(appState.searchQuery)}". Essayez un autre mot-clé ou changez de catégorie.`
+                        : `Aucune offre n'a pu être chargée depuis le réseau et le cache local est vide. Vérifiez votre connexion internet.`}
                 </p>
-                <button id="btn-reset-filters" class="px-4 py-2 bg-primary-light text-primary hover:bg-primary hover:text-white font-semibold text-xs rounded-full transition-all min-h-[44px]">
-                    Réinitialiser la recherche
+                <button id="btn-reset-filters" class="px-5 py-2.5 bg-primary text-white hover:bg-primary-dark font-semibold text-xs rounded-full transition-all min-h-[44px]">
+                    ${appState.searchQuery || appState.currentCategory !== 'all' ? 'Afficher toutes les offres' : 'Rafraîchir les offres'}
                 </button>
             `;
             emptyEl.querySelector('#btn-reset-filters')?.addEventListener('click', async () => {
@@ -397,6 +409,15 @@ async function initApp() {
         mainContentEl.appendChild(gridEl);
     }
 
+    /**
+     * Masque impérativement tout loader/squelette restant dans le DOM.
+     */
+    function hideLoading() {
+        appState.isLoading = false;
+        const skeleton = document.getElementById('catalog-loading-skeleton');
+        if (skeleton) skeleton.remove();
+    }
+
     // Chargement dynamique des données
     async function reloadProducts() {
         appState.isLoading = true;
@@ -417,7 +438,7 @@ async function initApp() {
             console.error('[Main] Erreur chargement produits:', err);
             appState.products = [];
         } finally {
-            appState.isLoading = false;
+            hideLoading();
             renderCatalogView();
         }
     }
@@ -431,27 +452,34 @@ async function initApp() {
         else if (hash === '' || hash === '#') navigateToView('catalog');
     });
 
-    // Chargement initial
+    // Rendu immédiat selon le hash URL (ou affichage immédiat des squelettes de chargement)
+    const initialHash = window.location.hash.toLowerCase();
+    if (initialHash === '#admin') {
+        navigateToView('admin');
+    } else if (initialHash === '#seller') {
+        navigateToView('seller');
+    } else if (initialHash === '#orders') {
+        navigateToView('orders');
+    } else {
+        renderCatalogView(); // Affiche immédiatement les squelettes
+    }
+
+    // Chargement asynchrone des offres & boutiques
     try {
         const [products, topShops] = await Promise.all([
             fetchActiveProducts({ category: 'all' }),
             fetchTopShops(),
         ]);
-        appState.products = products;
-        appState.topShops = topShops;
+        appState.products = products || [];
+        appState.topShops = topShops || [];
     } catch (err) {
         console.error('[Main] Erreur chargement initial:', err);
+        appState.products = [];
+        appState.topShops = [];
     } finally {
-        appState.isLoading = false;
-        const initialHash = window.location.hash.toLowerCase();
-        if (initialHash === '#admin') {
-            navigateToView('admin');
-        } else if (initialHash === '#seller') {
-            navigateToView('seller');
-        } else if (initialHash === '#orders') {
-            navigateToView('orders');
-        } else if (appState.currentView === 'catalog') {
-            renderCatalogView();
+        hideLoading();
+        if (appState.currentView === 'catalog') {
+            renderCatalogView(); // Remplace les squelettes par les données réelles ou l'empty state
         }
     }
 }
@@ -463,11 +491,17 @@ if (document.readyState === 'loading') {
     initApp();
 }
 
-// Enregistrement PWA Service Worker
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {
+// Enregistrement PWA Service Worker avec garde de sécurité stricte
+if (
+    typeof window !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    (window.location.protocol === 'https:' ||
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1')
+) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch((err) => {
-            console.warn('[SW] Enregistrement Service Worker échoué:', err);
-        });
+        navigator.serviceWorker
+            .register('/sw.js')
+            .catch((err) => console.warn('[SW] Ignoré:', err.message));
     });
 }

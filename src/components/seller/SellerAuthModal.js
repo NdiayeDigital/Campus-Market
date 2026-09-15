@@ -25,11 +25,12 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
             <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <!-- En-tête -->
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                            <i class="fa-solid fa-store"></i>
+                    <div class="flex items-center gap-2.5">
+                        <img src="/assets/logo.webp" alt="Campus Market" class="h-9 w-auto object-contain">
+                        <div>
+                            <h2 class="font-heading font-bold text-slate-900 text-base leading-tight">Espace Vendeur</h2>
+                            <span class="text-[10px] text-slate-400 font-medium">UIDT Thiès</span>
                         </div>
-                        <h2 class="font-heading font-bold text-slate-900 text-lg">Espace Vendeur UIDT</h2>
                     </div>
                     <button id="btn-close-seller-auth" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors min-h-[44px] min-w-[44px]">
                         <i class="fa-solid fa-xmark text-lg"></i>
