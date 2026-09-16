@@ -222,7 +222,10 @@ WITH CHECK (
     role IN ('acheteur', 'vendeur_pending')
 );
 
--- Mise à jour : L'utilisateur ne peut demander que le statut vendeur_pending (pas vendeur direct)
+-- Mise à jour : 
+-- - Le superadmin peut tout mettre à jour
+-- - Un utilisateur peut modifier ses données personnelles et solliciter le rôle 'vendeur_pending'
+-- - Un vendeur validé peut mettre à jour ses informations (nom, téléphone, is_open) tout en conservant son rôle 'vendeur'
 CREATE POLICY "L'utilisateur peut modifier son role en pending" 
 ON public.profiles FOR UPDATE 
 USING (
@@ -231,7 +234,10 @@ USING (
 ) 
 WITH CHECK (
     public.get_current_user_role(auth.uid()) = 'superadmin' OR
-    (auth.uid() = id AND role IN ('acheteur', 'vendeur_pending'))
+    (auth.uid() = id AND (
+        role IN ('acheteur', 'vendeur_pending') OR
+        (public.get_current_user_role(auth.uid()) = 'vendeur' AND role = 'vendeur')
+    ))
 );
 
 -- Suppression : Réservée au Super Admin
@@ -297,14 +303,12 @@ WITH CHECK (
 -- 1. Le vendeur concerné
 -- 2. L'acheteur connecté propriétaire de la commande
 -- 3. Le superadmin
--- 4. Pour un invité (buyer_id NULL), l'accès se fait via requête ciblée par ID de commande
 CREATE POLICY "Confidentialité des commandes" 
 ON public.orders FOR SELECT 
 USING (
     auth.uid() = seller_id OR 
     (auth.uid() IS NOT NULL AND auth.uid() = buyer_id) OR
-    public.get_current_user_role(auth.uid()) = 'superadmin' OR
-    buyer_id IS NULL
+    public.get_current_user_role(auth.uid()) = 'superadmin'
 );
 
 -- Mise à jour : Vendeur concerné, acheteur (pour annulation/réception), ou superadmin

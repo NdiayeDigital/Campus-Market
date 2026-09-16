@@ -120,12 +120,11 @@ window.openCheckoutModal = async function () {
             window.navigateTo('register');
             return;
         }
-        const { data: profile } = await window.supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (profile) {
-            document.getElementById('order_prenom').value = profile.prenom || '';
-            document.getElementById('order_nom').value = profile.nom || '';
-            document.getElementById('order_phone').value = profile.telephone || '';
-        }
+        const { data: profile } = await window.supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+        const meta = user.user_metadata || {};
+        document.getElementById('order_prenom').value = profile?.prenom || meta.prenom || '';
+        document.getElementById('order_nom').value = profile?.nom || meta.nom || '';
+        document.getElementById('order_phone').value = profile?.telephone || meta.telephone || '';
         orderModal.style.display = 'flex';
     }
 };
@@ -165,9 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const payment = document.getElementById('order_payment').value;
                 const fullAddress = `${pavillon}${detail} [Paiement: ${payment}]`;
                 // Fetch buyer profile metadata
-                const { data: profile } = await window.supabase.from('profiles').select('prenom, nom, telephone').eq('id', user.id).single();
-                const buyerName = profile ? `${profile.prenom} ${profile.nom}` : '';
-                const buyerPhone = profile ? profile.telephone : '';
+                const { data: profile } = await window.supabase.from('profiles').select('prenom, nom, telephone').eq('id', user.id).maybeSingle();
+                const meta = user.user_metadata || {};
+                const buyerName = profile ? `${profile.prenom} ${profile.nom}` : (`${meta.prenom || ''} ${meta.nom || ''}`.trim() || 'Client UIDT');
+                const buyerPhone = profile ? profile.telephone : (meta.telephone || '');
                 // Créer une commande par article dans le panier
                 ordersToInsert = cart.map(item => ({
                     buyer_id: user.id,

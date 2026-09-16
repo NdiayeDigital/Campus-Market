@@ -389,7 +389,7 @@ window.updateBottomNavigation = function (role) {
                 <span>Accueil</span>
             </button>
             <button class="bottom-nav-item" onclick="navigateTo('categories')" data-target="categories">
-                <i class="fa-solid fa-grid-2"></i>
+                <i class="fa-solid fa-table-cells-large"></i>
                 <span>Catégories</span>
             </button>
             <button class="bottom-nav-item" onclick="navigateTo('panier')" data-target="panier">

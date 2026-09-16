@@ -28,50 +28,88 @@
 
 ---
 
-## 🏗️ Architecture Technique
+## 🏗️ Architecture Technique Modulaire (Vite + Tailwind CSS)
 
 ```
 Campus-Market/
-├── index.html              # Point d'entrée SPA (Single Page Application)
-├── css/                    # Feuilles de styles CSS & thèmes
-├── js/                     # Logique applicative découpée en modules
-│   ├── supabase-config.js  # Configuration et initialisation du client Supabase
-│   ├── api.js              # Requêtes API (Produits, Profils, Filtres)
-│   ├── auth.js             # Gestion Auth (Inscription, Connexion, Rôles)
-│   ├── cart.js             # Gestion Panier, Commandes et Avis
-│   ├── admin.js            # Espace Vendeur & Tableau de bord SuperAdmin
-│   └── ui.js               # Interactions UI, Toasts, Modales & Navigation
-├── database/               # Scripts SQL & Schéma complet Supabase
-│   └── schema_final.sql    # Schéma consolidé avec sécurité RLS & Triggers
-├── docs/                   # Documentation & Captures d'écran
-└── package.json            # Dépendances Vite & TypeScript
+├── index.html              # Point d'entrée SPA & PWA
+├── manifest.json           # Manifest PWA (thème #1D4ED8, icônes)
+├── sw.js                   # Service Worker v19 (stratégie hybride Cache-First / Network-First)
+├── tailwind.config.js      # Configuration Tailwind CSS (thème UIDT, Outfit & Inter)
+├── src/
+│   ├── index.css           # Directives Tailwind et polices Google Fonts
+│   ├── main.js             # Orchestrateur SPA, routeur hash et gestion d'état
+│   ├── services/
+│   │   ├── supabase.js           # Client singleton Supabase avec fallback
+│   │   ├── cart-store.js         # Gestionnaire réactif du panier (localStorage pub/sub)
+│   │   ├── order-service.js      # Service commande invité & file hors ligne
+│   │   ├── catalog-service.js    # Requêtes catalogue & recherche floue
+│   │   ├── seller-service.js     # Authentification stricte vendeur & métriques
+│   │   ├── product-management.js # Compression Canvas + upload Storage + CRUD
+│   │   └── admin-service.js      # Supervision SuperAdmin UIDT (métriques réelles)
+│   ├── components/
+│   │   ├── Header.js             # Barre supérieure avec badge panier et recherche
+│   │   ├── CategoryChips.js      # Sélecteur horizontal de 7 catégories campus
+│   │   ├── ProductCard.js        # Carte produit mobile-first
+│   │   ├── CartModal.js          # Tiroir panier réactif
+│   │   ├── CheckoutModal.js      # Checkout 3 étapes sans obligation de compte
+│   │   ├── OrderStatus.js        # Stepper de suivi de commande en 5 étapes
+│   │   ├── seller/
+│   │   │   ├── SellerAuthModal.js   # Modale inscription/connexion vendeur
+│   │   │   ├── ProductManager.js    # Gestionnaire de catalogue marchand
+│   │   │   └── SellerDashboard.js   # Dashboard vendeur temps réel (Realtime)
+│   │   └── admin/
+│   │       └── SuperAdminDashboard.js # Panneau d'administration centrale UIDT
+│   └── utils/
+│       ├── levenshtein.js        # Algorithme de distance d'édition
+│       ├── image-compressor.js   # Compresseur d'images Canvas
+│       ├── audio-alert.js        # Alertes sonores Web Audio API
+│       └── security.js           # Échappement anti-XSS et validation institutionnelle
+├── database/
+│   └── schema_final.sql    # Schéma consolidé avec sécurité RLS et triggers
+├── tests/
+│   └── sanity-check.js     # Tests unitaires automatisés
+├── .env.example            # Gabarit des variables d'environnement Supabase
+└── package.json            # Configuration du projet & scripts Vite
 ```
 
-- **Frontend** : HTML5, CSS3 Moderne (Mode sombre/clair natif), JavaScript ES6+ / TypeScript.
-- **Backend & Données** : [Supabase](https://supabase.com) (PostgreSQL 15+, Authentification sécurisée, Row Level Security RLS).
-- **PWA & Offline First** : Service Worker et Manifest intégrés pour installation mobile/desktop.
+- **Frontend** : JavaScript ES6+ modulaire, Tailwind CSS v3, Vite 5.
+- **Backend & Données** : Supabase (PostgreSQL 15+, Authentification, Storage, Realtime, RLS).
+- **PWA & Offline First** : Service Worker v19 (Bypass Supabase, Cache-First assets statiques, Network-First pages).
 
 ---
 
 ## 🚀 Démarrage Rapide
 
 ### 1. Prérequis
-- [Node.js](https://nodejs.org/) (version 18 ou supérieure recommandée)
+- [Node.js](https://nodejs.org/) (version 18 ou supérieure)
+- npm (version 9+)
 
-### 2. Installation & Lancement local
+### 2. Configuration des secrets (.env)
+Copiez le gabarit `.env.example` vers `.env` :
 ```bash
-# Cloner le dépôt
-git clone https://github.com/votre-compte/campus-market.git
-cd campus-market
+cp .env.example .env
+```
+Renseignez vos clés de projet Supabase :
+```env
+VITE_SUPABASE_URL=https://votre-projet.supabase.co
+VITE_SUPABASE_ANON_KEY=votre-cle-anonyme
+```
 
-# Installer les dépendances (optionnel si utilisation de Vite)
+### 3. Installation & Lancement local
+```bash
+# Installer les dépendances
 npm install
+
+# Exécuter la suite de tests unitaires
+npm test
 
 # Démarrer le serveur de développement local
 npm run dev
-```
 
-> **Note :** L'application étant une Single Page Application vanilla, elle peut également être exécutée directement via une extension comme **Live Server** (VS Code) ou n'importe quel serveur HTTP statique.
+# Compiler pour la production
+npm run build
+```
 
 ---
 
@@ -79,11 +117,6 @@ npm run dev
 
 Le schéma complet de la base de données (tables `profiles`, `products`, `orders`, `reviews`, politiques RLS et triggers) se trouve dans :
 👉 [`database/schema_final.sql`](database/schema_final.sql)
-
-Pour répliquer l'environnement sur votre propre projet Supabase :
-1. Créez un projet sur [Supabase](https://supabase.com).
-2. Rendez-vous dans l'éditeur SQL et exécutez le script [`database/schema_final.sql`](database/schema_final.sql).
-3. Mettez à jour vos identifiants dans [`js/supabase-config.js`](js/supabase-config.js).
 
 ---
 

@@ -1,87 +1,137 @@
 // SUPABASE AUTHENTICATION & STATE MANAGEMENT
 // ==========================================
 async function checkAuthState() {
-    if (!window.supabase) return null;
-    const { data: { user } } = await window.supabase.auth.getUser();
-    
+    if (!window.supabase)
+        return null;
+    let user = null;
+    try {
+        const { data: authData } = await window.supabase.auth.getUser();
+        user = authData?.user || null;
+    }
+    catch (e) {
+        console.warn("Erreur lors de la récupération de la session auth:", e);
+        return null;
+    }
+
     const profilView = document.getElementById('view-profil');
-    if (profilView) {
-        if (user) {
-            // Logged in
-            const { data: profile } = await window.supabase.from('profiles').select('*').eq('id', user.id).single();
-            if (profile) {
-                if (window.updateBottomNavigation) {
-                    window.updateBottomNavigation(profile.role);
-                }
+    let profile = null;
 
-                if (profile.role === 'vendeur') {
-                    const currentHash = window.location.hash;
-                    if (!(window as any).initialRedirectDone) {
-                        (window as any).initialRedirectDone = true;
-                        if (currentHash === '' || currentHash === '#' || currentHash === '#accueil' || currentHash === '#categories' || currentHash === '#panier' || currentHash === '#profil') {
-                            setTimeout(() => {
-                                window.navigateTo('admin-dashboard');
-                            }, 50);
-                        }
-                    }
-                }
+    if (user) {
+        try {
+            const { data, error } = await window.supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .maybeSingle();
 
-                let header = document.getElementById('profil-header');
-                if (!header) {
-                    header = document.createElement('div');
-                    header.id = 'profil-header';
-                    header.style = "padding: 24px 20px; background: white; border-bottom: 1px solid var(--color-border); text-align: center;";
-                    profilView.insertBefore(header, profilView.firstChild);
-                }
-                header.innerHTML = `
-                    <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-                    <h3 style="margin: 0; font-size: 1.2rem;">${window.escapeHTML(profile.prenom)} ${window.escapeHTML(profile.nom)}</h3>
-                    <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 4px;">${window.escapeHTML(profile.telephone)}</p>
-                    <div style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: ${profile.role === 'vendeur' ? '#10B981' : '#818CF8'};">
-                        Compte ${profile.role.toUpperCase()}
-                    </div>
-                `;
-                
-                const btnBecomeSeller = document.getElementById('btn-become-seller');
-                const btnSellerDashboard = document.getElementById('btn-seller-dashboard');
-                const logoutSection = document.getElementById('logout-section');
-                
-                if (btnBecomeSeller) {
-                    btnBecomeSeller.style.display = 'block';
-                    const icon = btnBecomeSeller.querySelector('i');
-                    const span = btnBecomeSeller.querySelector('span');
-                    if(profile.role === 'vendeur') {
-                        icon.className = 'fa-solid fa-store-slash';
-                        span.innerText = 'Mode client';
-                        btnBecomeSeller.onclick = () => window.navigateTo('accueil');
-                    } else if(profile.role === 'vendeur_pending') {
-                        icon.className = 'fa-solid fa-hourglass-half';
-                        span.innerText = 'En attente de confirmation';
-                        btnBecomeSeller.onclick = () => {};
-                    } else {
-                        icon.className = 'fa-solid fa-store';
-                        span.innerText = 'Devenir Vendeur';
-                        btnBecomeSeller.onclick = () => window.navigateTo('seller-register');
-                    }
-                }
-                if (btnSellerDashboard) btnSellerDashboard.style.display = profile.role === 'vendeur' ? 'block' : 'none';
-                if (logoutSection) logoutSection.style.display = (profile.role === 'vendeur' || profile.role === 'superadmin') ? 'block' : 'none';
-                
-                document.getElementById('profil-unauth-state').style.display = 'none';
-                document.getElementById('profil-auth-menu').style.display = 'block';
+            if (error) {
+                console.warn("Erreur requête profiles (non-bloquante) :", error.message);
             }
-        } else {
-            // Not logged in
+            profile = data;
+
+            // Si le profil n'existe pas en base pour cet utilisateur authentifié, création d'un profil par défaut
+            if (!profile) {
+                const meta = user.user_metadata || {};
+                const defaultProfile = {
+                    id: user.id,
+                    prenom: meta.prenom || 'Étudiant',
+                    nom: meta.nom || 'UIDT',
+                    telephone: meta.telephone || '',
+                    role: meta.role || 'acheteur'
+                };
+                const { data: createdProfile } = await window.supabase
+                    .from('profiles')
+                    .insert([defaultProfile])
+                    .select()
+                    .maybeSingle();
+
+                profile = createdProfile || defaultProfile;
+            }
+        }
+        catch (err) {
+            console.warn("Exception récupération profil (non-fatale) :", err);
+            profile = null;
+        }
+    }
+
+    if (profilView) {
+        if (user && profile) {
+            // Logged in avec profil valide
+            if (window.updateBottomNavigation) {
+                window.updateBottomNavigation(profile.role);
+            }
+            if (profile.role === 'vendeur') {
+                const currentHash = window.location.hash;
+                if (!window.initialRedirectDone) {
+                    window.initialRedirectDone = true;
+                    if (currentHash === '' || currentHash === '#' || currentHash === '#accueil' || currentHash === '#categories' || currentHash === '#panier' || currentHash === '#profil') {
+                        setTimeout(() => {
+                            window.navigateTo('admin-dashboard');
+                        }, 50);
+                    }
+                }
+            }
+            let header = document.getElementById('profil-header');
+            if (!header) {
+                header = document.createElement('div');
+                header.id = 'profil-header';
+                header.style = "padding: 24px 20px; background: white; border-bottom: 1px solid var(--color-border); text-align: center;";
+                profilView.insertBefore(header, profilView.firstChild);
+            }
+            header.innerHTML = `
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <h3 style="margin: 0; font-size: 1.2rem;">${window.escapeHTML(profile.prenom)} ${window.escapeHTML(profile.nom)}</h3>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 4px;">${window.escapeHTML(profile.telephone)}</p>
+                <div style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: ${profile.role === 'vendeur' ? '#10B981' : '#818CF8'};">
+                    Compte ${profile.role.toUpperCase()}
+                </div>
+            `;
+            const btnBecomeSeller = document.getElementById('btn-become-seller');
+            const btnSellerDashboard = document.getElementById('btn-seller-dashboard');
+            const logoutSection = document.getElementById('logout-section');
+            if (btnBecomeSeller) {
+                btnBecomeSeller.style.display = 'block';
+                const icon = btnBecomeSeller.querySelector('i');
+                const span = btnBecomeSeller.querySelector('span');
+                if (profile.role === 'vendeur') {
+                    icon.className = 'fa-solid fa-store-slash';
+                    span.innerText = 'Mode client';
+                    btnBecomeSeller.onclick = () => window.navigateTo('accueil');
+                }
+                else if (profile.role === 'vendeur_pending') {
+                    icon.className = 'fa-solid fa-hourglass-half';
+                    span.innerText = 'En attente de confirmation';
+                    btnBecomeSeller.onclick = () => { };
+                }
+                else {
+                    icon.className = 'fa-solid fa-store';
+                    span.innerText = 'Devenir Vendeur';
+                    btnBecomeSeller.onclick = () => window.navigateTo('seller-register');
+                }
+            }
+            if (btnSellerDashboard)
+                btnSellerDashboard.style.display = profile.role === 'vendeur' ? 'block' : 'none';
+            if (logoutSection)
+                logoutSection.style.display = (profile.role === 'vendeur' || profile.role === 'superadmin') ? 'block' : 'none';
+            const unauthState = document.getElementById('profil-unauth-state');
+            if (unauthState)
+                unauthState.style.display = 'none';
+            const authMenu = document.getElementById('profil-auth-menu');
+            if (authMenu)
+                authMenu.style.display = 'block';
+        }
+        else {
+            // Not logged in ou profil introuvable
             if (window.updateBottomNavigation) {
                 window.updateBottomNavigation(null);
             }
             const header = document.getElementById('profil-header');
-            if(header) header.remove();
-            
+            if (header)
+                header.remove();
             let unauth = document.getElementById('profil-unauth-state');
-            if(!unauth) {
+            if (!unauth) {
                 unauth = document.createElement('div');
                 unauth.id = 'profil-unauth-state';
                 unauth.style = "padding: 40px 20px; text-align: center;";
@@ -99,48 +149,49 @@ async function checkAuthState() {
                 profilView.insertBefore(unauth, profilView.firstChild);
             }
             unauth.style.display = 'block';
-            
             let authMenu = document.getElementById('profil-auth-menu');
-            if(authMenu) authMenu.style.display = 'none';
+            if (authMenu)
+                authMenu.style.display = 'none';
         }
     }
-    if (user) {
-        if (typeof setupRealtimeNotifications === 'function') setupRealtimeNotifications();
+    // Ne lancer setupRealtimeNotifications QUE si l'utilisateur et son profil existent et ont un rôle vendeur ou superadmin
+    if (user && profile && (profile.role === 'vendeur' || profile.role === 'superadmin')) {
+        if (typeof setupRealtimeNotifications === 'function')
+            setupRealtimeNotifications();
     }
     return user;
 }
-
 // Intercept navigateTo to require login for profil, panier, commandes
 const originalNavigateTo = window.navigateTo;
-window.navigateTo = async function(viewId) {
+window.navigateTo = async function (viewId) {
     if (!window.supabase) {
-        if(originalNavigateTo) originalNavigateTo(viewId);
+        if (originalNavigateTo)
+            originalNavigateTo(viewId);
         return;
     }
-
     if (viewId === 'profil') {
         const { data: { user } } = await window.supabase.auth.getUser();
         if (user) {
-            const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).single();
+            const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
             if (profile && profile.role === 'vendeur') {
                 viewId = 'admin-profil';
             }
         }
     }
-
     if (viewId.startsWith('admin-')) {
         const { data: { user } } = await window.supabase.auth.getUser();
         if (!user) {
-            if(originalNavigateTo) originalNavigateTo('login');
+            if (originalNavigateTo)
+                originalNavigateTo('login');
             return;
         }
-        const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).single();
+        const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
         if (!profile || profile.role !== 'vendeur') {
-            if(originalNavigateTo) originalNavigateTo('accueil');
+            if (originalNavigateTo)
+                originalNavigateTo('accueil');
             return;
         }
     }
-
     if (viewId === 'seller-register') {
         const user = await checkAuthState();
         const authFields = document.getElementById('seller-auth-fields');
@@ -148,20 +199,20 @@ window.navigateTo = async function(viewId) {
             if (user) {
                 authFields.style.display = 'none';
                 authFields.querySelectorAll('input').forEach(i => i.removeAttribute('required'));
-            } else {
+            }
+            else {
                 authFields.style.display = 'block';
                 authFields.querySelectorAll('input').forEach(i => i.setAttribute('required', ''));
             }
         }
     }
-
     const mainBottomNav = document.getElementById('bottom-nav');
-    if(mainBottomNav) {
-        if(viewId === 'superadmin' || viewId === 'login' || viewId === 'register' || viewId === 'seller-register') {
+    if (mainBottomNav) {
+        if (viewId === 'superadmin' || viewId === 'login' || viewId === 'register' || viewId === 'seller-register') {
             mainBottomNav.style.display = 'none';
-        } else {
+        }
+        else {
             mainBottomNav.style.display = 'flex';
-            
             // Gérer le bouton central selon le mode (Panier / Ajouter)
             const panierBtn = mainBottomNav.querySelector('[data-target="panier"]');
             if (panierBtn) {
@@ -173,21 +224,22 @@ window.navigateTo = async function(viewId) {
                         document.getElementById('add-product-form-container').style.display = 'block';
                         window.scrollTo(0, 0);
                     };
-                } else { // Mode Client
+                }
+                else { // Mode Client
                     panierBtn.innerHTML = '<i class="fa-solid fa-bag-shopping"></i><span>Panier</span>';
                     panierBtn.onclick = (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if(originalNavigateTo) originalNavigateTo('panier');
+                        if (originalNavigateTo)
+                            originalNavigateTo('panier');
                     };
                 }
             }
         }
     }
-    
-    if(originalNavigateTo) originalNavigateTo(viewId);
+    if (originalNavigateTo)
+        originalNavigateTo(viewId);
 };
-
 // Handle Registration
 document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('register-form');
@@ -198,13 +250,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Inscription...';
             btn.disabled = true;
-
             const prenom = document.getElementById('first_name').value;
             const nom = document.getElementById('last_name').value;
             const phone = document.getElementById('phone').value;
             const email = document.getElementById('register-email') ? document.getElementById('register-email').value : document.querySelector('#view-register #email').value;
             const password = document.querySelector('#view-register #password').value;
-
             // SECURITY: Enforce university email domain
             if (!email.toLowerCase().endsWith('@univ-thies.sn')) {
                 alert("Erreur : L'adresse email doit se terminer par @univ-thies.sn");
@@ -212,68 +262,81 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.disabled = false;
                 return;
             }
-
             try {
-                // 1. Sign up Auth
+                // 1. Sign up Auth avec métadonnées
                 const { data, error } = await window.supabase.auth.signUp({
                     email: email,
-                    password: password
-                });
-
-                if (error) throw error;
-
-                // 2. Create Profile
-                if (data.user) {
-                    const { error: profileError } = await window.supabase.from('profiles').insert([
-                        {
-                            id: data.user.id,
+                    password: password,
+                    options: {
+                        data: {
                             prenom: prenom,
                             nom: nom,
                             telephone: phone,
                             role: 'acheteur'
                         }
-                    ]);
-                    if (profileError) {
-                        // If it fails due to RLS, it means the user is not logged in (Email confirmation needed)
-                        console.error("Profile creation error:", profileError);
-                        throw new Error(profileError.message);
+                    }
+                });
+                if (error)
+                    throw error;
+
+                // 2. Si une session existe immédiatement après signUp, upsert dans 'profiles' en fallback
+                if (data.session && data.user) {
+                    try {
+                        await window.supabase.from('profiles').upsert([
+                            {
+                                id: data.user.id,
+                                prenom: prenom,
+                                nom: nom,
+                                telephone: phone,
+                                role: 'acheteur'
+                            }
+                        ], { onConflict: 'id' });
+                    }
+                    catch (profileError) {
+                        console.warn("Fallback profiles upsert non-bloquant (trigger DB prioritaire) :", profileError);
                     }
                 }
 
                 // Connexion automatique et redirection
-                await checkAuthState();
-                
-                const checkoutPending = localStorage.getItem('checkout_pending');
-                if (checkoutPending === 'true') {
-                    localStorage.removeItem('checkout_pending');
-                    window.navigateTo('panier');
-                    setTimeout(() => {
-                        if (window.openCheckoutModal) window.openCheckoutModal();
-                    }, 500);
-                } else {
-                    window.navigateTo('accueil');
+                if (data.session) {
+                    await checkAuthState();
+                    const checkoutPending = localStorage.getItem('checkout_pending');
+                    if (checkoutPending === 'true') {
+                        localStorage.removeItem('checkout_pending');
+                        window.navigateTo('panier');
+                        setTimeout(() => {
+                            if (window.openCheckoutModal)
+                                window.openCheckoutModal();
+                        }, 500);
+                    }
+                    else {
+                        window.navigateTo('accueil');
+                    }
+                }
+                else {
+                    alert("Inscription réussie ! Si la confirmation d'email est activée, veuillez consulter votre boîte de réception avant de vous connecter.");
+                    window.navigateTo('login');
                 }
                 registerForm.reset();
-
-            } catch (error) {
+            }
+            catch (error) {
                 console.error("Registration error:", error);
-                
                 // Messages d'erreurs en français plus clairs
                 let errorMsg = error.message;
                 if (errorMsg.includes("User already registered")) {
                     errorMsg = "Un compte existe déjà avec cette adresse email.";
-                } else if (errorMsg.includes("row-level security policy")) {
+                }
+                else if (errorMsg.includes("row-level security policy")) {
                     errorMsg = "Vous devez désactiver la 'Confirmation d'email' dans les paramètres Supabase pour permettre la connexion directe.";
                 }
-                
                 alert("Erreur lors de l'inscription : " + errorMsg);
-            } finally {
+            }
+            finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         });
     }
-
     // Handle Login
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -283,51 +346,47 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connexion...';
             btn.disabled = true;
-
             const email = document.querySelector('#view-login #email').value;
             const password = document.querySelector('#view-login #password').value;
-
             try {
                 const { data, error } = await window.supabase.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
-
-                if (error) throw error;
-                
-                const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', data.user.id).single();
-                
+                if (error)
+                    throw error;
+                const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
                 await checkAuthState();
-                
                 if (profile && profile.role === 'vendeur') {
                     window.navigateTo('admin-dashboard');
-                } else {
+                }
+                else {
                     window.navigateTo('accueil');
                 }
-                
                 // Fetch user orders if any
-            } catch (error) {
+            }
+            catch (error) {
                 alert("Erreur de connexion : Identifiants incorrects.");
-            } finally {
+            }
+            finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         });
     }
-
     // Handle Logout
-    window.logout = async function() {
-        if(!window.supabase) return;
+    window.logout = async function () {
+        if (!window.supabase)
+            return;
         await window.supabase.auth.signOut();
-        delete (window as any).initialRedirectDone;
+        delete window.initialRedirectDone;
         const header = document.getElementById('profil-header');
-        if(header) header.remove();
+        if (header)
+            header.remove();
         window.navigateTo('login');
     };
-
     // Initial Auth Check
     checkAuthState();
-    
     // Fix navigation links in login/register pages
     const authLinks = document.querySelectorAll('#view-login a, #view-register a');
     authLinks.forEach(link => {
@@ -336,15 +395,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (href === 'login.html') {
                 e.preventDefault();
                 window.navigateTo('login');
-            } else if (href === 'register.html') {
+            }
+            else if (href === 'register.html') {
                 e.preventDefault();
                 window.navigateTo('register');
             }
         });
     });
 });
-
-
 // ==========================================
-
 window.checkAuthState = checkAuthState;

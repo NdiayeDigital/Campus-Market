@@ -4,8 +4,8 @@ async function checkSuperAdminSession() {
     if (!window.supabase)
         return;
     const { data: { session } } = await window.supabase.auth.getSession();
-    if (session) {
-        const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', session.user.id).single();
+    if (session && session.user) {
+        const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
         if (profile && profile.role === 'superadmin') {
             document.getElementById('superadmin-login').style.display = 'none';
             document.getElementById('superadmin-content').style.display = 'block';
@@ -22,31 +22,12 @@ window.loginSuperAdmin = async function () {
     errEl.style.display = 'none';
     if (!window.supabase)
         return;
-    // Hardcoded credentials for Super Admin (Test Mode)
-    if (email === 'maamin.ndiaye@univ-thies.sn' && (pass === 'Mouhamadou2005' || pass === 'Mouhammadou2005')) {
-        try {
-            const { data, error } = await window.supabase.auth.signInWithPassword({ email, password: pass });
-            if (error) {
-                errEl.innerText = "Erreur de connexion : le compte superadmin doit être créé d'abord dans Supabase !";
-                errEl.style.display = 'block';
-                return;
-            }
-            document.getElementById('superadmin-login').style.display = 'none';
-            document.getElementById('superadmin-content').style.display = 'block';
-            loadAdminData();
-        }
-        catch (e) {
-            errEl.innerText = "Erreur: " + e.message;
-            errEl.style.display = 'block';
-        }
-        return;
-    }
     try {
         const { data, error } = await window.supabase.auth.signInWithPassword({ email, password: pass });
         if (error)
             throw error;
         // Check role
-        const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', data.user.id).single();
+        const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
         if (profile && profile.role === 'superadmin') {
             document.getElementById('superadmin-login').style.display = 'none';
             document.getElementById('superadmin-content').style.display = 'block';
@@ -317,11 +298,19 @@ window.loadSellerDashboard = async function () {
     if (!window.supabase)
         return;
     const { data: { user } } = await window.supabase.auth.getUser();
-    if (!user)
+    if (!user) {
+        if (window.navigateTo)
+            window.navigateTo('login');
         return;
+    }
     // Fetch Seller info
-    const { data: profile } = await window.supabase.from('profiles').select('*').eq('id', user.id).single();
-    if (profile && profile.role === 'vendeur') {
+    const { data: profile } = await window.supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (!profile || profile.role !== 'vendeur') {
+        console.warn("Utilisateur non vendeur ou profil introuvable dans loadSellerDashboard.");
+        if (window.navigateTo)
+            window.navigateTo('accueil');
+        return;
+    }
         document.getElementById('admin-seller-name').innerText = window.escapeHTML(profile.prenom) + " " + window.escapeHTML(profile.nom);
         const adminProfileNameEl = document.getElementById('admin-profile-name');
         if (adminProfileNameEl)
@@ -365,7 +354,6 @@ window.loadSellerDashboard = async function () {
                 circleDivProfil.style.left = "2px";
             }
         }
-    }
     // Fetch Orders
     const { data: orders, error } = await window.supabase
         .from('orders')
@@ -959,15 +947,15 @@ async function setupRealtimeNotifications() {
         }
     }
     const { data: { user } } = await window.supabase.auth.getUser();
-    if (!user)
+    if (!user || !user.id)
         return;
     // Récupérer le rôle pour configurer l'abonnement
-    const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).single();
-    if (!profile)
+    const { data: profile } = await window.supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    if (!profile || (profile.role !== 'vendeur' && profile.role !== 'superadmin'))
         return;
     // 2. Abonnement personnalisé selon le rôle
     if (profile.role === 'vendeur') {
-        supabase
+        window.supabase
             .channel('public:orders')
             .on('postgres_changes', {
             event: '*',
@@ -979,22 +967,9 @@ async function setupRealtimeNotifications() {
         })
             .subscribe();
     }
-    else if (profile.role === 'acheteur') {
-        supabase
-            .channel('public:orders')
-            .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'orders',
-            filter: `buyer_id=eq.${user.id}`
-        }, (payload) => {
-            handleOrderChange(payload, user.id);
-        })
-            .subscribe();
-    }
     else if (profile.role === 'superadmin') {
         // Notification pour le superadmin en cas de demande vendeur en attente
-        supabase
+        window.supabase
             .channel('public:profiles')
             .on('postgres_changes', {
             event: 'UPDATE',
@@ -1014,7 +989,7 @@ async function setupRealtimeNotifications() {
         })
             .subscribe();
         // Rafraîchir les données globales de l'admin en temps réel
-        supabase
+        window.supabase
             .channel('public:orders')
             .on('postgres_changes', {
             event: '*',
@@ -1158,9 +1133,14 @@ function playNotificationSound() {
         console.log("Audio not supported or blocked", e);
     }
 }
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialiser les notifications après un court délai pour s'assurer que l'auth est chargée
-    setTimeout(setupRealtimeNotifications, 1500);
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialiser les notifications en temps réel uniquement si une session active existe
+    if (window.supabase) {
+        const { data: { session } } = await window.supabase.auth.getSession();
+        if (session && session.user) {
+            setupRealtimeNotifications();
+        }
+    }
 });
 window.loadAdminData = loadAdminData;
 // ==========================================
