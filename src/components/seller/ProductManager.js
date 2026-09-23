@@ -13,6 +13,7 @@ import {
 } from '../../services/product-management.js';
 import { CATEGORIES } from '../../services/catalog-service.js';
 import { escapeHTML } from '../../utils/security.js';
+import { showToast, showConfirm } from '../../utils/notifications.js';
 
 /**
  * Crée le gestionnaire de produits du vendeur.
@@ -495,19 +496,32 @@ export function createProductManager({ sellerId, onProductChanged } = {}) {
                     try {
                         await toggleProductStock(id, currentStock);
                         await loadData();
+                        showToast(`Stock mis à jour : ${currentStock === 0 ? 'Disponible' : 'Épuisé'}`, 'info');
                         if (typeof onProductChanged === 'function') onProductChanged();
                     } catch (err) {
-                        alert(err.message);
+                        showToast(err.message, 'error');
+                        btn.disabled = false;
                     }
                 } else if (action === 'delete') {
-                    if (confirm('Voulez-vous vraiment supprimer cet article de votre catalogue ?')) {
+                    const confirmed = await showConfirm({
+                        title: 'Supprimer le produit',
+                        message: 'Voulez-vous vraiment supprimer cet article de votre catalogue ? Cette action est définitive.',
+                        confirmText: 'Supprimer',
+                        cancelText: 'Annuler',
+                        isDestructive: true,
+                        icon: 'fa-trash-can',
+                    });
+
+                    if (confirmed) {
                         btn.disabled = true;
                         try {
                             await deleteProduct(id);
                             await loadData();
+                            showToast('Produit retiré du catalogue.', 'info');
                             if (typeof onProductChanged === 'function') onProductChanged();
                         } catch (err) {
-                            alert(err.message);
+                            showToast(err.message, 'error');
+                            btn.disabled = false;
                         }
                     }
                 }

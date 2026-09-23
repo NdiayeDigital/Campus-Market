@@ -14,16 +14,18 @@ import {
 import { createProductManager } from './ProductManager.js';
 import { audioAlert, playNotificationSound } from '../../utils/audio-alert.js';
 import { escapeHTML, formatSenegalPhone } from '../../utils/security.js';
+import { showToast, showConfirm } from '../../utils/notifications.js';
 
 /**
  * Crée le tableau de bord marchand.
  * @param {Object} props
  * @param {Object} props.seller - Données du vendeur ({ id, prenom, nom, ... })
+ * @param {Function} [props.onBackToCatalog] - Callback pour retourner à la boutique
  * @param {Function} props.onLogout - Callback lors de la déconnexion
  * @param {Function} props.onShowToast - Callback pour afficher un toast
  * @returns {HTMLElement}
  */
-export function createSellerDashboard({ seller, onLogout, onShowToast } = {}) {
+export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onShowToast } = {}) {
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full max-w-5xl mx-auto px-4 py-6 flex flex-col gap-6';
 
@@ -157,6 +159,16 @@ export function createSellerDashboard({ seller, onLogout, onShowToast } = {}) {
                     >
                         <span class="w-2 h-2 rounded-full ${isOpen ? 'bg-white animate-ping' : 'bg-slate-400'}"></span>
                         <span>${isOpen ? 'Boutique Ouverte' : 'Boutique Fermée'}</span>
+                    </button>
+
+                    <!-- Voir la boutique / Catalogue -->
+                    <button 
+                        id="btn-seller-back-shop" 
+                        title="Voir le catalogue public"
+                        class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors min-h-[44px]"
+                    >
+                        <i class="fa-solid fa-store text-primary text-xs"></i>
+                        <span class="hidden sm:inline">Boutique</span>
                     </button>
 
                     <!-- Déconnexion -->
@@ -390,17 +402,31 @@ export function createSellerDashboard({ seller, onLogout, onShowToast } = {}) {
                 await toggleShopStatus(sellerId, !currentIsOpen);
                 if (dashboardData) dashboardData.isOpen = !currentIsOpen;
                 render();
-                if (typeof onShowToast === 'function') {
-                    onShowToast(!currentIsOpen ? 'Boutique ouverte aux commandes ! 🟢' : 'Boutique mise en pause ⏸️', 'info');
-                }
+                showToast(!currentIsOpen ? 'Boutique ouverte aux commandes ! 🟢' : 'Boutique mise en pause ⏸️', 'info');
             } catch (err) {
-                alert(err.message);
+                showToast(err.message, 'error');
+            }
+        });
+
+        // Retour à la boutique
+        containerEl.querySelector('#btn-seller-back-shop')?.addEventListener('click', () => {
+            if (typeof onBackToCatalog === 'function') {
+                onBackToCatalog();
             }
         });
 
         // Déconnexion
         containerEl.querySelector('#btn-seller-logout')?.addEventListener('click', async () => {
-            if (confirm('Voulez-vous vous déconnecter de votre espace vendeur ?')) {
+            const confirmed = await showConfirm({
+                title: 'Déconnexion Marchand',
+                message: 'Voulez-vous vraiment vous déconnecter de votre espace vendeur ?',
+                confirmText: 'Se déconnecter',
+                cancelText: 'Annuler',
+                isDestructive: false,
+                icon: 'fa-right-from-bracket',
+            });
+
+            if (confirmed) {
                 cleanup();
                 await logoutSeller();
                 if (typeof onLogout === 'function') onLogout();
@@ -427,11 +453,9 @@ export function createSellerDashboard({ seller, onLogout, onShowToast } = {}) {
                 try {
                     await updateOrderStatus(id, next);
                     await loadData();
-                    if (typeof onShowToast === 'function') {
-                        onShowToast('Statut de la commande mis à jour.', 'success');
-                    }
+                    showToast('Statut de la commande mis à jour.', 'success');
                 } catch (err) {
-                    alert(err.message);
+                    showToast(err.message, 'error');
                 }
             });
         });

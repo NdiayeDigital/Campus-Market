@@ -7,6 +7,7 @@
 
 import { fetchLiveOrderStatus, cancelOrderByBuyer, submitOrderReview } from '../services/order-service.js';
 import { escapeHTML, formatSenegalPhone } from '../utils/security.js';
+import { showToast, showConfirm } from '../utils/notifications.js';
 
 const RECENT_ORDERS_KEY = 'campus_market_recent_orders';
 
@@ -352,7 +353,16 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                 const target = recentOrders[idx];
                 if (!target) return;
 
-                if (confirm(`Voulez-vous vraiment annuler votre commande ${target.reference || ''} ?`)) {
+                const confirmed = await showConfirm({
+                    title: 'Annuler la commande',
+                    message: `Voulez-vous vraiment annuler votre commande ${target.reference || ''} ?`,
+                    confirmText: 'Oui, annuler',
+                    cancelText: 'Non, garder',
+                    isDestructive: true,
+                    icon: 'fa-ban',
+                });
+
+                if (confirmed) {
                     btn.disabled = true;
                     try {
                         if (target.orderId || target.id) {
@@ -360,10 +370,11 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                         }
                         recentOrders[idx].status = 'cancelled';
                         localStorage.setItem(RECENT_ORDERS_KEY, JSON.stringify(recentOrders));
-                        if (typeof onShowToast === 'function') onShowToast('Commande annulée avec succès.', 'info');
+                        showToast('Commande annulée avec succès.', 'info');
                         render();
                     } catch (err) {
-                        alert(`Impossible d'annuler : ${err.message}`);
+                        showToast(`Impossible d'annuler : ${err.message}`, 'error');
+                        btn.disabled = false;
                     }
                 }
             });
@@ -418,7 +429,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
 
             const sellerId = reviewModalOrder.items?.[0]?.seller_id || reviewModalOrder.seller_id;
             if (!sellerId) {
-                alert('Marchand non identifiable pour cet avis.');
+                showToast('Marchand non identifiable pour cet avis.', 'warning');
                 return;
             }
 
@@ -441,12 +452,10 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                     setTimeout(() => reviewModal.classList.add('hidden'), 300);
                 }
 
-                if (typeof onShowToast === 'function') {
-                    onShowToast('🎉 Merci pour votre avis sur le marchand !', 'success');
-                }
+                showToast('🎉 Merci pour votre avis sur le marchand !', 'success');
                 render();
             } catch (err) {
-                alert(`Erreur envoi avis : ${err.message}`);
+                showToast(`Erreur envoi avis : ${err.message}`, 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = `<span>Publier mon avis</span><i class="fa-solid fa-check text-xs"></i>`;

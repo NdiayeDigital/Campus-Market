@@ -281,6 +281,28 @@ console.assert(rejectedOrderStatusInvalid, 'updateOrderStatusAdmin avec statut i
 
 console.log('✅ [SuperAdminLocations] Gestion dynamique des lieux et statuts commandes validée !');
 
+// 9. Test Modern Notifications & Confirm Dialogs
+import { showToast, showConfirm } from '../src/utils/notifications.js';
+
+let notificationsOk = true;
+try {
+    showToast('Test Toast Success', 'success');
+    showToast('Test Toast Error', 'error');
+    showToast('Test Toast Warning', 'warning');
+    showToast('Test Toast Info', 'info');
+
+    const confirmed = await showConfirm({
+        title: 'Test Modal',
+        message: 'Message test',
+    });
+    console.assert(confirmed === true, 'showConfirm devrait renvoyer true en environnement headless');
+} catch (e) {
+    notificationsOk = false;
+    console.error('Erreur test notifications:', e);
+}
+console.assert(notificationsOk, 'Les notifications modernes ont échoué');
+console.log('✅ [ModernNotifications] Module de toasts et confirmations modernes validé !');
+
 console.log('🎉 Tous les tests unitaires des services de base sont passés avec succès !');
 
 

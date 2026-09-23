@@ -23,6 +23,7 @@ import {
 } from '../../services/admin-service.js';
 import { supabase } from '../../services/supabase.js';
 import { escapeHTML } from '../../utils/security.js';
+import { showToast, showConfirm } from '../../utils/notifications.js';
 
 /**
  * Crée le tableau de bord SuperAdmin.
@@ -789,12 +790,10 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
             try {
                 const newLoc = await addDeliveryLocation({ name, category });
                 deliveryLocations.push(newLoc);
-                if (typeof onShowToast === 'function') {
-                    onShowToast(`Lieu "${name}" ajouté aux zones de livraison ! 📍`, 'success');
-                }
+                showToast(`Lieu "${name}" ajouté aux zones de livraison ! 📍`, 'success');
                 render();
             } catch (err) {
-                alert(err.message);
+                showToast(err.message, 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Ajouter le lieu`;
             }
@@ -810,12 +809,10 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                     await toggleDeliveryLocation(id, !isCurrentlyActive);
                     const target = deliveryLocations.find((l) => l.id === id);
                     if (target) target.is_active = !isCurrentlyActive;
-                    if (typeof onShowToast === 'function') {
-                        onShowToast(`Statut du lieu mis à jour : ${!isCurrentlyActive ? 'Actif' : 'Désactivé'}`, 'info');
-                    }
+                    showToast(`Statut du lieu mis à jour : ${!isCurrentlyActive ? 'Actif' : 'Désactivé'}`, 'info');
                     render();
                 } catch (err) {
-                    alert(err.message);
+                    showToast(err.message, 'error');
                     btn.disabled = false;
                 }
             });
@@ -826,17 +823,24 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
                 const name = btn.getAttribute('data-name') || 'ce lieu';
-                if (confirm(`Voulez-vous vraiment supprimer "${name}" des zones de livraison ?`)) {
+                const confirmed = await showConfirm({
+                    title: 'Supprimer le lieu de livraison',
+                    message: `Voulez-vous vraiment supprimer "${name}" des zones de livraison ?`,
+                    confirmText: 'Supprimer',
+                    cancelText: 'Annuler',
+                    isDestructive: true,
+                    icon: 'fa-location-dot',
+                });
+
+                if (confirmed) {
                     btn.disabled = true;
                     try {
                         await deleteDeliveryLocation(id);
                         deliveryLocations = deliveryLocations.filter((l) => l.id !== id);
-                        if (typeof onShowToast === 'function') {
-                            onShowToast(`Lieu "${name}" supprimé.`, 'info');
-                        }
+                        showToast(`Lieu "${name}" supprimé.`, 'info');
                         render();
                     } catch (err) {
-                        alert(err.message);
+                        showToast(err.message, 'error');
                         btn.disabled = false;
                     }
                 }
@@ -850,18 +854,25 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                 const newStatus = e.target.value;
                 if (!newStatus) return;
 
-                if (confirm(`Confirmez-vous le passage de cette commande au statut "${newStatus}" ?`)) {
+                const confirmed = await showConfirm({
+                    title: 'Modifier le statut de commande',
+                    message: `Confirmez-vous le passage de cette commande au statut "${newStatus}" ?`,
+                    confirmText: 'Modifier le statut',
+                    cancelText: 'Annuler',
+                    isDestructive: false,
+                    icon: 'fa-truck-fast',
+                });
+
+                if (confirmed) {
                     sel.disabled = true;
                     try {
                         await updateOrderStatusAdmin(orderId, newStatus);
                         const ord = allOrders.find((o) => o.id === orderId);
                         if (ord) ord.status = newStatus;
-                        if (typeof onShowToast === 'function') {
-                            onShowToast(`Statut de commande mis à jour : ${newStatus} ✔️`, 'success');
-                        }
+                        showToast(`Statut de commande mis à jour : ${newStatus} ✔️`, 'success');
                         render();
                     } catch (err) {
-                        alert(err.message);
+                        showToast(err.message, 'error');
                         sel.disabled = false;
                     }
                 } else {
@@ -885,17 +896,24 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
             containerEl.querySelectorAll('button[data-action="delete-product"]').forEach((btn) => {
                 btn.addEventListener('click', async () => {
                     const id = btn.getAttribute('data-id');
-                    if (confirm('Voulez-vous vraiment supprimer définitivement ce produit du catalogue ?')) {
+                    const confirmed = await showConfirm({
+                        title: 'Modération - Supprimer le produit',
+                        message: 'Voulez-vous vraiment supprimer définitivement ce produit du catalogue ?',
+                        confirmText: 'Supprimer du catalogue',
+                        cancelText: 'Annuler',
+                        isDestructive: true,
+                        icon: 'fa-trash-can',
+                    });
+
+                    if (confirmed) {
                         btn.disabled = true;
                         try {
                             await deleteProductAdmin(id);
                             allProducts = allProducts.filter((p) => p.id !== id);
-                            if (typeof onShowToast === 'function') {
-                                onShowToast('Article modéré et supprimé du catalogue.', 'info');
-                            }
+                            showToast('Article modéré et supprimé du catalogue.', 'info');
                             render();
                         } catch (err) {
-                            alert(err.message);
+                            showToast(err.message, 'error');
                             btn.disabled = false;
                         }
                     }
@@ -917,26 +935,29 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                 try {
                     if (action === 'approve') {
                         await approveSeller(id);
-                        if (typeof onShowToast === 'function') {
-                            onShowToast('Vendeur approuvé avec succès ! 🟢', 'success');
-                        }
+                        showToast('Vendeur approuvé avec succès ! 🟢', 'success');
                     } else if (action === 'reject') {
-                        if (confirm('Rejeter la demande de ce vendeur ?')) {
+                        const confirmed = await showConfirm({
+                            title: 'Rejeter la candidature',
+                            message: 'Voulez-vous vraiment rejeter la demande d\'adhésion de ce vendeur ?',
+                            confirmText: 'Rejeter la demande',
+                            cancelText: 'Annuler',
+                            isDestructive: true,
+                            icon: 'fa-user-xmark',
+                        });
+
+                        if (confirmed) {
                             await rejectSeller(id);
-                            if (typeof onShowToast === 'function') {
-                                onShowToast('Candidature rejetée.', 'info');
-                            }
+                            showToast('Candidature rejetée.', 'info');
                         }
                     } else if (action === 'toggle-suspend') {
                         const isSuspended = btn.getAttribute('data-suspended') === 'true';
                         await suspendSeller(id, !isSuspended);
-                        if (typeof onShowToast === 'function') {
-                            onShowToast(!isSuspended ? 'Boutique suspendue.' : 'Boutique réactivée.', 'info');
-                        }
+                        showToast(!isSuspended ? 'Boutique suspendue.' : 'Boutique réactivée.', 'info');
                     }
                     await loadAdminData();
                 } catch (err) {
-                    alert(err.message);
+                    showToast(err.message, 'error');
                 } finally {
                     btn.disabled = false;
                 }

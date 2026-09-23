@@ -55,7 +55,7 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
             </div>
 
             <!-- Ligne inférieure : Champ de recherche avec icône loupe -->
-            <div class="relative w-full">
+            <div id="header-search-row" class="relative w-full">
                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <i class="fa-solid fa-magnifying-glass text-sm"></i>
                 </div>
@@ -138,6 +138,27 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
             if (typeof onSearch === 'function') onSearch('');
         }
     });
+
+    headerEl.setMode = (mode) => {
+        const searchRow = headerEl.querySelector('#header-search-row');
+        const ordersBtn = headerEl.querySelector('#header-orders-btn');
+        const sellerBtn = headerEl.querySelector('#header-seller-btn');
+
+        if (mode === 'hidden') {
+            headerEl.classList.add('hidden');
+        } else if (mode === 'orders') {
+            headerEl.classList.remove('hidden');
+            if (searchRow) searchRow.classList.add('hidden');
+            if (ordersBtn) ordersBtn.classList.add('hidden');
+            if (sellerBtn) sellerBtn.classList.remove('hidden');
+        } else {
+            // mode === 'catalog' (par défaut)
+            headerEl.classList.remove('hidden');
+            if (searchRow) searchRow.classList.remove('hidden');
+            if (ordersBtn) ordersBtn.classList.remove('hidden');
+            if (sellerBtn) sellerBtn.classList.remove('hidden');
+        }
+    };
 
     return headerEl;
 }

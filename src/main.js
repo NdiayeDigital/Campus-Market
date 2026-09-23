@@ -23,7 +23,10 @@ import {
     fetchTopShops,
 } from './services/catalog-service.js';
 import { escapeHTML } from './utils/security.js';
+import { showToast } from './utils/notifications.js';
 import logoUrl from './assets/logo.webp';
+
+export { showToast };
 
 const LOCAL_SELLER_KEY = 'campus_market_cached_seller';
 
@@ -46,47 +49,6 @@ const appState = {
     topShops: [],
     isLoading: true,
 };
-
-/**
- * Affiche une notification toast non intrusive.
- * @param {string} message
- * @param {('success'|'info'|'warning')} [type='success']
- */
-export function showToast(message, type = 'success') {
-    let container = document.getElementById('toast-root');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-root';
-        container.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm px-4';
-        document.body.appendChild(container);
-    }
-
-    const toast = document.createElement('div');
-    const colors = {
-        success: 'bg-emerald-600 text-white shadow-emerald-600/30',
-        info: 'bg-primary text-white shadow-primary/30',
-        warning: 'bg-accent text-slate-900 shadow-accent/30',
-    };
-
-    toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg font-heading font-semibold text-xs transition-all duration-300 transform translate-y-3 opacity-0 ${
-        colors[type] || colors.success
-    }`;
-    toast.innerHTML = `
-        <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-info-circle'} text-sm"></i>
-        <span>${escapeHTML(message)}</span>
-    `;
-
-    container.appendChild(toast);
-
-    requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-3', 'opacity-0');
-    });
-
-    setTimeout(() => {
-        toast.classList.add('translate-y-3', 'opacity-0');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
 
 /**
  * Initialise l'application Campus Market dans le DOM.
@@ -293,16 +255,24 @@ async function initApp() {
         }
 
         if (viewName === 'orders') {
+            if (headerComponent.setMode) headerComponent.setMode('orders');
             categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.remove('hidden');
             renderOrdersView();
         } else if (viewName === 'seller') {
+            if (headerComponent.setMode) headerComponent.setMode('hidden');
             categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.remove('hidden');
             renderSellerView();
         } else if (viewName === 'admin') {
+            if (headerComponent.setMode) headerComponent.setMode('hidden');
             categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.add('hidden');
             renderAdminView();
         } else {
+            if (headerComponent.setMode) headerComponent.setMode('catalog');
             categoryChipsComponent.classList.remove('hidden');
+            footerEl.classList.remove('hidden');
             renderCatalogView();
         }
     }
@@ -353,6 +323,7 @@ async function initApp() {
         mainContentEl.innerHTML = '';
         activeDashboardEl = createSellerDashboard({
             seller: appState.currentSeller,
+            onBackToCatalog: () => navigateToView('catalog'),
             onLogout: () => {
                 appState.currentSeller = null;
                 try {
@@ -557,7 +528,7 @@ async function initApp() {
     } else if (initialHash === '#orders') {
         navigateToView('orders');
     } else {
-        renderCatalogView(); // Affiche immédiatement les squelettes
+        navigateToView('catalog');
     }
 
     // Chargement asynchrone des offres & boutiques
