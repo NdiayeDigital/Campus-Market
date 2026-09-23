@@ -137,7 +137,7 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h1 class="font-heading font-extrabold text-lg text-white">Administration Centrale</h1>
+                            <h1 class="font-heading font-extrabold text-lg text-white">Admin</h1>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-accent/20 text-accent border border-accent/40">
                                 UIDT Thiès
                             </span>
