@@ -215,9 +215,6 @@ async function initApp() {
                 <button id="footer-link-catalog" class="hover:text-primary transition-colors">Offres</button>
                 <button id="footer-link-orders" class="hover:text-primary transition-colors">Mes commandes</button>
                 <button id="footer-link-seller" class="hover:text-amber-700 text-amber-900 font-semibold transition-colors">Espace Vendeur</button>
-                <button id="footer-link-admin" class="hover:text-slate-800 text-slate-400 text-xs transition-colors flex items-center gap-1 font-semibold">
-                    <i class="fa-solid fa-lock text-[10px]"></i> Administration UIDT
-                </button>
                 <a href="https://wa.me/221784799882" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1">
                     <i class="fa-brands fa-whatsapp"></i> Aide & Support
                 </a>
@@ -235,7 +232,6 @@ async function initApp() {
             sellerAuthModalController.open('login');
         }
     });
-    footerEl.querySelector('#footer-link-admin')?.addEventListener('click', () => navigateToView('admin'));
 
     rootWrapper.appendChild(footerEl);
     appEl.appendChild(rootWrapper);
@@ -305,11 +301,16 @@ async function initApp() {
         mainContentEl.appendChild(activeDashboardEl);
     }
 
-    // Rendu de l'Administration UIDT
+    // Rendu de l'Administration UIDT (accessible exclusivement via /#admin)
     function renderAdminView() {
         mainContentEl.innerHTML = '';
         const adminDashboard = createSuperAdminDashboard({
-            onExit: () => navigateToView('catalog'),
+            onExit: () => {
+                if (window.location.hash.toLowerCase() === '#admin') {
+                    history.replaceState(null, '', window.location.pathname);
+                }
+                navigateToView('catalog');
+            },
             onShowToast: showToast,
         });
         mainContentEl.appendChild(adminDashboard);
