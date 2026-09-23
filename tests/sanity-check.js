@@ -71,6 +71,27 @@ try {
 } catch (e) {
     rejectedNegativePrice = e.message.includes('positif');
 }
+console.assert(rejectedNegativePrice, 'Échec de rejet prix négatif pour produit');
+
+let descriptionError = null;
+try {
+    // Appel avec prix valide pour tester le chemin avec description
+    await createProduct({
+        sellerId: 's-1',
+        title: 'Produit Test',
+        price: 1500,
+        description: 'Excellente qualité',
+    });
+} catch (e) {
+    // Si échec réseau / DB Supabase, c'est normal en environnement mock/test,
+    // mais cela ne DOIT PAS être un ReferenceError (description is not defined)
+    if (e.message?.includes('description is not defined')) {
+        descriptionError = e.message;
+    }
+}
+console.assert(!descriptionError, `Bug ReferenceError sur description: ${descriptionError}`);
+console.log('✅ [ProductManagement] Validation prix et gestion description validées !');
+
 // 5. Test SuperAdmin Service Validations
 import {
     loginAdmin,
