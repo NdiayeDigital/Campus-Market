@@ -88,12 +88,15 @@ CREATE POLICY "Public Read on Product Images"
 ON storage.objects FOR SELECT
 USING (bucket_id IN ('product-images', 'products'));
 
--- Droits d'upload pour les vendeurs connectés
+-- Droits d'upload strictement réservés aux vendeurs et superadmins
 DROP POLICY IF EXISTS "Authenticated sellers upload to Products" ON storage.objects;
 CREATE POLICY "Authenticated sellers upload to Products"
 ON storage.objects FOR INSERT
 TO authenticated
-WITH CHECK (bucket_id IN ('product-images', 'products'));
+WITH CHECK (
+    bucket_id IN ('product-images', 'products') AND 
+    public.get_current_user_role(auth.uid()) IN ('vendeur', 'superadmin')
+);
 
 -- Droits de mise à jour/suppression pour le propriétaire de l'image
 DROP POLICY IF EXISTS "Authenticated sellers update Products" ON storage.objects;

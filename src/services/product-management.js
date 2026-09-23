@@ -32,6 +32,7 @@ export async function createProduct({
     imageFile = null,
     icon = 'fa-box',
     color = '#1D4ED8',
+    description = '',
 }) {
     if (!sellerId) throw new Error('Identifiant vendeur requis.');
     if (!title || !price) throw new Error('Veuillez renseigner le titre et le prix.');

@@ -6,6 +6,7 @@
 import { createOrder } from '../services/order-service.js';
 import { cartStore } from '../services/cart-store.js';
 import { fetchDeliveryLocations, DEFAULT_DELIVERY_LOCATIONS } from '../services/admin-service.js';
+import { escapeHTML } from '../utils/security.js';
 
 const LOCAL_BUYER_KEY = 'campus_market_last_buyer';
 
@@ -65,7 +66,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                                 type="text" 
                                 id="buyer-prenom" 
                                 required 
-                                value="${savedBuyer.prenom || ''}"
+                                value="${escapeHTML(savedBuyer.prenom || '')}"
                                 placeholder="Ex: Moussa" 
                                 class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
@@ -76,7 +77,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                                 type="text" 
                                 id="buyer-nom" 
                                 required 
-                                value="${savedBuyer.nom || ''}"
+                                value="${escapeHTML(savedBuyer.nom || '')}"
                                 placeholder="Ex: Diallo" 
                                 class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
@@ -89,7 +90,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                             type="tel" 
                             id="buyer-phone" 
                             required 
-                            value="${savedBuyer.telephone || ''}"
+                            value="${escapeHTML(savedBuyer.telephone || '')}"
                             placeholder="Ex: 77 123 45 67" 
                             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                         >
@@ -113,7 +114,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                             >
                                 <option value="" disabled ${!savedBuyer.pavillon ? 'selected' : ''}>Sélectionnez...</option>
                                 ${DEFAULT_DELIVERY_LOCATIONS.map((p) => `
-                                    <option value="${p.name}" ${savedBuyer.pavillon === p.name ? 'selected' : ''}>${p.name}</option>
+                                    <option value="${escapeHTML(p.name)}" ${savedBuyer.pavillon === p.name ? 'selected' : ''}>${escapeHTML(p.name)}</option>
                                 `).join('')}
                             </select>
                         </div>
@@ -123,7 +124,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                                 type="text" 
                                 id="delivery-chambre" 
                                 required 
-                                value="${savedBuyer.chambre || ''}"
+                                value="${escapeHTML(savedBuyer.chambre || '')}"
                                 placeholder="Ex: Chambre 14, 2e étage" 
                                 class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
@@ -210,7 +211,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                 selectEl.innerHTML = `
                     <option value="" disabled ${!currentVal ? 'selected' : ''}>Sélectionnez...</option>
                     ${locations.map((loc) => `
-                        <option value="${loc.name}" ${currentVal === loc.name ? 'selected' : ''}>${loc.name}</option>
+                        <option value="${escapeHTML(loc.name)}" ${currentVal === loc.name ? 'selected' : ''}>${escapeHTML(loc.name)}</option>
                     `).join('')}
                 `;
             }

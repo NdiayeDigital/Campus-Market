@@ -128,14 +128,25 @@ GRANT EXECUTE ON FUNCTION public.track_order_secure(TEXT, TEXT) TO anon, authent
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    assigned_role TEXT;
 BEGIN
+    -- Protection contre l'élévation de privilèges :
+    -- Seul 'vendeur_pending' ou 'acheteur' peut être assigné à l'inscription.
+    -- Les rôles 'superadmin' et 'vendeur' exigent une approbation préalable.
+    IF NEW.raw_user_meta_data->>'role' = 'vendeur_pending' THEN
+        assigned_role := 'vendeur_pending';
+    ELSE
+        assigned_role := 'acheteur';
+    END IF;
+
     INSERT INTO public.profiles (id, prenom, nom, telephone, role, is_open)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'prenom', 'Étudiant'),
         COALESCE(NEW.raw_user_meta_data->>'nom', 'UIDT'),
         COALESCE(NEW.raw_user_meta_data->>'telephone', ''),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'acheteur'),
+        assigned_role,
         true
     )
     ON CONFLICT (id) DO UPDATE 
@@ -143,7 +154,11 @@ BEGIN
         prenom = EXCLUDED.prenom,
         nom = EXCLUDED.nom,
         telephone = CASE WHEN EXCLUDED.telephone <> '' THEN EXCLUDED.telephone ELSE public.profiles.telephone END,
-        role = CASE WHEN public.profiles.role = 'superadmin' THEN 'superadmin' ELSE EXCLUDED.role END;
+        role = CASE 
+            WHEN public.profiles.role = 'superadmin' THEN 'superadmin'
+            WHEN public.profiles.role = 'vendeur' THEN 'vendeur'
+            ELSE assigned_role 
+        END;
 
     RETURN NEW;
 END;

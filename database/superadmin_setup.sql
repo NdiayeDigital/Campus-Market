@@ -43,18 +43,12 @@ USING (
 
 
 -- 2. TRANSFORMATION DU COMPTE EN SUPER ADMIN
--- Remplacez 'maamin.ndiaye@univ-thies.sn' par l'adresse e-mail de l'administrateur si nécessaire.
+-- Remplacez 'admin@univ-thies.sn' par l'adresse e-mail de l'administrateur souhaité.
 -- L'utilisateur doit déjà être inscrit sur l'application avant d'exécuter cette commande.
 UPDATE public.profiles 
 SET role = 'superadmin' 
-WHERE id = (SELECT id FROM auth.users WHERE email = 'maamin.ndiaye@univ-thies.sn');
-
+WHERE id = (SELECT id FROM auth.users WHERE email = 'admin@univ-thies.sn');
 
 -- ====================================================================================
--- OPTION ALTERNATIVE (RÉSERVOIR EMAIL CODÉ EN DUR) :
--- Si vous préférez l'ancienne approche basée strictement sur l'e-mail dans le JWT :
---
--- CREATE POLICY "Superadmin update profiles" 
--- ON public.profiles FOR UPDATE 
--- USING (auth.jwt() ->> 'email' = 'maamin.ndiaye@univ-thies.sn');
+-- Note : Utilisez de préférence database/schema_final.sql pour éviter toute récursion RLS.
 -- ====================================================================================

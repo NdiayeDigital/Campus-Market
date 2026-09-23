@@ -212,6 +212,49 @@ AFTER UPDATE ON public.orders
 FOR EACH ROW
 EXECUTE FUNCTION public.adjust_product_stock_on_cancel();
 
+-- Trigger automatique de création de profil étudiant (auth.users -> profiles)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    assigned_role TEXT;
+BEGIN
+    -- Règle stricte anti-élévation de privilèges :
+    -- Seul 'vendeur_pending' ou 'acheteur' peut être sollicité à l'inscription.
+    IF NEW.raw_user_meta_data->>'role' = 'vendeur_pending' THEN
+        assigned_role := 'vendeur_pending';
+    ELSE
+        assigned_role := 'acheteur';
+    END IF;
+
+    INSERT INTO public.profiles (id, prenom, nom, telephone, role, is_open)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'prenom', 'Étudiant'),
+        COALESCE(NEW.raw_user_meta_data->>'nom', 'UIDT'),
+        COALESCE(NEW.raw_user_meta_data->>'telephone', ''),
+        assigned_role,
+        true
+    )
+    ON CONFLICT (id) DO UPDATE 
+    SET 
+        prenom = EXCLUDED.prenom,
+        nom = EXCLUDED.nom,
+        telephone = CASE WHEN EXCLUDED.telephone <> '' THEN EXCLUDED.telephone ELSE public.profiles.telephone END,
+        role = CASE 
+            WHEN public.profiles.role = 'superadmin' THEN 'superadmin'
+            WHEN public.profiles.role = 'vendeur' THEN 'vendeur'
+            ELSE assigned_role 
+        END;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 
 -- ====================================================================================
 -- 5. POLITIQUES DE SÉCURITÉ RLS (IDEMPOTENTES)
@@ -357,11 +400,31 @@ ON public.reviews FOR INSERT
 WITH CHECK (auth.uid() = buyer_id);
 
 
+
+-- ------------------------------------------------------------------------------------
+-- E. POLITIQUES POUR 'delivery_locations'
+-- ------------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Public Read Active Locations" ON public.delivery_locations;
+DROP POLICY IF EXISTS "SuperAdmin Manage Locations" ON public.delivery_locations;
+
+-- Lecture publique : accessible à tous (acheteurs invités & connectés)
+CREATE POLICY "Public Read Active Locations"
+ON public.delivery_locations FOR SELECT
+USING (true);
+
+-- Écriture / Modification réservée au SuperAdmin
+CREATE POLICY "SuperAdmin Manage Locations"
+ON public.delivery_locations FOR ALL
+TO authenticated
+USING (public.is_super_admin(auth.uid()))
+WITH CHECK (public.is_super_admin(auth.uid()));
+
+
 -- ====================================================================================
 -- 6. CONFIGURATION DU STORAGE & BUCKET PRODUITS
 -- ====================================================================================
 INSERT INTO storage.buckets (id, name, public) 
-VALUES ('product-images', 'product-images', true)
+VALUES ('product-images', 'product-images', true), ('products', 'products', true)
 ON CONFLICT (id) DO NOTHING;
 
 DROP POLICY IF EXISTS "Images publiques" ON storage.objects;
@@ -371,12 +434,12 @@ DROP POLICY IF EXISTS "Uploads réservés aux vendeurs" ON storage.objects;
 -- Lecture publique des images
 CREATE POLICY "Images publiques" 
 ON storage.objects FOR SELECT 
-USING (bucket_id = 'product-images');
+USING (bucket_id IN ('product-images', 'products'));
 
 -- Upload strictement réservé aux profils avec rôle 'vendeur' ou 'superadmin'
 CREATE POLICY "Uploads réservés aux vendeurs" 
 ON storage.objects FOR INSERT 
 WITH CHECK (
-    bucket_id = 'product-images' AND 
+    bucket_id IN ('product-images', 'products') AND 
     public.get_current_user_role(auth.uid()) IN ('vendeur', 'superadmin')
 );
