@@ -25,12 +25,23 @@ import {
 import { escapeHTML } from './utils/security.js';
 import logoUrl from './assets/logo.webp';
 
+const LOCAL_SELLER_KEY = 'campus_market_cached_seller';
+
+// Récupération synchrone immédiate du profil vendeur en cache pour éviter toute déconnexion au rafraîchissement
+let initialCachedSeller = null;
+try {
+    const rawSeller = localStorage.getItem(LOCAL_SELLER_KEY);
+    if (rawSeller) initialCachedSeller = JSON.parse(rawSeller);
+} catch {
+    initialCachedSeller = null;
+}
+
 // État local de l'application
 const appState = {
     currentCategory: 'all',
     searchQuery: '',
     currentView: 'catalog', // 'catalog' | 'orders' | 'seller' | 'admin'
-    currentSeller: null,
+    currentSeller: initialCachedSeller,
     products: [],
     topShops: [],
     isLoading: true,
@@ -87,12 +98,24 @@ async function initApp() {
     const rootWrapper = document.createElement('div');
     rootWrapper.className = 'min-h-screen bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white';
 
-    // Récupération asynchrone NON-BLOQUANTE de la session vendeur existante
-    // Garantit que l'initialisation ne freeze jamais pour les acheteurs / utilisateurs anonymes
+    // Validation asynchrone continue de la session auprès de Supabase
     getCurrentSeller()
         .then((existingSeller) => {
-            if (existingSeller && existingSeller.profile?.role === 'vendeur') {
+            if (existingSeller && existingSeller.profile && (existingSeller.profile.role === 'vendeur' || existingSeller.profile.role === 'superadmin')) {
                 appState.currentSeller = existingSeller.profile;
+                try {
+                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(existingSeller.profile));
+                } catch {}
+            } else if (appState.currentSeller) {
+                // La session distante n'est plus valide (expirée ou révoquée)
+                appState.currentSeller = null;
+                try {
+                    localStorage.removeItem(LOCAL_SELLER_KEY);
+                } catch {}
+                if (appState.currentView === 'seller') {
+                    navigateToView('catalog');
+                    showToast('Votre session vendeur a expiré. Veuillez vous reconnecter.', 'warning');
+                }
             }
         })
         .catch((err) => {
@@ -117,6 +140,9 @@ async function initApp() {
     const sellerAuthModalController = createSellerAuthModal({
         onAuthenticated: ({ profile }) => {
             appState.currentSeller = profile;
+            try {
+                localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(profile));
+            } catch {}
             showToast(`Bienvenue dans votre Espace Vendeur, ${profile.prenom} !`, 'success');
             navigateToView('seller');
         },
@@ -170,8 +196,11 @@ async function initApp() {
             }
             // Vérifie si une session existe
             const sellerSession = await getCurrentSeller();
-            if (sellerSession && sellerSession.profile.role === 'vendeur') {
+            if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
                 appState.currentSeller = sellerSession.profile;
+                try {
+                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
+                } catch {}
                 navigateToView('seller');
             } else {
                 sellerAuthModalController.open('login');
@@ -225,11 +254,20 @@ async function initApp() {
 
     footerEl.querySelector('#footer-link-catalog')?.addEventListener('click', () => navigateToView('catalog'));
     footerEl.querySelector('#footer-link-orders')?.addEventListener('click', () => navigateToView('orders'));
-    footerEl.querySelector('#footer-link-seller')?.addEventListener('click', () => {
+    footerEl.querySelector('#footer-link-seller')?.addEventListener('click', async () => {
         if (appState.currentSeller) {
             navigateToView('seller');
         } else {
-            sellerAuthModalController.open('login');
+            const sellerSession = await getCurrentSeller();
+            if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
+                appState.currentSeller = sellerSession.profile;
+                try {
+                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
+                } catch {}
+                navigateToView('seller');
+            } else {
+                sellerAuthModalController.open('login');
+            }
         }
     });
 
@@ -280,18 +318,46 @@ async function initApp() {
     }
 
     // Rendu de l'Espace Vendeur
-    function renderSellerView() {
-        mainContentEl.innerHTML = '';
+    async function renderSellerView() {
+        // 1. Si le profil n'est pas encore en mémoire, afficher un écran d'attente et vérifier Supabase
         if (!appState.currentSeller) {
+            mainContentEl.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-24 gap-3 text-slate-500 animate-pulse">
+                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
+                    <p class="text-xs font-semibold">Accès à votre Espace Vendeur...</p>
+                </div>
+            `;
+
+            try {
+                const sellerSession = await getCurrentSeller();
+                if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
+                    appState.currentSeller = sellerSession.profile;
+                    try {
+                        localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
+                    } catch {}
+                }
+            } catch (err) {
+                console.warn('[Main] Erreur getCurrentSeller lors du rendu vendeur:', err);
+            }
+        }
+
+        // 2. Si aucune session n'est active, inviter à la connexion et retourner au catalogue
+        if (!appState.currentSeller) {
+            mainContentEl.innerHTML = '';
             sellerAuthModalController.open('login');
             navigateToView('catalog');
             return;
         }
 
+        // 3. Montage du tableau de bord vendeur
+        mainContentEl.innerHTML = '';
         activeDashboardEl = createSellerDashboard({
             seller: appState.currentSeller,
             onLogout: () => {
                 appState.currentSeller = null;
+                try {
+                    localStorage.removeItem(LOCAL_SELLER_KEY);
+                } catch {}
                 showToast('Déconnecté de votre espace marchand.', 'info');
                 navigateToView('catalog');
             },
