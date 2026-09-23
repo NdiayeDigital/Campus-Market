@@ -5,19 +5,7 @@
 
 import { createOrder } from '../services/order-service.js';
 import { cartStore } from '../services/cart-store.js';
-
-const PAVILLONS = [
-    'Pavillon A1',
-    'Pavillon A2',
-    'Pavillon A3',
-    'Pavillon A4',
-    'Pavillon B1',
-    'Pavillon B2',
-    'Pavillon C',
-    'Jardin Social',
-    'Bibliothèque Universitaire (BU)',
-    'Salles de cours / Espaces communs'
-];
+import { fetchDeliveryLocations, DEFAULT_DELIVERY_LOCATIONS } from '../services/admin-service.js';
 
 const LOCAL_BUYER_KEY = 'campus_market_last_buyer';
 
@@ -124,8 +112,8 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                                 class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
                                 <option value="" disabled ${!savedBuyer.pavillon ? 'selected' : ''}>Sélectionnez...</option>
-                                ${PAVILLONS.map((p) => `
-                                    <option value="${p}" ${savedBuyer.pavillon === p ? 'selected' : ''}>${p}</option>
+                                ${DEFAULT_DELIVERY_LOCATIONS.map((p) => `
+                                    <option value="${p.name}" ${savedBuyer.pavillon === p.name ? 'selected' : ''}>${p.name}</option>
                                 `).join('')}
                             </select>
                         </div>
@@ -178,6 +166,16 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                             </div>
                         </label>
                     </div>
+
+                    <div id="payment-notice" class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-[11px] text-slate-600 flex items-center gap-2">
+                        <i class="fa-solid fa-info-circle text-primary text-xs"></i>
+                        <span id="payment-notice-text">Règlement Wave direct au vendeur ou lors de la remise en main propre en chambre.</span>
+                    </div>
+
+                    <div id="multi-vendor-notice" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5"></i>
+                        <span><strong>Panier multi-vendeurs :</strong> Vos articles proviennent de plusieurs marchands étudiants. Ils vous contacteront individuellement.</span>
+                    </div>
                 </div>
 
                 <!-- Message d'erreur -->
@@ -202,7 +200,34 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
     const submitBtn = modalEl.querySelector('#btn-submit-order');
     const errorEl = modalEl.querySelector('#checkout-error');
 
+    async function refreshLocations() {
+        const selectEl = modalEl.querySelector('#delivery-pavillon');
+        if (!selectEl) return;
+        const currentVal = selectEl.value || savedBuyer.pavillon || '';
+        try {
+            const locations = await fetchDeliveryLocations(false);
+            if (locations && locations.length > 0) {
+                selectEl.innerHTML = `
+                    <option value="" disabled ${!currentVal ? 'selected' : ''}>Sélectionnez...</option>
+                    ${locations.map((loc) => `
+                        <option value="${loc.name}" ${currentVal === loc.name ? 'selected' : ''}>${loc.name}</option>
+                    `).join('')}
+                `;
+            }
+        } catch {
+            // Repli sur la liste par défaut déjà présente
+        }
+    }
+
     function open() {
+        refreshLocations();
+        const currentItems = cartStore.getCart();
+        const uniqueSellers = new Set(currentItems.map((i) => i.seller_id).filter(Boolean));
+        const multiVendorEl = modalEl.querySelector('#multi-vendor-notice');
+        if (multiVendorEl) {
+            multiVendorEl.classList.toggle('hidden', uniqueSellers.size <= 1);
+        }
+
         modalEl.classList.remove('opacity-0', 'pointer-events-none');
         modalEl.classList.add('opacity-100');
         document.body.style.overflow = 'hidden';
@@ -218,6 +243,20 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
     modalEl.querySelector('#btn-close-checkout')?.addEventListener('click', close);
     modalEl.addEventListener('click', (e) => {
         if (e.target === modalEl) close();
+    });
+
+    const noticeText = modalEl.querySelector('#payment-notice-text');
+    modalEl.querySelectorAll('input[name="payment-method"]').forEach((radio) => {
+        radio.addEventListener('change', (e) => {
+            if (!noticeText) return;
+            if (e.target.value === 'wave') {
+                noticeText.textContent = 'Règlement Wave direct au vendeur ou lors de la remise en main propre en chambre.';
+            } else if (e.target.value === 'om') {
+                noticeText.textContent = 'Règlement Orange Money direct au vendeur ou lors de la remise en main propre en chambre.';
+            } else {
+                noticeText.textContent = 'Paiement en espèces lors de la livraison en main propre.';
+            }
+        });
     });
 
     formEl?.addEventListener('submit', async (e) => {
@@ -271,6 +310,9 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
             if (typeof onOrderSuccess === 'function') {
                 onOrderSuccess({
                     reference: result.reference,
+                    orderId: result.orderId,
+                    seller_name: result.sellerName,
+                    seller_phone: result.sellerPhone,
                     isOffline: result.isOffline,
                     prenom,
                     nom,
@@ -278,6 +320,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                     pavillon,
                     chambre,
                     items,
+                    paymentMethod,
                 });
             }
         } catch (err) {

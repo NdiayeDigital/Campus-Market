@@ -252,16 +252,137 @@ export async function createOrder({
         // Succès : vidage automatique du panier
         clearCart();
 
+        // Référence cohérente partagée avec le dashboard marchand (#CMD-XXXXXX)
+        const primaryOrder = data && data[0] ? data[0] : null;
+        const finalReference = primaryOrder 
+            ? `#CMD-${primaryOrder.id.slice(0, 6).toUpperCase()}` 
+            : reference;
+
+        const firstItem = items[0] || {};
+        const sellerName = firstItem.seller_name || (firstItem.seller ? `${firstItem.seller.prenom} ${firstItem.seller.nom}`.trim() : 'Vendeur UIDT');
+        const sellerPhone = firstItem.seller_phone || firstItem.seller?.telephone || '';
+
         return {
             success: true,
-            reference,
+            reference: finalReference,
             isOffline: false,
             orders: data,
+            orderId: primaryOrder ? primaryOrder.id : null,
+            sellerName,
+            sellerPhone,
         };
     } catch (err) {
         console.error('[OrderService] Erreur lors de l’insertion de la commande:', err);
         throw new Error(err.message || 'Erreur lors de l’envoi de votre commande. Veuillez réessayer.');
     }
+}
+
+/**
+ * Récupère le statut en direct d'une commande via la fonction RPC sécurisée ou requête directe.
+ * @param {Object} params
+ * @param {string} [params.orderId]
+ * @param {string} [params.reference]
+ * @param {string} [params.phone]
+ * @returns {Promise<Object|null>}
+ */
+export async function fetchLiveOrderStatus({ orderId, reference, phone } = {}) {
+    if (!orderId && !reference) return null;
+
+    try {
+        const targetRef = reference || (orderId ? `#CMD-${orderId.slice(0, 6).toUpperCase()}` : '');
+        
+        // 1. Appel RPC sécurisé (track_order_secure)
+        const { data: rpcData, error: rpcErr } = await supabase.rpc('track_order_secure', {
+            p_reference: targetRef,
+            p_phone: phone || '',
+        });
+
+        if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+            return rpcData[0];
+        }
+
+        // 2. Repli direct si utilisateur authentifié ou si RLS le permet
+        if (orderId) {
+            const { data, error } = await supabase
+                .from('orders')
+                .select('id, status, price, quantity, delivery_address, created_at, seller_id, seller:seller_id(id, prenom, nom, telephone)')
+                .eq('id', orderId)
+                .maybeSingle();
+
+            if (!error && data) {
+                return {
+                    ...data,
+                    seller_name: data.seller ? `${data.seller.prenom} ${data.seller.nom}`.trim() : 'Vendeur UIDT',
+                    seller_phone: data.seller?.telephone || '',
+                };
+            }
+        }
+
+        return null;
+    } catch (err) {
+        console.warn('[OrderService] Erreur fetchLiveOrderStatus:', err);
+        return null;
+    }
+}
+
+/**
+ * Permet à un étudiant d'annuler sa commande si elle est toujours en attente (pending).
+ * @param {string} orderId
+ * @returns {Promise<Object>}
+ */
+export async function cancelOrderByBuyer(orderId) {
+    if (!orderId) throw new Error('Identifiant commande requis.');
+
+    const { data, error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', orderId)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec d'annulation de la commande: ${error.message}`);
+    }
+    return data;
+}
+
+/**
+ * Enregistre l'avis et la note d'un étudiant pour un vendeur après livraison.
+ * @param {Object} reviewData
+ * @param {string} reviewData.sellerId - UUID du marchand
+ * @param {string} [reviewData.orderId] - UUID de la commande
+ * @param {number} reviewData.rating - Note de 1 à 5
+ * @param {string} [reviewData.comment] - Commentaire libre
+ * @returns {Promise<Object>}
+ */
+export async function submitOrderReview({ sellerId, orderId = null, rating, comment = '' }) {
+    if (!sellerId) throw new Error('Identifiant marchand manquant.');
+    const note = Math.max(1, Math.min(5, parseInt(rating, 10) || 5));
+
+    let buyerId = null;
+    try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user) buyerId = authData.user.id;
+    } catch {
+        buyerId = null;
+    }
+
+    const { data, error } = await supabase
+        .from('reviews')
+        .insert([{
+            seller_id: sellerId,
+            order_id: orderId || null,
+            buyer_id: buyerId,
+            rating: note,
+            comment: comment.trim(),
+        }])
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Impossible d'enregistrer votre avis: ${error.message}`);
+    }
+    return data;
 }
 
 export default {
@@ -270,4 +391,7 @@ export default {
     generateOrderReference,
     syncPendingOrders,
     getPendingOfflineOrders,
+    fetchLiveOrderStatus,
+    cancelOrderByBuyer,
+    submitOrderReview,
 };

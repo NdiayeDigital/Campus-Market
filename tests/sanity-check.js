@@ -185,6 +185,102 @@ console.assert(firstOrder.buyer_id === null, 'buyer_id anonyme non respecté');
 
 console.log('✅ [OrderService] Insertion strictement conforme aux 10 colonnes réelles validée !');
 
+// 7. Test Nouveaux Modules & Fonctionnalités Production
+import fs from 'fs';
+import { updateProduct } from '../src/services/product-management.js';
+import { submitOrderReview, cancelOrderByBuyer, fetchLiveOrderStatus } from '../src/services/order-service.js';
+import { fetchAllProductsAdmin, fetchAllOrdersAdmin } from '../src/services/admin-service.js';
+
+// Test validation modification produit
+let rejectedMissingUpdateId = false;
+try {
+    await updateProduct({ productId: '', title: 'Test', price: 1000 });
+} catch (e) {
+    rejectedMissingUpdateId = e.message.includes('Identifiant produit requis');
+}
+console.assert(rejectedMissingUpdateId, 'Échec de rejet updateProduct sans ID');
+
+// Test validation avis & annulation
+let rejectedReviewNoSeller = false;
+try {
+    await submitOrderReview({ rating: 5 });
+} catch (e) {
+    rejectedReviewNoSeller = e.message.includes('marchand');
+}
+console.assert(rejectedReviewNoSeller, 'Échec de rejet submitOrderReview sans sellerId');
+
+let rejectedCancelNoId = false;
+try {
+    await cancelOrderByBuyer('');
+} catch (e) {
+    rejectedCancelNoId = e.message.includes('Identifiant');
+}
+console.assert(rejectedCancelNoId, 'Échec de rejet cancelOrderByBuyer sans ID');
+
+// Test présence PWA dans public/
+console.assert(fs.existsSync('./public/sw.js'), 'Fichier public/sw.js manquant !');
+console.assert(fs.existsSync('./public/manifest.json'), 'Fichier public/manifest.json manquant !');
+console.assert(typeof fetchLiveOrderStatus === 'function', 'fetchLiveOrderStatus non exporté');
+console.assert(typeof fetchAllProductsAdmin === 'function', 'fetchAllProductsAdmin non exporté');
+console.assert(typeof fetchAllOrdersAdmin === 'function', 'fetchAllOrdersAdmin non exporté');
+
+console.log('✅ [ProductionFeatures] Modules d\'édition, avis, PWA et modération validés !');
+
+// 8. Test SuperAdmin Locations & Order Status Management
+import {
+    DEFAULT_DELIVERY_LOCATIONS,
+    fetchDeliveryLocations,
+    addDeliveryLocation,
+    toggleDeliveryLocation,
+    deleteDeliveryLocation,
+    updateOrderStatusAdmin,
+} from '../src/services/admin-service.js';
+
+console.assert(Array.isArray(DEFAULT_DELIVERY_LOCATIONS) && DEFAULT_DELIVERY_LOCATIONS.length >= 8, 'DEFAULT_DELIVERY_LOCATIONS incomplet');
+console.assert(DEFAULT_DELIVERY_LOCATIONS.some(l => l.name === 'Pavillon A1'), 'Pavillon A1 manquant dans DEFAULT_DELIVERY_LOCATIONS');
+
+let rejectedAddLocNoName = false;
+try {
+    await addDeliveryLocation({ name: '' });
+} catch (e) {
+    rejectedAddLocNoName = e.message.includes('requis');
+}
+console.assert(rejectedAddLocNoName, 'addDeliveryLocation sans nom devrait échouer');
+
+let rejectedToggleLocNoId = false;
+try {
+    await toggleDeliveryLocation(null, true);
+} catch (e) {
+    rejectedToggleLocNoId = e.message.includes('manquant');
+}
+console.assert(rejectedToggleLocNoId, 'toggleDeliveryLocation sans ID devrait échouer');
+
+let rejectedDeleteLocNoId = false;
+try {
+    await deleteDeliveryLocation(undefined);
+} catch (e) {
+    rejectedDeleteLocNoId = e.message.includes('manquant');
+}
+console.assert(rejectedDeleteLocNoId, 'deleteDeliveryLocation sans ID devrait échouer');
+
+let rejectedOrderStatusNoId = false;
+try {
+    await updateOrderStatusAdmin('', 'delivered');
+} catch (e) {
+    rejectedOrderStatusNoId = e.message.includes('requis');
+}
+console.assert(rejectedOrderStatusNoId, 'updateOrderStatusAdmin sans ID devrait échouer');
+
+let rejectedOrderStatusInvalid = false;
+try {
+    await updateOrderStatusAdmin('uuid-123', 'fake_status');
+} catch (e) {
+    rejectedOrderStatusInvalid = e.message.includes('invalide');
+}
+console.assert(rejectedOrderStatusInvalid, 'updateOrderStatusAdmin avec statut invalide devrait échouer');
+
+console.log('✅ [SuperAdminLocations] Gestion dynamique des lieux et statuts commandes validée !');
+
 console.log('🎉 Tous les tests unitaires des services de base sont passés avec succès !');
 
 

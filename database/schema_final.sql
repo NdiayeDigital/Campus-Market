@@ -36,23 +36,28 @@ CREATE TABLE IF NOT EXISTS public.products (
     image_url TEXT,
     stock INTEGER DEFAULT -1,
     old_price NUMERIC,
+    description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- TABLE: orders
 CREATE TABLE IF NOT EXISTS public.orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    reference TEXT,
     buyer_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     buyer_name TEXT,
     buyer_phone TEXT,
     seller_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    seller_name TEXT,
+    seller_phone TEXT,
     product_id UUID REFERENCES public.products(id) ON DELETE SET NULL,
     price NUMERIC NOT NULL,
     quantity INTEGER DEFAULT 1 NOT NULL,
+    delivery_fee NUMERIC DEFAULT 0,
     delivery_address TEXT NOT NULL,
     payment_method TEXT DEFAULT 'cash' CHECK (payment_method IN ('cash', 'wave', 'om')),
     payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')),
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'delivered', 'cancelled')),
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -67,6 +72,15 @@ CREATE TABLE IF NOT EXISTS public.reviews (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- TABLE: delivery_locations (Gestion des Pavillons & Sites par le SuperAdmin)
+CREATE TABLE IF NOT EXISTS public.delivery_locations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE,
+    category TEXT DEFAULT 'pavillon',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 
 -- ====================================================================================
 -- 2. ACTIVATION DU ROW LEVEL SECURITY (RLS)
@@ -75,6 +89,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.delivery_locations ENABLE ROW LEVEL SECURITY;
 
 
 -- ====================================================================================

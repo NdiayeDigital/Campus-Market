@@ -91,17 +91,130 @@ export async function createProduct({
         color,
     };
 
-    const { data, error } = await supabase
-        .from('products')
-        .insert([productPayload])
-        .select()
-        .single();
-
-    if (error) {
-        throw new Error(`Erreur lors de la création du produit: ${error.message}`);
+    if (description) {
+        productPayload.description = description.trim();
     }
 
-    return data;
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .insert([productPayload])
+            .select()
+            .single();
+
+        if (error) {
+            // Repli gracieux si la colonne description n'a pas encore été créée en base
+            if (error.message && error.message.includes('description')) {
+                delete productPayload.description;
+                const { data: fbData, error: fbErr } = await supabase
+                    .from('products')
+                    .insert([productPayload])
+                    .select()
+                    .single();
+                if (fbErr) throw fbErr;
+                return fbData;
+            }
+            throw error;
+        }
+
+        return data;
+    } catch (err) {
+        throw new Error(`Erreur lors de la création du produit: ${err.message}`);
+    }
+}
+
+/**
+ * Modifie un produit existant (titre, prix, stock, catégorie, description, image).
+ * @param {Object} data
+ * @returns {Promise<Object>}
+ */
+export async function updateProduct({
+    productId,
+    sellerId,
+    title,
+    price,
+    category,
+    stock,
+    description = '',
+    imageFile = null,
+}) {
+    if (!productId) throw new Error('Identifiant produit requis pour la modification.');
+    if (!title || !price) throw new Error('Veuillez renseigner le titre et le prix.');
+
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+        throw new Error('Le prix doit être un nombre positif supérieur à zéro.');
+    }
+
+    const parsedStock = stock === '' || stock === undefined ? -1 : parseInt(stock, 10);
+    const updates = {
+        title: title.trim(),
+        price: parsedPrice,
+        category: category || 'autres',
+        stock: parsedStock,
+    };
+
+    if (imageFile) {
+        try {
+            const compressedDataUrl = await compressImage(imageFile, {
+                maxWidth: 800,
+                maxHeight: 800,
+                quality: 0.75,
+            });
+
+            const blob = dataURLtoBlob(compressedDataUrl);
+            const fileName = `${sellerId || 'seller'}/${Date.now()}_prod.jpg`;
+
+            const { data: uploadData, error: uploadErr } = await supabase.storage
+                .from(STORAGE_BUCKET)
+                .upload(fileName, blob, {
+                    contentType: 'image/jpeg',
+                    upsert: true,
+                });
+
+            if (!uploadErr && uploadData) {
+                const { data: publicUrlData } = supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .getPublicUrl(fileName);
+
+                updates.image_url = publicUrlData?.publicUrl || null;
+            }
+        } catch (imgError) {
+            console.warn('[ProductManagement] Erreur upload image modification:', imgError);
+        }
+    }
+
+    if (description !== undefined) {
+        updates.description = String(description).trim();
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .update(updates)
+            .eq('id', productId)
+            .select()
+            .single();
+
+        if (error) {
+            if (error.message && error.message.includes('description')) {
+                delete updates.description;
+                const { data: fbData, error: fbErr } = await supabase
+                    .from('products')
+                    .update(updates)
+                    .eq('id', productId)
+                    .select()
+                    .single();
+                if (fbErr) throw fbErr;
+                return fbData;
+            }
+            throw error;
+        }
+
+        return data;
+    } catch (err) {
+        throw new Error(`Erreur lors de la mise à jour du produit: ${err.message}`);
+    }
 }
 
 /**
@@ -176,6 +289,7 @@ export async function deleteProduct(productId) {
 
 export default {
     createProduct,
+    updateProduct,
     getSellerProducts,
     updateProductStock,
     toggleProductStock,

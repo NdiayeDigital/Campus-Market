@@ -56,6 +56,10 @@ export function createCategoryChips({ activeCategory = 'all', onSelectCategory }
     }
 
     render();
+    containerEl.setActiveCategory = (catId) => {
+        currentActive = catId;
+        render();
+    };
     return containerEl;
 }
 

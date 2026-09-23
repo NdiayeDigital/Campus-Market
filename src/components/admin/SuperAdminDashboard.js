@@ -1,15 +1,24 @@
 /**
- * Composant SuperAdminDashboard (Panneau d'administration de l'UIDT)
- * Supervision globale, modération des demandes d'adhésion et suspension des boutiques.
+ * Composant SuperAdminDashboard (Panneau d'administration centrale de l'UIDT)
+ * Supervision globale, modération des demandes d'adhésion, suspension des boutiques,
+ * modération du catalogue produits et traçabilité des commandes.
  */
 
 import {
     fetchGlobalMetrics,
     fetchPendingSellers,
     fetchActiveSellers,
+    fetchAllProductsAdmin,
+    fetchAllOrdersAdmin,
     approveSeller,
     rejectSeller,
     suspendSeller,
+    deleteProductAdmin,
+    fetchDeliveryLocations,
+    addDeliveryLocation,
+    toggleDeliveryLocation,
+    deleteDeliveryLocation,
+    updateOrderStatusAdmin,
     loginAdmin,
 } from '../../services/admin-service.js';
 import { supabase } from '../../services/supabase.js';
@@ -30,6 +39,11 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
     let metrics = null;
     let pendingSellers = [];
     let activeSellers = [];
+    let allProducts = [];
+    let allOrders = [];
+    let deliveryLocations = [];
+    let activeTab = 'sellers'; // 'sellers' | 'products' | 'orders' | 'locations'
+    let productSearchQuery = '';
     let isLoading = true;
     let isAuthenticated = false;
 
@@ -63,14 +77,20 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
         render();
 
         try {
-            const [m, p, a] = await Promise.all([
+            const [m, p, a, prods, ords, locs] = await Promise.all([
                 fetchGlobalMetrics(),
                 fetchPendingSellers(),
                 fetchActiveSellers(),
+                fetchAllProductsAdmin().catch(() => []),
+                fetchAllOrdersAdmin().catch(() => []),
+                fetchDeliveryLocations(true).catch(() => []),
             ]);
             metrics = m;
-            pendingSellers = p;
-            activeSellers = a;
+            pendingSellers = p || [];
+            activeSellers = a || [];
+            allProducts = prods || [];
+            allOrders = ords || [];
+            deliveryLocations = locs || [];
         } catch (err) {
             console.error('[SuperAdmin] Erreur chargement données:', err);
             if (typeof onShowToast === 'function') {
@@ -109,16 +129,16 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
 
         containerEl.innerHTML = `
             <!-- En-tête SuperAdmin -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 text-white p-5 rounded-2xl shadow-md">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-xl bg-accent text-slate-950 font-extrabold flex items-center justify-center text-lg shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 text-white p-5 rounded-3xl shadow-md">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-accent text-slate-950 font-extrabold flex items-center justify-center text-xl shadow-sm">
                         <i class="fa-solid fa-shield-halved"></i>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
                             <h1 class="font-heading font-extrabold text-lg text-white">Administration Centrale</h1>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-accent/20 text-accent border border-accent/40">
-                                UIDT
+                                UIDT Thiès
                             </span>
                         </div>
                         <p class="text-xs text-slate-400 mt-0.5">Superviseur : ${escapeHTML(currentAdmin?.prenom || '')} ${escapeHTML(currentAdmin?.nom || 'Admin')}</p>
@@ -126,21 +146,20 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                 </div>
 
                 <div class="flex items-center gap-2.5">
-                    <button id="btn-refresh-admin" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors min-h-[44px]">
+                    <button id="btn-refresh-admin" class="flex items-center gap-1.5 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl text-xs font-bold transition-colors min-h-[44px]">
                         <i class="fa-solid fa-arrows-rotate"></i>
                         <span>Actualiser</span>
                     </button>
-                    <button id="btn-exit-admin" class="flex items-center gap-1.5 px-3.5 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl text-xs font-bold transition-all min-h-[44px]">
+                    <button id="btn-exit-admin" class="flex items-center gap-1.5 px-4 py-2.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-2xl text-xs font-bold transition-all min-h-[44px]">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i>
                         <span>Quitter</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Cartes KPI (MÉTRIQUES RÉELLES SANS AUCUN PLANCHER) -->
+            <!-- Cartes KPI réelles -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                <!-- Vendeurs Actifs -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
                     <div class="flex items-center justify-between text-slate-500 mb-2">
                         <span class="text-xs font-semibold">Marchands certifiés</span>
                         <i class="fa-solid fa-store text-emerald-600 text-sm"></i>
@@ -149,8 +168,7 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                     <span class="text-[10px] text-slate-400 mt-1">Boutiques actives</span>
                 </div>
 
-                <!-- Demandes en attente -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between relative overflow-hidden">
                     ${m.pendingSellersCount > 0 ? `<div class="absolute -top-6 -right-6 w-12 h-12 bg-accent/20 rounded-full animate-ping"></div>` : ''}
                     <div class="flex items-center justify-between text-slate-500 mb-2">
                         <span class="text-xs font-semibold">Demandes en attente</span>
@@ -163,8 +181,7 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                     <span class="text-[10px] text-slate-400 mt-1">Candidatures étudiantes</span>
                 </div>
 
-                <!-- Commandes Globales -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
                     <div class="flex items-center justify-between text-slate-500 mb-2">
                         <span class="text-xs font-semibold">Total Commandes</span>
                         <i class="fa-solid fa-boxes-packing text-primary text-sm"></i>
@@ -173,8 +190,7 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                     <span class="text-[10px] text-slate-400 mt-1">Historique complet</span>
                 </div>
 
-                <!-- Volume Financier Réel -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
                     <div class="flex items-center justify-between text-slate-500 mb-2">
                         <span class="text-xs font-semibold">Volume d'affaires réel</span>
                         <i class="fa-solid fa-coins text-emerald-600 text-sm"></i>
@@ -186,32 +202,85 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                 </div>
             </div>
 
-            <!-- SECTION : Demandes d'adhésion en attente -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <h2 class="font-heading font-bold text-base text-slate-900">Demandes de validation de Vendeur</h2>
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold ${pendingSellers.length > 0 ? 'bg-accent text-slate-900' : 'bg-slate-100 text-slate-600'}">
-                            ${pendingSellers.length}
-                        </span>
-                    </div>
-                </div>
+            <!-- Onglets d'administration -->
+            <div class="flex border-b border-slate-200 gap-2">
+                <button id="tab-admin-sellers" class="flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
+                    activeTab === 'sellers'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                }">
+                    <i class="fa-solid fa-users-gear text-xs"></i>
+                    <span>Marchands & Demandes (${pendingSellers.length + activeSellers.length})</span>
+                </button>
 
-                ${renderPendingSellersList()}
+                <button id="tab-admin-products" class="flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
+                    activeTab === 'products'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                }">
+                    <i class="fa-solid fa-box text-xs"></i>
+                    <span>Modération Produits (${allProducts.length})</span>
+                </button>
+
+                <button id="tab-admin-orders" class="flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
+                    activeTab === 'orders'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                }">
+                    <i class="fa-solid fa-truck-ramp-box text-xs"></i>
+                    <span>Suivi Commandes (${allOrders.length})</span>
+                </button>
+
+                <button id="tab-admin-locations" class="flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
+                    activeTab === 'locations'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                }">
+                    <i class="fa-solid fa-location-dot text-xs"></i>
+                    <span>Lieux & Pavillons (${deliveryLocations.length})</span>
+                </button>
             </div>
 
-            <!-- SECTION : Gestion des marchands certifiés -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4">
-                <div class="flex items-center justify-between">
-                    <h2 class="font-heading font-bold text-base text-slate-900">Marchands enregistrés</h2>
-                    <span class="text-xs text-slate-500">${activeSellers.length} inscrit${activeSellers.length > 1 ? 's' : ''}</span>
-                </div>
-
-                ${renderActiveSellersList()}
+            <!-- Contenu dynamique de l'onglet -->
+            <div id="admin-tab-content">
+                ${activeTab === 'sellers' ? renderSellersTab() : ''}
+                ${activeTab === 'products' ? renderProductsTab() : ''}
+                ${activeTab === 'orders' ? renderOrdersTab() : ''}
+                ${activeTab === 'locations' ? renderLocationsTab() : ''}
             </div>
         `;
 
         bindEvents();
+    }
+
+    function renderSellersTab() {
+        return `
+            <div class="flex flex-col gap-6">
+                <!-- Demandes en attente -->
+                <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <h2 class="font-heading font-bold text-base text-slate-900">Demandes de validation de Vendeur</h2>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold ${pendingSellers.length > 0 ? 'bg-accent text-slate-900' : 'bg-slate-100 text-slate-600'}">
+                                ${pendingSellers.length}
+                            </span>
+                        </div>
+                    </div>
+
+                    ${renderPendingSellersList()}
+                </div>
+
+                <!-- Marchands actifs -->
+                <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-heading font-bold text-base text-slate-900">Marchands enregistrés</h2>
+                        <span class="text-xs text-slate-500">${activeSellers.length} inscrit${activeSellers.length > 1 ? 's' : ''}</span>
+                    </div>
+
+                    ${renderActiveSellersList()}
+                </div>
+            </div>
+        `;
     }
 
     function renderPendingSellersList() {
@@ -227,7 +296,7 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
         return `
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 ${pendingSellers.map((s) => `
-                    <div class="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between gap-3">
+                    <div class="p-4 rounded-2xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between gap-3">
                         <div>
                             <div class="flex items-center justify-between">
                                 <h3 class="font-heading font-bold text-slate-900 text-sm">
@@ -283,7 +352,7 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                     return `
                         <div class="py-3 flex items-center justify-between gap-3">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs ${
+                                <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs ${
                                     isSuspended ? 'bg-slate-100 text-slate-400' : 'bg-primary-light text-primary'
                                 }">
                                     ${((s.prenom?.[0] || '') + (s.nom?.[0] || '')).toUpperCase() || 'V'}
@@ -307,7 +376,7 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
                                 data-action="toggle-suspend" 
                                 data-id="${s.id}" 
                                 data-suspended="${isSuspended ? 'true' : 'false'}"
-                                class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors min-h-[36px] ${
+                                class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors min-h-[36px] ${
                                     isSuspended 
                                         ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' 
                                         : 'border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
@@ -322,9 +391,290 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
         `;
     }
 
+    function renderProductsTab() {
+        const filtered = allProducts.filter((p) => {
+            if (!productSearchQuery) return true;
+            const q = productSearchQuery.toLowerCase();
+            return (
+                (p.title || '').toLowerCase().includes(q) ||
+                (p.category || '').toLowerCase().includes(q) ||
+                (p.seller?.prenom || '').toLowerCase().includes(q) ||
+                (p.seller?.nom || '').toLowerCase().includes(q)
+            );
+        });
+
+        return `
+            <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="font-heading font-bold text-base text-slate-900">Modération du Catalogue Produits</h2>
+                        <p class="text-xs text-slate-500">Suppression des articles non conformes aux règles du campus</p>
+                    </div>
+
+                    <!-- Champ recherche -->
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input 
+                            type="text" 
+                            id="admin-product-search" 
+                            value="${escapeHTML(productSearchQuery)}"
+                            placeholder="Rechercher un produit..." 
+                            class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                        >
+                    </div>
+                </div>
+
+                ${filtered.length === 0 ? `
+                    <div class="text-center py-12 text-slate-400 text-xs">
+                        Aucun produit ne correspond à votre filtre.
+                    </div>
+                ` : `
+                    <div class="flex flex-col divide-y divide-slate-100">
+                        ${filtered.map((prod) => `
+                            <div class="py-3 flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                        ${prod.image_url 
+                                            ? `<img src="${escapeHTML(prod.image_url)}" alt="${escapeHTML(prod.title)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
+                                            : `<i class="fa-solid ${escapeHTML(prod.icon || 'fa-box')} text-primary"></i>`
+                                        }
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h4 class="font-heading font-bold text-slate-900 text-xs sm:text-sm truncate">${escapeHTML(prod.title)}</h4>
+                                        <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+                                            <span class="font-extrabold text-primary">${Number(prod.price).toLocaleString('fr-FR')} FCFA</span>
+                                            <span>•</span>
+                                            <span>${escapeHTML(prod.category || 'Catégorie')}</span>
+                                            <span>•</span>
+                                            <span>Vendeur : ${prod.seller ? `${escapeHTML(prod.seller.prenom)} ${escapeHTML(prod.seller.nom)}` : 'Inconnu'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    data-action="delete-product" 
+                                    data-id="${prod.id}" 
+                                    title="Modérer / Supprimer"
+                                    class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors min-h-[38px] min-w-[38px]"
+                                >
+                                    <i class="fa-solid fa-trash-can text-sm"></i>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+        `;
+    }
+
+    function renderOrdersTab() {
+        return `
+            <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4">
+                <div>
+                    <h2 class="font-heading font-bold text-base text-slate-900">Historique des Commandes Récentes</h2>
+                    <p class="text-xs text-slate-500">Traçabilité des transactions et résolution directe des litiges</p>
+                </div>
+
+                ${allOrders.length === 0 ? `
+                    <div class="text-center py-12 text-slate-400 text-xs">
+                        Aucune commande enregistrée pour le moment.
+                    </div>
+                ` : `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-[11px] font-bold text-slate-400 uppercase border-b border-slate-100">
+                                <tr>
+                                    <th class="py-2.5 px-3">Réf / Date</th>
+                                    <th class="py-2.5 px-3">Client</th>
+                                    <th class="py-2.5 px-3">Pavillon / Chambre</th>
+                                    <th class="py-2.5 px-3">Produit</th>
+                                    <th class="py-2.5 px-3">Montant</th>
+                                    <th class="py-2.5 px-3">Statut</th>
+                                    <th class="py-2.5 px-3 text-right">Action Admin</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${allOrders.map((ord) => `
+                                    <tr class="hover:bg-slate-50/60 transition-colors">
+                                        <td class="py-3 px-3">
+                                            <span class="font-heading font-bold text-primary block">
+                                                ${escapeHTML(ord.reference || ('#CMD-' + ord.id.slice(0, 6).toUpperCase()))}
+                                            </span>
+                                            <span class="text-[10px] text-slate-400">${new Date(ord.created_at).toLocaleDateString('fr-FR')}</span>
+                                        </td>
+                                        <td class="py-3 px-3">
+                                            <span class="font-bold text-slate-900 block">${escapeHTML(ord.buyer_name || 'Invité')}</span>
+                                            <span class="text-[10px] text-slate-400">${escapeHTML(ord.buyer_phone || '')}</span>
+                                        </td>
+                                        <td class="py-3 px-3 text-slate-600">
+                                            ${escapeHTML(ord.delivery_address || 'Non spécifié')}
+                                        </td>
+                                        <td class="py-3 px-3">
+                                            <span class="font-medium text-slate-800">${escapeHTML(ord.product?.title || 'Article')}</span>
+                                            <span class="text-[10px] text-slate-400 block">(x${ord.quantity || 1})</span>
+                                        </td>
+                                        <td class="py-3 px-3 font-extrabold text-slate-900">
+                                            ${Number(ord.price).toLocaleString('fr-FR')} F
+                                        </td>
+                                        <td class="py-3 px-3">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                ord.status === 'delivered'
+                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                    : ord.status === 'cancelled'
+                                                    ? 'bg-red-100 text-red-700'
+                                                    : ord.status === 'shipped'
+                                                    ? 'bg-blue-100 text-blue-800'
+                                                    : 'bg-amber-100 text-amber-800'
+                                            }">
+                                                ${escapeHTML(ord.status || 'pending')}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-3 text-right">
+                                            <select 
+                                                data-action="change-order-status" 
+                                                data-id="${ord.id}"
+                                                class="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                                            >
+                                                <option value="" disabled selected>Modifier...</option>
+                                                <option value="pending" ${ord.status === 'pending' ? 'disabled' : ''}>En attente</option>
+                                                <option value="confirmed" ${ord.status === 'confirmed' ? 'disabled' : ''}>Confirmée</option>
+                                                <option value="shipped" ${ord.status === 'shipped' ? 'disabled' : ''}>Expédiée</option>
+                                                <option value="delivered" ${ord.status === 'delivered' ? 'disabled' : ''}>Livrée</option>
+                                                <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler (Litige)</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `}
+            </div>
+        `;
+    }
+
+    function renderLocationsTab() {
+        return `
+            <div class="flex flex-col gap-6">
+                <!-- Formulaire d'ajout d'un lieu -->
+                <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col gap-3">
+                    <div>
+                        <h3 class="font-heading font-bold text-sm text-slate-900">Ajouter un Lieu ou Pavillon de Livraison</h3>
+                        <p class="text-xs text-slate-500">Ce lieu sera immédiatement proposé aux étudiants lors de la finalisation de commande.</p>
+                    </div>
+                    <form id="form-add-location" class="flex flex-col sm:flex-row gap-3 items-end">
+                        <div class="flex-1 w-full">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" for="new-location-name">Nom du site ou pavillon *</label>
+                            <input 
+                                type="text" 
+                                id="new-location-name" 
+                                placeholder="Ex: Site ENSA, Pavillon D, Amphi B..." 
+                                required
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                            >
+                        </div>
+                        <div class="w-full sm:w-56">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" for="new-location-category">Catégorie</label>
+                            <select 
+                                id="new-location-category" 
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                            >
+                                <option value="pavillon">Pavillon Résidence</option>
+                                <option value="site">Site Universitaire / Pédagogique</option>
+                                <option value="bu">Bibliothèque (BU)</option>
+                                <option value="autre">Autre Espace</option>
+                            </select>
+                        </div>
+                        <button 
+                            type="submit" 
+                            id="btn-submit-location"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
+                        >
+                            <i class="fa-solid fa-plus"></i> Ajouter le lieu
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Liste des lieux configurés -->
+                <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4">
+                    <div>
+                        <h3 class="font-heading font-bold text-base text-slate-900">Lieux et Pavillons Configurés (${deliveryLocations.length})</h3>
+                        <p class="text-xs text-slate-500">Activez ou désactivez les zones selon la disponibilité des livraisons sur le campus.</p>
+                    </div>
+
+                    ${deliveryLocations.length === 0 ? `
+                        <div class="text-center py-10 text-slate-400 text-xs">Aucun lieu configuré pour le moment.</div>
+                    ` : `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="text-[11px] font-bold text-slate-400 uppercase border-b border-slate-100">
+                                    <tr>
+                                        <th class="py-2.5 px-3">Nom du lieu</th>
+                                        <th class="py-2.5 px-3">Catégorie</th>
+                                        <th class="py-2.5 px-3">Statut</th>
+                                        <th class="py-2.5 px-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${deliveryLocations.map((loc) => `
+                                        <tr class="hover:bg-slate-50/60 transition-colors">
+                                            <td class="py-3 px-3 font-bold text-slate-900 flex items-center gap-2">
+                                                <i class="fa-solid fa-location-dot text-primary text-xs"></i>
+                                                <span>${escapeHTML(loc.name)}</span>
+                                            </td>
+                                            <td class="py-3 px-3">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                                    ${escapeHTML(loc.category || 'pavillon')}
+                                                </span>
+                                            </td>
+                                            <td class="py-3 px-3">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                    loc.is_active 
+                                                        ? 'bg-emerald-100 text-emerald-800' 
+                                                        : 'bg-slate-100 text-slate-500'
+                                                }">
+                                                    ${loc.is_active ? 'Actif' : 'Désactivé'}
+                                                </span>
+                                            </td>
+                                            <td class="py-3 px-3 text-right">
+                                                <div class="flex items-center justify-end gap-2">
+                                                    <button 
+                                                        data-action="toggle-location" 
+                                                        data-id="${loc.id}" 
+                                                        data-active="${loc.is_active}"
+                                                        class="px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-colors ${
+                                                            loc.is_active 
+                                                                ? 'border-amber-300 text-amber-700 hover:bg-amber-50' 
+                                                                : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+                                                        }"
+                                                    >
+                                                        ${loc.is_active ? 'Désactiver' : 'Activer'}
+                                                    </button>
+                                                    <button 
+                                                        data-action="delete-location" 
+                                                        data-id="${loc.id}" 
+                                                        data-name="${escapeHTML(loc.name)}"
+                                                        class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Supprimer ce lieu"
+                                                    >
+                                                        <i class="fa-solid fa-trash-can"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
     function renderLoginModal() {
         containerEl.innerHTML = `
-            <div class="w-full max-w-md mx-auto my-12 bg-white rounded-2xl shadow-xl border border-slate-200 p-6 flex flex-col gap-5">
+            <div class="w-full max-w-md mx-auto my-12 bg-white rounded-3xl shadow-2xl border border-slate-200/80 p-6 flex flex-col gap-5">
                 <div class="flex items-center gap-3">
                     <img src="/assets/logo.webp" alt="Campus Market" class="h-10 w-auto object-contain">
                     <div>
@@ -405,10 +755,162 @@ export function createSuperAdminDashboard({ onExit, onShowToast } = {}) {
             if (typeof onExit === 'function') onExit();
         });
 
+        // Navigation d'onglets
+        containerEl.querySelector('#tab-admin-sellers')?.addEventListener('click', () => {
+            activeTab = 'sellers';
+            render();
+        });
+        containerEl.querySelector('#tab-admin-products')?.addEventListener('click', () => {
+            activeTab = 'products';
+            render();
+        });
+        containerEl.querySelector('#tab-admin-orders')?.addEventListener('click', () => {
+            activeTab = 'orders';
+            render();
+        });
+        containerEl.querySelector('#tab-admin-locations')?.addEventListener('click', () => {
+            activeTab = 'locations';
+            render();
+        });
+
+        // Formulaire d'ajout de lieu
+        const formAddLoc = containerEl.querySelector('#form-add-location');
+        formAddLoc?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nameInput = formAddLoc.querySelector('#new-location-name');
+            const catSelect = formAddLoc.querySelector('#new-location-category');
+            const submitBtn = formAddLoc.querySelector('#btn-submit-location');
+            const name = nameInput.value.trim();
+            const category = catSelect.value;
+            if (!name) return;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Ajout...`;
+            try {
+                const newLoc = await addDeliveryLocation({ name, category });
+                deliveryLocations.push(newLoc);
+                if (typeof onShowToast === 'function') {
+                    onShowToast(`Lieu "${name}" ajouté aux zones de livraison ! 📍`, 'success');
+                }
+                render();
+            } catch (err) {
+                alert(err.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Ajouter le lieu`;
+            }
+        });
+
+        // Toggle activation d'un lieu
+        containerEl.querySelectorAll('button[data-action="toggle-location"]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                const isCurrentlyActive = btn.getAttribute('data-active') === 'true';
+                btn.disabled = true;
+                try {
+                    await toggleDeliveryLocation(id, !isCurrentlyActive);
+                    const target = deliveryLocations.find((l) => l.id === id);
+                    if (target) target.is_active = !isCurrentlyActive;
+                    if (typeof onShowToast === 'function') {
+                        onShowToast(`Statut du lieu mis à jour : ${!isCurrentlyActive ? 'Actif' : 'Désactivé'}`, 'info');
+                    }
+                    render();
+                } catch (err) {
+                    alert(err.message);
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        // Suppression d'un lieu
+        containerEl.querySelectorAll('button[data-action="delete-location"]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                const name = btn.getAttribute('data-name') || 'ce lieu';
+                if (confirm(`Voulez-vous vraiment supprimer "${name}" des zones de livraison ?`)) {
+                    btn.disabled = true;
+                    try {
+                        await deleteDeliveryLocation(id);
+                        deliveryLocations = deliveryLocations.filter((l) => l.id !== id);
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`Lieu "${name}" supprimé.`, 'info');
+                        }
+                        render();
+                    } catch (err) {
+                        alert(err.message);
+                        btn.disabled = false;
+                    }
+                }
+            });
+        });
+
+        // Modification du statut de commande par le SuperAdmin
+        containerEl.querySelectorAll('select[data-action="change-order-status"]').forEach((sel) => {
+            sel.addEventListener('change', async (e) => {
+                const orderId = sel.getAttribute('data-id');
+                const newStatus = e.target.value;
+                if (!newStatus) return;
+
+                if (confirm(`Confirmez-vous le passage de cette commande au statut "${newStatus}" ?`)) {
+                    sel.disabled = true;
+                    try {
+                        await updateOrderStatusAdmin(orderId, newStatus);
+                        const ord = allOrders.find((o) => o.id === orderId);
+                        if (ord) ord.status = newStatus;
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`Statut de commande mis à jour : ${newStatus} ✔️`, 'success');
+                        }
+                        render();
+                    } catch (err) {
+                        alert(err.message);
+                        sel.disabled = false;
+                    }
+                } else {
+                    sel.value = '';
+                }
+            });
+        });
+
+        // Recherche produits
+        const prodSearchInput = containerEl.querySelector('#admin-product-search');
+        prodSearchInput?.addEventListener('input', (e) => {
+            productSearchQuery = e.target.value;
+            const contentEl = containerEl.querySelector('#admin-tab-content');
+            if (contentEl && activeTab === 'products') {
+                contentEl.innerHTML = renderProductsTab();
+                bindProductsEvents();
+            }
+        });
+
+        function bindProductsEvents() {
+            containerEl.querySelectorAll('button[data-action="delete-product"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    if (confirm('Voulez-vous vraiment supprimer définitivement ce produit du catalogue ?')) {
+                        btn.disabled = true;
+                        try {
+                            await deleteProductAdmin(id);
+                            allProducts = allProducts.filter((p) => p.id !== id);
+                            if (typeof onShowToast === 'function') {
+                                onShowToast('Article modéré et supprimé du catalogue.', 'info');
+                            }
+                            render();
+                        } catch (err) {
+                            alert(err.message);
+                            btn.disabled = false;
+                        }
+                    }
+                });
+            });
+        }
+
+        bindProductsEvents();
+
         // Actions Approuver / Rejeter / Suspendre
         containerEl.querySelectorAll('button[data-action]').forEach((btn) => {
+            const action = btn.getAttribute('data-action');
+            if (action === 'delete-product' || action === 'toggle-location' || action === 'delete-location') return;
+
             btn.addEventListener('click', async () => {
-                const action = btn.getAttribute('data-action');
                 const id = btn.getAttribute('data-id');
 
                 btn.disabled = true;

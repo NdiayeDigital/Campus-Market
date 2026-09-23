@@ -320,7 +320,7 @@ export function createSellerDashboard({ seller, onLogout, onShowToast } = {}) {
                             <!-- En-tête commande -->
                             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
                                 <div>
-                                    <span class="font-heading font-bold text-sm text-slate-900">#CMD-${o.id.slice(0, 6).toUpperCase()}</span>
+                                    <span class="font-heading font-bold text-sm text-slate-900">${escapeHTML(o.reference || `#CMD-${o.id.slice(0, 6).toUpperCase()}`)}</span>
                                     <span class="text-[11px] text-slate-400 ml-2">${new Date(o.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
                                 <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${statusBadgeClass}">
@@ -354,7 +354,7 @@ export function createSellerDashboard({ seller, onLogout, onShowToast } = {}) {
                                         <i class="fa-solid fa-phone text-emerald-600"></i>
                                         <span class="hidden sm:inline">Appel</span>
                                     </a>
-                                    <a href="https://wa.me/${clientPhone}?text=${encodeURIComponent(`Bonjour ${o.buyer_name || ''} ! Je suis votre vendeur Campus Market pour votre commande #${o.id.slice(0, 6)}.`)}" target="_blank" rel="noopener" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs rounded-lg flex items-center gap-1.5 min-h-[38px]">
+                                    <a href="https://wa.me/${clientPhone}?text=${encodeURIComponent(`Bonjour ${o.buyer_name || ''} ! Je suis votre vendeur Campus Market pour votre commande ${o.reference || ('#CMD-' + o.id.slice(0, 6).toUpperCase())}.`)}" target="_blank" rel="noopener" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs rounded-lg flex items-center gap-1.5 min-h-[38px]">
                                         <i class="fa-brands fa-whatsapp text-sm"></i>
                                         <span class="hidden sm:inline">WhatsApp</span>
                                     </a>

@@ -133,10 +133,12 @@ class CartStore {
                 title: product.title,
                 price: Number(product.price) || 0,
                 seller_id: product.seller_id,
-                seller_name: product.seller ? `${product.seller.prenom} ${product.seller.nom}`.trim() : null,
+                seller_name: product.seller ? `${product.seller.prenom} ${product.seller.nom}`.trim() : (product.seller_name || null),
+                seller_phone: product.seller?.telephone || product.seller_phone || null,
                 image_url: product.image_url || null,
                 icon: product.icon || 'fa-box',
                 color: product.color || '#1D4ED8',
+                description: product.description || '',
                 quantity: Math.min(MAX_ITEM_QUANTITY, qtyToAdd),
             });
         }

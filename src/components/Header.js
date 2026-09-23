@@ -15,7 +15,7 @@ import logoUrl from '../assets/logo.webp';
  * @param {Function} props.onOpenSeller - Callback lors du clic sur Espace Vendeur
  * @returns {HTMLElement}
  */
-export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller } = {}) {
+export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller, onLogoClick } = {}) {
     const headerEl = document.createElement('header');
     headerEl.className = 'sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all';
 
@@ -89,6 +89,18 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller 
     });
 
     // Événements boutons
+    headerEl.querySelector('#header-logo-btn')?.addEventListener('click', () => {
+        if (searchInput) {
+            searchInput.value = '';
+            if (clearBtn) clearBtn.classList.add('hidden');
+        }
+        if (typeof onLogoClick === 'function') {
+            onLogoClick();
+        } else if (typeof onSearch === 'function') {
+            onSearch('');
+        }
+    });
+
     headerEl.querySelector('#header-cart-btn')?.addEventListener('click', () => {
         if (typeof onOpenCart === 'function') onOpenCart();
     });

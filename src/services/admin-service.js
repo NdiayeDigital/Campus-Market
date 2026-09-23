@@ -242,14 +242,182 @@ export async function deleteProductAdmin(productId) {
     return true;
 }
 
+/**
+ * Récupère l'intégralité des produits du catalogue pour modération SuperAdmin.
+ * @returns {Promise<Array>}
+ */
+export async function fetchAllProductsAdmin() {
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*, seller:seller_id(id, prenom, nom, telephone)')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('[AdminService] Erreur fetchAllProductsAdmin:', err);
+        throw err;
+    }
+}
+
+/**
+ * Récupère l'historique complet des commandes pour supervision SuperAdmin.
+ * @returns {Promise<Array>}
+ */
+export async function fetchAllOrdersAdmin() {
+    try {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*, product:product_id(title, image_url), seller:seller_id(prenom, nom, telephone)')
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('[AdminService] Erreur fetchAllOrdersAdmin:', err);
+        throw err;
+    }
+}
+
+export const DEFAULT_DELIVERY_LOCATIONS = [
+    { id: 'def-1', name: 'Pavillon A1', category: 'pavillon', is_active: true },
+    { id: 'def-2', name: 'Pavillon A2', category: 'pavillon', is_active: true },
+    { id: 'def-3', name: 'Pavillon A3', category: 'pavillon', is_active: true },
+    { id: 'def-4', name: 'Pavillon A4', category: 'pavillon', is_active: true },
+    { id: 'def-5', name: 'Pavillon B1', category: 'pavillon', is_active: true },
+    { id: 'def-6', name: 'Pavillon B2', category: 'pavillon', is_active: true },
+    { id: 'def-7', name: 'Pavillon C', category: 'pavillon', is_active: true },
+    { id: 'def-8', name: 'Jardin Social', category: 'site', is_active: true },
+    { id: 'def-9', name: 'Bibliothèque Universitaire (BU)', category: 'bu', is_active: true },
+    { id: 'def-10', name: 'Salles de cours / Espaces communs', category: 'site', is_active: true },
+];
+
+/**
+ * Récupère les lieux et pavillons de livraison (avec fallback local si hors-ligne).
+ * @param {boolean} [includeInactive=false] - Inclure les lieux inactifs (pour le SuperAdmin)
+ * @returns {Promise<Array>}
+ */
+export async function fetchDeliveryLocations(includeInactive = false) {
+    try {
+        let query = supabase.from('delivery_locations').select('*').order('name', { ascending: true });
+        if (!includeInactive) {
+            query = query.eq('is_active', true);
+        }
+        const { data, error } = await query;
+        if (error || !data || data.length === 0) {
+            return includeInactive ? DEFAULT_DELIVERY_LOCATIONS : DEFAULT_DELIVERY_LOCATIONS.filter((l) => l.is_active);
+        }
+        return data;
+    } catch {
+        return includeInactive ? DEFAULT_DELIVERY_LOCATIONS : DEFAULT_DELIVERY_LOCATIONS.filter((l) => l.is_active);
+    }
+}
+
+/**
+ * Ajoute un nouveau lieu de livraison (SuperAdmin).
+ * @param {Object} params
+ * @param {string} params.name
+ * @param {string} [params.category='pavillon']
+ * @returns {Promise<Object>}
+ */
+export async function addDeliveryLocation({ name, category = 'pavillon' }) {
+    if (!name || !name.trim()) throw new Error('Le nom du lieu est requis.');
+
+    const { data, error } = await supabase
+        .from('delivery_locations')
+        .insert([{ name: name.trim(), category, is_active: true }])
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec d'ajout du lieu : ${error.message}`);
+    }
+    return data;
+}
+
+/**
+ * Active ou désactive un lieu de livraison (SuperAdmin).
+ * @param {string} id
+ * @param {boolean} isActive
+ * @returns {Promise<Object>}
+ */
+export async function toggleDeliveryLocation(id, isActive) {
+    if (!id) throw new Error('ID lieu manquant.');
+    const { data, error } = await supabase
+        .from('delivery_locations')
+        .update({ is_active: isActive })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec de modification du statut : ${error.message}`);
+    }
+    return data;
+}
+
+/**
+ * Supprime un lieu de livraison (SuperAdmin).
+ * @param {string} id
+ * @returns {Promise<boolean>}
+ */
+export async function deleteDeliveryLocation(id) {
+    if (!id) throw new Error('ID lieu manquant.');
+    const { error } = await supabase
+        .from('delivery_locations')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        throw new Error(`Échec de suppression du lieu : ${error.message}`);
+    }
+    return true;
+}
+
+/**
+ * Modifie le statut d'une commande par le SuperAdmin (arbitrage et litiges).
+ * @param {string} orderId
+ * @param {string} newStatus - 'pending'|'confirmed'|'processing'|'shipped'|'delivered'|'cancelled'
+ * @returns {Promise<Object>}
+ */
+export async function updateOrderStatusAdmin(orderId, newStatus) {
+    if (!orderId) throw new Error('ID commande requis.');
+    const VALID_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!VALID_STATUSES.includes(newStatus)) {
+        throw new Error(`Statut invalide : ${newStatus}`);
+    }
+
+    const { data, error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec de mise à jour du statut : ${error.message}`);
+    }
+    return data;
+}
+
 export default {
     verifyAdminRole,
     loginAdmin,
     fetchGlobalMetrics,
     fetchPendingSellers,
     fetchActiveSellers,
+    fetchAllProductsAdmin,
+    fetchAllOrdersAdmin,
     approveSeller,
     rejectSeller,
     suspendSeller,
     deleteProductAdmin,
+    fetchDeliveryLocations,
+    addDeliveryLocation,
+    toggleDeliveryLocation,
+    deleteDeliveryLocation,
+    updateOrderStatusAdmin,
+    DEFAULT_DELIVERY_LOCATIONS,
 };

@@ -11,6 +11,7 @@ import { createProductCard } from './components/ProductCard.js';
 import { createCartModal } from './components/CartModal.js';
 import { createCheckoutModal } from './components/CheckoutModal.js';
 import { createOrderStatusView, trackRecentOrder } from './components/OrderStatus.js';
+import { createProductDetailModal } from './components/ProductDetailModal.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
 import { createSellerDashboard } from './components/seller/SellerDashboard.js';
 import { createSuperAdminDashboard } from './components/admin/SuperAdminDashboard.js';
@@ -121,12 +122,33 @@ async function initApp() {
         },
     });
 
+    const productDetailModalController = createProductDetailModal({
+        onAddToCart: (product, qty = 1) => {
+            cartStore.addToCart(product, qty);
+            showToast(`Ajouté au panier : ${product.title} (x${qty})`, 'success');
+        },
+    });
+
     document.body.appendChild(cartModalController.element);
     document.body.appendChild(checkoutModalController.element);
     document.body.appendChild(sellerAuthModalController.element);
+    document.body.appendChild(productDetailModalController.element);
 
     // 2. Header
     const headerComponent = createHeader({
+        onLogoClick: async () => {
+            appState.searchQuery = '';
+            appState.currentCategory = 'all';
+            if (categoryChipsComponent?.setActiveCategory) {
+                categoryChipsComponent.setActiveCategory('all');
+            }
+            const searchInput = document.getElementById('header-search-input');
+            if (searchInput) searchInput.value = '';
+            if (appState.currentView !== 'catalog') {
+                navigateToView('catalog');
+            }
+            await reloadProducts();
+        },
         onSearch: async (query) => {
             appState.searchQuery = query;
             if (appState.currentView !== 'catalog') {
@@ -256,6 +278,7 @@ async function initApp() {
         mainContentEl.innerHTML = '';
         const orderView = createOrderStatusView({
             onBackToCatalog: () => navigateToView('catalog'),
+            onShowToast: showToast,
         });
         mainContentEl.appendChild(orderView);
     }
@@ -383,6 +406,9 @@ async function initApp() {
             emptyEl.querySelector('#btn-reset-filters')?.addEventListener('click', async () => {
                 appState.searchQuery = '';
                 appState.currentCategory = 'all';
+                if (categoryChipsComponent?.setActiveCategory) {
+                    categoryChipsComponent.setActiveCategory('all');
+                }
                 const searchInput = document.getElementById('header-search-input');
                 if (searchInput) searchInput.value = '';
                 await reloadProducts();
@@ -401,6 +427,9 @@ async function initApp() {
                 onAddToCart: (prod) => {
                     cartStore.addToCart(prod, 1);
                     showToast(`Ajouté au panier : ${prod.title}`, 'success');
+                },
+                onClickCard: (prod) => {
+                    productDetailModalController.open(prod);
                 },
             });
             gridEl.appendChild(card);
