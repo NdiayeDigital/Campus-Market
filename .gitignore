@@ -24,3 +24,8 @@ Thumbs.db
 *.swp
 *.swo
 ~$*
+
+# Outils d'agents & workflows
+.antigravity/
+.agents/*
+!.agents/AGENTS.md
