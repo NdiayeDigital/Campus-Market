@@ -1,7 +1,26 @@
 -- ====================================================================================
--- CAMPUS MARKET UIDT - PATCH FINAL PRODUCTION & POUVOIRS SUPERADMIN
+-- CAMPUS MARKET UIDT - PATCH FINAL PRODUCTION & POUVOIRS SUPERADMIN (CORRIGÉ & AUTONOME)
 -- À exécuter dans le SQL Editor de Supabase (https://fqulqgdjusfzhcjpvyay.supabase.co)
 -- ====================================================================================
+
+-- 0. DÉFINITION EXPLICITE DES FONCTIONS DE SÉCURITÉ ET DE RÔLE (SECURITY DEFINER)
+-- Évite l'erreur 42883 et prévient toute récursion infinie sur la table profiles
+CREATE OR REPLACE FUNCTION public.get_current_user_role(user_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+    user_role TEXT;
+BEGIN
+    SELECT role INTO user_role FROM public.profiles WHERE id = user_id;
+    RETURN COALESCE(user_role, 'acheteur');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION public.is_super_admin(user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN (public.get_current_user_role(user_id) = 'superadmin');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 1. Ajout de la colonne payment_status sur orders (requis par le RPC de suivi de commande)
 ALTER TABLE public.orders 

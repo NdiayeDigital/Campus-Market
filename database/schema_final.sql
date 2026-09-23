@@ -107,6 +107,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+CREATE OR REPLACE FUNCTION public.is_super_admin(user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN (public.get_current_user_role(user_id) = 'superadmin');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
 -- Sécurisation du calcul de prix réel d'une commande
 CREATE OR REPLACE FUNCTION public.force_order_price()
 RETURNS TRIGGER AS $$
