@@ -79,8 +79,10 @@ export async function fetchGlobalMetrics() {
         if (errProf) throw errProf;
 
         const allProfiles = profiles || [];
-        const activeSellersCount = allProfiles.filter((p) => p.role === 'vendeur').length;
+        const suspendedIds = getSuspendedSellersCache();
+        const activeSellersCount = allProfiles.filter((p) => (p.role === 'vendeur' || p.role === 'superadmin') && !suspendedIds.includes(p.id) && p.role !== 'vendeur_desactive' && p.role !== 'suspendu').length;
         const pendingSellersCount = allProfiles.filter((p) => p.role === 'vendeur_pending').length;
+        const suspendedSellersCount = allProfiles.filter((p) => p.role === 'vendeur_desactive' || p.role === 'suspendu' || suspendedIds.includes(p.id)).length;
 
         // 2. Commandes globales et CA réel
         const { data: orders, error: errOrders } = await supabase
@@ -93,17 +95,24 @@ export async function fetchGlobalMetrics() {
         const totalOrdersCount = allOrders.length;
         const deliveredOrders = allOrders.filter((o) => o.status === 'delivered');
 
-        // Somme des chiffres d'affaires réels sur les commandes livrées
+        // Somme des chiffres d'affaires réels sur les commandes livrées (Volume d'affaires vendeur)
         const totalDeliveredRevenue = deliveredOrders.reduce(
             (sum, o) => sum + (Number(o.price) || 0),
             0
         );
 
+        // 3. Revenus Récurrents Réels : Cotisations récurrentes des abonnements vendeurs (2 000 FCFA/mois par boutique active)
+        const SELLER_MONTHLY_SUBSCRIPTION_FEE = 2000;
+        const totalSubscriptionRevenue = activeSellersCount * SELLER_MONTHLY_SUBSCRIPTION_FEE;
+
         return {
             activeSellersCount,
             pendingSellersCount,
+            suspendedSellersCount,
             totalOrdersCount,
             totalDeliveredRevenue,
+            totalSubscriptionRevenue,
+            sellerMonthlyFee: SELLER_MONTHLY_SUBSCRIPTION_FEE,
         };
     } catch (err) {
         console.error('[AdminService] Erreur fetchGlobalMetrics:', err);
@@ -131,8 +140,62 @@ export async function fetchPendingSellers() {
     }
 }
 
+// Clé de persistance pour état de suspension local (résilience avant migration DB)
+export const SUSPENDED_SELLERS_KEY = 'campus_market_suspended_sellers';
+
 /**
- * Récupère la liste des vendeurs actifs certifiés.
+ * Récupère la liste des IDs vendeurs suspendus en cache local.
+ * @returns {string[]}
+ */
+export function getSuspendedSellersCache() {
+    try {
+        if (typeof localStorage !== 'undefined') {
+            const raw = localStorage.getItem(SUSPENDED_SELLERS_KEY);
+            return raw ? JSON.parse(raw) : [];
+        }
+    } catch {}
+    return [];
+}
+
+/**
+ * Enregistre ou retire un vendeur de la liste des suspendus en cache local.
+ * @param {string} sellerId
+ * @param {boolean} isSuspended
+ */
+export function setSuspendedSellerInCache(sellerId, isSuspended) {
+    if (!sellerId) return;
+    try {
+        if (typeof localStorage !== 'undefined') {
+            let list = getSuspendedSellersCache();
+            if (isSuspended) {
+                if (!list.includes(sellerId)) list.push(sellerId);
+            } else {
+                list = list.filter((id) => id !== sellerId);
+            }
+            localStorage.setItem(SUSPENDED_SELLERS_KEY, JSON.stringify(list));
+        }
+    } catch {}
+}
+
+/**
+ * Détermine avec certitude si un vendeur est actuellement suspendu.
+ * Vérifie le champ booléen is_suspended, le rôle 'vendeur_desactive'/'suspendu',
+ * ou le cache persistant local.
+ * @param {Object} seller
+ * @returns {boolean}
+ */
+export function isSellerSuspended(seller) {
+    if (!seller) return false;
+    if (seller.is_suspended === true) return true;
+    if (seller.role === 'vendeur_desactive' || seller.role === 'suspendu') return true;
+    const suspendedIds = getSuspendedSellersCache();
+    if (suspendedIds.includes(seller.id)) return true;
+    return false;
+}
+
+/**
+ * Récupère la liste des vendeurs actifs certifiés et suspendus.
+ * Synchronise l'état avec le cache local pour une persistance immédiate.
  * @returns {Promise<Array>}
  */
 export async function fetchActiveSellers() {
@@ -140,11 +203,30 @@ export async function fetchActiveSellers() {
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .in('role', ['vendeur', 'vendeur_desactive'])
+            .in('role', ['vendeur', 'vendeur_desactive', 'suspendu'])
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data || [];
+        const sellers = data || [];
+        const suspendedIds = getSuspendedSellersCache();
+
+        return sellers.map((s) => {
+            const suspended = s.is_suspended === true || 
+                s.role === 'vendeur_desactive' || 
+                s.role === 'suspendu' || 
+                suspendedIds.includes(s.id);
+
+            if (suspended) {
+                setSuspendedSellerInCache(s.id, true);
+                return {
+                    ...s,
+                    is_suspended: true,
+                    role: s.role === 'vendeur' ? 'vendeur_desactive' : s.role,
+                    is_open: false,
+                };
+            }
+            return s;
+        });
     } catch (err) {
         console.error('[AdminService] Erreur fetchActiveSellers:', err);
         throw err;
@@ -208,18 +290,111 @@ export async function suspendSeller(sellerId, suspend = true) {
     const targetRole = suspend ? 'vendeur_desactive' : 'vendeur';
     const isOpen = !suspend;
 
+    // Synchronisation immédiate du cache local (résilience hors-ligne / avant migration)
+    setSuspendedSellerInCache(sellerId, suspend);
+
+    // 1. Tentative avec is_suspended et rôle (schéma complet)
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ 
+                is_suspended: suspend, 
+                role: targetRole, 
+                is_open: isOpen 
+            })
+            .eq('id', sellerId)
+            .select();
+
+        if (!error && data?.length) {
+            return data[0];
+        }
+    } catch {}
+
+    // 2. Tentative avec rôle et is_open (si is_suspended n'est pas encore migré)
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ 
+                role: targetRole, 
+                is_open: isOpen 
+            })
+            .eq('id', sellerId)
+            .select();
+
+        if (!error && data?.length) {
+            return data[0];
+        }
+    } catch {}
+
+    // 3. Repli avec is_open seul si la contrainte check bloque le rôle
     const { data, error } = await supabase
         .from('profiles')
-        .update({ role: targetRole, is_open: isOpen })
+        .update({ is_open: isOpen })
         .eq('id', sellerId)
-        .select()
-        .single();
+        .select();
 
     if (error) {
         throw new Error(`Échec de mise à jour du statut: ${error.message}`);
     }
 
-    return data;
+    return (data && data[0]) || { id: sellerId, role: targetRole, is_open: isOpen, is_suspended: suspend };
+}
+
+/**
+ * Rétrograde un vendeur en simple acheteur (révocation définitive des droits marchand).
+ * @param {string} sellerId
+ * @returns {Promise<Object>}
+ */
+export async function revokeSeller(sellerId) {
+    if (!sellerId) throw new Error('ID vendeur manquant.');
+
+    setSuspendedSellerInCache(sellerId, false);
+
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ role: 'acheteur', is_open: false, is_suspended: false })
+            .eq('id', sellerId)
+            .select()
+            .single();
+
+        if (!error && data) return data;
+    } catch {}
+
+    const { data: fbData, error: fbErr } = await supabase
+        .from('profiles')
+        .update({ role: 'acheteur', is_open: false })
+        .eq('id', sellerId)
+        .select()
+        .single();
+
+    if (fbErr) {
+        throw new Error(`Échec de rétrogradation: ${fbErr.message}`);
+    }
+
+    return fbData;
+}
+
+/**
+ * Supprime définitivement un profil utilisateur/vendeur.
+ * @param {string} sellerId
+ * @returns {Promise<boolean>}
+ */
+export async function deleteSellerAccount(sellerId) {
+    if (!sellerId) throw new Error('ID vendeur manquant.');
+
+    setSuspendedSellerInCache(sellerId, false);
+
+    const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', sellerId);
+
+    if (error) {
+        throw new Error(`Échec de suppression du compte: ${error.message}`);
+    }
+
+    return true;
 }
 
 /**
@@ -402,6 +577,46 @@ export async function updateOrderStatusAdmin(orderId, newStatus) {
     return data;
 }
 
+/**
+ * Récupère l'intégralité des profils d'utilisateurs de la plateforme (SuperAdmin).
+ * @returns {Promise<Array>}
+ */
+export async function fetchAllProfilesAdmin() {
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('[AdminService] Erreur fetchAllProfilesAdmin:', err);
+        return [];
+    }
+}
+
+/**
+ * Met à jour le rôle d'un compte utilisateur (SuperAdmin).
+ * @param {string} userId
+ * @param {string} newRole - 'acheteur'|'vendeur_pending'|'vendeur'|'vendeur_desactive'|'suspendu'|'superadmin'
+ * @returns {Promise<Object>}
+ */
+export async function updateUserRoleAdmin(userId, newRole) {
+    if (!userId || !newRole) throw new Error('ID et rôle requis.');
+    const { data, error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec de modification du rôle : ${error.message}`);
+    }
+    return data;
+}
+
 export default {
     verifyAdminRole,
     loginAdmin,
@@ -410,14 +625,19 @@ export default {
     fetchActiveSellers,
     fetchAllProductsAdmin,
     fetchAllOrdersAdmin,
+    fetchAllProfilesAdmin,
     approveSeller,
     rejectSeller,
     suspendSeller,
+    revokeSeller,
+    deleteSellerAccount,
     deleteProductAdmin,
     fetchDeliveryLocations,
     addDeliveryLocation,
     toggleDeliveryLocation,
     deleteDeliveryLocation,
     updateOrderStatusAdmin,
+    updateUserRoleAdmin,
     DEFAULT_DELIVERY_LOCATIONS,
 };
+

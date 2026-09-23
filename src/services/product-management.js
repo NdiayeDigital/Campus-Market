@@ -34,7 +34,6 @@ export async function createProduct({
     color = '#1D4ED8',
     description = '',
 }) {
-    if (!sellerId) throw new Error('Identifiant vendeur requis.');
     if (!title || !price) throw new Error('Veuillez renseigner le titre et le prix.');
 
     const parsedPrice = parseFloat(price);
@@ -44,9 +43,69 @@ export async function createProduct({
 
     const parsedStock = stock === '' || stock === undefined ? -1 : parseInt(stock, 10);
 
+    // 1. Résolution et synchronisation stricte de la session d'authentification Supabase
+    let activeSellerId = sellerId;
+    try {
+        let { data: sessionData } = await supabase.auth.getSession();
+        let session = sessionData?.session;
+
+        if (!session?.user) {
+            try {
+                const { data: refreshData } = await supabase.auth.refreshSession();
+                if (refreshData?.session) session = refreshData.session;
+            } catch {}
+        }
+
+        if (session?.user) {
+            // L'ID du créateur doit TOUJOURS correspondre à l'UID authentifié Supabase
+            // pour satisfaire la condition RLS : auth.uid() = seller_id
+            activeSellerId = session.user.id;
+
+            // Contrôle préventif du rôle et du statut
+            try {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role, is_open')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
+
+                if (profile) {
+                    if (profile.role === 'vendeur_pending') {
+                        throw new Error("Votre candidature vendeur est en cours de validation par l'administration UIDT. Vous pourrez publier vos produits dès son approbation.");
+                    }
+                    if (profile.role === 'suspendu' || profile.is_open === false) {
+                        throw new Error("Votre compte vendeur ou boutique a été suspendu par l'administration. Veuillez contacter le support.");
+                    }
+                    if (profile.role !== 'vendeur' && profile.role !== 'superadmin') {
+                        throw new Error("Seuls les comptes marchands validés et administrateurs peuvent publier des articles.");
+                    }
+                }
+            } catch (roleErr) {
+                if (roleErr.message && (
+                    roleErr.message.includes('en cours de validation') || 
+                    roleErr.message.includes('suspendu') || 
+                    roleErr.message.includes('Seuls les comptes')
+                )) {
+                    throw roleErr;
+                }
+            }
+        }
+    } catch (authCheckErr) {
+        if (authCheckErr.message && (
+            authCheckErr.message.includes('en cours de validation') || 
+            authCheckErr.message.includes('suspendu') || 
+            authCheckErr.message.includes('Seuls les comptes')
+        )) {
+            throw authCheckErr;
+        }
+        console.warn('[ProductManagement] Avertissement session vendeur:', authCheckErr);
+    }
+
+    if (!activeSellerId) throw new Error('Identifiant vendeur requis.');
+
     let imageUrl = null;
 
-    // 1. Compression et Téléversement de l'image si fournie
+    // 2. Compression et Téléversement de l'image si fournie
     if (imageFile) {
         try {
             // Compression Canvas (max 800x800, qualité 0.75)
@@ -57,7 +116,7 @@ export async function createProduct({
             });
 
             const blob = dataURLtoBlob(compressedDataUrl);
-            const fileName = `${sellerId}/${Date.now()}_prod.jpg`;
+            const fileName = `${activeSellerId}/${Date.now()}_prod.jpg`;
 
             const { data: uploadData, error: uploadErr } = await supabase.storage
                 .from(STORAGE_BUCKET)
@@ -80,16 +139,15 @@ export async function createProduct({
         }
     }
 
-    // 2. Insertion dans la table `products`
+    // 3. Insertion dans la table `products`
     const productPayload = {
-        seller_id: sellerId,
+        seller_id: activeSellerId,
         title: title.trim(),
         price: parsedPrice,
         category,
         stock: parsedStock,
         image_url: imageUrl,
         icon,
-        color,
     };
 
     if (description) {
@@ -120,6 +178,9 @@ export async function createProduct({
 
         return data;
     } catch (err) {
+        if (err.message && err.message.includes('row-level security policy')) {
+            throw new Error("Publication non autorisée : votre compte n'a pas les droits nécessaires ou votre session a expiré. Veuillez vous reconnecter avec un compte vendeur validé ou administrateur.");
+        }
         throw new Error(`Erreur lors de la création du produit: ${err.message}`);
     }
 }
@@ -214,6 +275,9 @@ export async function updateProduct({
 
         return data;
     } catch (err) {
+        if (err.message && err.message.includes('row-level security policy')) {
+            throw new Error("Modification non autorisée : vous ne pouvez modifier que les produits de votre propre boutique.");
+        }
         throw new Error(`Erreur lors de la mise à jour du produit: ${err.message}`);
     }
 }
@@ -255,6 +319,9 @@ export async function updateProductStock(productId, newStock) {
         .single();
 
     if (error) {
+        if (error.message && error.message.includes('row-level security policy')) {
+            throw new Error("Mise à jour du stock non autorisée : vous ne pouvez modifier que les produits de votre propre boutique.");
+        }
         throw new Error(`Impossible de mettre à jour le stock: ${error.message}`);
     }
     return data;
@@ -283,6 +350,9 @@ export async function deleteProduct(productId) {
         .eq('id', productId);
 
     if (error) {
+        if (error.message && error.message.includes('row-level security policy')) {
+            throw new Error("Suppression non autorisée : vous ne pouvez supprimer que les produits de votre propre boutique.");
+        }
         throw new Error(`Impossible de supprimer le produit: ${error.message}`);
     }
     return true;

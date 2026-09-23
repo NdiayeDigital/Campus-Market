@@ -132,6 +132,10 @@ export async function loginSeller({ email, password }) {
         return { status: 'pending', user, profile };
     }
 
+    if (profile.role === 'vendeur_desactive' || profile.role === 'suspendu' || profile.is_suspended === true) {
+        return { status: 'suspended', user, profile };
+    }
+
     if (profile.role === 'vendeur' || profile.role === 'superadmin') {
         return { status: 'approved', user, profile };
     }
@@ -145,24 +149,50 @@ export async function loginSeller({ email, password }) {
  */
 export async function getCurrentSeller() {
     try {
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((resolve) =>
-            setTimeout(() => resolve({ data: { session: null } }), 2000)
-        );
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+        let { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+        if (!session?.user) {
+            try {
+                const { data: refreshData } = await supabase.auth.refreshSession();
+                if (refreshData?.session?.user) {
+                    session = refreshData.session;
+                }
+            } catch {}
+        }
         if (!session?.user) return null;
 
-        const profilePromise = supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
-        const profileTimeout = new Promise((resolve) =>
-            setTimeout(() => resolve({ data: null, error: null }), 2000)
-        );
-        const { data: profile } = await Promise.race([profilePromise, profileTimeout]);
+        let profile = null;
+        try {
+            const { data } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .maybeSingle();
+            profile = data;
+        } catch (fetchErr) {
+            console.warn('[SellerService] Impossible de récupérer le profil distant:', fetchErr);
+        }
 
-        if (profile && (profile.role === 'vendeur' || profile.role === 'vendeur_pending')) {
+        // Repli gracieux sur le profil en cache local si le réseau est lent ou inaccessible
+        if (!profile && typeof localStorage !== 'undefined') {
+            try {
+                const cachedRaw = localStorage.getItem('campus_market_cached_seller');
+                if (cachedRaw) {
+                    const parsed = JSON.parse(cachedRaw);
+                    if (parsed && parsed.id === session.user.id) {
+                        profile = parsed;
+                    }
+                }
+            } catch {}
+        }
+
+        if (profile && (
+            profile.role === 'vendeur' || 
+            profile.role === 'vendeur_pending' || 
+            profile.role === 'vendeur_desactive' || 
+            profile.role === 'suspendu' || 
+            profile.role === 'superadmin' || 
+            profile.is_suspended === true
+        )) {
             return { user: session.user, profile };
         }
         return null;
@@ -195,25 +225,46 @@ export async function getSellerDashboardData(sellerId) {
             .eq('id', sellerId)
             .single();
 
-        // 2. Commandes associées
-        const { data: orders, error: ordersErr } = await supabase
-            .from('orders')
-            .select('*, product:product_id(title, icon, color, image_url)')
-            .eq('seller_id', sellerId)
-            .order('created_at', { ascending: false });
+        // 2. Commandes associées (avec repli gracieux sans jointure si le cache PostgREST diffère)
+        let ordersList = [];
+        try {
+            const { data: ordersWithProd, error: joinErr } = await supabase
+                .from('orders')
+                .select('*, product:product_id(title, icon, color, image_url)')
+                .eq('seller_id', sellerId)
+                .order('created_at', { ascending: false });
 
-        if (ordersErr) throw ordersErr;
+            if (!joinErr && ordersWithProd) {
+                ordersList = ordersWithProd;
+            } else {
+                throw joinErr;
+            }
+        } catch (joinError) {
+            console.warn('[SellerService] Repli sur requête orders simple:', joinError?.message || joinError);
+            const { data: rawOrders, error: rawOrdersErr } = await supabase
+                .from('orders')
+                .select('*')
+                .eq('seller_id', sellerId)
+                .order('created_at', { ascending: false });
+
+            if (rawOrdersErr) throw rawOrdersErr;
+            ordersList = rawOrders || [];
+        }
 
         // 3. Produits du vendeur
-        const { data: products, error: prodsErr } = await supabase
-            .from('products')
-            .select('id, stock')
-            .eq('seller_id', sellerId);
+        let productsList = [];
+        try {
+            const { data: products, error: prodsErr } = await supabase
+                .from('products')
+                .select('id, stock')
+                .eq('seller_id', sellerId);
 
-        if (prodsErr) throw prodsErr;
-
-        const ordersList = orders || [];
-        const productsList = products || [];
+            if (!prodsErr && products) {
+                productsList = products;
+            }
+        } catch (prodErr) {
+            console.warn('[SellerService] Erreur récupération produits vendeur:', prodErr);
+        }
 
         // Calculs des KPIs réels (AUCUNE valeur factice)
         const deliveredOrders = ordersList.filter((o) => o.status === 'delivered');

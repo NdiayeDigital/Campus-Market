@@ -224,6 +224,11 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 if (res.status === 'pending') {
                     activeTab = 'pending';
                     render();
+                } else if (res.status === 'suspended') {
+                    close();
+                    if (typeof onAuthenticated === 'function') {
+                        onAuthenticated({ user: res.user, profile: res.profile, isSuspended: true });
+                    }
                 } else if (res.status === 'approved') {
                     close();
                     if (typeof onAuthenticated === 'function') {

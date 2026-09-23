@@ -198,10 +198,37 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
 
                             <!-- Stepper visuel (masqué si annulée) -->
                             ${!isCancelled ? `
-                                <div class="py-2 px-1">
-                                    <div class="relative flex items-center justify-between w-full">
-                                        <div class="absolute top-1/2 left-0 right-0 h-1 bg-slate-100 -translate-y-1/2 z-0"></div>
-                                        <div class="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 z-0 transition-all duration-500" style="width: ${(activeIndex / (STATUS_STEPS.length - 1)) * 100}%;"></div>
+                                <div class="py-2 px-1 flex flex-col gap-3">
+                                    <!-- Carte étape active avec radar visuel -->
+                                    <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-blue-50/70 border border-blue-100/80">
+                                        <div class="relative flex items-center justify-center w-6 h-6">
+                                            <span class="absolute w-full h-full rounded-full bg-primary/30 animate-ping"></span>
+                                            <span class="relative w-2.5 h-2.5 rounded-full bg-primary"></span>
+                                        </div>
+                                        <div class="flex flex-col min-w-0">
+                                            <span class="text-xs font-heading font-extrabold text-primary leading-tight">
+                                                Statut actuel : ${STATUS_STEPS[activeIndex]?.label || 'En cours'}
+                                            </span>
+                                            <span class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                                                ${
+                                                    currentStatus === 'pending'
+                                                        ? 'Votre commande a été transmise au marchand étudiant. En attente de confirmation.'
+                                                        : currentStatus === 'confirmed'
+                                                        ? 'Le vendeur a confirmé votre commande et prépare les articles.'
+                                                        : currentStatus === 'processing'
+                                                        ? 'Commande en cours de préparation / emballage.'
+                                                        : currentStatus === 'shipped'
+                                                        ? 'Le livreur est en route vers votre pavillon ! Tenez-vous prêt(e).'
+                                                        : 'Commande livrée avec succès à votre pavillon.'
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Barre d'étapes -->
+                                    <div class="relative flex items-center justify-between w-full pt-1">
+                                        <div class="absolute top-4 left-0 right-0 h-1 bg-slate-100 -translate-y-1/2 z-0"></div>
+                                        <div class="absolute top-4 left-0 h-1 bg-gradient-to-r from-primary to-blue-500 -translate-y-1/2 z-0 transition-all duration-500" style="width: ${(activeIndex / (STATUS_STEPS.length - 1)) * 100}%;"></div>
 
                                         ${STATUS_STEPS.map((step, sIdx) => {
                                             const isPassed = sIdx <= activeIndex;
@@ -213,10 +240,10 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                                         isPassed
                                                             ? 'bg-primary text-white shadow-md shadow-primary/30'
                                                             : 'bg-white border-2 border-slate-200 text-slate-400'
-                                                    } ${isCurrent ? 'ring-4 ring-primary/20 scale-110' : ''}">
+                                                    } ${isCurrent ? 'ring-4 ring-primary/30 scale-110' : ''}">
                                                         <i class="fa-solid ${step.icon}"></i>
                                                     </div>
-                                                    <span class="text-[10px] font-semibold mt-1 hidden sm:block ${isPassed ? 'text-primary' : 'text-slate-400'}">
+                                                    <span class="text-[9px] sm:text-[10px] font-semibold mt-1.5 ${isCurrent ? 'text-primary font-bold' : isPassed ? 'text-slate-700' : 'text-slate-400'} text-center max-w-[50px] sm:max-w-none leading-tight">
                                                         ${step.label}
                                                     </span>
                                                 </div>
@@ -232,14 +259,14 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                             `}
 
                             <!-- Détail article commandé -->
-                            <div class="bg-slate-50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-slate-700">
+                            <div class="bg-slate-50/80 rounded-2xl p-3.5 flex items-center justify-between text-xs text-slate-700 border border-slate-100">
                                 <div>
                                     <span class="font-bold text-slate-900 block sm:inline">
                                         ${firstItem ? escapeHTML(firstItem.title) : 'Commande Campus Market'}
                                     </span>
                                     ${totalItemsCount > 1 ? `<span class="text-slate-400 ml-1">(+${totalItemsCount - 1} autre${totalItemsCount > 2 ? 's' : ''})</span>` : ''}
                                 </div>
-                                <span class="font-semibold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200/60">
+                                <span class="font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-xl border border-slate-200/60 shadow-sm">
                                     Chambre : ${escapeHTML(order.chambre || 'N/A')}
                                 </span>
                             </div>
@@ -249,7 +276,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                 ${cleanPhone ? `
                                     <a 
                                         href="tel:${cleanPhone}" 
-                                        class="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors min-h-[44px]"
+                                        class="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all min-h-[44px]"
                                     >
                                         <i class="fa-solid fa-phone text-emerald-600 text-sm"></i>
                                         <span>Appeler</span>
@@ -258,7 +285,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                         href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Bonjour ! Je vous contacte au sujet de ma commande ${order.reference || ''} sur Campus Market.`)}" 
                                         target="_blank" 
                                         rel="noopener" 
-                                        class="flex-1 py-2.5 px-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors min-h-[44px]"
+                                        class="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm min-h-[44px]"
                                     >
                                         <i class="fa-brands fa-whatsapp text-base"></i>
                                         <span>WhatsApp</span>

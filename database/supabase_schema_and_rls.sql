@@ -55,16 +55,15 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 -- ------------------------------------------------------------------------------------
 
 -- POLITIQUES POUR 'profiles'
--- a. Tout le monde peut voir les profils publics (pour afficher le nom des vendeurs)
+DROP POLICY IF EXISTS "Les profils sont visibles par tous" ON public.profiles;
 CREATE POLICY "Les profils sont visibles par tous" 
 ON public.profiles FOR SELECT USING (true);
 
--- b. L'utilisateur peut créer son propre profil (lors de l'inscription, uniquement en tant qu'acheteur)
+DROP POLICY IF EXISTS "L'utilisateur peut créer son profil" ON public.profiles;
 CREATE POLICY "L'utilisateur peut créer son profil" 
 ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id AND role = 'acheteur');
 
--- c. L'utilisateur peut mettre Ã  jour SON propre profil UNIQUEMENT (ex: devenir vendeur_pending)
--- On vÃ©rifie que auth.uid() == id et on empÃªche un Ã©tudiant de se nommer 'superadmin'
+DROP POLICY IF EXISTS "L'utilisateur peut modifier son role en pending" ON public.profiles;
 CREATE POLICY "L'utilisateur peut modifier son role en pending" 
 ON public.profiles FOR UPDATE 
 USING (auth.uid() = id) 
@@ -72,41 +71,43 @@ WITH CHECK (role IN ('acheteur', 'vendeur_pending'));
 
 
 -- POLITIQUES POUR 'products'
--- a. Tout le monde peut voir le catalogue de produits
+DROP POLICY IF EXISTS "Catalogue public" ON public.products;
 CREATE POLICY "Catalogue public" 
 ON public.products FOR SELECT USING (true);
 
--- b. Seuls les vendeurs authentifiÃ©s peuvent insÃ©rer des produits
+DROP POLICY IF EXISTS "Les vendeurs ajoutent leurs produits" ON public.products;
 CREATE POLICY "Les vendeurs ajoutent leurs produits" 
 ON public.products FOR INSERT 
 WITH CHECK (auth.uid() = seller_id);
 
--- c. Seuls les vendeurs peuvent modifier ou supprimer LEURS propres produits
+DROP POLICY IF EXISTS "Les vendeurs modifient leurs produits" ON public.products;
 CREATE POLICY "Les vendeurs modifient leurs produits" 
 ON public.products FOR UPDATE USING (auth.uid() = seller_id);
+
+DROP POLICY IF EXISTS "Les vendeurs suppriment leurs produits" ON public.products;
 CREATE POLICY "Les vendeurs suppriment leurs produits" 
 ON public.products FOR DELETE USING (auth.uid() = seller_id);
 
 
 -- POLITIQUES POUR 'orders'
--- a. Un acheteur peut créer une commande (y compris un invité avec buyer_id NULL)
+DROP POLICY IF EXISTS "Les acheteurs créent des commandes" ON public.orders;
 CREATE POLICY "Les acheteurs créent des commandes" 
 ON public.orders FOR INSERT 
 WITH CHECK (auth.uid() = buyer_id OR buyer_id IS NULL);
 
--- b. Un utilisateur peut voir ses commandes (les invités peuvent voir les commandes sans compte)
+DROP POLICY IF EXISTS "Confidentialité des commandes" ON public.orders;
 CREATE POLICY "Confidentialité des commandes" 
 ON public.orders FOR SELECT 
 USING (auth.uid() = buyer_id OR auth.uid() = seller_id OR buyer_id IS NULL);
 
--- c. Seul le vendeur concernÃ© (ou l'acheteur pour annuler) peut modifier le statut d'une commande
+DROP POLICY IF EXISTS "Modification des statuts de commandes" ON public.orders;
 CREATE POLICY "Modification des statuts de commandes" 
 ON public.orders FOR UPDATE 
 USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
 
 -- ====================================================================================
 -- FIN DU SCRIPT. 
--- Cliquez sur "Run" en bas Ã  droite de l'Ã©diteur SQL de Supabase.
+-- Cliquez sur "Run" en bas à droite de l'éditeur SQL de Supabase.
 -- ====================================================================================
 
 
@@ -116,10 +117,10 @@ USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
 INSERT INTO storage.buckets (id, name, public) VALUES ('product-images', 'product-images', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Politique : Tout le monde peut voir les images
+DROP POLICY IF EXISTS "Images publiques" ON storage.objects;
 CREATE POLICY "Images publiques" ON storage.objects FOR SELECT USING (bucket_id = 'product-images');
 
--- Politique : Seuls les utilisateurs connectés peuvent uploader
+DROP POLICY IF EXISTS "Uploads authentifiés" ON storage.objects;
 CREATE POLICY "Uploads authentifiés" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
 
 
@@ -127,7 +128,7 @@ CREATE POLICY "Uploads authentifiés" ON storage.objects FOR INSERT WITH CHECK (
 -- 6. AMÉLIORATION DE LA SÉCURITÉ ET DES TRIGGERS DE STOCK AUTOMATIQUES
 -- ====================================================================================
 
--- Politique permettant au Super Admin de supprimer des profils étudiants
+DROP POLICY IF EXISTS "Superadmin delete profiles" ON public.profiles;
 CREATE POLICY "Superadmin delete profiles" 
 ON public.profiles FOR DELETE 
 USING (

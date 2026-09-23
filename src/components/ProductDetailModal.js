@@ -27,9 +27,12 @@ export function createProductDetailModal({ onAddToCart } = {}) {
         }
 
         const p = currentProduct;
-        const isOpen = p.seller ? p.seller.is_open !== false : true;
+        const isSuspended = p.seller 
+            ? (p.seller.is_suspended === true || p.seller.role === 'vendeur_desactive' || p.seller.role === 'suspendu') 
+            : false;
+        const isOpen = p.seller ? (p.seller.is_open !== false && !isSuspended) : true;
         const isOutOfStock = p.stock === 0;
-        const isUnavailable = !isOpen || isOutOfStock;
+        const isUnavailable = !isOpen || isOutOfStock || isSuspended;
 
         const sellerName = p.seller
             ? `${p.seller.prenom || ''} ${p.seller.nom || ''}`.trim()
@@ -70,13 +73,15 @@ export function createProductDetailModal({ onAddToCart } = {}) {
                     <div class="absolute bottom-3 left-3 flex items-center gap-2">
                         ${discountBadge}
                         <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
-                            !isOpen
+                            isSuspended
+                                ? 'bg-red-600 text-white'
+                                : !isOpen
                                 ? 'bg-slate-900/85 text-white'
                                 : isOutOfStock
                                 ? 'bg-red-600 text-white'
                                 : 'bg-emerald-600/90 text-white'
                         }">
-                            ${!isOpen ? 'Boutique fermée' : isOutOfStock ? 'Rupture' : 'En stock'}
+                            ${isSuspended ? 'Boutique suspendue' : !isOpen ? 'Boutique fermée' : isOutOfStock ? 'Rupture' : 'En stock'}
                         </span>
                     </div>
                 </div>
@@ -124,12 +129,12 @@ export function createProductDetailModal({ onAddToCart } = {}) {
                         </div>
 
                         ${cleanPhone ? `
-                            <div class="flex items-center gap-1.5">
-                                <a href="tel:${cleanPhone}" title="Appeler le vendeur" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors min-h-[40px] min-w-[40px]">
+                            <div class="flex items-center gap-2">
+                                <a href="tel:${cleanPhone}" title="Appeler le vendeur" aria-label="Appeler le vendeur" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-90 text-slate-700 flex items-center justify-center transition-all min-h-[44px] min-w-[44px]">
                                     <i class="fa-solid fa-phone text-xs text-emerald-600"></i>
                                 </a>
-                                <a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Bonjour ! Je vous contacte au sujet de votre article "${p.title}" sur Campus Market.`)}" target="_blank" rel="noopener" title="Discuter sur WhatsApp" class="w-9 h-9 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors min-h-[40px] min-w-[40px]">
-                                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                                <a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Bonjour ! Je vous contacte au sujet de votre article "${p.title}" sur Campus Market.`)}" target="_blank" rel="noopener" title="Discuter sur WhatsApp" aria-label="Discuter sur WhatsApp" class="w-10 h-10 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-90 text-[#25D366] flex items-center justify-center transition-all min-h-[44px] min-w-[44px]">
+                                    <i class="fa-brands fa-whatsapp text-lg"></i>
                                 </a>
                             </div>
                         ` : ''}
@@ -139,13 +144,13 @@ export function createProductDetailModal({ onAddToCart } = {}) {
                     <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
                         <!-- Sélecteur quantité -->
                         <div class="flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto justify-between sm:justify-start">
-                            <button id="btn-detail-qty-minus" class="w-9 h-9 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 transition-colors font-bold text-sm min-h-[40px] min-w-[40px]">
+                            <button id="btn-detail-qty-minus" aria-label="Diminuer" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[40px] min-w-[40px]">
                                 <i class="fa-solid fa-minus text-xs"></i>
                             </button>
                             <span id="detail-qty-display" class="font-heading font-extrabold text-sm text-slate-900 w-8 text-center">
                                 ${selectedQuantity}
                             </span>
-                            <button id="btn-detail-qty-plus" class="w-9 h-9 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 transition-colors font-bold text-sm min-h-[40px] min-w-[40px]">
+                            <button id="btn-detail-qty-plus" aria-label="Augmenter" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[40px] min-w-[40px]">
                                 <i class="fa-solid fa-plus text-xs"></i>
                             </button>
                         </div>
@@ -154,10 +159,10 @@ export function createProductDetailModal({ onAddToCart } = {}) {
                         <button 
                             id="btn-detail-add-cart"
                             ${isUnavailable ? 'disabled' : ''}
-                            class="flex-1 w-full py-3.5 px-5 rounded-2xl font-heading font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all min-h-[48px] ${
+                            class="flex-1 w-full py-3.5 px-5 rounded-2xl font-heading font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all min-h-[48px] ${
                                 isUnavailable 
                                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
-                                    : 'bg-primary hover:bg-primary-dark active:scale-[0.99] text-white shadow-primary/30'
+                                    : 'bg-gradient-to-r from-primary to-blue-600 hover:from-primary-dark hover:to-primary active:scale-[0.98] text-white shadow-primary/30'
                             }"
                         >
                             <i class="fa-solid fa-bag-shopping text-sm"></i>

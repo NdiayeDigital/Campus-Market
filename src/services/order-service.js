@@ -207,7 +207,39 @@ export async function createOrder({
         buyerId = null;
     }
 
-    // Préparation rigoureuse des lignes de commandes pour Supabase (strictement conformes aux 10 colonnes)
+    // 1. Vérification et rattachement dynamique de seller_id pour chaque article du panier
+    for (const item of items) {
+        if (!item.seller_id && !item.seller?.id && !item.sellerId) {
+            const prodId = item.id || item.product_id;
+            if (prodId) {
+                try {
+                    const { data: prodData } = await supabase
+                        .from('products')
+                        .select('seller_id, seller:seller_id(id, prenom, nom, telephone)')
+                        .eq('id', prodId)
+                        .maybeSingle();
+
+                    if (prodData?.seller_id) {
+                        item.seller_id = prodData.seller_id;
+                        if (prodData.seller) {
+                            item.seller = prodData.seller;
+                            item.seller_name = `${prodData.seller.prenom || ''} ${prodData.seller.nom || ''}`.trim();
+                            item.seller_phone = prodData.seller.telephone || '';
+                        }
+                    }
+                } catch (fetchErr) {
+                    console.warn('[OrderService] Erreur récupération seller_id pour produit:', prodId, fetchErr);
+                }
+            }
+        }
+    }
+
+    const missingSeller = items.find((i) => !i.seller_id && !i.seller?.id && !i.sellerId);
+    if (missingSeller) {
+        throw new Error(`Impossible d'identifier le vendeur pour l'article "${missingSeller.title || 'sélectionné'}". Veuillez retirer cet article et réessayer.`);
+    }
+
+    // 2. Préparation rigoureuse des lignes de commandes pour Supabase (strictement conformes aux 10 colonnes)
     const ordersToInsert = buildOrderPayload({
         clientNom,
         clientPrenom,
@@ -232,11 +264,33 @@ export async function createOrder({
     }
 
     try {
-        const { data, error } = await supabase.from('orders').insert(ordersToInsert).select();
+        // Tentative d'insertion avec colonne reference (si la table a été enrichie)
+        const payloadWithRef = ordersToInsert.map((ord) => ({
+            ...ord,
+            reference,
+        }));
 
-        if (error) {
+        let insertError = null;
+        // On effectue un insert SANS .select() pour utiliser "Prefer: return=minimal".
+        // RÈGLE RLS CRUCIALE : Les acheteurs non-connectés (invités) ne disposent pas
+        // de permission SELECT sur la table orders (pour protéger la vie privée des étudiants).
+        // Par conséquent, un .select() ou RETURNING * déclenche une erreur RLS 42501 et annule l'insertion.
+        // L'insertion sans .select() utilise Prefer: return=minimal et réussit toujours.
+        const { error: errWithRef } = await supabase.from('orders').insert(payloadWithRef);
+
+        if (errWithRef) {
+            // Si la colonne 'reference' n'existe pas en base, repli sur le payload strict 10 colonnes
+            if (errWithRef.message && (errWithRef.message.includes('reference') || errWithRef.message.includes('column'))) {
+                const { error: errCore } = await supabase.from('orders').insert(ordersToInsert);
+                if (errCore) insertError = errCore;
+            } else {
+                insertError = errWithRef;
+            }
+        }
+
+        if (insertError) {
             // En cas d'échec réseau imprévu, fallback dans la file hors-ligne
-            if (error.message && (error.message.includes('fetch') || error.message.includes('network'))) {
+            if (insertError.message && (insertError.message.includes('fetch') || insertError.message.includes('network') || insertError.message.includes('Failed to fetch'))) {
                 savePendingOrdersLocally(ordersToInsert);
                 clearCart();
                 return {
@@ -246,17 +300,11 @@ export async function createOrder({
                     message: 'Réseau instable. Commande mise en file d’attente locale pour synchronisation.',
                 };
             }
-            throw error;
+            throw insertError;
         }
 
         // Succès : vidage automatique du panier
         clearCart();
-
-        // Référence cohérente partagée avec le dashboard marchand (#CMD-XXXXXX)
-        const primaryOrder = data && data[0] ? data[0] : null;
-        const finalReference = primaryOrder 
-            ? `#CMD-${primaryOrder.id.slice(0, 6).toUpperCase()}` 
-            : reference;
 
         const firstItem = items[0] || {};
         const sellerName = firstItem.seller_name || (firstItem.seller ? `${firstItem.seller.prenom} ${firstItem.seller.nom}`.trim() : 'Vendeur UIDT');
@@ -264,10 +312,10 @@ export async function createOrder({
 
         return {
             success: true,
-            reference: finalReference,
+            reference,
             isOffline: false,
-            orders: data,
-            orderId: primaryOrder ? primaryOrder.id : null,
+            orders: ordersToInsert,
+            orderId: reference,
             sellerName,
             sellerPhone,
         };

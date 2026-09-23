@@ -98,8 +98,11 @@ import {
     approveSeller,
     rejectSeller,
     suspendSeller,
+    revokeSeller,
+    deleteSellerAccount,
     deleteProductAdmin,
     verifyAdminRole,
+    isSellerSuspended,
 } from '../src/services/admin-service.js';
 
 let rejectedMissingCredentials = false;
@@ -142,10 +145,31 @@ try {
 }
 console.assert(rejectedMissingDeleteProductId, 'Échec de rejet deleteProductAdmin sans ID');
 
+let rejectedMissingRevokeId = false;
+try {
+    await revokeSeller(null);
+} catch (e) {
+    rejectedMissingRevokeId = e.message.includes('ID vendeur manquant');
+}
+console.assert(rejectedMissingRevokeId, 'Échec de rejet revokeSeller sans ID');
+
+let rejectedMissingDeleteSellerId = false;
+try {
+    await deleteSellerAccount(null);
+} catch (e) {
+    rejectedMissingDeleteSellerId = e.message.includes('ID vendeur manquant');
+}
+console.assert(rejectedMissingDeleteSellerId, 'Échec de rejet deleteSellerAccount sans ID');
+
+console.assert(isSellerSuspended({ is_suspended: true }) === true, 'isSellerSuspended avec is_suspended: true');
+console.assert(isSellerSuspended({ role: 'vendeur_desactive' }) === true, 'isSellerSuspended avec role: vendeur_desactive');
+console.assert(isSellerSuspended({ role: 'suspendu' }) === true, 'isSellerSuspended avec role: suspendu');
+console.assert(isSellerSuspended({ role: 'vendeur', is_suspended: false }) === false, 'isSellerSuspended vendeur actif');
+
 const nullAdminRole = await verifyAdminRole(null);
 console.assert(nullAdminRole === false, 'verifyAdminRole(null) devrait retourner false');
 
-console.log('✅ [AdminService] Validation stricte des opérations SuperAdmin validée !');
+console.log('✅ [AdminService] Validation stricte des opérations SuperAdmin & Gestion des Comptes validée !');
 
 // 6. Test Order Service Payload (Strict 10 real DB columns)
 import { buildOrderPayload } from '../src/services/order-service.js';

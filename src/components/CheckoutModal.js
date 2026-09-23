@@ -100,13 +100,29 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                 <!-- SECTION 2 : Livraison Pavillon-à-Pavillon -->
                 <div class="flex flex-col gap-3 pt-2 border-t border-slate-100">
                     <h3 class="font-heading font-bold text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                        <span class="w-5 h-5 rounded-full bg-primary text-white text-[11px] flex items-center justify-center">2</span>
-                        Lieu de livraison (UIDT)
+                        <span class="w-5 h-5 rounded-full bg-primary text-white text-[11px] flex items-center justify-center font-extrabold">2</span>
+                        Lieu de livraison (Campus UIDT)
                     </h3>
+
+                    <!-- Puces de sélection rapide des pavillons fréquents -->
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] text-slate-500 font-medium">Accès rapide aux résidences :</span>
+                        <div class="flex items-center gap-1.5 flex-wrap" id="quick-pavillon-chips">
+                            ${['Pavillon A1', 'Pavillon A2', 'Pavillon B', 'Pavillon C', 'Pavillon D', 'Jardin Social'].map((pavName) => `
+                                <button 
+                                    type="button" 
+                                    data-pav="${pavName}" 
+                                    class="quick-pav-chip px-2.5 py-1 text-xs rounded-xl border border-slate-200 bg-white hover:border-primary hover:text-primary text-slate-700 font-medium transition-all active:scale-95 cursor-pointer"
+                                >
+                                    ${pavName}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1" for="delivery-pavillon">Pavillon ou Site *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" for="delivery-pavillon">Pavillon ou Site sélectionné *</label>
                             <select 
                                 id="delivery-pavillon" 
                                 required 
@@ -135,7 +151,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                 <!-- SECTION 3 : Mode de paiement -->
                 <div class="flex flex-col gap-3 pt-2 border-t border-slate-100">
                     <h3 class="font-heading font-bold text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                        <span class="w-5 h-5 rounded-full bg-primary text-white text-[11px] flex items-center justify-center">3</span>
+                        <span class="w-5 h-5 rounded-full bg-primary text-white text-[11px] flex items-center justify-center font-extrabold">3</span>
                         Mode de règlement
                     </h3>
 
@@ -143,8 +159,8 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                         <!-- Wave -->
                         <label class="cursor-pointer">
                             <input type="radio" name="payment-method" value="wave" checked class="peer sr-only">
-                            <div class="p-3 border-2 border-slate-200 rounded-xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-[#1DA1F2] peer-checked:bg-sky-50 min-h-[44px]">
-                                <i class="fa-solid fa-water text-[#1DA1F2] text-lg"></i>
+                            <div class="p-3 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-[#1DA1F2] peer-checked:bg-sky-50 peer-checked:shadow-sm min-h-[48px]">
+                                <i class="fa-solid fa-water text-[#1DA1F2] text-xl"></i>
                                 <span class="text-xs font-bold text-slate-800">Wave</span>
                             </div>
                         </label>
@@ -152,8 +168,8 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                         <!-- Orange Money -->
                         <label class="cursor-pointer">
                             <input type="radio" name="payment-method" value="om" class="peer sr-only">
-                            <div class="p-3 border-2 border-slate-200 rounded-xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-[#FF7900] peer-checked:bg-orange-50 min-h-[44px]">
-                                <i class="fa-solid fa-mobile-screen-button text-[#FF7900] text-lg"></i>
+                            <div class="p-3 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-[#FF7900] peer-checked:bg-orange-50 peer-checked:shadow-sm min-h-[48px]">
+                                <i class="fa-solid fa-mobile-screen-button text-[#FF7900] text-xl"></i>
                                 <span class="text-xs font-bold text-slate-800">OM</span>
                             </div>
                         </label>
@@ -161,8 +177,8 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                         <!-- Espèces -->
                         <label class="cursor-pointer">
                             <input type="radio" name="payment-method" value="cash" class="peer sr-only">
-                            <div class="p-3 border-2 border-slate-200 rounded-xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 min-h-[44px]">
-                                <i class="fa-solid fa-money-bill-wave text-emerald-600 text-lg"></i>
+                            <div class="p-3 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:shadow-sm min-h-[48px]">
+                                <i class="fa-solid fa-money-bill-wave text-emerald-600 text-xl"></i>
                                 <span class="text-xs font-bold text-slate-800">Espèces</span>
                             </div>
                         </label>
@@ -187,7 +203,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                     <button 
                         type="submit" 
                         id="btn-submit-order" 
-                        class="w-full py-4 px-5 bg-primary hover:bg-primary-dark active:scale-[0.99] text-white font-heading font-extrabold text-base rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 transition-all min-h-[52px]"
+                        class="w-full py-4 px-5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary-dark hover:to-primary active:scale-[0.98] text-white font-heading font-extrabold text-base rounded-2xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 transition-all min-h-[52px]"
                     >
                         <span>Confirmer ma commande</span>
                         <i class="fa-solid fa-check text-sm"></i>
@@ -257,6 +273,23 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
             } else {
                 noticeText.textContent = 'Paiement en espèces lors de la livraison en main propre.';
             }
+        });
+    });
+
+    // Écouteurs puces de sélection rapide de pavillon
+    modalEl.querySelectorAll('.quick-pav-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+            const pav = chip.getAttribute('data-pav');
+            const selectEl = modalEl.querySelector('#delivery-pavillon');
+            if (selectEl && pav) {
+                selectEl.value = pav;
+            }
+            modalEl.querySelectorAll('.quick-pav-chip').forEach((c) => {
+                c.classList.remove('bg-primary', 'text-white', 'border-primary', 'shadow-sm');
+                c.classList.add('bg-white', 'text-slate-700', 'border-slate-200');
+            });
+            chip.classList.remove('bg-white', 'text-slate-700', 'border-slate-200');
+            chip.classList.add('bg-primary', 'text-white', 'border-primary', 'shadow-sm');
         });
     });
 

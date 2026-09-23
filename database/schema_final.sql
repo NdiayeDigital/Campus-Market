@@ -324,28 +324,26 @@ CREATE POLICY "Catalogue public"
 ON public.products FOR SELECT 
 USING (true);
 
--- Insertion : STRICTEMENT réservée aux vendeurs validés (rôle = 'vendeur')
+-- Insertion : Tout utilisateur authentifie publiant sous son propre identifiant
 CREATE POLICY "Les vendeurs ajoutent leurs produits" 
 ON public.products FOR INSERT 
-WITH CHECK (
-    auth.uid() = seller_id AND 
-    public.get_current_user_role(auth.uid()) = 'vendeur'
-);
+TO authenticated 
+WITH CHECK (auth.uid() = seller_id);
 
--- Mise à jour : Un vendeur validé modifie ses propres produits (ou le superadmin)
+-- Mise à jour : Le vendeur modifie ses propres produits
 CREATE POLICY "Les vendeurs modifient leurs produits" 
 ON public.products FOR UPDATE 
-USING (
-    (auth.uid() = seller_id AND public.get_current_user_role(auth.uid()) = 'vendeur') OR
-    public.get_current_user_role(auth.uid()) = 'superadmin'
-);
+TO authenticated 
+USING (auth.uid() = seller_id);
 
--- Suppression : Un vendeur ou le superadmin peut supprimer
+-- Suppression : Le vendeur ou le superadmin peut supprimer
 CREATE POLICY "Les vendeurs suppriment leurs produits" 
 ON public.products FOR DELETE 
+TO authenticated 
 USING (
-    (auth.uid() = seller_id AND public.get_current_user_role(auth.uid()) = 'vendeur') OR
-    public.get_current_user_role(auth.uid()) = 'superadmin'
+    auth.uid() = seller_id OR
+    public.is_super_admin(auth.uid()) OR
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'superadmin'
 );
 
 

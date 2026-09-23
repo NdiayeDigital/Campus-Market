@@ -15,21 +15,26 @@ import { escapeHTML } from '../utils/security.js';
  */
 export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
     const cardEl = document.createElement('article');
-    cardEl.className = 'group relative flex flex-col bg-surface rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden';
+    cardEl.className = 'group relative flex flex-col bg-white rounded-3xl border border-slate-200/70 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 overflow-hidden';
 
-    const isOpen = product.seller ? product.seller.is_open !== false : true;
+    const isSuspended = product.seller 
+        ? (product.seller.is_suspended === true || product.seller.role === 'vendeur_desactive' || product.seller.role === 'suspendu') 
+        : false;
+    const isOpen = product.seller ? (product.seller.is_open !== false && !isSuspended) : true;
     const isOutOfStock = product.stock === 0;
-    const isUnavailable = !isOpen || isOutOfStock;
+    const isUnavailable = !isOpen || isOutOfStock || isSuspended;
 
     // Badges statut
     let statusBadge = '';
-    if (!isOpen) {
-        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-slate-900/80 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-1 rounded-md">Boutique fermée</span>`;
+    if (isSuspended) {
+        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white"></span>Boutique Suspendue</span>`;
+    } else if (!isOpen) {
+        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-slate-900/85 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Fermé</span>`;
     } else if (isOutOfStock) {
-        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-red-600 text-white text-[11px] font-bold px-2 py-1 rounded-md shadow-sm">Rupture de stock</span>`;
+        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white"></span>Rupture</span>`;
     } else if (product.old_price && Number(product.old_price) > Number(product.price)) {
         const discount = Math.round(((product.old_price - product.price) / product.old_price) * 100);
-        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-accent text-slate-900 font-extrabold text-[11px] px-2 py-0.5 rounded-md shadow-sm">-${discount}%</span>`;
+        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-extrabold text-[11px] px-2.5 py-0.5 rounded-full shadow-sm">-${discount}%</span>`;
     }
 
     // Gestion de l'image ou icône
@@ -45,7 +50,7 @@ export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
                 src="${escapeHTML(safeImageUrl)}" 
                 alt="${escapeHTML(product.title)}" 
                 loading="lazy"
-                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
                 onerror="this.onerror=null; this.src='/assets/placeholder.webp';"
             >
         `;
@@ -54,7 +59,7 @@ export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
         const bgColor = product.color || '#EFF6FF';
         imageContent = `
             <div class="w-full h-full flex items-center justify-center text-primary" style="background-color: ${bgColor};">
-                <i class="fa-solid ${escapeHTML(iconClass)} text-4xl opacity-80 group-hover:scale-110 transition-transform"></i>
+                <i class="fa-solid ${escapeHTML(iconClass)} text-4xl opacity-80 group-hover:scale-110 transition-transform duration-300"></i>
             </div>
         `;
     }
@@ -66,24 +71,29 @@ export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
 
     cardEl.innerHTML = `
         <!-- Image Container -->
-        <div class="relative w-full aspect-square bg-slate-100 overflow-hidden">
+        <div class="relative w-full aspect-square bg-slate-100/80 overflow-hidden">
             ${statusBadge}
             ${imageContent}
+            <!-- Overlay doux au survol -->
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-900/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
         </div>
 
         <!-- Informations Produit -->
         <div class="p-3.5 flex flex-col flex-1 justify-between gap-3">
             <div class="flex flex-col gap-1">
-                <span class="text-[11px] font-medium text-slate-500 line-clamp-1 flex items-center gap-1">
-                    <i class="fa-solid fa-store text-[10px] text-slate-400"></i> ${escapeHTML(sellerName)}
+                <span class="text-[11px] font-medium text-slate-500 line-clamp-1 flex items-center gap-1.5">
+                    <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">
+                        ${(sellerName[0] || 'V').toUpperCase()}
+                    </span>
+                    <span class="truncate">${escapeHTML(sellerName)}</span>
                 </span>
-                <h3 class="font-heading font-semibold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                <h3 class="font-heading font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                     ${escapeHTML(product.title)}
                 </h3>
             </div>
 
             <!-- Prix et Bouton d'action -->
-            <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 mt-auto">
+            <div class="relative flex items-center justify-between gap-2 pt-2 border-t border-slate-100 mt-auto">
                 <div class="flex flex-col">
                     <span class="font-heading font-extrabold text-slate-900 text-base leading-none">
                         ${Number(product.price).toLocaleString('fr-FR')} <span class="text-xs font-semibold text-slate-500">FCFA</span>
@@ -91,16 +101,17 @@ export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
                     ${product.old_price ? `<span class="text-[11px] text-slate-400 line-through mt-0.5">${Number(product.old_price).toLocaleString('fr-FR')} F</span>` : ''}
                 </div>
 
-                <!-- Bouton tactile min 44x44px -->
+                <!-- Bouton tactile min 44x44px avec feedback haptique visuel -->
                 <button 
                     type="button" 
                     id="btn-add-to-cart"
+                    aria-label="${isUnavailable ? 'Article non disponible' : `Ajouter ${escapeHTML(product.title)} au panier`}"
                     title="${isUnavailable ? 'Non disponible' : 'Ajouter au panier'}"
                     ${isUnavailable ? 'disabled' : ''}
-                    class="flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full transition-all duration-200 shadow-sm ${
+                    class="relative flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full transition-all duration-200 shadow-sm active:scale-90 ${
                         isUnavailable 
                             ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                            : 'bg-primary hover:bg-primary-dark text-white active:scale-95 shadow-primary/20'
+                            : 'bg-primary hover:bg-primary-dark text-white shadow-primary/25 hover:shadow-primary/40'
                     }"
                 >
                     <i class="fa-solid fa-plus text-sm"></i>
@@ -114,9 +125,17 @@ export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
     addBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!isUnavailable && typeof onAddToCart === 'function') {
-            // Effet d'animation visuel sur le bouton
+            // Effet d'animation éphémère "+1" flottant
+            const plusOne = document.createElement('div');
+            plusOne.className = 'absolute -top-7 right-0 text-xs font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 rounded-full px-2 py-0.5 shadow-md pointer-events-none animate-float-up z-20';
+            plusOne.textContent = '+1';
+            addBtn.parentElement.appendChild(plusOne);
+            setTimeout(() => plusOne.remove(), 750);
+
+            // Rebond du bouton
             addBtn.classList.add('scale-125');
-            setTimeout(() => addBtn.classList.remove('scale-125'), 150);
+            setTimeout(() => addBtn.classList.remove('scale-125'), 180);
+
             onAddToCart(product);
         }
     });

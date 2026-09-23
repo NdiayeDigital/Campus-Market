@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
+import { getSuspendedSellersCache } from './admin-service.js';
 
 // Clés de persistance locale pour tolérance hors-ligne
 const PRODUCTS_CACHE_KEY = 'campus_market_cached_products';
@@ -119,7 +120,7 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
     try {
         let query = supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role)')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)
             .abortSignal(controller.signal);
@@ -138,7 +139,19 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
 
         if (error) throw error;
 
-        const products = data || [];
+        const rawProducts = data || [];
+        const suspendedIds = getSuspendedSellersCache();
+        const products = rawProducts.filter((p) => {
+            if (!p.seller) return true;
+            if (p.seller.role === 'vendeur_desactive' || p.seller.role === 'suspendu' || p.seller.is_suspended === true) {
+                return false;
+            }
+            if (suspendedIds.includes(p.seller.id) || suspendedIds.includes(p.seller_id)) {
+                return false;
+            }
+            return true;
+        });
+
         if (category === 'all' && offset === 0 && products.length > 0) {
             saveLocalCachedProducts(products);
         }

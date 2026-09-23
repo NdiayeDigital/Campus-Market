@@ -12,10 +12,13 @@ import { createCartModal } from './components/CartModal.js';
 import { createCheckoutModal } from './components/CheckoutModal.js';
 import { createOrderStatusView, trackRecentOrder } from './components/OrderStatus.js';
 import { createProductDetailModal } from './components/ProductDetailModal.js';
+import { createBottomNav } from './components/BottomNav.js';
+import { createHeroBanner } from './components/HeroBanner.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
 import { createSellerDashboard } from './components/seller/SellerDashboard.js';
 import { createSuperAdminDashboard } from './components/admin/SuperAdminDashboard.js';
 import { getCurrentSeller } from './services/seller-service.js';
+import { supabase } from './services/supabase.js';
 import { cartStore } from './services/cart-store.js';
 import {
     fetchActiveProducts,
@@ -60,29 +63,49 @@ async function initApp() {
     const rootWrapper = document.createElement('div');
     rootWrapper.className = 'min-h-screen bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white';
 
-    // Validation asynchrone continue de la session auprès de Supabase
+    let headerComponent = null;
+    let categoryChipsComponent = null;
+    let bottomNavComponent = null;
+
+    // Validation asynchrone continue de la session auprès de Supabase sans déconnexion intempestive
     getCurrentSeller()
         .then((existingSeller) => {
             if (existingSeller && existingSeller.profile && (existingSeller.profile.role === 'vendeur' || existingSeller.profile.role === 'superadmin')) {
                 appState.currentSeller = existingSeller.profile;
+                headerComponent?.updateSellerState?.(existingSeller.profile);
                 try {
                     localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(existingSeller.profile));
                 } catch {}
-            } else if (appState.currentSeller) {
-                // La session distante n'est plus valide (expirée ou révoquée)
-                appState.currentSeller = null;
-                try {
-                    localStorage.removeItem(LOCAL_SELLER_KEY);
-                } catch {}
-                if (appState.currentView === 'seller') {
-                    navigateToView('catalog');
-                    showToast('Votre session vendeur a expiré. Veuillez vous reconnecter.', 'warning');
-                }
             }
         })
         .catch((err) => {
             console.warn('[Main] Session vendeur non bloquante:', err);
         });
+
+    // Écouteur réactif des événements d'authentification Supabase (évite toute déconnexion intempestive)
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+            appState.currentSeller = null;
+            headerComponent?.updateSellerState?.(null);
+            try {
+                localStorage.removeItem(LOCAL_SELLER_KEY);
+            } catch {}
+            if (appState.currentView === 'seller') {
+                navigateToView('catalog');
+                showToast('Déconnecté de votre espace marchand.', 'info');
+            }
+        } else if (session?.user && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
+            getCurrentSeller().then((res) => {
+                if (res?.profile) {
+                    appState.currentSeller = res.profile;
+                    headerComponent?.updateSellerState?.(res.profile);
+                    try {
+                        localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(res.profile));
+                    } catch {}
+                }
+            }).catch(() => {});
+        }
+    });
 
     // 1. Modales globales
     const cartModalController = createCartModal({
@@ -102,6 +125,7 @@ async function initApp() {
     const sellerAuthModalController = createSellerAuthModal({
         onAuthenticated: ({ profile }) => {
             appState.currentSeller = profile;
+            headerComponent?.updateSellerState?.(profile);
             try {
                 localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(profile));
             } catch {}
@@ -123,8 +147,21 @@ async function initApp() {
     document.body.appendChild(productDetailModalController.element);
 
     // 2. Header
-    const headerComponent = createHeader({
+    headerComponent = createHeader({
         onLogoClick: async () => {
+            appState.searchQuery = '';
+            appState.currentCategory = 'all';
+            if (categoryChipsComponent?.setActiveCategory) {
+                categoryChipsComponent.setActiveCategory('all');
+            }
+            const searchInput = document.getElementById('header-search-input');
+            if (searchInput) searchInput.value = '';
+            if (appState.currentView !== 'catalog') {
+                navigateToView('catalog');
+            }
+            await reloadProducts();
+        },
+        onOpenCatalog: async () => {
             appState.searchQuery = '';
             appState.currentCategory = 'all';
             if (categoryChipsComponent?.setActiveCategory) {
@@ -150,30 +187,16 @@ async function initApp() {
         onOpenOrders: () => {
             navigateToView('orders');
         },
-        onOpenSeller: async () => {
-            // Si déjà connecté vendeur -> ouvre le dashboard
-            if (appState.currentSeller) {
-                navigateToView('seller');
-                return;
-            }
-            // Vérifie si une session existe
-            const sellerSession = await getCurrentSeller();
-            if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
-                appState.currentSeller = sellerSession.profile;
-                try {
-                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
-                } catch {}
-                navigateToView('seller');
-            } else {
-                sellerAuthModalController.open('login');
-            }
+        onOpenSeller: () => {
+            openSellerFlow();
         },
     });
 
     rootWrapper.appendChild(headerComponent);
+    headerComponent.updateSellerState?.(appState.currentSeller);
 
     // 3. Barre de sélection de catégorie (Chips)
-    const categoryChipsComponent = createCategoryChips({
+    categoryChipsComponent = createCategoryChips({
         activeCategory: appState.currentCategory,
         onSelectCategory: async (catId) => {
             appState.currentCategory = catId;
@@ -186,57 +209,118 @@ async function initApp() {
 
     rootWrapper.appendChild(categoryChipsComponent);
 
-    // 4. Conteneur principal (Vues dynamiques)
+    // 4. Hero Banner (Accueil & Découverte UIDT)
+    const heroBannerComponent = createHeroBanner({
+        onSelectTag: async (tagQuery) => {
+            appState.searchQuery = tagQuery;
+            const searchInput = document.getElementById('header-search-input');
+            if (searchInput) searchInput.value = tagQuery;
+            if (appState.currentView !== 'catalog') {
+                navigateToView('catalog');
+            }
+            await reloadProducts();
+        },
+    });
+
+    // 5. Conteneur principal (Vues dynamiques)
     const mainContentEl = document.createElement('main');
     mainContentEl.id = 'main-content';
-    mainContentEl.className = 'flex-1 max-w-7xl w-full mx-auto px-4 py-5 flex flex-col gap-6';
+    mainContentEl.className = 'flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
     rootWrapper.appendChild(mainContentEl);
 
-    // 5. Footer
+    // 6. Barre de navigation mobile inférieure (BottomNav)
+    bottomNavComponent = createBottomNav({
+        activeTab: appState.currentView,
+        onNavigate: (viewName) => {
+            if (viewName === 'catalog') {
+                appState.searchQuery = '';
+                appState.currentCategory = 'all';
+                categoryChipsComponent?.setActiveCategory('all');
+                const searchInput = document.getElementById('header-search-input');
+                if (searchInput) searchInput.value = '';
+                if (appState.currentView !== 'catalog') {
+                    navigateToView('catalog');
+                }
+                reloadProducts();
+            } else if (viewName === 'seller') {
+                openSellerFlow();
+            } else {
+                navigateToView(viewName);
+            }
+        },
+        onOpenCart: () => {
+            cartModalController.open();
+        },
+        onFocusSearch: () => {
+            if (appState.currentView !== 'catalog') {
+                navigateToView('catalog');
+            }
+            headerComponent.focusSearch?.();
+        },
+    });
+    rootWrapper.appendChild(bottomNavComponent);
+
+    // 7. Footer
     const footerEl = document.createElement('footer');
-    footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 text-center mt-auto';
+    footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 text-center mt-auto pb-28 sm:pb-8';
     footerEl.innerHTML = `
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-            <div class="flex items-center gap-2.5">
-                <img src="${logoUrl}" alt="Campus Market" class="h-10 sm:h-12 w-auto object-contain" onerror="this.src='/assets/logo.webp'">
-                <span class="font-heading font-bold text-slate-800">Campus Market</span>
-                <span>• Université Iba Der Thiam (UIDT)</span>
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-slate-500">
+            <!-- Marque & Identité UIDT -->
+            <div class="flex items-center gap-3">
+                <img src="${logoUrl}" alt="Campus Market" class="h-9 sm:h-11 w-auto object-contain" onerror="this.src='/assets/logo.webp'">
+                <div class="text-left">
+                    <span class="font-heading font-extrabold text-slate-900 text-sm block leading-tight">Campus Market</span>
+                    <span class="text-[11px] text-slate-400">Université Iba Der Thiam de Thiès</span>
+                </div>
             </div>
-            <div class="flex items-center gap-4 text-slate-600 font-medium flex-wrap justify-center">
+
+            <!-- Liens de navigation Desktop & Tablette (masqués sur mobile car déjà dans BottomNav) -->
+            <div class="hidden sm:flex items-center gap-5 text-slate-600 font-medium flex-wrap justify-center">
                 <button id="footer-link-catalog" class="hover:text-primary transition-colors">Offres</button>
                 <button id="footer-link-orders" class="hover:text-primary transition-colors">Mes commandes</button>
                 <button id="footer-link-seller" class="hover:text-amber-700 text-amber-900 font-semibold transition-colors">Espace Vendeur</button>
                 <a href="https://wa.me/221784799882" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1">
-                    <i class="fa-brands fa-whatsapp"></i> Aide & Support
+                    <i class="fa-brands fa-whatsapp text-sm"></i> Aide & Support
                 </a>
             </div>
-            <p>© 2026 Campus Market. Livraison Pavillon-à-Pavillon.</p>
+
+            <!-- Bouton Support WhatsApp Mobile (visible uniquement sur smartphone au lieu des liens doublons) -->
+            <div class="flex sm:hidden items-center justify-center w-full">
+                <a href="https://wa.me/221784799882" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 rounded-full font-bold text-xs transition-all shadow-sm active:scale-95 min-h-[44px]">
+                    <i class="fa-brands fa-whatsapp text-base"></i>
+                    <span>Besoin d'aide ? Support WhatsApp UIDT</span>
+                </a>
+            </div>
+
+            <p class="text-[11px] text-slate-400">© 2026 Campus Market. Livraison Pavillon-à-Pavillon.</p>
         </div>
     `;
 
     footerEl.querySelector('#footer-link-catalog')?.addEventListener('click', () => navigateToView('catalog'));
     footerEl.querySelector('#footer-link-orders')?.addEventListener('click', () => navigateToView('orders'));
-    footerEl.querySelector('#footer-link-seller')?.addEventListener('click', async () => {
-        if (appState.currentSeller) {
-            navigateToView('seller');
-        } else {
-            const sellerSession = await getCurrentSeller();
-            if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
-                appState.currentSeller = sellerSession.profile;
-                try {
-                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
-                } catch {}
-                navigateToView('seller');
-            } else {
-                sellerAuthModalController.open('login');
-            }
-        }
-    });
+    footerEl.querySelector('#footer-link-seller')?.addEventListener('click', openSellerFlow);
 
     rootWrapper.appendChild(footerEl);
     appEl.appendChild(rootWrapper);
 
     let activeDashboardEl = null;
+
+    async function openSellerFlow() {
+        if (appState.currentSeller) {
+            navigateToView('seller');
+            return;
+        }
+        const sellerSession = await getCurrentSeller();
+        if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
+            appState.currentSeller = sellerSession.profile;
+            try {
+                localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
+            } catch {}
+            navigateToView('seller');
+        } else {
+            sellerAuthModalController.open('login');
+        }
+    }
 
     // Navigation de vue
     function navigateToView(viewName) {
@@ -249,30 +333,48 @@ async function initApp() {
         appState.currentView = viewName;
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
+        // Animation fluide de changement de vue
+        mainContentEl.classList.remove('view-transition-enter');
+        void mainContentEl.offsetWidth;
+        mainContentEl.classList.add('view-transition-enter');
+
+        if (bottomNavComponent) {
+            bottomNavComponent.setActiveTab(viewName);
+            bottomNavComponent.setHidden(viewName === 'admin');
+        }
+
         const targetHash = viewName === 'catalog' ? '' : `#${viewName}`;
         if (window.location.hash !== targetHash) {
             history.replaceState(null, '', targetHash || window.location.pathname);
         }
 
         if (viewName === 'orders') {
+            mainContentEl.className = 'flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('orders');
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.remove('hidden');
+            if (bottomNavComponent) bottomNavComponent.setHidden(false);
             renderOrdersView();
         } else if (viewName === 'seller') {
-            if (headerComponent.setMode) headerComponent.setMode('hidden');
-            categoryChipsComponent.classList.add('hidden');
-            footerEl.classList.remove('hidden');
-            renderSellerView();
-        } else if (viewName === 'admin') {
+            mainContentEl.className = 'flex-1 w-full pb-24 sm:pb-8 flex flex-col view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('hidden');
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.add('hidden');
+            if (bottomNavComponent) bottomNavComponent.setHidden(true);
+            renderSellerView();
+        } else if (viewName === 'admin') {
+            mainContentEl.className = 'flex-1 w-full pb-24 sm:pb-8 flex flex-col view-transition-enter';
+            if (headerComponent.setMode) headerComponent.setMode('hidden');
+            categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.add('hidden');
+            if (bottomNavComponent) bottomNavComponent.setHidden(true);
             renderAdminView();
         } else {
+            mainContentEl.className = 'flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
             categoryChipsComponent.classList.remove('hidden');
             footerEl.classList.remove('hidden');
+            if (bottomNavComponent) bottomNavComponent.setHidden(false);
             renderCatalogView();
         }
     }
@@ -289,7 +391,7 @@ async function initApp() {
 
     // Rendu de l'Espace Vendeur
     async function renderSellerView() {
-        // 1. Si le profil n'est pas encore en mémoire, afficher un écran d'attente et vérifier Supabase
+        // 1. Si le profil n'est pas encore en mémoire, afficher un écran d'attente
         if (!appState.currentSeller) {
             mainContentEl.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-24 gap-3 text-slate-500 animate-pulse">
@@ -297,18 +399,26 @@ async function initApp() {
                     <p class="text-xs font-semibold">Accès à votre Espace Vendeur...</p>
                 </div>
             `;
+        }
 
-            try {
-                const sellerSession = await getCurrentSeller();
-                if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
-                    appState.currentSeller = sellerSession.profile;
-                    try {
-                        localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
-                    } catch {}
-                }
-            } catch (err) {
-                console.warn('[Main] Erreur getCurrentSeller lors du rendu vendeur:', err);
+        try {
+            const sellerSession = await getCurrentSeller();
+            if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
+                appState.currentSeller = sellerSession.profile;
+                headerComponent?.updateSellerState?.(sellerSession.profile);
+                try {
+                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
+                } catch {}
+            } else if (!sellerSession) {
+                // Session Supabase absente ou révoquée
+                appState.currentSeller = null;
+                headerComponent?.updateSellerState?.(null);
+                try {
+                    localStorage.removeItem(LOCAL_SELLER_KEY);
+                } catch {}
             }
+        } catch (err) {
+            console.warn('[Main] Erreur getCurrentSeller lors du rendu vendeur:', err);
         }
 
         // 2. Si aucune session n'est active, inviter à la connexion et retourner au catalogue
@@ -326,6 +436,7 @@ async function initApp() {
             onBackToCatalog: () => navigateToView('catalog'),
             onLogout: () => {
                 appState.currentSeller = null;
+                headerComponent?.updateSellerState?.(null);
                 try {
                     localStorage.removeItem(LOCAL_SELLER_KEY);
                 } catch {}
@@ -348,6 +459,9 @@ async function initApp() {
                 }
                 navigateToView('catalog');
             },
+            onBackToCatalog: () => {
+                navigateToView('catalog');
+            },
             onShowToast: showToast,
         });
         mainContentEl.appendChild(adminDashboard);
@@ -357,7 +471,12 @@ async function initApp() {
     function renderCatalogView() {
         mainContentEl.innerHTML = '';
 
-        // Section Top Shops (Vendeurs populaires certifiés)
+        // 1. Bannière d'accueil & Découverte UIDT (affichée en mode accueil sans recherche active)
+        if (!appState.searchQuery && appState.currentCategory === 'all') {
+            mainContentEl.appendChild(heroBannerComponent);
+        }
+
+        // 2. Section Top Shops (Vendeurs populaires certifiés)
         if (appState.topShops.length > 0 && !appState.searchQuery) {
             const topShopsSection = document.createElement('section');
             topShopsSection.className = 'flex flex-col gap-3';
@@ -369,10 +488,10 @@ async function initApp() {
                     </h2>
                     <span class="text-xs text-slate-400 font-medium">Vendeurs certifiés</span>
                 </div>
-                <div class="flex items-center gap-3 overflow-x-auto scrollbar-none py-1" style="scrollbar-width: none;">
+                <div class="flex items-center gap-3 overflow-x-auto no-scrollbar py-1" style="scrollbar-width: none;">
                     ${appState.topShops.map((shop) => `
-                        <div class="flex-shrink-0 bg-white border border-slate-200/80 rounded-2xl p-3 flex items-center gap-3 shadow-sm hover:shadow transition-all min-w-[200px]">
-                            <div class="w-11 h-11 rounded-full bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm">
+                        <div class="flex-shrink-0 bg-white border border-slate-200/80 rounded-2xl p-3 flex items-center gap-3 shadow-card hover:shadow-card-hover transition-all min-w-[200px]">
+                            <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm shadow-sm">
                                 ${((shop.prenom?.[0] || 'V') + (shop.nom?.[0] || '')).toUpperCase()}
                             </div>
                             <div class="flex flex-col min-w-0">
@@ -390,31 +509,31 @@ async function initApp() {
             mainContentEl.appendChild(topShopsSection);
         }
 
-        // Section Titre des offres
+        // 3. Section Titre des offres
         const productsHeaderSection = document.createElement('div');
-        productsHeaderSection.className = 'flex items-center justify-between pt-2';
+        productsHeaderSection.className = 'flex items-center justify-between pt-1';
         productsHeaderSection.innerHTML = `
             <div>
-                <h1 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900">
+                <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900">
                     ${appState.searchQuery ? `Résultats pour "${escapeHTML(appState.searchQuery)}"` : 'Offres disponibles'}
-                </h1>
+                </h2>
                 <p class="text-xs text-slate-500 mt-0.5">
-                    ${appState.isLoading ? 'Chargement des produits...' : `${appState.products.length} article${appState.products.length > 1 ? 's' : ''} trouvé${appState.products.length > 1 ? 's' : ''}`}
+                    ${appState.isLoading ? 'Recherche des offres...' : `${appState.products.length} article${appState.products.length > 1 ? 's' : ''} disponible${appState.products.length > 1 ? 's' : ''}`}
                 </p>
             </div>
         `;
         mainContentEl.appendChild(productsHeaderSection);
 
-        // État de chargement (Squelettes)
+        // État de chargement (Squelettes Shimmer modernes)
         if (appState.isLoading) {
             const skeletonGrid = document.createElement('div');
             skeletonGrid.id = 'catalog-loading-skeleton';
-            skeletonGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4';
-            skeletonGrid.innerHTML = Array(6).fill(0).map(() => `
-                <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col gap-3 animate-pulse">
-                    <div class="w-full aspect-square bg-slate-200 rounded-xl"></div>
-                    <div class="h-3.5 bg-slate-200 rounded w-3/4"></div>
-                    <div class="h-4 bg-slate-200 rounded w-1/2 mt-auto"></div>
+            skeletonGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4';
+            skeletonGrid.innerHTML = Array(8).fill(0).map(() => `
+                <div class="bg-white rounded-3xl border border-slate-200/70 p-3.5 flex flex-col gap-3 shadow-card overflow-hidden">
+                    <div class="w-full aspect-square shimmer-placeholder rounded-2xl"></div>
+                    <div class="h-3.5 shimmer-placeholder rounded-md w-3/4"></div>
+                    <div class="h-4 shimmer-placeholder rounded-md w-1/2 mt-auto"></div>
                 </div>
             `).join('');
             mainContentEl.appendChild(skeletonGrid);
@@ -485,6 +604,15 @@ async function initApp() {
         if (skeleton) skeleton.remove();
     }
 
+    function updateCategoryCounters(items) {
+        if (!items || !categoryChipsComponent?.setCategoryCounts) return;
+        const counts = { all: items.length };
+        items.forEach((p) => {
+            if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
+        });
+        categoryChipsComponent.setCategoryCounts(counts);
+    }
+
     // Chargement dynamique des données
     async function reloadProducts() {
         appState.isLoading = true;
@@ -507,6 +635,7 @@ async function initApp() {
         } finally {
             hideLoading();
             renderCatalogView();
+            updateCategoryCounters(appState.products);
         }
     }
 
@@ -539,6 +668,7 @@ async function initApp() {
         ]);
         appState.products = products || [];
         appState.topShops = topShops || [];
+        updateCategoryCounters(appState.products);
     } catch (err) {
         console.error('[Main] Erreur chargement initial:', err);
         appState.products = [];
