@@ -276,11 +276,10 @@ async function initApp() {
     footerEl.innerHTML = `
         <div class="w-full flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-slate-500">
             <!-- Marque & Identité UIDT -->
-            <div class="flex items-center gap-3">
-                <img src="${logoUrl}" alt="Campus Market" class="h-9 sm:h-11 w-auto object-contain" onerror="this.src='/assets/logo.webp'">
-                <div class="text-left">
-                    <span class="font-heading font-extrabold text-slate-900 text-sm block leading-tight">Campus Market</span>
-                    <span class="text-[11px] text-slate-400">Université Iba Der Thiam de Thiès</span>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <img src="${logoUrl}" alt="Campus Market" class="h-10 sm:h-12 w-auto max-w-[200px] object-contain" onerror="this.src='/assets/logo.webp'">
+                <div class="text-left hidden sm:block">
+                    <span class="text-[11px] text-slate-400 block font-medium">Université Iba Der Thiam de Thiès</span>
                 </div>
             </div>
 

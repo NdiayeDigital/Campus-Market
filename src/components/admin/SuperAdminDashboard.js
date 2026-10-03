@@ -31,6 +31,7 @@ import { supabase } from '../../services/supabase.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
 import { exportOrdersToCSV, exportSellersToCSV, exportAccountsToCSV } from '../../utils/export-csv.js';
+import logoUrl from '../../assets/logo.webp';
 
 /**
  * Crée le tableau de bord SuperAdmin.
@@ -163,12 +164,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
             <aside id="admin-desktop-sidebar" aria-label="Navigation SuperAdmin desktop" class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white border-r border-slate-200/80 text-slate-900 z-40 flex-col justify-between p-5 select-none shadow-xs">
                 <!-- Haut : Identité SuperAdmin & Marque Campus Market -->
                 <div class="flex flex-col gap-6">
-                    <div class="flex items-center gap-3 px-1 py-1">
-                        <img src="/assets/logo.webp" alt="Campus Market" class="h-10 w-auto object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
-                        <div class="flex flex-col min-w-0">
-                            <span class="font-heading font-extrabold text-primary text-base tracking-tight leading-none block truncate">CAMPUS MARKET</span>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">Supervision UIDT</span>
-                        </div>
+                    <div class="flex flex-col items-start gap-1.5 px-1 py-1">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-11 w-auto max-w-[190px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <span class="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">Supervision Centrale</span>
                     </div>
 
                     <!-- Superviseur actif -->
@@ -252,7 +250,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
             <header class="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 text-slate-900 shadow-xs w-full">
                 <div class="w-full px-4 py-2.5 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2.5 min-w-0">
-                        <img src="/assets/logo.webp" alt="Campus Market" class="h-8 w-auto object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
                         <div class="min-w-0">
                             <span class="font-heading font-extrabold text-primary text-sm leading-none block truncate">CAMPUS MARKET</span>
                             <span class="text-[10px] text-slate-500 font-medium leading-tight mt-0.5 block truncate">Administration UIDT • ${escapeHTML(currentAdmin?.prenom || 'Admin')}</span>
@@ -279,7 +277,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                     
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                         <div class="flex items-center gap-2.5">
-                            <img src="/assets/logo.webp" alt="Campus Market" class="h-7 w-auto object-contain">
+                            <img src="${logoUrl}" alt="Campus Market" class="h-7 w-auto max-w-[120px] object-contain" onerror="this.src='/assets/logo.webp'">
                             <div>
                                 <h4 class="font-heading font-extrabold text-sm text-slate-900">Administration Centrale</h4>
                                 <p class="text-[11px] text-slate-500">Actions et supervision UIDT</p>
@@ -340,14 +338,83 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
             </nav>
 
             <!-- 5. CONTENU PRINCIPAL PLEIN ÉCRAN (w-full lg:ml-64 lg:w-[calc(100%-16rem)]) -->
-            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-screen p-4 sm:p-6 lg:p-8 xl:p-10 pb-28 sm:pb-8 bg-[#F8FAFC] flex-1">
-                <div id="admin-tab-content" class="w-full">
-                    ${activeTab === 'overview' ? renderOverviewTab() : ''}
-                    ${activeTab === 'sellers' ? renderSellersTab() : ''}
-                    ${activeTab === 'accounts' ? renderAccountsTab() : ''}
-                    ${activeTab === 'products' ? renderProductsTab() : ''}
-                    ${activeTab === 'orders' ? renderOrdersTab() : ''}
-                    ${activeTab === 'locations' ? renderLocationsTab() : ''}
+            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-screen bg-[#F8FAFC] flex flex-col flex-1 pb-28 sm:pb-8">
+                <!-- TOP HEADER SUPERADMIN DESKTOP (hidden lg:flex, sticky top-0, z-30) -->
+                <header class="hidden lg:flex sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 w-full px-8 py-3.5 items-center justify-between select-none shadow-xs">
+                    <!-- Gauche : Fil d'Ariane & Titre de section -->
+                    <div class="flex items-center gap-3">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-7.5 w-auto max-w-[140px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <div class="flex items-center gap-2 text-xs text-slate-400 font-semibold">
+                            <span class="hover:text-slate-600 transition-colors">Supervision UIDT</span>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                            <span class="text-primary font-bold">${(navTabs.find(t => t.id === activeTab) || navTabs[0]).label}</span>
+                        </div>
+                    </div>
+
+                    <!-- Droite : Statut Opérationnel + Actions Rapides + Profil -->
+                    <div class="flex items-center gap-3">
+                        <!-- Statut Système -->
+                        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-bold shadow-2xs">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>Système Opérationnel</span>
+                        </div>
+
+                        <div class="h-4 w-px bg-slate-200"></div>
+
+                        <!-- Bouton Actualiser Top -->
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-refresh-admin" 
+                            title="Actualiser les données"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                        >
+                            <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                            <span>Actualiser</span>
+                        </button>
+
+                        <!-- Bouton Marketplace Top -->
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-admin-view-site" 
+                            title="Voir la marketplace publique"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                        >
+                            <i class="fa-solid fa-store text-xs"></i>
+                            <span>Boutique</span>
+                        </button>
+
+                        <div class="h-4 w-px bg-slate-200"></div>
+
+                        <!-- Profil Superviseur & Bouton Quitter -->
+                        <div class="flex items-center gap-2.5 pl-1">
+                            <div class="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
+                                ${((currentAdmin?.prenom?.[0] || '') + (currentAdmin?.nom?.[0] || 'A')).toUpperCase()}
+                            </div>
+                            <div class="flex flex-col text-left">
+                                <span class="text-xs font-extrabold text-slate-900 leading-tight truncate max-w-[120px]">${escapeHTML(currentAdmin?.prenom || '')} ${escapeHTML(currentAdmin?.nom || 'Admin')}</span>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase leading-none">SuperAdmin</span>
+                            </div>
+                            <button 
+                                type="button" 
+                                id="top-hdr-btn-exit-admin" 
+                                title="Quitter la session d'administration"
+                                class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 flex items-center justify-center text-xs active:scale-95 transition-all cursor-pointer ml-1"
+                            >
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex-1">
+                    <div id="admin-tab-content" class="w-full">
+                        ${activeTab === 'overview' ? renderOverviewTab() : ''}
+                        ${activeTab === 'sellers' ? renderSellersTab() : ''}
+                        ${activeTab === 'accounts' ? renderAccountsTab() : ''}
+                        ${activeTab === 'products' ? renderProductsTab() : ''}
+                        ${activeTab === 'orders' ? renderOrdersTab() : ''}
+                        ${activeTab === 'locations' ? renderLocationsTab() : ''}
+                    </div>
                 </div>
             </main>
 
@@ -1827,9 +1894,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                 <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-8 flex flex-col gap-6 relative z-10 view-transition-enter">
-                    <div class="flex items-center gap-3.5">
-                        <img src="/assets/logo.webp" alt="Campus Market" class="h-11 w-auto object-contain" onerror="this.src='/assets/logo.webp'">
-                        <div>
+                    <div class="flex flex-col items-center text-center gap-2">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-14 sm:h-16 w-auto object-contain mx-auto" onerror="this.src='/assets/logo.webp'">
+                        <div class="mt-1">
                             <h2 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 leading-tight">Portail Administrateur</h2>
                             <p class="text-xs text-slate-500">Accès institutionnel réservé à l'UIDT</p>
                         </div>
@@ -1899,8 +1966,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
     }
 
     function bindEvents() {
-        // 1. Actions SuperAdmin (Sidebar Desktop)
+        // 1. Actions SuperAdmin (Sidebar Desktop & Top Header)
         containerEl.querySelector('#hdr-btn-refresh-admin')?.addEventListener('click', loadAdminData);
+        containerEl.querySelector('#top-hdr-btn-refresh-admin')?.addEventListener('click', loadAdminData);
         containerEl.querySelector('#btn-refresh-admin')?.addEventListener('click', loadAdminData);
 
         const handleViewSite = () => {
@@ -1911,6 +1979,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
             }
         };
         containerEl.querySelector('#hdr-btn-admin-view-site')?.addEventListener('click', handleViewSite);
+        containerEl.querySelector('#top-hdr-btn-admin-view-site')?.addEventListener('click', handleViewSite);
 
         const exitAdminHandler = async () => {
             await supabase.auth.signOut();
@@ -1919,6 +1988,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
             if (typeof onExit === 'function') onExit();
         };
         containerEl.querySelector('#hdr-btn-exit-admin')?.addEventListener('click', exitAdminHandler);
+        containerEl.querySelector('#top-hdr-btn-exit-admin')?.addEventListener('click', exitAdminHandler);
         containerEl.querySelector('#btn-exit-admin')?.addEventListener('click', exitAdminHandler);
 
         // Tiroir mobile (Bottom Sheet)

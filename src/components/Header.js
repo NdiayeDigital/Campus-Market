@@ -25,11 +25,8 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
             <!-- Ligne supérieure : Logo & Actions rapides -->
             <div class="flex items-center justify-between gap-4">
                 <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer group" id="header-logo-btn">
-                    <img src="${logoUrl}" alt="Campus Market" class="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-105" onerror="this.src='/assets/logo.webp'">
-                    <div class="flex flex-col">
-                        <span class="font-heading font-extrabold text-primary text-sm sm:text-base tracking-tight leading-none">CAMPUS MARKET</span>
-                        <span class="text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">UIDT Thiès</span>
-                    </div>
+                    <img src="${logoUrl}" alt="Campus Market" class="h-9 sm:h-10.5 w-auto max-w-[170px] sm:max-w-[210px] object-contain transition-transform group-hover:scale-105" onerror="this.src='/assets/logo.webp'">
+                    <span class="hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">UIDT Thiès</span>
                 </div>
 
                 <!-- Groupe de navigation rapide & Panier -->

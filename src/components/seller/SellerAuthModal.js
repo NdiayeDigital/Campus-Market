@@ -6,6 +6,7 @@
 
 import { loginSeller, registerSeller } from '../../services/seller-service.js';
 import { CATEGORIES } from '../../services/catalog-service.js';
+import logoUrl from '../../assets/logo.webp';
 
 /**
  * Crée le modal d'authentification marchand.
@@ -27,7 +28,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 <!-- En-tête -->
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
                     <div class="flex items-center gap-2.5">
-                        <img src="/assets/logo.webp" alt="Campus Market" class="h-9 w-auto object-contain">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-9 w-auto max-w-[140px] object-contain">
                         <div>
                             <h2 class="font-heading font-bold text-slate-900 text-base leading-tight">Espace Vendeur</h2>
                             <span class="text-[10px] text-slate-400 font-medium">UIDT Thiès</span>

@@ -83,14 +83,14 @@ export function createProductManager({
                         id="pm-tab-list" 
                         class="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[42px] cursor-pointer active:scale-95 ${
                             activeTab === 'list'
-                                ? 'bg-slate-900 text-white shadow-xs'
+                                ? 'bg-primary text-white shadow-md shadow-primary/20'
                                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                         }"
                     >
                         <i class="fa-solid fa-boxes-stacked text-xs"></i>
                         <span>Mes Articles</span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            activeTab === 'list' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                            activeTab === 'list' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                         }">
                             ${products.length}
                         </span>
@@ -334,7 +334,7 @@ export function createProductManager({
                                     class="w-full h-full object-cover transition-transform duration-300"
                                     onerror="this.onerror=null; this.src='/assets/placeholder.webp';"
                                 >
-                                <span id="live-preview-price" class="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-xs font-black bg-slate-900/90 text-amber-300 backdrop-blur-md shadow-sm tabular-nums">
+                                <span id="live-preview-price" class="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-xs font-black bg-white/95 text-primary backdrop-blur-md shadow-sm border border-slate-200/80 tabular-nums">
                                     ${previewPrice} F
                                 </span>
                                 <span id="live-preview-category" class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-slate-800 backdrop-blur-md shadow-xs">
@@ -361,7 +361,7 @@ export function createProductManager({
                                     <span class="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
                                         <i class="fa-solid fa-truck-fast text-primary"></i> Livraison campus
                                     </span>
-                                    <span class="px-3 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg pointer-events-none">
+                                    <span class="px-3 py-1 bg-primary text-white text-[11px] font-bold rounded-lg pointer-events-none">
                                         Ajouter au panier
                                     </span>
                                 </div>
@@ -420,7 +420,7 @@ export function createProductManager({
                 <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                     <button type="button" data-article-filter="all" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         articleFilter === 'all'
-                            ? 'bg-slate-900 text-white shadow-xs'
+                            ? 'bg-primary text-white shadow-xs'
                             : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
                     }">
                         Tous (${products.length})

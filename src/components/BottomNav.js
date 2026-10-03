@@ -118,12 +118,9 @@ export function createBottomNav({
             >
                 <!-- Haut : Logo officiel UIDT & Marque -->
                 <div class="flex flex-col gap-6">
-                    <div class="flex items-center gap-3 cursor-pointer group px-2 py-1" id="sidebar-logo-btn">
-                        <img src="${logoUrl}" alt="Campus Market" class="h-10 w-auto object-contain transition-transform group-hover:scale-105" onerror="this.src='/assets/logo.webp'">
-                        <div class="flex flex-col">
-                            <span class="font-heading font-extrabold text-primary text-base tracking-tight leading-none">CAMPUS MARKET</span>
-                            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">UIDT Thiès</span>
-                        </div>
+                    <div class="flex flex-col items-start gap-1.5 cursor-pointer group px-2 py-1" id="sidebar-logo-btn">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-11 w-auto max-w-[195px] object-contain transition-transform group-hover:scale-105" onerror="this.src='/assets/logo.webp'">
+                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest pl-1">Université Iba Der Thiam</span>
                     </div>
 
                     <!-- Navigation verticale avec liens aérés -->

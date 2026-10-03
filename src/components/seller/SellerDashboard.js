@@ -20,6 +20,7 @@ import { audioAlert, playNotificationSound } from '../../utils/audio-alert.js';
 import { escapeHTML, formatSenegalPhone } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
 import { exportOrdersToCSV } from '../../utils/export-csv.js';
+import logoUrl from '../../assets/logo.webp';
 
 /**
  * Crée le tableau de bord marchand moderne et fluide.
@@ -164,16 +165,15 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             <aside id="seller-desktop-sidebar" aria-label="Navigation vendeur desktop" class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white border-r border-slate-200/80 z-40 flex-col justify-between p-5 select-none shadow-xs">
                 <div class="flex flex-col gap-6">
                     <!-- Logo & Titre Vendeur -->
-                    <div class="flex items-center gap-3 px-1 py-1">
-                        <div class="w-10 h-10 rounded-2xl ${isSuspended ? 'bg-slate-200 text-slate-500' : 'bg-primary text-white'} flex items-center justify-center font-extrabold text-base shadow-xs flex-shrink-0">
-                            <i class="fa-solid fa-shop"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-1.5">
-                                <span class="font-heading font-extrabold text-slate-900 text-base leading-tight">Espace Vendeur</span>
-                            </div>
-                            <span class="text-xs text-slate-500 font-semibold truncate block mt-0.5">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
-                        </div>
+                    <div class="flex flex-col items-start gap-1.5 px-1 py-1">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-11 w-auto max-w-[190px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <span class="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">Espace Marchand</span>
+                    </div>
+
+                    <!-- Marchand certifié -->
+                    <div class="px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Marchand certifié</span>
+                        <span class="text-xs font-extrabold text-slate-900 block truncate mt-0.5">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
                     </div>
 
                     <!-- Statut Boutique interactif -->
@@ -211,20 +211,20 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         <button 
                             type="button" 
                             id="subtab-orders" 
-                            class="flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer active:scale-95 ${
+                            class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                 activeSubTab === 'orders'
-                                    ? 'bg-slate-900 text-white shadow-sm'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                    ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
                             }"
                         >
                             <div class="flex items-center gap-3">
-                                <i class="fa-solid fa-clipboard-list text-base ${activeSubTab === 'orders' ? 'text-accent' : 'text-slate-400'}"></i>
+                                <i class="fa-solid fa-clipboard-list text-xs w-4 text-center ${activeSubTab === 'orders' ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
                                 <span>Commandes</span>
                             </div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
                                 activeSubTab === 'orders' 
-                                    ? 'bg-slate-800 text-slate-200' 
-                                    : (pendingCount > 0 ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-slate-100 text-slate-600')
+                                    ? 'bg-white/20 text-white' 
+                                    : (pendingCount > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 text-slate-600')
                             }">
                                 ${allOrders.length}
                             </span>
@@ -234,18 +234,18 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         <button 
                             type="button" 
                             id="subtab-products" 
-                            class="flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer active:scale-95 ${
+                            class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                 activeSubTab === 'products'
-                                    ? 'bg-slate-900 text-white shadow-sm'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                    ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
                             }"
                         >
                             <div class="flex items-center gap-3">
-                                <i class="fa-solid fa-tags text-base ${activeSubTab === 'products' ? 'text-accent' : 'text-slate-400'}"></i>
+                                <i class="fa-solid fa-tags text-xs w-4 text-center ${activeSubTab === 'products' ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
                                 <span>Mes Articles</span>
                             </div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                                activeSubTab === 'products' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
+                                activeSubTab === 'products' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                             }">
                                 ${data.totalProductsCount || 0}
                             </span>
@@ -256,13 +256,13 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                             <button 
                                 type="button" 
                                 id="subtab-add-product" 
-                                class="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer active:scale-95 ${
+                                class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                     activeSubTab === 'add-product'
-                                        ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                        ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
+                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
                                 }"
                             >
-                                <i class="fa-solid fa-plus text-base ${activeSubTab === 'add-product' ? 'text-white' : 'text-slate-400'}"></i>
+                                <i class="fa-solid fa-plus text-xs w-4 text-center ${activeSubTab === 'add-product' ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
                                 <span>Ajouter un produit</span>
                             </button>
                         ` : ''}
@@ -324,9 +324,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                 <div class="w-full px-4 py-2.5 flex items-center justify-between gap-3">
                     <!-- Logo & Titre Vendeur -->
                     <div class="flex items-center gap-2.5 min-w-0">
-                        <div class="w-8 h-8 rounded-xl ${isSuspended ? 'bg-slate-200 text-slate-500' : 'bg-primary text-white'} flex items-center justify-center font-extrabold text-xs shadow-xs shrink-0">
-                            <i class="fa-solid fa-shop"></i>
-                        </div>
+                        <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
                         <div class="min-w-0">
                             <div class="flex items-center gap-1.5">
                                 <span class="font-heading font-extrabold text-slate-900 text-sm leading-tight block truncate">Espace Vendeur</span>
@@ -374,9 +372,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                     
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
-                                <i class="fa-solid fa-store"></i>
-                            </div>
+                            <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
                             <div>
                                 <h4 class="font-heading font-extrabold text-sm text-slate-900">Boutique ${escapeHTML(seller.prenom)}</h4>
                                 <p class="text-[11px] text-slate-400">Actions et paramètres du compte</p>
@@ -419,7 +415,108 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             </div>
 
             <!-- 4. CONTENU PRINCIPAL PLEIN ÉCRAN (w-full lg:ml-64 lg:w-[calc(100%-16rem)]) -->
-            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-6 pb-28 sm:pb-8 flex flex-col gap-6 flex-1 min-h-screen">
+            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-screen bg-[#F8FAFC] flex flex-col flex-1 pb-28 sm:pb-8">
+                <!-- TOP HEADER VENDEUR DESKTOP (hidden lg:flex, sticky top-0, z-30) -->
+                <header class="hidden lg:flex sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 w-full px-8 py-3.5 items-center justify-between select-none shadow-xs">
+                    <!-- Gauche : Fil d'Ariane & Titre de section -->
+                    <div class="flex items-center gap-3">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-7.5 w-auto max-w-[140px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <div class="flex items-center gap-2 text-xs text-slate-400 font-semibold">
+                            <span class="hover:text-slate-600 transition-colors">Espace Marchand</span>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                            <span class="text-primary font-bold">
+                                ${activeSubTab === 'orders' ? 'Commandes en direct' : activeSubTab === 'products' ? 'Mes Articles' : 'Ajouter un produit'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Droite : Statut Boutique + Son + Actions Rapides + Profil -->
+                    <div class="flex items-center gap-3">
+                        <!-- Statut Boutique interactif -->
+                        ${!isSuspended ? `
+                            <button 
+                                type="button" 
+                                id="top-hdr-btn-toggle-shop" 
+                                title="${isOpen ? 'Mettre la boutique en pause' : 'Ouvrir la boutique'}"
+                                class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 cursor-pointer ${
+                                    isOpen 
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' 
+                                        : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                                }"
+                            >
+                                <span class="w-2 h-2 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
+                                <span>${isOpen ? 'Boutique Ouverte' : 'Boutique en Pause'}</span>
+                            </button>
+                        ` : `
+                            <div class="px-3 py-1.5 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-ban text-rose-600 text-xs"></i>
+                                <span>Compte Suspendu</span>
+                            </div>
+                        `}
+
+                        <div class="h-4 w-px bg-slate-200"></div>
+
+                        <!-- Bouton Alerte Sonore Top -->
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-toggle-audio" 
+                            title="Activer/Désactiver les alertes sonores"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer min-h-[36px] ${
+                                audioAlert.isEnabled 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                            }"
+                        >
+                            <i class="fa-solid ${audioAlert.isEnabled ? 'fa-volume-high text-emerald-600' : 'fa-volume-xmark'} text-xs"></i>
+                            <span>${audioAlert.isEnabled ? 'Son ON' : 'Son OFF'}</span>
+                        </button>
+
+                        <!-- Bouton Actualiser Top -->
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-refresh-orders" 
+                            title="Actualiser les commandes"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                        >
+                            <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                            <span>Actualiser</span>
+                        </button>
+
+                        <!-- Bouton Marketplace Top -->
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-seller-back-shop" 
+                            title="Voir la marketplace publique"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                        >
+                            <i class="fa-solid fa-store text-xs"></i>
+                            <span>Marketplace</span>
+                        </button>
+
+                        <div class="h-4 w-px bg-slate-200"></div>
+
+                        <!-- Profil Marchand & Déconnexion -->
+                        <div class="flex items-center gap-2.5 pl-1">
+                            <div class="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
+                                ${((seller?.prenom?.[0] || '') + (seller?.nom?.[0] || 'V')).toUpperCase()}
+                            </div>
+                            <div class="flex flex-col text-left">
+                                <span class="text-xs font-extrabold text-slate-900 leading-tight truncate max-w-[120px]">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase leading-none">Marchand</span>
+                            </div>
+                            <button 
+                                type="button" 
+                                id="top-hdr-btn-seller-logout" 
+                                title="Se déconnecter de l'espace marchand"
+                                class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 flex items-center justify-center text-xs active:scale-95 transition-all cursor-pointer ml-1"
+                            >
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex flex-col gap-6 flex-1">
                 ${isSuspended ? `
                     <!-- Alerte rouge Vendeur Suspendu -->
                     <div class="bg-rose-50 border border-rose-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-rose-950 animate-fade-in">
@@ -617,7 +714,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         data-seller-tab="orders"
                         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'orders'
-                                ? 'bg-slate-900 text-white shadow-xs'
+                                ? 'bg-primary text-white shadow-md shadow-primary/20'
                                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                         }"
                     >
@@ -625,7 +722,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         <span>Commandes</span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                             activeSubTab === 'orders' 
-                                ? 'bg-slate-800 text-slate-200' 
+                                ? 'bg-white/20 text-white' 
                                 : (pendingCount > 0 ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-slate-100 text-slate-600')
                         }">
                             ${allOrders.length}
@@ -637,14 +734,14 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         data-seller-tab="products"
                         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'products'
-                                ? 'bg-slate-900 text-white shadow-xs'
+                                ? 'bg-primary text-white shadow-md shadow-primary/20'
                                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                         }"
                     >
                         <i class="fa-solid fa-tags text-xs"></i>
                         <span>Mes Articles</span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            activeSubTab === 'products' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                            activeSubTab === 'products' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                         }">
                             ${data.totalProductsCount || 0}
                         </span>
@@ -853,7 +950,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                 <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                     <button type="button" data-order-filter="all" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         orderFilter === 'all'
-                            ? 'bg-slate-900 text-white shadow-xs'
+                            ? 'bg-primary text-white shadow-xs'
                             : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
                     }">
                         Toutes (${orders.length})
@@ -929,7 +1026,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                     statusBadgeClass = 'bg-blue-50 text-blue-800 border-blue-200';
                                     stepIdx = 2;
                                     nextActionBtn = `
-                                        <button data-action="update-status" data-id="${o.id}" data-next="processing" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all min-h-[44px] flex items-center gap-1.5 cursor-pointer">
+                                        <button data-action="update-status" data-id="${o.id}" data-next="processing" class="px-4 py-2 bg-primary hover:bg-primary-hover active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all min-h-[44px] flex items-center gap-1.5 cursor-pointer">
                                             <i class="fa-solid fa-fire-burner text-xs"></i>
                                             <span>Préparer</span>
                                         </button>
@@ -940,7 +1037,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                     statusBadgeClass = 'bg-indigo-50 text-indigo-800 border-indigo-200';
                                     stepIdx = 3;
                                     nextActionBtn = `
-                                        <button data-action="update-status" data-id="${o.id}" data-next="shipped" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all min-h-[44px] flex items-center gap-1.5 cursor-pointer">
+                                        <button data-action="update-status" data-id="${o.id}" data-next="shipped" class="px-4 py-2 bg-primary hover:bg-primary-hover active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all min-h-[44px] flex items-center gap-1.5 cursor-pointer">
                                             <i class="fa-solid fa-motorcycle text-xs"></i>
                                             <span>Remettre au livreur</span>
                                         </button>
@@ -994,7 +1091,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                     <!-- En-tête de la commande -->
                                     <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-wrap gap-2">
                                         <div class="flex items-center gap-2">
-                                            <span class="font-heading font-extrabold text-sm text-slate-900">${escapeHTML(orderRef)}</span>
+                                            <span class="font-mono font-bold text-xs text-primary">${escapeHTML(orderRef)}</span>
                                             <span class="text-slate-300">•</span>
                                             <span class="text-xs text-slate-400">
                                                 ${new Date(o.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à ${new Date(o.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -1107,6 +1204,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-toggle-audio')?.addEventListener('click', toggleAudioHandler);
+        containerEl.querySelector('#top-hdr-btn-toggle-audio')?.addEventListener('click', toggleAudioHandler);
         containerEl.querySelector('#drawer-btn-toggle-audio')?.addEventListener('click', () => {
             closeDrawer();
             toggleAudioHandler();
@@ -1130,6 +1228,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-toggle-shop')?.addEventListener('click', toggleShopHandler);
+        containerEl.querySelector('#top-hdr-btn-toggle-shop')?.addEventListener('click', toggleShopHandler);
         containerEl.querySelector('#hdr-btn-toggle-shop-mobile')?.addEventListener('click', toggleShopHandler);
 
         // Retour à la boutique publique
@@ -1139,6 +1238,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-seller-back-shop')?.addEventListener('click', backShopHandler);
+        containerEl.querySelector('#top-hdr-btn-seller-back-shop')?.addEventListener('click', backShopHandler);
         containerEl.querySelector('#drawer-btn-back-shop')?.addEventListener('click', () => {
             closeDrawer();
             backShopHandler();
@@ -1163,6 +1263,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-seller-logout')?.addEventListener('click', logoutHandler);
+        containerEl.querySelector('#top-hdr-btn-seller-logout')?.addEventListener('click', logoutHandler);
         containerEl.querySelector('#drawer-btn-logout')?.addEventListener('click', () => {
             closeDrawer();
             logoutHandler();
@@ -1192,6 +1293,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-refresh-orders')?.addEventListener('click', refreshHandler);
+        containerEl.querySelector('#top-hdr-btn-refresh-orders')?.addEventListener('click', refreshHandler);
         containerEl.querySelector('#drawer-btn-refresh-orders')?.addEventListener('click', (e) => {
             closeDrawer();
             refreshHandler(e);
