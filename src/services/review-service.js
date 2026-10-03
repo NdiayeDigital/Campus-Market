@@ -4,7 +4,6 @@
  */
 
 import { supabase } from './supabase.js';
-import { escapeHTML } from '../utils/security.js';
 
 /**
  * Récupère l'ensemble des avis publics d'un vendeur.
