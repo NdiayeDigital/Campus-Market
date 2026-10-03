@@ -36,7 +36,9 @@ export async function createProduct({
 }) {
     if (!title || !price) throw new Error('Veuillez renseigner le titre et le prix.');
 
-    const parsedPrice = parseFloat(price);
+    // Assainissement robuste du prix (supporte les espaces "1 500" et mentions "FCFA")
+    const cleanPriceStr = String(price).replace(/\s+/g, '').replace(/fcfa/gi, '').replace(/f$/i, '');
+    const parsedPrice = parseFloat(cleanPriceStr);
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
         throw new Error('Le prix doit être un nombre positif supérieur à zéro.');
     }
@@ -65,7 +67,7 @@ export async function createProduct({
             try {
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('role, is_open')
+                    .select('role, is_open, is_suspended')
                     .eq('id', session.user.id)
                     .maybeSingle();
 
@@ -73,7 +75,7 @@ export async function createProduct({
                     if (profile.role === 'vendeur_pending') {
                         throw new Error("Votre candidature vendeur est en cours de validation par l'administration UIDT. Vous pourrez publier vos produits dès son approbation.");
                     }
-                    if (profile.role === 'suspendu' || profile.is_open === false) {
+                    if (profile.role === 'vendeur_desactive' || profile.role === 'suspendu' || profile.is_suspended === true || profile.is_open === false) {
                         throw new Error("Votre compte vendeur ou boutique a été suspendu par l'administration. Veuillez contacter le support.");
                     }
                     if (profile.role !== 'vendeur' && profile.role !== 'superadmin') {
@@ -203,7 +205,8 @@ export async function updateProduct({
     if (!productId) throw new Error('Identifiant produit requis pour la modification.');
     if (!title || !price) throw new Error('Veuillez renseigner le titre et le prix.');
 
-    const parsedPrice = parseFloat(price);
+    const cleanPriceStr = String(price).replace(/\s+/g, '').replace(/fcfa/gi, '').replace(/f$/i, '');
+    const parsedPrice = parseFloat(cleanPriceStr);
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
         throw new Error('Le prix doit être un nombre positif supérieur à zéro.');
     }

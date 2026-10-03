@@ -16,6 +16,7 @@ import { createBottomNav } from './components/BottomNav.js';
 import { createHeroBanner } from './components/HeroBanner.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
 import { createSellerDashboard } from './components/seller/SellerDashboard.js';
+import { createSellerShowcase } from './components/seller/SellerShowcase.js';
 import { createSuperAdminDashboard } from './components/admin/SuperAdminDashboard.js';
 import { getCurrentSeller } from './services/seller-service.js';
 import { supabase } from './services/supabase.js';
@@ -73,6 +74,7 @@ async function initApp() {
             if (existingSeller && existingSeller.profile && (existingSeller.profile.role === 'vendeur' || existingSeller.profile.role === 'superadmin')) {
                 appState.currentSeller = existingSeller.profile;
                 headerComponent?.updateSellerState?.(existingSeller.profile);
+                bottomNavComponent?.setSeller?.(existingSeller.profile);
                 try {
                     localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(existingSeller.profile));
                 } catch {}
@@ -87,6 +89,7 @@ async function initApp() {
         if (event === 'SIGNED_OUT') {
             appState.currentSeller = null;
             headerComponent?.updateSellerState?.(null);
+            bottomNavComponent?.setSeller?.(null);
             try {
                 localStorage.removeItem(LOCAL_SELLER_KEY);
             } catch {}
@@ -99,6 +102,7 @@ async function initApp() {
                 if (res?.profile) {
                     appState.currentSeller = res.profile;
                     headerComponent?.updateSellerState?.(res.profile);
+                    bottomNavComponent?.setSeller?.(res.profile);
                     try {
                         localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(res.profile));
                     } catch {}
@@ -126,6 +130,7 @@ async function initApp() {
         onAuthenticated: ({ profile }) => {
             appState.currentSeller = profile;
             headerComponent?.updateSellerState?.(profile);
+            bottomNavComponent?.setSeller?.(profile);
             try {
                 localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(profile));
             } catch {}
@@ -138,6 +143,11 @@ async function initApp() {
         onAddToCart: (product, qty = 1) => {
             cartStore.addToCart(product, qty);
             showToast(`Ajouté au panier : ${product.title} (x${qty})`, 'success');
+        },
+        onOpenSeller: (seller) => {
+            if (seller?.id) {
+                navigateToView('shop', { sellerId: seller.id });
+            }
         },
     });
 
@@ -222,13 +232,13 @@ async function initApp() {
         },
     });
 
-    // 5. Conteneur principal (Vues dynamiques)
+    // 5. Conteneur principal (Vues dynamiques - Plein écran fluide)
     const mainContentEl = document.createElement('main');
     mainContentEl.id = 'main-content';
-    mainContentEl.className = 'flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
+    mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
     rootWrapper.appendChild(mainContentEl);
 
-    // 6. Barre de navigation mobile inférieure (BottomNav)
+    // 6. Barre de navigation mobile inférieure (BottomNav) & Sidebar Desktop
     bottomNavComponent = createBottomNav({
         activeTab: appState.currentView,
         onNavigate: (viewName) => {
@@ -260,11 +270,11 @@ async function initApp() {
     });
     rootWrapper.appendChild(bottomNavComponent);
 
-    // 7. Footer
+    // 7. Footer (Plein écran fluide aligné avec la sidebar)
     const footerEl = document.createElement('footer');
-    footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 text-center mt-auto pb-28 sm:pb-8';
+    footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 sm:px-6 lg:px-8 xl:px-10 text-center mt-auto pb-28 sm:pb-8 lg:ml-64 lg:w-[calc(100%-16rem)] w-full';
     footerEl.innerHTML = `
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-slate-500">
+        <div class="w-full flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-slate-500">
             <!-- Marque & Identité UIDT -->
             <div class="flex items-center gap-3">
                 <img src="${logoUrl}" alt="Campus Market" class="h-9 sm:h-11 w-auto object-contain" onerror="this.src='/assets/logo.webp'">
@@ -323,7 +333,7 @@ async function initApp() {
     }
 
     // Navigation de vue
-    function navigateToView(viewName) {
+    function navigateToView(viewName, params = {}) {
         // Nettoyage du canal Realtime si on quitte l'espace vendeur
         if (appState.currentView === 'seller' && viewName !== 'seller' && activeDashboardEl?.cleanup) {
             activeDashboardEl.cleanup();
@@ -333,50 +343,82 @@ async function initApp() {
         appState.currentView = viewName;
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Animation fluide de changement de vue
-        mainContentEl.classList.remove('view-transition-enter');
-        void mainContentEl.offsetWidth;
-        mainContentEl.classList.add('view-transition-enter');
-
-        if (bottomNavComponent) {
-            bottomNavComponent.setActiveTab(viewName);
-            bottomNavComponent.setHidden(viewName === 'admin');
+        // Animation fluide de changement de vue (sauf seller et admin qui gèrent leurs propres barres et sidebars fixes)
+        if (viewName !== 'seller' && viewName !== 'admin') {
+            mainContentEl.classList.remove('view-transition-enter');
+            void mainContentEl.offsetWidth;
+            mainContentEl.classList.add('view-transition-enter');
+        } else {
+            mainContentEl.classList.remove('view-transition-enter');
         }
 
-        const targetHash = viewName === 'catalog' ? '' : `#${viewName}`;
+        if (bottomNavComponent) {
+            bottomNavComponent.setActiveTab(viewName === 'shop' ? 'catalog' : viewName);
+            bottomNavComponent.setHidden(viewName === 'admin' || viewName === 'seller');
+        }
+
+        let targetHash = viewName === 'catalog' ? '' : `#${viewName}`;
+        if (viewName === 'shop' && params.sellerId) {
+            targetHash = `#shop/${params.sellerId}`;
+        }
         if (window.location.hash !== targetHash) {
             history.replaceState(null, '', targetHash || window.location.pathname);
         }
 
         if (viewName === 'orders') {
-            mainContentEl.className = 'flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('orders');
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.remove('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(false);
             renderOrdersView();
         } else if (viewName === 'seller') {
-            mainContentEl.className = 'flex-1 w-full pb-24 sm:pb-8 flex flex-col view-transition-enter';
+            mainContentEl.className = 'flex-1 w-full p-0 m-0 pb-0 flex flex-col';
             if (headerComponent.setMode) headerComponent.setMode('hidden');
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.add('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(true);
             renderSellerView();
         } else if (viewName === 'admin') {
-            mainContentEl.className = 'flex-1 w-full pb-24 sm:pb-8 flex flex-col view-transition-enter';
+            mainContentEl.className = 'flex-1 w-full p-0 m-0 pb-0 flex flex-col';
             if (headerComponent.setMode) headerComponent.setMode('hidden');
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.add('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(true);
             renderAdminView();
+        } else if (viewName === 'shop') {
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            if (headerComponent.setMode) headerComponent.setMode('catalog');
+            categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.remove('hidden');
+            if (bottomNavComponent) bottomNavComponent.setHidden(false);
+            renderShopView(params.sellerId);
         } else {
-            mainContentEl.className = 'flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
             categoryChipsComponent.classList.remove('hidden');
             footerEl.classList.remove('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(false);
             renderCatalogView();
         }
+    }
+
+    // Rendu de la vitrine marchand publique
+    function renderShopView(sellerId) {
+        mainContentEl.innerHTML = '';
+        const showcaseEl = createSellerShowcase({
+            sellerId,
+            onBackToCatalog: () => navigateToView('catalog'),
+            onAddToCart: (product, qty = 1) => {
+                cartStore.addToCart(product, qty);
+                showToast(`Ajouté au panier : ${product.title} (x${qty})`, 'success');
+            },
+            onClickProduct: (product) => {
+                productDetailModalController.open(product);
+            },
+            onShowToast: showToast,
+        });
+        mainContentEl.appendChild(showcaseEl);
     }
 
     // Rendu de la vue Commandes acheteur
@@ -490,12 +532,16 @@ async function initApp() {
                 </div>
                 <div class="flex items-center gap-3 overflow-x-auto no-scrollbar py-1" style="scrollbar-width: none;">
                     ${appState.topShops.map((shop) => `
-                        <div class="flex-shrink-0 bg-white border border-slate-200/80 rounded-2xl p-3 flex items-center gap-3 shadow-card hover:shadow-card-hover transition-all min-w-[200px]">
-                            <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm shadow-sm">
+                        <div 
+                            data-shop-id="${shop.id}" 
+                            title="Visiter la boutique de ${escapeHTML(shop.prenom)}"
+                            class="flex-shrink-0 bg-white border border-slate-200/80 hover:border-primary/50 rounded-2xl p-3 flex items-center gap-3 shadow-card hover:shadow-card-hover transition-all min-w-[200px] cursor-pointer active:scale-95 group"
+                        >
+                            <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white font-heading font-extrabold flex items-center justify-center text-sm shadow-sm transition-colors">
                                 ${((shop.prenom?.[0] || 'V') + (shop.nom?.[0] || '')).toUpperCase()}
                             </div>
                             <div class="flex flex-col min-w-0">
-                                <span class="font-heading font-bold text-slate-900 text-xs truncate leading-tight">${escapeHTML(shop.prenom)} ${escapeHTML(shop.nom)}</span>
+                                <span class="font-heading font-bold text-slate-900 group-hover:text-primary transition-colors text-xs truncate leading-tight">${escapeHTML(shop.prenom)} ${escapeHTML(shop.nom)}</span>
                                 <div class="flex items-center gap-1 mt-1 text-[11px] text-amber-500 font-bold">
                                     <i class="fa-solid fa-star text-[10px]"></i>
                                     <span>${shop.avgRating || '5.0'}</span>
@@ -506,6 +552,14 @@ async function initApp() {
                     `).join('')}
                 </div>
             `;
+
+            topShopsSection.querySelectorAll('[data-shop-id]').forEach((shopCard) => {
+                shopCard.addEventListener('click', () => {
+                    const id = shopCard.dataset.shopId;
+                    if (id) navigateToView('shop', { sellerId: id });
+                });
+            });
+
             mainContentEl.appendChild(topShopsSection);
         }
 
@@ -528,8 +582,8 @@ async function initApp() {
         if (appState.isLoading) {
             const skeletonGrid = document.createElement('div');
             skeletonGrid.id = 'catalog-loading-skeleton';
-            skeletonGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4';
-            skeletonGrid.innerHTML = Array(8).fill(0).map(() => `
+            skeletonGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full';
+            skeletonGrid.innerHTML = Array(12).fill(0).map(() => `
                 <div class="bg-white rounded-3xl border border-slate-200/70 p-3.5 flex flex-col gap-3 shadow-card overflow-hidden">
                     <div class="w-full aspect-square shimmer-placeholder rounded-2xl"></div>
                     <div class="h-3.5 shimmer-placeholder rounded-md w-3/4"></div>
@@ -574,9 +628,9 @@ async function initApp() {
             return;
         }
 
-        // Grille des cartes produits
+        // Grille des cartes produits (Plein écran fluide)
         const gridEl = document.createElement('div');
-        gridEl.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4';
+        gridEl.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full';
 
         appState.products.forEach((product) => {
             const card = createProductCard({
@@ -587,6 +641,11 @@ async function initApp() {
                 },
                 onClickCard: (prod) => {
                     productDetailModalController.open(prod);
+                },
+                onOpenSeller: (seller) => {
+                    if (seller?.id) {
+                        navigateToView('shop', { sellerId: seller.id });
+                    }
                 },
             });
             gridEl.appendChild(card);
@@ -641,21 +700,30 @@ async function initApp() {
 
     // Écoute des changements de fragment d'URL pour navigation directe
     window.addEventListener('hashchange', () => {
-        const hash = window.location.hash.toLowerCase();
+        const rawHash = window.location.hash;
+        const hash = rawHash.toLowerCase();
         if (hash === '#admin') navigateToView('admin');
         else if (hash === '#seller') navigateToView('seller');
         else if (hash === '#orders') navigateToView('orders');
+        else if (hash.startsWith('#shop/')) {
+            const sellerId = rawHash.slice(6);
+            navigateToView('shop', { sellerId });
+        }
         else if (hash === '' || hash === '#') navigateToView('catalog');
     });
 
     // Rendu immédiat selon le hash URL (ou affichage immédiat des squelettes de chargement)
-    const initialHash = window.location.hash.toLowerCase();
+    const rawInitialHash = window.location.hash;
+    const initialHash = rawInitialHash.toLowerCase();
     if (initialHash === '#admin') {
         navigateToView('admin');
     } else if (initialHash === '#seller') {
         navigateToView('seller');
     } else if (initialHash === '#orders') {
         navigateToView('orders');
+    } else if (initialHash.startsWith('#shop/')) {
+        const sellerId = rawInitialHash.slice(6);
+        navigateToView('shop', { sellerId });
     } else {
         navigateToView('catalog');
     }

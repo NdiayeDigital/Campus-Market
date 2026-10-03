@@ -294,9 +294,65 @@ export async function fetchTopShops() {
     }
 }
 
+/**
+ * Récupère le profil public d'un marchand (vendeur).
+ * @param {string} sellerId - UUID du vendeur
+ * @returns {Promise<Object|null>}
+ */
+export async function fetchSellerProfile(sellerId) {
+    if (!sellerId) return null;
+
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, prenom, nom, telephone, is_open, role, created_at')
+            .eq('id', sellerId)
+            .single();
+
+        if (error) {
+            console.warn('[CatalogService] Erreur fetchSellerProfile:', error);
+            return null;
+        }
+
+        return data;
+    } catch (err) {
+        console.error('[CatalogService] Exception fetchSellerProfile:', err);
+        return null;
+    }
+}
+
+/**
+ * Récupère l'ensemble des articles actifs d'un vendeur donné.
+ * @param {string} sellerId - UUID du vendeur
+ * @returns {Promise<Array>}
+ */
+export async function fetchSellerProducts(sellerId) {
+    if (!sellerId) return [];
+
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role)')
+            .eq('seller_id', sellerId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.warn('[CatalogService] Erreur fetchSellerProducts:', error);
+            return [];
+        }
+
+        return data || [];
+    } catch (err) {
+        console.error('[CatalogService] Exception fetchSellerProducts:', err);
+        return [];
+    }
+}
+
 export default {
     CATEGORIES,
     fetchActiveProducts,
     searchProducts,
     fetchTopShops,
+    fetchSellerProfile,
+    fetchSellerProducts,
 };

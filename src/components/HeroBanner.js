@@ -76,7 +76,7 @@ export function createHeroBanner({ onSelectTag, onExploreCatalog } = {}) {
                         <button 
                             type="button" 
                             data-query="${escapeHTML(tag.query)}"
-                            class="tag-chip flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white text-white hover:text-slate-900 border border-white/20 text-xs font-semibold backdrop-blur-md transition-all duration-200 active:scale-95"
+                            class="tag-chip flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-full bg-white/10 hover:bg-white text-white hover:text-slate-900 border border-white/20 text-xs font-semibold backdrop-blur-md transition-all duration-200 active:scale-95"
                         >
                             <i class="fa-solid ${tag.icon} text-[11px] text-accent group-hover:text-primary"></i>
                             <span>${tag.label}</span>

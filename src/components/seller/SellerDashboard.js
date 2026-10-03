@@ -19,6 +19,7 @@ import { isSellerSuspended } from '../../services/admin-service.js';
 import { audioAlert, playNotificationSound } from '../../utils/audio-alert.js';
 import { escapeHTML, formatSenegalPhone } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
+import { exportOrdersToCSV } from '../../utils/export-csv.js';
 
 /**
  * Crée le tableau de bord marchand moderne et fluide.
@@ -31,13 +32,15 @@ import { showToast, showConfirm } from '../../utils/notifications.js';
  */
 export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onShowToast } = {}) {
     const containerEl = document.createElement('div');
-    containerEl.className = 'w-full flex flex-col bg-slate-50 min-h-screen text-slate-900 view-transition-enter';
+    containerEl.className = 'w-full flex flex-col bg-slate-50 min-h-screen text-slate-900';
 
     const sellerId = seller.id;
     let dashboardData = null;
     let isLoading = true;
     let activeSubTab = 'orders'; // 'orders' | 'products' | 'add-product'
     let orderFilter = 'all'; // 'all' | 'pending' | 'in_progress' | 'delivered'
+    let orderSearchQuery = '';
+    let orderPavillonFilter = 'all';
     let realtimeChannel = null;
     let pollingTimer = null;
 
@@ -134,7 +137,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
     function render() {
         if (isLoading) {
             containerEl.innerHTML = `
-                <div class="max-w-6xl mx-auto px-4 py-8 flex flex-col gap-5 animate-pulse w-full">
+                <div class="w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-5 animate-pulse">
                     <div class="h-20 bg-white rounded-2xl w-full border border-slate-200/60"></div>
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="h-28 bg-white rounded-2xl border border-slate-200/60"></div>
@@ -157,107 +160,266 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
         const deliveredCount = allOrders.filter((o) => o.status === 'delivered').length;
 
         containerEl.innerHTML = `
-            <!-- Header Compact & Sticky Espace Vendeur -->
-            <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs w-full">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
+            <!-- 1. SIDEBAR VENDEUR DESKTOP : Collée TOUT À GAUCHE de l'écran (w-64 fixed h-screen) -->
+            <aside id="seller-desktop-sidebar" aria-label="Navigation vendeur desktop" class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white border-r border-slate-200/80 z-40 flex-col justify-between p-5 select-none shadow-xs">
+                <div class="flex flex-col gap-6">
                     <!-- Logo & Titre Vendeur -->
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${isSuspended ? 'bg-slate-200 text-slate-500' : 'bg-primary text-white'} flex items-center justify-center font-extrabold text-sm sm:text-base shadow-xs flex-shrink-0">
+                    <div class="flex items-center gap-3 px-1 py-1">
+                        <div class="w-10 h-10 rounded-2xl ${isSuspended ? 'bg-slate-200 text-slate-500' : 'bg-primary text-white'} flex items-center justify-center font-extrabold text-base shadow-xs flex-shrink-0">
                             <i class="fa-solid fa-shop"></i>
                         </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="font-heading font-extrabold text-slate-900 text-sm sm:text-base leading-tight">Espace Vendeur</span>
-                                ${isSuspended ? `
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
-                                        Suspendu
-                                    </span>
-                                ` : `
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                        Marchand UIDT
-                                    </span>
-                                `}
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-heading font-extrabold text-slate-900 text-base leading-tight">Espace Vendeur</span>
                             </div>
-                            <div class="text-[11px] text-slate-500 flex items-center gap-1.5 leading-tight mt-0.5">
-                                <span class="font-medium text-slate-700 truncate max-w-[120px] sm:max-w-none">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
-                                <span>•</span>
-                                <span class="flex items-center gap-1 font-semibold ${isOpen ? 'text-emerald-600' : 'text-amber-600'}">
-                                    <span class="w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
-                                    <span>${isOpen ? 'Ouvert aux commandes' : 'En pause'}</span>
-                                </span>
-                            </div>
+                            <span class="text-xs text-slate-500 font-semibold truncate block mt-0.5">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
                         </div>
                     </div>
 
-                    <!-- Actions Rapides Header -->
-                    <div class="flex items-center gap-1.5 sm:gap-2">
-                        <!-- Toggle Disponibilité Boutique -->
+                    <!-- Statut Boutique interactif -->
+                    ${!isSuspended ? `
+                        <button 
+                            type="button"
+                            id="hdr-btn-toggle-shop" 
+                            title="${isOpen ? 'Mettre la boutique en pause' : 'Ouvrir la boutique aux commandes'}"
+                            class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${
+                                isOpen 
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' 
+                                    : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                            }"
+                        >
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
+                                <span>${isOpen ? 'Boutique Ouverte' : 'Boutique en Pause'}</span>
+                            </div>
+                            <i class="fa-solid ${isOpen ? 'fa-toggle-on text-emerald-600' : 'fa-toggle-off text-amber-600'} text-base"></i>
+                        </button>
+                    ` : `
+                        <div class="px-3.5 py-2.5 rounded-2xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200 flex items-center gap-2">
+                            <i class="fa-solid fa-ban text-rose-600"></i>
+                            <span>Compte Suspendu</span>
+                        </div>
+                    `}
+
+                    <!-- Liens verticaux sidebar desktop -->
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1">
+                            Gestion Marchande
+                        </span>
+
+                        <!-- Commandes -->
+                        <button 
+                            type="button" 
+                            id="subtab-orders" 
+                            class="flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer active:scale-95 ${
+                                activeSubTab === 'orders'
+                                    ? 'bg-slate-900 text-white shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }"
+                        >
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-clipboard-list text-base ${activeSubTab === 'orders' ? 'text-accent' : 'text-slate-400'}"></i>
+                                <span>Commandes</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                activeSubTab === 'orders' 
+                                    ? 'bg-slate-800 text-slate-200' 
+                                    : (pendingCount > 0 ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-slate-100 text-slate-600')
+                            }">
+                                ${allOrders.length}
+                            </span>
+                        </button>
+
+                        <!-- Mes Articles -->
+                        <button 
+                            type="button" 
+                            id="subtab-products" 
+                            class="flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer active:scale-95 ${
+                                activeSubTab === 'products'
+                                    ? 'bg-slate-900 text-white shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }"
+                        >
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-tags text-base ${activeSubTab === 'products' ? 'text-accent' : 'text-slate-400'}"></i>
+                                <span>Mes Articles</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                activeSubTab === 'products' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                            }">
+                                ${data.totalProductsCount || 0}
+                            </span>
+                        </button>
+
+                        <!-- Ajouter un produit -->
                         ${!isSuspended ? `
                             <button 
-                                type="button"
-                                id="hdr-btn-toggle-shop" 
-                                title="${isOpen ? 'Mettre la boutique en pause' : 'Ouvrir la boutique aux commandes'}"
-                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 min-h-[38px] cursor-pointer ${
-                                    isOpen 
-                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' 
-                                        : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                                type="button" 
+                                id="subtab-add-product" 
+                                class="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer active:scale-95 ${
+                                    activeSubTab === 'add-product'
+                                        ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                                 }"
                             >
-                                <span class="w-2 h-2 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
-                                <span class="hidden sm:inline">${isOpen ? 'Boutique Ouverte' : 'En Pause'}</span>
+                                <i class="fa-solid fa-plus text-base ${activeSubTab === 'add-product' ? 'text-white' : 'text-slate-400'}"></i>
+                                <span>Ajouter un produit</span>
                             </button>
                         ` : ''}
+                    </div>
+                </div>
 
-                        <!-- Actualiser -->
+                <!-- Bas de Sidebar : Actions Vendeur Desktop -->
+                <div class="flex flex-col gap-2 pt-4 border-t border-slate-100">
+                    <div class="grid grid-cols-2 gap-2">
                         <button 
                             type="button"
                             id="hdr-btn-refresh-orders" 
                             title="Actualiser les données"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors min-h-[38px] active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                         >
                             <i class="fa-solid fa-arrows-rotate text-xs"></i>
-                            <span class="hidden md:inline">Actualiser</span>
+                            <span>Actualiser</span>
                         </button>
 
-                        <!-- Alerte Sonore -->
                         <button 
                             type="button"
                             id="hdr-btn-toggle-audio" 
                             title="Activer/Désactiver les alertes sonores"
-                            class="flex items-center justify-center w-9 h-9 rounded-xl text-xs border transition-all active:scale-95 min-h-[38px] min-w-[38px] cursor-pointer ${
+                            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                                 audioAlert.isEnabled 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-xs' 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                                     : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                             }"
                         >
                             <i class="fa-solid ${audioAlert.isEnabled ? 'fa-volume-high text-emerald-600' : 'fa-volume-xmark'} text-xs"></i>
+                            <span>${audioAlert.isEnabled ? 'Son ON' : 'Son OFF'}</span>
                         </button>
+                    </div>
 
-                        <!-- Voir la Boutique Publique -->
-                        <button 
-                            type="button"
-                            id="hdr-btn-seller-back-shop" 
-                            title="Voir le catalogue public du campus"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors min-h-[38px] active:scale-95 cursor-pointer"
-                        >
-                            <i class="fa-solid fa-store text-xs"></i>
-                            <span class="hidden sm:inline">Boutique</span>
-                        </button>
+                    <button 
+                        type="button"
+                        id="hdr-btn-seller-back-shop" 
+                        title="Voir la marketplace publique"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors cursor-pointer"
+                    >
+                        <i class="fa-solid fa-store text-xs"></i>
+                        <span>Voir Marketplace</span>
+                    </button>
 
-                        <!-- Déconnexion -->
+                    <button 
+                        type="button"
+                        id="hdr-btn-seller-logout" 
+                        title="Se déconnecter de l'espace marchand"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/60 transition-colors cursor-pointer"
+                    >
+                        <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                        <span>Déconnexion</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- 2. HEADER MOBILE VENDEUR : Épuré avec Titre + Badge statut + Menu ⋮ unique (lg:hidden) -->
+            <header class="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs w-full">
+                <div class="w-full px-4 py-2.5 flex items-center justify-between gap-3">
+                    <!-- Logo & Titre Vendeur -->
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-xl ${isSuspended ? 'bg-slate-200 text-slate-500' : 'bg-primary text-white'} flex items-center justify-center font-extrabold text-xs shadow-xs shrink-0">
+                            <i class="fa-solid fa-shop"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-heading font-extrabold text-slate-900 text-sm leading-tight block truncate">Espace Vendeur</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 font-medium truncate block">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
+                        </div>
+                    </div>
+
+                    <!-- Droite : Badge Statut Compact + Menu ⋮ -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        ${!isSuspended ? `
+                            <button 
+                                type="button" 
+                                id="hdr-btn-toggle-shop-mobile" 
+                                title="${isOpen ? 'Mettre en pause' : 'Ouvrir la boutique'}"
+                                class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                                    isOpen 
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                                        : 'bg-amber-50 text-amber-800 border-amber-300'
+                                }"
+                            >
+                                <span class="w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
+                                <span>${isOpen ? 'Ouverte' : 'Pause'}</span>
+                            </button>
+                        ` : ''}
+
+                        <!-- Bouton Menu Unique Mobile ⋮ -->
                         <button 
-                            type="button"
-                            id="hdr-btn-seller-logout" 
-                            title="Se déconnecter de l'espace marchand"
-                            class="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors min-h-[38px] min-w-[38px] active:scale-95 cursor-pointer"
+                            type="button" 
+                            id="hdr-btn-seller-menu-mobile" 
+                            title="Menu des actions marchand"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 cursor-pointer"
                         >
-                            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                            <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
                         </button>
                     </div>
                 </div>
             </header>
 
-            <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6 w-full flex-1">
+            <!-- 3. TIROIR MOBILE (Bottom Sheet) pour actions essentielles -->
+            <div id="seller-mobile-drawer" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300 select-none">
+                <div class="flex-1 w-full" id="seller-drawer-backdrop"></div>
+                <div class="bg-white rounded-t-3xl border-t border-slate-200/80 p-5 pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full">
+                    <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1"></div>
+                    
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
+                                <i class="fa-solid fa-store"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-heading font-extrabold text-sm text-slate-900">Boutique ${escapeHTML(seller.prenom)}</h4>
+                                <p class="text-[11px] text-slate-400">Actions et paramètres du compte</p>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-close-seller-drawer" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs cursor-pointer">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <!-- Actualiser -->
+                        <button type="button" id="drawer-btn-refresh-orders" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer">
+                            <i class="fa-solid fa-arrows-rotate text-sm text-slate-500 w-5 text-center"></i>
+                            <span>Actualiser les commandes</span>
+                        </button>
+
+                        <!-- Alerte sonore -->
+                        <button type="button" id="drawer-btn-toggle-audio" class="flex items-center justify-between px-4 py-3 rounded-2xl ${audioAlert.isEnabled ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-50 text-slate-700'} font-bold text-xs transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid ${audioAlert.isEnabled ? 'fa-volume-high text-emerald-600' : 'fa-volume-xmark text-slate-500'} text-sm w-5 text-center"></i>
+                                <span>Alerte sonore de commande</span>
+                            </div>
+                            <span class="text-[10px] font-extrabold ${audioAlert.isEnabled ? 'text-emerald-700' : 'text-slate-400'}">${audioAlert.isEnabled ? 'Activé' : 'Désactivé'}</span>
+                        </button>
+
+                        <!-- Voir boutique publique -->
+                        <button type="button" id="drawer-btn-back-shop" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs transition-colors cursor-pointer">
+                            <i class="fa-solid fa-store text-sm w-5 text-center"></i>
+                            <span>Voir la marketplace publique</span>
+                        </button>
+
+                        <!-- Déconnexion -->
+                        <button type="button" id="drawer-btn-logout" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition-colors cursor-pointer">
+                            <i class="fa-solid fa-arrow-right-from-bracket text-sm w-5 text-center"></i>
+                            <span>Se déconnecter de l'espace marchand</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. CONTENU PRINCIPAL PLEIN ÉCRAN (w-full lg:ml-64 lg:w-[calc(100%-16rem)]) -->
+            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-6 pb-28 sm:pb-8 flex flex-col gap-6 flex-1 min-h-screen">
                 ${isSuspended ? `
                     <!-- Alerte rouge Vendeur Suspendu -->
                     <div class="bg-rose-50 border border-rose-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-rose-950 animate-fade-in">
@@ -275,6 +437,107 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                             <p class="text-[11px] text-rose-600 font-semibold mt-2 flex items-center gap-1.5">
                                 <i class="fa-solid fa-headset text-xs"></i> Contactez la direction de la scolarité ou l'administration pour régulariser votre compte.
                             </p>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${(allOrders.length === 0 || Number(data.totalProductsCount || 0) === 0) && !isSuspended ? `
+                    <!-- Guide de Démarrage Rapide (Onboarding Hero moderne style Stripe/Shopify) -->
+                    <div class="bg-gradient-to-br from-blue-50/70 via-white to-amber-50/30 rounded-3xl border border-primary/20 shadow-card p-5 sm:p-7 relative overflow-hidden flex flex-col gap-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-primary/20 flex-shrink-0">
+                                    <i class="fa-solid fa-rocket"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg">
+                                            Bienvenue sur votre Espace Marchand, ${escapeHTML(seller.prenom)} !
+                                        </h3>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-200">
+                                            Guide 3 étapes
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-0.5">
+                                        Activez votre boutique en quelques clics pour recevoir vos premières commandes sur le campus de Thiès.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 self-start sm:self-center">
+                                <span class="px-3 py-1 rounded-full text-xs font-extrabold ${Number(data.totalProductsCount || 0) > 0 ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-blue-100 text-primary border border-blue-200'}">
+                                    ${Number(data.totalProductsCount || 0) > 0 ? 'Étape 2 sur 3 • 66%' : 'Étape 1 sur 3 • 33%'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Jauge de progression animée -->
+                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                            <div class="bg-gradient-to-r from-primary to-amber-500 h-full rounded-full transition-all duration-500" style="width: ${Number(data.totalProductsCount || 0) > 0 ? (allOrders.length > 0 ? '100%' : '66%') : '33%'}"></div>
+                        </div>
+
+                        <!-- Les 3 étapes interactives -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                            <!-- Étape 1 -->
+                            <div class="bg-white/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between gap-3 shadow-xs">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-black shrink-0">
+                                        <i class="fa-solid fa-check"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-heading font-bold text-xs text-slate-900">1. Boutique Ouverte</h4>
+                                        <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">Votre boutique est active et prête à recevoir les commandes étudiantes.</p>
+                                    </div>
+                                </div>
+                                <span class="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check text-[10px]"></i> Opérationnel
+                                </span>
+                            </div>
+
+                            <!-- Étape 2 -->
+                            <div class="bg-white/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between gap-3 shadow-xs">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-7 h-7 rounded-xl ${Number(data.totalProductsCount || 0) > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-primary/10 text-primary'} flex items-center justify-center text-xs font-black shrink-0">
+                                        ${Number(data.totalProductsCount || 0) > 0 ? '<i class="fa-solid fa-check"></i>' : '2'}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-heading font-bold text-xs text-slate-900">2. Publier un Article</h4>
+                                        <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">Ajoutez votre premier plat, fourniture ou produit avec photo et prix.</p>
+                                    </div>
+                                </div>
+                                ${Number(data.totalProductsCount || 0) > 0 ? `
+                                    <span class="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                                        <i class="fa-solid fa-circle-check text-[10px]"></i> ${data.totalProductsCount} article(s) en ligne
+                                    </span>
+                                ` : `
+                                    <button type="button" id="btn-onboarding-add-product" class="px-3 py-1.5 bg-primary hover:bg-primary-hover active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-plus text-[10px]"></i> Publier maintenant
+                                    </button>
+                                `}
+                            </div>
+
+                            <!-- Étape 3 -->
+                            <div class="bg-white/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between gap-3 shadow-xs">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-black shrink-0">
+                                        <i class="fa-brands fa-whatsapp text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-heading font-bold text-xs text-slate-900">3. Partager sur WhatsApp</h4>
+                                        <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">Diffusez votre catalogue dans les groupes de vos pavillons.</p>
+                                    </div>
+                                </div>
+                                <button type="button" id="btn-onboarding-share-wa" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <i class="fa-brands fa-whatsapp text-xs"></i> Partager le lien
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Astuce campus UIDT -->
+                        <div class="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 text-amber-900 text-xs">
+                            <i class="fa-solid fa-lightbulb text-amber-600 text-sm mt-0.5 shrink-0"></i>
+                            <div>
+                                <span class="font-bold">Conseil Campus UIDT :</span> Les étudiants commandent principalement entre 12h-14h et 19h-22h dans les Pavillons A et B. Gardez votre boutique en statut "Ouvert" et votre téléphone actif durant ces créneaux pour maximiser vos ventes !
+                            </div>
                         </div>
                     </div>
                 ` : ''}
@@ -347,11 +610,11 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                     </div>
                 </div>
 
-                <!-- Barre d'onglets de navigation épurée (scroll horizontal sur mobile) -->
-                <div class="flex items-center gap-1.5 border-b border-slate-200/80 overflow-x-auto no-scrollbar pb-2">
+                <!-- Barre d'onglets de navigation Tablette (sm à lg uniquement, masquée sur desktop et mobile) -->
+                <div class="hidden sm:flex lg:hidden items-center gap-1.5 border-b border-slate-200/80 overflow-x-auto no-scrollbar pb-2">
                     <button 
                         type="button" 
-                        id="subtab-orders" 
+                        data-seller-tab="orders"
                         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'orders'
                                 ? 'bg-slate-900 text-white shadow-xs'
@@ -371,7 +634,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
                     <button 
                         type="button" 
-                        id="subtab-products" 
+                        data-seller-tab="products"
                         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'products'
                                 ? 'bg-slate-900 text-white shadow-xs'
@@ -390,7 +653,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                     ${!isSuspended ? `
                         <button 
                             type="button" 
-                            id="subtab-add-product" 
+                            data-seller-tab="add-product"
                             class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                                 activeSubTab === 'add-product'
                                     ? 'bg-primary text-white shadow-xs'
@@ -408,6 +671,90 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                     ${activeSubTab === 'orders' ? renderOrdersTab(allOrders) : ''}
                 </div>
             </main>
+
+            <!-- 5. BARRE INFÉRIEURE FIXE MOBILE VENDEUR (lg:hidden, TOUJOURS visible, z-50) -->
+            <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation vendeur mobile">
+                <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around">
+                    <!-- Dashboard -->
+                    <button 
+                        type="button" 
+                        id="bnav-seller-dashboard" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] text-slate-500 hover:text-slate-800 font-medium cursor-pointer active:scale-95"
+                    >
+                        <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>
+                        <span class="text-[10px] leading-tight">Dashboard</span>
+                    </button>
+
+                    <!-- Commandes -->
+                    <button 
+                        type="button" 
+                        id="bnav-seller-orders" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'orders'
+                                ? 'text-primary font-bold'
+                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                        }"
+                    >
+                        ${activeSubTab === 'orders' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
+                        <div class="relative">
+                            <i class="fa-solid fa-clipboard-list text-lg mb-0.5"></i>
+                            ${pendingCount > 0 ? `
+                                <span class="absolute -top-1.5 -right-2.5 bg-amber-400 text-slate-950 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full border-2 border-white shadow-sm min-w-[18px] text-center transform scale-100 animate-pulse">
+                                    ${pendingCount}
+                                </span>
+                            ` : ''}
+                        </div>
+                        <span class="text-[10px] leading-tight">Commandes</span>
+                    </button>
+
+                    <!-- Mes Articles -->
+                    <button 
+                        type="button" 
+                        id="bnav-seller-products" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'products'
+                                ? 'text-primary font-bold'
+                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                        }"
+                    >
+                        ${activeSubTab === 'products' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
+                        <div class="relative">
+                            <i class="fa-solid fa-tags text-lg mb-0.5"></i>
+                            <span class="absolute -top-1.5 -right-2.5 bg-slate-100 text-slate-700 font-bold text-[9px] px-1 py-0.2 rounded-full border border-slate-200 min-w-[16px] text-center">
+                                ${data.totalProductsCount || 0}
+                            </span>
+                        </div>
+                        <span class="text-[10px] leading-tight">Articles</span>
+                    </button>
+
+                    <!-- Ajouter un produit (si non suspendu) -->
+                    ${!isSuspended ? `
+                        <button 
+                            type="button" 
+                            id="bnav-seller-add" 
+                            class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
+                                activeSubTab === 'add-product'
+                                    ? 'text-emerald-700 font-bold'
+                                    : 'text-emerald-600 hover:text-emerald-800 font-medium'
+                            }"
+                        >
+                            ${activeSubTab === 'add-product' ? '<span class="absolute top-0 w-8 h-1 bg-emerald-600 rounded-full"></span>' : ''}
+                            <i class="fa-solid fa-circle-plus text-lg mb-0.5"></i>
+                            <span class="text-[10px] leading-tight">Ajouter</span>
+                        </button>
+                    ` : ''}
+
+                    <!-- Voir Boutique Publique -->
+                    <button 
+                        type="button" 
+                        id="bnav-seller-shop" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] text-slate-500 hover:text-primary font-medium cursor-pointer active:scale-95"
+                    >
+                        <i class="fa-solid fa-store text-lg mb-0.5"></i>
+                        <span class="text-[10px] leading-tight">Boutique</span>
+                    </button>
+                </div>
+            </nav>
         `;
 
         if (activeSubTab === 'products' || activeSubTab === 'add-product') {
@@ -426,24 +773,31 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
     }
 
     function renderOrdersTab(orders) {
-        if (orders.length === 0) {
-            return `
-                <div class="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-200/90 shadow-xs my-2">
-                    <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-xl mx-auto mb-3">
-                        <i class="fa-solid fa-inbox"></i>
-                    </div>
-                    <h3 class="font-heading font-extrabold text-slate-900 text-base mb-1">Aucune commande pour le moment</h3>
-                    <p class="text-xs text-slate-500 max-w-sm mx-auto">Vos commandes clients apparaîtront ici en temps réel dès qu'un étudiant valide son panier.</p>
-                </div>
-            `;
-        }
-
-        // Filtrage des commandes selon le filtre actif
+        // Filtrage multi-critères : statut, recherche textuelle, pavillon
         const filtered = orders.filter((o) => {
-            if (orderFilter === 'all') return true;
-            if (orderFilter === 'pending') return o.status === 'pending';
-            if (orderFilter === 'in_progress') return ['confirmed', 'processing', 'shipped'].includes(o.status);
-            if (orderFilter === 'delivered') return o.status === 'delivered';
+            // 1. Statut
+            if (orderFilter === 'pending' && o.status !== 'pending') return false;
+            if (orderFilter === 'in_progress' && !['confirmed', 'processing', 'shipped'].includes(o.status)) return false;
+            if (orderFilter === 'delivered' && o.status !== 'delivered') return false;
+
+            // 2. Recherche textuelle
+            if (orderSearchQuery) {
+                const q = orderSearchQuery.toLowerCase();
+                const name = (o.buyer_name || '').toLowerCase();
+                const phone = (o.buyer_phone || '').toLowerCase();
+                const ref = (o.reference || `#cmd-${(o.id || '').slice(0, 6)}`).toLowerCase();
+                const item = (o.product?.title || '').toLowerCase();
+                if (!name.includes(q) && !phone.includes(q) && !ref.includes(q) && !item.includes(q)) {
+                    return false;
+                }
+            }
+
+            // 3. Pavillon
+            if (orderPavillonFilter !== 'all') {
+                const addr = (o.delivery_address || '').toLowerCase();
+                if (!addr.includes(orderPavillonFilter.toLowerCase())) return false;
+            }
+
             return true;
         });
 
@@ -453,6 +807,48 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
         return `
             <div class="flex flex-col gap-4">
+                <!-- Barre d'outils commandes : Recherche, Filtre Pavillon & Export CSV -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <!-- Recherche textuelle -->
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input 
+                            type="text" 
+                            id="input-seller-search-orders" 
+                            value="${escapeHTML(orderSearchQuery)}"
+                            placeholder="Rechercher étudiant, tél, #CMD..." 
+                            class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[40px]"
+                        >
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <!-- Filtre Pavillon -->
+                        <select 
+                            id="select-seller-pavillon" 
+                            class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[40px] cursor-pointer"
+                        >
+                            <option value="all" ${orderPavillonFilter === 'all' ? 'selected' : ''}>Tous les pavillons</option>
+                            <option value="Pavillon A1" ${orderPavillonFilter === 'Pavillon A1' ? 'selected' : ''}>Pavillon A1</option>
+                            <option value="Pavillon A2" ${orderPavillonFilter === 'Pavillon A2' ? 'selected' : ''}>Pavillon A2</option>
+                            <option value="Pavillon B" ${orderPavillonFilter === 'Pavillon B' ? 'selected' : ''}>Pavillon B</option>
+                            <option value="Pavillon C" ${orderPavillonFilter === 'Pavillon C' ? 'selected' : ''}>Pavillon C</option>
+                            <option value="Pavillon D" ${orderPavillonFilter === 'Pavillon D' ? 'selected' : ''}>Pavillon D</option>
+                            <option value="Jardin Social" ${orderPavillonFilter === 'Jardin Social' ? 'selected' : ''}>Jardin Social</option>
+                        </select>
+
+                        <!-- Bouton Export CSV -->
+                        <button 
+                            type="button" 
+                            id="btn-seller-export-orders" 
+                            title="Exporter mes ventes en format CSV"
+                            class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all min-h-[40px] cursor-pointer"
+                        >
+                            <i class="fa-solid fa-file-csv text-primary text-xs"></i>
+                            <span>Exporter CSV</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Filtres par pilules de statut -->
                 <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                     <button type="button" data-order-filter="all" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
@@ -487,11 +883,23 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
                 <!-- Liste des cartes de commandes compactes et soignées -->
                 ${filtered.length === 0 ? `
-                    <div class="p-8 text-center bg-white rounded-2xl border border-slate-200/80 text-slate-400 text-xs">
-                        Aucune commande ne correspond à ce filtre.
+                    <div class="p-8 sm:p-12 text-center bg-gradient-to-br from-blue-50/50 via-white to-amber-50/30 rounded-3xl border border-primary/20 shadow-card my-2">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center text-2xl mx-auto mb-3 shadow-md shadow-primary/20">
+                            <i class="fa-solid fa-inbox"></i>
+                        </div>
+                        <h4 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg mb-1">
+                            ${orderSearchQuery || orderPavillonFilter !== 'all' ? 'Aucune commande ne correspond à ces critères' : 'Aucune commande enregistrée pour le moment'}
+                        </h4>
+                        <p class="text-xs text-slate-500 max-w-sm mx-auto mb-5 leading-relaxed">
+                            ${orderSearchQuery || orderPavillonFilter !== 'all' ? 'Essayez de modifier votre recherche ou de réinitialiser le filtre pavillon.' : 'Vos commandes apparaîtront ici dès qu\'un étudiant valide son panier sur le campus.'}
+                        </p>
+                        <button type="button" id="btn-empty-share-wa" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all inline-flex items-center gap-2 cursor-pointer">
+                            <i class="fa-brands fa-whatsapp text-sm"></i>
+                            <span>Diffuser le lien de ma boutique sur WhatsApp</span>
+                        </button>
                     </div>
                 ` : `
-                    <div class="flex flex-col gap-3">
+                    <div class="flex flex-col gap-3.5">
                         ${filtered.map((o) => {
                             const clientPhone = formatSenegalPhone(o.buyer_phone || '');
                             const productTitle = o.product ? o.product.title : 'Article Campus Market';
@@ -499,11 +907,13 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                             let nextActionBtn = '';
                             let statusLabel = '';
                             let statusBadgeClass = '';
+                            let stepIdx = 1;
 
                             switch (o.status) {
                                 case 'pending':
                                     statusLabel = 'En attente';
                                     statusBadgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
+                                    stepIdx = 1;
                                     nextActionBtn = `
                                         <button data-action="update-status" data-id="${o.id}" data-next="confirmed" class="px-4 py-2 bg-primary hover:bg-primary-hover active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all min-h-[44px] flex items-center gap-1.5 cursor-pointer">
                                             <i class="fa-solid fa-check text-xs"></i>
@@ -517,6 +927,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                 case 'confirmed':
                                     statusLabel = 'Confirmée';
                                     statusBadgeClass = 'bg-blue-50 text-blue-800 border-blue-200';
+                                    stepIdx = 2;
                                     nextActionBtn = `
                                         <button data-action="update-status" data-id="${o.id}" data-next="processing" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all min-h-[44px] flex items-center gap-1.5 cursor-pointer">
                                             <i class="fa-solid fa-fire-burner text-xs"></i>
@@ -527,6 +938,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                 case 'processing':
                                     statusLabel = 'En préparation';
                                     statusBadgeClass = 'bg-indigo-50 text-indigo-800 border-indigo-200';
+                                    stepIdx = 3;
                                     nextActionBtn = `
                                         <button data-action="update-status" data-id="${o.id}" data-next="shipped" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all min-h-[44px] flex items-center gap-1.5 cursor-pointer">
                                             <i class="fa-solid fa-motorcycle text-xs"></i>
@@ -537,6 +949,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                 case 'shipped':
                                     statusLabel = 'En livraison';
                                     statusBadgeClass = 'bg-purple-50 text-purple-800 border-purple-200';
+                                    stepIdx = 3;
                                     nextActionBtn = `
                                         <button data-action="update-status" data-id="${o.id}" data-next="delivered" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all min-h-[44px] flex items-center gap-1.5 cursor-pointer">
                                             <i class="fa-solid fa-box-open text-xs"></i>
@@ -547,6 +960,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                 case 'delivered':
                                     statusLabel = 'Livrée';
                                     statusBadgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+                                    stepIdx = 4;
                                     nextActionBtn = `
                                         <span class="text-xs font-bold text-emerald-700 flex items-center gap-1 py-1">
                                             <i class="fa-solid fa-circle-check"></i> Terminée
@@ -556,13 +970,27 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                 case 'cancelled':
                                     statusLabel = 'Annulée';
                                     statusBadgeClass = 'bg-slate-100 text-slate-500 line-through border-slate-200';
+                                    stepIdx = 0;
                                     break;
                             }
 
                             const orderRef = o.reference || `#CMD-${o.id.slice(0, 6).toUpperCase()}`;
 
+                            // Badges officiels de mode de règlement (Wave cyan, OM orange, Cash vert)
+                            let paymentBadge = '';
+                            if (o.payment_method === 'wave') {
+                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1"><i class="fa-solid fa-water text-[9px]"></i> Wave</span>`;
+                            } else if (o.payment_method === 'om') {
+                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-50 text-orange-700 border border-orange-200 inline-flex items-center gap-1"><i class="fa-solid fa-mobile-screen text-[9px]"></i> Orange Money</span>`;
+                            } else {
+                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1"><i class="fa-solid fa-money-bill-wave text-[9px]"></i> Espèces</span>`;
+                            }
+
+                            // Message WhatsApp type poli et direct
+                            const waText = `Bonjour ${o.buyer_name || 'cher client'} ! Je suis votre marchand Campus Market concernant votre commande ${orderRef} (${productTitle}). Je prépare votre commande pour livraison au ${o.delivery_address || 'campus'}. Confirmez-vous votre présence ?`;
+
                             return `
-                                <div class="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-4 sm:p-5 flex flex-col gap-3.5 shadow-xs transition-all">
+                                <div class="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-4 sm:p-5 flex flex-col gap-3.5 shadow-xs hover:shadow-card transition-all">
                                     <!-- En-tête de la commande -->
                                     <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-wrap gap-2">
                                         <div class="flex items-center gap-2">
@@ -572,10 +1000,40 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                                 ${new Date(o.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à ${new Date(o.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
-                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusBadgeClass}">
-                                            ${statusLabel}
-                                        </span>
+                                        <div class="flex items-center gap-2">
+                                            ${paymentBadge}
+                                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusBadgeClass}">
+                                                ${statusLabel}
+                                            </span>
+                                        </div>
                                     </div>
+
+                                    <!-- Stepper Visuel 4 Étapes de Commande -->
+                                    ${stepIdx > 0 ? `
+                                        <div class="w-full bg-slate-50/80 p-2.5 rounded-xl border border-slate-100/90 my-0.5">
+                                            <div class="flex items-center justify-between text-[11px] font-bold">
+                                                <div class="flex items-center gap-1.5 ${stepIdx >= 1 ? 'text-primary' : 'text-slate-400'}">
+                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 1 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center text-[9px] font-black">1</span>
+                                                    <span>Reçue</span>
+                                                </div>
+                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 2 ? 'bg-primary' : 'bg-slate-200'}"></div>
+                                                <div class="flex items-center gap-1.5 ${stepIdx >= 2 ? 'text-primary' : 'text-slate-400'}">
+                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 2 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center text-[9px] font-black">2</span>
+                                                    <span>Confirmée</span>
+                                                </div>
+                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 3 ? 'bg-primary' : 'bg-slate-200'}"></div>
+                                                <div class="flex items-center gap-1.5 ${stepIdx >= 3 ? 'text-primary' : 'text-slate-400'}">
+                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 3 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center text-[9px] font-black">3</span>
+                                                    <span>En route</span>
+                                                </div>
+                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 4 ? 'bg-emerald-600' : 'bg-slate-200'}"></div>
+                                                <div class="flex items-center gap-1.5 ${stepIdx >= 4 ? 'text-emerald-700 font-extrabold' : 'text-slate-400'}">
+                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 4 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center text-[9px] font-black">4</span>
+                                                    <span>Livrée</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
 
                                     <!-- Détails Acheteur, Pavillon & Article -->
                                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
@@ -587,8 +1045,10 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                                 <span>${escapeHTML(o.buyer_name || 'Client UIDT')}</span>
                                             </div>
                                             <p class="text-slate-600 mt-1 flex items-center gap-1.5 font-medium">
-                                                <i class="fa-solid fa-location-dot text-primary text-xs"></i>
-                                                <span>${escapeHTML(o.delivery_address || 'Pavillon')}</span>
+                                                <span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold inline-flex items-center gap-1">
+                                                    <i class="fa-solid fa-location-dot text-[10px]"></i>
+                                                    <span>${escapeHTML(o.delivery_address || 'Pavillon Campus')}</span>
+                                                </span>
                                             </p>
                                         </div>
 
@@ -602,22 +1062,22 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
                                     <!-- Actions : Contact & Progression -->
                                     <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
-                                        <!-- Liens 1-clic Appel & WhatsApp -->
+                                        <!-- Liens 1-clic Appel & WhatsApp avec Message Pré-rempli -->
                                         <div class="flex items-center gap-2">
                                             <a 
                                                 href="tel:${clientPhone}" 
-                                                class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 min-h-[44px] transition-colors active:scale-95"
+                                                class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 min-h-[44px] transition-colors active:scale-95 cursor-pointer shadow-xs"
                                             >
                                                 <i class="fa-solid fa-phone text-emerald-600 text-xs"></i>
                                                 <span>Appel</span>
                                             </a>
                                             <a 
-                                                href="https://wa.me/${clientPhone}?text=${encodeURIComponent(`Bonjour ${o.buyer_name || ''} ! Je suis votre vendeur Campus Market concernant votre commande ${orderRef}.`)}" 
+                                                href="https://wa.me/${clientPhone}?text=${encodeURIComponent(waText)}" 
                                                 target="_blank" 
                                                 rel="noopener noreferrer" 
-                                                class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 flex items-center gap-1.5 min-h-[44px] transition-colors active:scale-95"
+                                                class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 min-h-[44px] transition-all active:scale-95 shadow-xs cursor-pointer"
                                             >
-                                                <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i>
+                                                <i class="fa-brands fa-whatsapp text-sm"></i>
                                                 <span>WhatsApp</span>
                                             </a>
                                         </div>
@@ -637,7 +1097,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
     }
 
     function bindEvents() {
-        // Toggle Audio (Header & Body)
+        // Toggle Audio (Header, Sidebar & Drawer)
         const toggleAudioHandler = async () => {
             await audioAlert.toggle();
             render();
@@ -647,8 +1107,12 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-toggle-audio')?.addEventListener('click', toggleAudioHandler);
+        containerEl.querySelector('#drawer-btn-toggle-audio')?.addEventListener('click', () => {
+            closeDrawer();
+            toggleAudioHandler();
+        });
 
-        // Toggle Boutique
+        // Toggle Boutique (Desktop Sidebar, Mobile Header & Drawer)
         const toggleShopHandler = async () => {
             const isSuspended = isSellerSuspended(seller) || seller.is_suspended === true || seller.role === 'vendeur_desactive' || seller.role === 'suspendu';
             if (isSuspended) {
@@ -666,14 +1130,20 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-toggle-shop')?.addEventListener('click', toggleShopHandler);
+        containerEl.querySelector('#hdr-btn-toggle-shop-mobile')?.addEventListener('click', toggleShopHandler);
 
-        // Retour à la boutique
+        // Retour à la boutique publique
         const backShopHandler = () => {
             if (typeof onBackToCatalog === 'function') {
                 onBackToCatalog();
             }
         };
         containerEl.querySelector('#hdr-btn-seller-back-shop')?.addEventListener('click', backShopHandler);
+        containerEl.querySelector('#drawer-btn-back-shop')?.addEventListener('click', () => {
+            closeDrawer();
+            backShopHandler();
+        });
+        containerEl.querySelector('#bnav-seller-shop')?.addEventListener('click', backShopHandler);
 
         // Déconnexion
         const logoutHandler = async () => {
@@ -693,10 +1163,23 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-seller-logout')?.addEventListener('click', logoutHandler);
+        containerEl.querySelector('#drawer-btn-logout')?.addEventListener('click', () => {
+            closeDrawer();
+            logoutHandler();
+        });
 
-        // Actualisation manuelle
+        // Gestion du tiroir tactile mobile (Bottom Sheet)
+        const drawerEl = containerEl.querySelector('#seller-mobile-drawer');
+        const openDrawer = () => drawerEl?.classList.remove('hidden');
+        const closeDrawer = () => drawerEl?.classList.add('hidden');
+
+        containerEl.querySelector('#hdr-btn-seller-menu-mobile')?.addEventListener('click', openDrawer);
+        containerEl.querySelector('#btn-close-seller-drawer')?.addEventListener('click', closeDrawer);
+        containerEl.querySelector('#seller-drawer-backdrop')?.addEventListener('click', closeDrawer);
+
+        // Actualisation manuelle (Sidebar Desktop & Drawer Mobile)
         const refreshHandler = async (e) => {
-            const btn = e.currentTarget;
+            const btn = e?.currentTarget || containerEl.querySelector('#hdr-btn-refresh-orders');
             const icon = btn?.querySelector('i');
             if (icon) icon.classList.add('fa-spin');
             if (btn) btn.disabled = true;
@@ -709,8 +1192,12 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             }
         };
         containerEl.querySelector('#hdr-btn-refresh-orders')?.addEventListener('click', refreshHandler);
+        containerEl.querySelector('#drawer-btn-refresh-orders')?.addEventListener('click', (e) => {
+            closeDrawer();
+            refreshHandler(e);
+        });
 
-        // Sous-onglets de navigation
+        // Sous-onglets de navigation Sidebar Desktop
         containerEl.querySelector('#subtab-orders')?.addEventListener('click', () => {
             activeSubTab = 'orders';
             render();
@@ -725,6 +1212,85 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             activeSubTab = 'add-product';
             render();
         });
+
+        // Sous-onglets de navigation Tablette
+        containerEl.querySelectorAll('button[data-seller-tab]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                activeSubTab = btn.getAttribute('data-seller-tab') || 'orders';
+                render();
+            });
+        });
+
+        // Navigation fixe mobile vendeur (Bottom Nav)
+        containerEl.querySelector('#bnav-seller-dashboard')?.addEventListener('click', () => {
+            activeSubTab = 'orders';
+            render();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        containerEl.querySelector('#bnav-seller-orders')?.addEventListener('click', () => {
+            activeSubTab = 'orders';
+            render();
+        });
+
+        containerEl.querySelector('#bnav-seller-products')?.addEventListener('click', () => {
+            activeSubTab = 'products';
+            render();
+        });
+
+        containerEl.querySelector('#bnav-seller-add')?.addEventListener('click', () => {
+            activeSubTab = 'add-product';
+            render();
+        });
+
+        // Recherche textuelle commandes
+        const searchInput = containerEl.querySelector('#input-seller-search-orders');
+        searchInput?.addEventListener('input', (e) => {
+            orderSearchQuery = e.target.value;
+            render();
+            const reFocus = containerEl.querySelector('#input-seller-search-orders');
+            if (reFocus) {
+                reFocus.focus();
+                reFocus.setSelectionRange(reFocus.value.length, reFocus.value.length);
+            }
+        });
+
+        // Filtre pavillon commandes
+        containerEl.querySelector('#select-seller-pavillon')?.addEventListener('change', (e) => {
+            orderPavillonFilter = e.target.value;
+            render();
+        });
+
+        // Export CSV commandes vendeur
+        containerEl.querySelector('#btn-seller-export-orders')?.addEventListener('click', () => {
+            const allOrders = dashboardData?.recentOrders || [];
+            if (allOrders.length === 0) {
+                showToast("Aucune commande à exporter.", 'info');
+                return;
+            }
+            exportOrdersToCSV(allOrders, `ventes-${seller.prenom || 'vendeur'}-${new Date().toISOString().slice(0, 10)}.csv`);
+            showToast("Export CSV des commandes téléchargé !", 'success');
+        });
+
+        // Onboarding CTA: Publier un article
+        containerEl.querySelector('#btn-onboarding-add-product')?.addEventListener('click', () => {
+            activeSubTab = 'add-product';
+            render();
+        });
+
+        // Onboarding CTA: Partager sur WhatsApp
+        const shareWaHandler = () => {
+            const shopUrl = `${window.location.origin}/#seller/${sellerId}`;
+            const shareText = `Bonjour ! Retrouvez tous mes plats et articles sur ma boutique Campus Market UIDT : ${shopUrl}`;
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+            window.open(waUrl, '_blank', 'noopener,noreferrer');
+            if (navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(shopUrl).catch(() => {});
+            }
+            showToast("Lien de votre boutique copié et WhatsApp ouvert !", 'success');
+        };
+        containerEl.querySelector('#btn-onboarding-share-wa')?.addEventListener('click', shareWaHandler);
+        containerEl.querySelector('#btn-empty-share-wa')?.addEventListener('click', shareWaHandler);
 
         // Filtres par pilule de statut
         containerEl.querySelectorAll('button[data-order-filter]').forEach((btn) => {

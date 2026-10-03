@@ -14,14 +14,14 @@ import { CATEGORIES } from '../services/catalog-service.js';
  */
 export function createCategoryChips({ activeCategory = 'all', onSelectCategory } = {}) {
     const containerEl = document.createElement('div');
-    containerEl.className = 'w-full py-2.5 px-4 bg-background/80 backdrop-blur-sm border-b border-slate-200/60 overflow-hidden';
+    containerEl.className = 'w-full lg:ml-64 lg:w-[calc(100%-16rem)] py-2.5 px-4 sm:px-6 lg:px-8 xl:px-10 bg-background/90 backdrop-blur-sm border-b border-slate-200/60 overflow-hidden';
 
     let currentActive = activeCategory;
     let countsMap = {};
 
     function render() {
         containerEl.innerHTML = `
-            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 max-w-7xl mx-auto scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
                 ${CATEGORIES.map((cat) => {
                     const isActive = cat.id === currentActive;
                     const count = countsMap[cat.id];

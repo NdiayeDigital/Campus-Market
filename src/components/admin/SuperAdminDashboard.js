@@ -30,6 +30,7 @@ import {
 import { supabase } from '../../services/supabase.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
+import { exportOrdersToCSV, exportSellersToCSV, exportAccountsToCSV } from '../../utils/export-csv.js';
 
 /**
  * Crée le tableau de bord SuperAdmin.
@@ -41,7 +42,7 @@ import { showToast, showConfirm } from '../../utils/notifications.js';
  */
 export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast } = {}) {
     const containerEl = document.createElement('div');
-    containerEl.className = 'w-full flex flex-col view-transition-enter';
+    containerEl.className = 'w-full flex flex-col min-h-screen text-slate-900';
 
     let currentAdmin = null;
     let metrics = null;
@@ -57,6 +58,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
     let sellerFilterTab = 'all'; // 'all' | 'pending' | 'active' | 'suspended'
     let accountSearchQuery = '';
     let accountRoleFilter = 'all'; // 'all' | 'acheteur' | 'vendeur' | 'superadmin' | 'suspendu'
+    let orderSearchQuery = '';
+    let orderPavillonFilter = 'all';
+    let orderPaymentFilter = 'all';
     let isLoading = true;
     let isAuthenticated = false;
 
@@ -155,64 +159,161 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
         ];
 
         containerEl.innerHTML = `
-            <!-- Header Unique SuperAdmin (Compact, Glassmorphic & Sticky) -->
-            <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white shadow-xs w-full">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-3">
-                    <!-- Logo & Titre SuperAdmin -->
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-accent to-amber-400 text-slate-950 font-black flex items-center justify-center text-base shadow-sm shrink-0">
-                            <i class="fa-solid fa-shield-halved"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2">
-                                <span class="font-heading font-extrabold text-white text-sm sm:text-base leading-none truncate">Administration Centrale</span>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-accent text-slate-950 leading-none shrink-0">
-                                    UIDT Thiès
-                                </span>
-                            </div>
-                            <p class="text-[11px] text-slate-400 leading-tight mt-0.5 truncate">
-                                Superviseur : <strong class="text-slate-200 font-semibold">${escapeHTML(currentAdmin?.prenom || '')} ${escapeHTML(currentAdmin?.nom || 'Admin')}</strong>
-                            </p>
+            <!-- 1. SIDEBAR SUPERADMIN DESKTOP : Collée TOUT À GAUCHE de l'écran (w-64 fixed h-screen) -->
+            <aside id="admin-desktop-sidebar" aria-label="Navigation SuperAdmin desktop" class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white border-r border-slate-200/80 text-slate-900 z-40 flex-col justify-between p-5 select-none shadow-xs">
+                <!-- Haut : Identité SuperAdmin & Marque Campus Market -->
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-center gap-3 px-1 py-1">
+                        <img src="/assets/logo.webp" alt="Campus Market" class="h-10 w-auto object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <div class="flex flex-col min-w-0">
+                            <span class="font-heading font-extrabold text-primary text-base tracking-tight leading-none block truncate">CAMPUS MARKET</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">Supervision UIDT</span>
                         </div>
                     </div>
 
-                    <!-- Actions Rapides -->
-                    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                        <!-- Actualiser -->
+                    <!-- Superviseur actif -->
+                    <div class="px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Superviseur actif</span>
+                        <span class="text-xs font-extrabold text-slate-900 block truncate mt-0.5">${escapeHTML(currentAdmin?.prenom || '')} ${escapeHTML(currentAdmin?.nom || 'Admin')}</span>
+                    </div>
+
+                    <!-- Liens verticaux sidebar desktop -->
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1">
+                            Navigation Centrale
+                        </span>
+                        ${navTabs.map(tab => `
+                            <button 
+                                data-tab-target="${tab.id}"
+                                id="admin-sidebar-${tab.id}"
+                                class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
+                                    activeTab === tab.id
+                                        ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
+                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                }"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <i class="fa-solid ${tab.icon} text-xs w-4 text-center ${activeTab === tab.id ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
+                                    <span>${tab.label}</span>
+                                </div>
+                                ${tab.badge !== null ? `
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
+                                        activeTab === tab.id 
+                                            ? 'bg-white/20 text-white' 
+                                            : (tab.badgeAlert ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 text-slate-700')
+                                    }">
+                                        ${tab.badge}
+                                    </span>
+                                ` : ''}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Bas de Sidebar : Actions SuperAdmin Desktop -->
+                <div class="flex flex-col gap-2 pt-4 border-t border-slate-100">
+                    <div class="grid grid-cols-2 gap-2">
                         <button 
                             id="hdr-btn-refresh-admin" 
                             title="Actualiser toutes les données"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all min-h-[38px] active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition-all cursor-pointer"
                         >
                             <i class="fa-solid fa-arrows-rotate text-xs"></i>
-                            <span class="hidden sm:inline">Actualiser</span>
+                            <span>Actualiser</span>
                         </button>
 
-                        <!-- Voir le catalogue public / site -->
                         <button 
                             id="hdr-btn-admin-view-site" 
                             title="Voir la marketplace publique"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary/20 hover:bg-primary/30 text-accent border border-accent/30 transition-all min-h-[38px] active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all cursor-pointer"
                         >
                             <i class="fa-solid fa-store text-xs"></i>
-                            <span class="hidden sm:inline">Boutique</span>
-                        </button>
-
-                        <!-- Quitter / Déconnexion -->
-                        <button 
-                            id="hdr-btn-exit-admin" 
-                            title="Quitter l'administration"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all min-h-[38px] active:scale-95 cursor-pointer"
-                        >
-                            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
-                            <span class="hidden sm:inline">Quitter</span>
+                            <span>Boutique</span>
                         </button>
                     </div>
+
+                    <button 
+                        id="hdr-btn-exit-admin" 
+                        title="Quitter l'administration"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 transition-all cursor-pointer"
+                    >
+                        <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                        <span>Quitter l'administration</span>
+                    </button>
+
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 mt-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                        <span class="text-[10px] text-slate-500 font-medium truncate">Système UIDT Actif • v2.1</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 2. HEADER MOBILE SUPERADMIN : Épuré blanc avec Logo + Titre + Menu ⋮ unique (lg:hidden) -->
+            <header class="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 text-slate-900 shadow-xs w-full">
+                <div class="w-full px-4 py-2.5 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <img src="/assets/logo.webp" alt="Campus Market" class="h-8 w-auto object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <div class="min-w-0">
+                            <span class="font-heading font-extrabold text-primary text-sm leading-none block truncate">CAMPUS MARKET</span>
+                            <span class="text-[10px] text-slate-500 font-medium leading-tight mt-0.5 block truncate">Administration UIDT • ${escapeHTML(currentAdmin?.prenom || 'Admin')}</span>
+                        </div>
+                    </div>
+
+                    <!-- Bouton Menu Unique Mobile ⋮ -->
+                    <button 
+                        type="button" 
+                        id="hdr-btn-admin-menu-mobile" 
+                        title="Menu actions administration"
+                        class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 cursor-pointer"
+                    >
+                        <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+                    </button>
                 </div>
             </header>
 
-            <!-- Navigation Mobile / Tablette (< lg) : Barre d'onglets compacte sticky avec scroll horizontal masqué -->
-            <nav class="lg:hidden sticky top-[53px] z-30 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 shadow-xs w-full">
+            <!-- 3. TIROIR MOBILE (Bottom Sheet) pour actions SuperAdmin -->
+            <div id="admin-mobile-drawer" class="hidden fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300 select-none">
+                <div class="flex-1 w-full" id="admin-drawer-backdrop"></div>
+                <div class="bg-white border-t border-slate-200/80 text-slate-900 rounded-t-3xl p-5 pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full">
+                    <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-1"></div>
+                    
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <div class="flex items-center gap-2.5">
+                            <img src="/assets/logo.webp" alt="Campus Market" class="h-7 w-auto object-contain">
+                            <div>
+                                <h4 class="font-heading font-extrabold text-sm text-slate-900">Administration Centrale</h4>
+                                <p class="text-[11px] text-slate-500">Actions et supervision UIDT</p>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-close-admin-drawer" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center text-xs cursor-pointer">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <!-- Actualiser -->
+                        <button type="button" id="drawer-btn-refresh-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-bold text-xs transition-colors cursor-pointer">
+                            <i class="fa-solid fa-arrows-rotate text-sm text-primary w-5 text-center"></i>
+                            <span>Actualiser toutes les données</span>
+                        </button>
+
+                        <!-- Voir Boutique -->
+                        <button type="button" id="drawer-btn-admin-view-site" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-bold text-xs transition-colors cursor-pointer">
+                            <i class="fa-solid fa-store text-sm text-primary w-5 text-center"></i>
+                            <span>Voir la marketplace publique</span>
+                        </button>
+
+                        <!-- Quitter -->
+                        <button type="button" id="drawer-btn-exit-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-bold text-xs transition-colors cursor-pointer">
+                            <i class="fa-solid fa-arrow-right-from-bracket text-sm text-rose-600 w-5 text-center"></i>
+                            <span>Quitter l'administration centrale</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. NAVIGATION TABLETTE (sm à lg) : Barre d'onglets compacte sticky -->
+            <nav class="hidden sm:flex lg:hidden sticky top-[53px] z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs w-full">
                 <div class="px-3 sm:px-4 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     ${navTabs.map(tab => `
                         <button 
@@ -220,15 +321,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                             id="admin-nav-${tab.id}"
                             class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[44px] active:scale-95 cursor-pointer ${
                                 activeTab === tab.id
-                                    ? 'bg-accent text-slate-950 shadow-sm font-extrabold'
-                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                                    ? 'bg-primary text-white shadow-xs font-extrabold'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                             }"
                         >
                             <i class="fa-solid ${tab.icon} text-xs"></i>
                             <span>${tab.label}</span>
                             ${tab.badge !== null ? `
                                 <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
-                                    activeTab === tab.id ? 'bg-slate-950 text-accent' : (tab.badgeAlert ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-slate-800 text-slate-300')
+                                    activeTab === tab.id ? 'bg-white/20 text-white' : (tab.badgeAlert ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 text-slate-700')
                                 }">
                                     ${tab.badge}
                                 </span>
@@ -238,64 +339,45 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                 </div>
             </nav>
 
-            <!-- Shell Desktop + Contenu dynamique -->
-            <div class="w-full max-w-7xl mx-auto flex flex-1 items-start">
-                <!-- Sidebar Desktop (>= lg) -->
-                <aside class="hidden lg:flex flex-col w-64 p-4 border-r border-slate-200/80 bg-white sticky top-[53px] h-[calc(100vh-53px)] shrink-0 justify-between">
-                    <div class="flex flex-col gap-1.5">
-                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1">
-                            Navigation Centrale
-                        </span>
-                        ${navTabs.map(tab => `
-                            <button 
-                                data-tab-target="${tab.id}"
-                                id="admin-sidebar-${tab.id}"
-                                class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all min-h-[42px] cursor-pointer group ${
-                                    activeTab === tab.id
-                                        ? 'bg-slate-900 text-white shadow-sm'
-                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                                }"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <i class="fa-solid ${tab.icon} text-xs w-4 text-center ${activeTab === tab.id ? 'text-accent' : 'text-slate-400 group-hover:text-slate-700'}"></i>
-                                    <span>${tab.label}</span>
-                                </div>
-                                ${tab.badge !== null ? `
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
-                                        activeTab === tab.id 
-                                            ? 'bg-slate-800 text-accent' 
-                                            : (tab.badgeAlert ? 'bg-amber-100 text-amber-800 animate-pulse' : 'bg-slate-100 text-slate-600')
-                                    }">
-                                        ${tab.badge}
+            <!-- 5. CONTENU PRINCIPAL PLEIN ÉCRAN (w-full lg:ml-64 lg:w-[calc(100%-16rem)]) -->
+            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-screen p-4 sm:p-6 lg:p-8 xl:p-10 pb-28 sm:pb-8 bg-[#F8FAFC] flex-1">
+                <div id="admin-tab-content" class="w-full">
+                    ${activeTab === 'overview' ? renderOverviewTab() : ''}
+                    ${activeTab === 'sellers' ? renderSellersTab() : ''}
+                    ${activeTab === 'accounts' ? renderAccountsTab() : ''}
+                    ${activeTab === 'products' ? renderProductsTab() : ''}
+                    ${activeTab === 'orders' ? renderOrdersTab() : ''}
+                    ${activeTab === 'locations' ? renderLocationsTab() : ''}
+                </div>
+            </main>
+
+            <!-- 6. BARRE INFÉRIEURE FIXE MOBILE SUPERADMIN (lg:hidden, TOUJOURS visible, z-50) -->
+            <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 text-slate-900 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation admin mobile">
+                <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around">
+                    ${navTabs.map(tab => `
+                        <button 
+                            type="button"
+                            data-tab-target="${tab.id}"
+                            class="relative flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 min-h-[48px] min-w-[50px] cursor-pointer active:scale-95 ${
+                                activeTab === tab.id
+                                    ? 'text-primary font-bold'
+                                    : 'text-slate-500 hover:text-slate-800 font-medium'
+                            }"
+                        >
+                            ${activeTab === tab.id ? '<span class="absolute top-0 w-7 h-1 bg-primary rounded-full"></span>' : ''}
+                            <div class="relative">
+                                <i class="fa-solid ${tab.icon} text-lg mb-0.5"></i>
+                                ${tab.badge !== null && tab.badge > 0 ? `
+                                    <span class="absolute -top-1.5 -right-2.5 bg-primary text-white font-black text-[9px] px-1.5 py-0.2 rounded-full border-2 border-white shadow-sm min-w-[16px] text-center ${tab.badgeAlert ? 'animate-pulse' : ''}">
+                                        ${tab.badge > 99 ? '99+' : tab.badge}
                                     </span>
                                 ` : ''}
-                            </button>
-                        `).join('')}
-                    </div>
-
-                    <div class="pt-4 border-t border-slate-100 flex flex-col gap-2">
-                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center gap-2.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                            <div class="min-w-0 flex-1">
-                                <span class="text-[11px] font-bold text-slate-900 block truncate">Système UIDT Actif</span>
-                                <span class="text-[10px] text-slate-500 block truncate">Session superviseur</span>
                             </div>
-                        </div>
-                    </div>
-                </aside>
-
-                <!-- Zone de contenu dynamique pour l'onglet actif -->
-                <main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 bg-slate-50/40">
-                    <div id="admin-tab-content" class="w-full">
-                        ${activeTab === 'overview' ? renderOverviewTab() : ''}
-                        ${activeTab === 'sellers' ? renderSellersTab() : ''}
-                        ${activeTab === 'accounts' ? renderAccountsTab() : ''}
-                        ${activeTab === 'products' ? renderProductsTab() : ''}
-                        ${activeTab === 'orders' ? renderOrdersTab() : ''}
-                        ${activeTab === 'locations' ? renderLocationsTab() : ''}
-                    </div>
-                </main>
-            </div>
+                            <span class="text-[9px] leading-tight mt-0.5 truncate max-w-[54px]">${tab.label}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </nav>
         `;
 
         bindEvents();
@@ -312,6 +394,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
         };
 
         const deliveredOrdersCount = allOrders.filter((o) => o.status === 'delivered').length;
+
+        // Calcul de la répartition des commandes par Pavillon / Zone
+        const locationCounts = {};
+        allOrders.forEach((o) => {
+            const loc = (o.delivery_address || 'Non spécifié').trim();
+            locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+        });
+        const sortedLocations = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]);
+        const maxLocationCount = sortedLocations.length > 0 ? sortedLocations[0][1] : 1;
 
         return `
             <div class="flex flex-col gap-5 sm:gap-6">
@@ -428,39 +519,90 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                     </div>
                 </div>
 
+                <!-- Répartition Géographique des Commandes (Pavillons & Campus UIDT) -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col gap-4">
+                    <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0">
+                                <i class="fa-solid fa-chart-column"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-sm text-slate-900">Répartition Logistique par Pavillon / Zone</h3>
+                                <p class="text-xs text-slate-500">Volume de commandes par destination sur le campus UIDT</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                            ${allOrders.length} commande${allOrders.length > 1 ? 's' : ''} au total
+                        </span>
+                    </div>
+
+                    ${sortedLocations.length === 0 ? `
+                        <div class="py-8 text-center text-slate-400 text-xs">
+                            <i class="fa-solid fa-map-location-dot text-2xl text-slate-300 mb-1.5 block"></i>
+                            Aucune commande enregistrée pour établir la répartition géographique.
+                        </div>
+                    ` : `
+                        <div class="flex flex-col gap-3 pt-1">
+                            ${sortedLocations.slice(0, 6).map(([locName, count], idx) => {
+                                const percent = Math.round((count / (allOrders.length || 1)) * 100);
+                                const barPercent = Math.max(8, Math.round((count / maxLocationCount) * 100));
+                                const isTop = idx === 0;
+
+                                return `
+                                    <div class="flex flex-col gap-1.5 group">
+                                        <div class="flex items-center justify-between text-xs">
+                                            <span class="font-semibold text-slate-800 flex items-center gap-2 truncate max-w-[70%]">
+                                                <i class="fa-solid fa-location-dot text-[11px] ${isTop ? 'text-primary' : 'text-slate-400'}"></i>
+                                                <span class="truncate">${escapeHTML(locName)}</span>
+                                            </span>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <span class="font-bold text-slate-900 tabular-nums">${count} cmd</span>
+                                                <span class="text-[11px] font-bold ${isTop ? 'text-primary bg-primary/10' : 'text-slate-500 bg-slate-100'} tabular-nums px-2 py-0.5 rounded-md">(${percent}%)</span>
+                                            </div>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                            <div class="h-full rounded-full transition-all duration-500 ${isTop ? 'bg-primary' : 'bg-slate-300 group-hover:bg-primary/70'}" style="width: ${barPercent}%"></div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
+
                 <!-- Raccourcis Opérationnels et Actions Rapides -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <button data-jump-tab="sellers" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-amber-300 hover:shadow-xs transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
-                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
+                    <button data-jump-tab="sellers" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
                             <i class="fa-solid fa-user-plus"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate">Candidatures</span>
+                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate group-hover:text-primary transition-colors">Candidatures</span>
                             <span class="text-[11px] text-slate-500 block truncate">${m.pendingSellersCount} en attente</span>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-amber-500 transition-colors"></i>
+                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-primary transition-colors"></i>
                     </button>
 
-                    <button data-jump-tab="accounts" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-300 hover:shadow-xs transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
-                        <div class="w-9 h-9 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
+                    <button data-jump-tab="accounts" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
+                        <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
                             <i class="fa-solid fa-id-card-clip"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate">Gestion Comptes</span>
+                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate group-hover:text-primary transition-colors">Gestion Comptes</span>
                             <span class="text-[11px] text-slate-500 block truncate">${allProfiles.length || 0} profils</span>
                         </div>
                         <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-primary transition-colors"></i>
                     </button>
 
-                    <button data-jump-tab="locations" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-emerald-300 hover:shadow-xs transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
-                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
+                    <button data-jump-tab="locations" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
                             <i class="fa-solid fa-map-location-dot"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate">Zones Livraison</span>
+                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate group-hover:text-primary transition-colors">Zones Livraison</span>
                             <span class="text-[11px] text-slate-500 block truncate">${deliveryLocations.length} lieux</span>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-emerald-500 transition-colors"></i>
+                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-primary transition-colors"></i>
                     </button>
                 </div>
             </div>
@@ -510,22 +652,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         ` : ''}
                     </div>
 
-                    <!-- Filtres rôles -->
-                    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                        <button type="button" data-account-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
-                            Tous (${allProfiles.length})
-                        </button>
-                        <button type="button" data-account-filter="acheteur" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'acheteur' ? 'bg-blue-600 text-white shadow-xs' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'}">
-                            Acheteurs
-                        </button>
-                        <button type="button" data-account-filter="vendeur" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'vendeur' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}">
-                            Vendeurs
-                        </button>
-                        <button type="button" data-account-filter="suspendu" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'suspendu' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100'}">
-                            Suspendus
-                        </button>
-                        <button type="button" data-account-filter="superadmin" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'superadmin' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
-                            SuperAdmin
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <!-- Filtres rôles -->
+                        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                            <button type="button" data-account-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                Tous (${allProfiles.length})
+                            </button>
+                            <button type="button" data-account-filter="acheteur" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'acheteur' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                Acheteurs
+                            </button>
+                            <button type="button" data-account-filter="vendeur" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'vendeur' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                Vendeurs
+                            </button>
+                            <button type="button" data-account-filter="suspendu" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'suspendu' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                Suspendus
+                            </button>
+                            <button type="button" data-account-filter="superadmin" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'superadmin' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                SuperAdmin
+                            </button>
+                        </div>
+
+                        <!-- Export CSV -->
+                        <button type="button" id="btn-export-accounts-csv" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80 flex items-center gap-1.5 shrink-0">
+                            <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
+                            <span class="hidden sm:inline">Exporter CSV</span>
+                            <span class="sm:hidden">CSV</span>
                         </button>
                     </div>
                 </div>
@@ -565,14 +716,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                                 <td class="py-3 px-4">
                                                     <div class="flex items-center gap-3">
                                                         <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                                            suspended ? 'bg-rose-100 text-rose-700' : prof.role === 'superadmin' ? 'bg-slate-900 text-accent' : prof.role === 'vendeur' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
+                                                            suspended ? 'bg-rose-100 text-rose-700' : prof.role === 'superadmin' ? 'bg-primary text-white shadow-xs' : prof.role === 'vendeur' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
                                                         }">
                                                             ${((prof.prenom?.[0] || '') + (prof.nom?.[0] || '')).toUpperCase() || 'U'}
                                                         </div>
                                                         <div class="min-w-0">
                                                             <div class="flex items-center gap-1.5">
                                                                 <span class="font-bold text-slate-900 block truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
-                                                                ${isSelf ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-200 text-slate-700">Vous</span>` : ''}
+                                                                ${isSelf ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-primary/10 text-primary">Vous</span>` : ''}
                                                             </div>
                                                             ${prof.email ? `<span class="text-[11px] text-slate-400 block truncate">${escapeHTML(prof.email)}</span>` : ''}
                                                         </div>
@@ -581,10 +732,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                                 <td class="py-3 px-4">
                                                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                                                         suspended ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                                                        prof.role === 'superadmin' ? 'bg-slate-900 text-accent' :
+                                                        prof.role === 'superadmin' ? 'bg-primary text-white font-extrabold shadow-xs' :
                                                         prof.role === 'vendeur' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
                                                         prof.role === 'vendeur_pending' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
-                                                        'bg-blue-50 text-blue-700 border border-blue-200'
+                                                        'bg-primary/10 text-primary border border-primary/20'
                                                     }">
                                                         ${suspended ? 'Suspendu' : prof.role === 'superadmin' ? 'SuperAdmin' : prof.role === 'vendeur' ? 'Vendeur' : prof.role === 'vendeur_pending' ? 'Candidat' : 'Acheteur'}
                                                     </span>
@@ -649,7 +800,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                     <div class="py-3 flex flex-col gap-2.5">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                                suspended ? 'bg-rose-100 text-rose-700' : prof.role === 'superadmin' ? 'bg-slate-900 text-accent' : prof.role === 'vendeur' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
+                                                suspended ? 'bg-rose-100 text-rose-700' : prof.role === 'superadmin' ? 'bg-primary text-white shadow-xs' : prof.role === 'vendeur' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
                                             }">
                                                 ${((prof.prenom?.[0] || '') + (prof.nom?.[0] || '')).toUpperCase() || 'U'}
                                             </div>
@@ -658,13 +809,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                                     <span class="font-bold text-slate-900 text-sm truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
                                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                                         suspended ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                                                        prof.role === 'superadmin' ? 'bg-slate-900 text-accent' :
-                                                        prof.role === 'vendeur' ? 'bg-emerald-50 text-emerald-800' :
-                                                        'bg-blue-50 text-blue-700'
+                                                        prof.role === 'superadmin' ? 'bg-primary text-white font-extrabold shadow-xs' :
+                                                        prof.role === 'vendeur' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
+                                                        'bg-primary/10 text-primary border border-primary/20'
                                                     }">
                                                         ${suspended ? 'Suspendu' : prof.role === 'superadmin' ? 'SuperAdmin' : prof.role === 'vendeur' ? 'Vendeur' : 'Acheteur'}
                                                     </span>
-                                                    ${isSelf ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-200 text-slate-700">Vous</span>` : ''}
+                                                    ${isSelf ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-primary/10 text-primary">Vous</span>` : ''}
                                                 </div>
                                                 <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
                                                     <span><i class="fa-solid fa-phone text-[9px] mr-1"></i>${escapeHTML(prof.telephone || 'Non renseigné')}</span>
@@ -769,22 +920,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         ` : ''}
                     </div>
 
-                    <!-- Filtres statut -->
-                    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                        <button type="button" data-seller-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${sellerFilterTab === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
-                            Tous (${totalAccounts})
-                        </button>
-                        <button type="button" data-seller-filter="pending" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'pending' ? 'bg-amber-500 text-white shadow-xs' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}">
-                            <span>En attente</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'pending' ? 'bg-amber-700 text-white' : 'bg-amber-200 text-amber-900'}">${totalPending}</span>
-                        </button>
-                        <button type="button" data-seller-filter="active" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'active' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}">
-                            <span>Actifs</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'active' ? 'bg-emerald-800 text-white' : 'bg-emerald-200 text-emerald-900'}">${activeCount}</span>
-                        </button>
-                        <button type="button" data-seller-filter="suspended" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'suspended' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100'}">
-                            <span>Suspendus</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'suspended' ? 'bg-rose-800 text-white' : 'bg-rose-200 text-rose-900'}">${suspendedCount}</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <!-- Filtres statut -->
+                        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                            <button type="button" data-seller-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${sellerFilterTab === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                Tous (${totalAccounts})
+                            </button>
+                            <button type="button" data-seller-filter="pending" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'pending' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                <span>En attente</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'}">${totalPending}</span>
+                            </button>
+                            <button type="button" data-seller-filter="active" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'active' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                <span>Actifs</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'active' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}">${activeCount}</span>
+                            </button>
+                            <button type="button" data-seller-filter="suspended" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'suspended' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                <span>Suspendus</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'suspended' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}">${suspendedCount}</span>
+                            </button>
+                        </div>
+
+                        <!-- Export CSV -->
+                        <button type="button" id="btn-export-sellers-csv" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80 flex items-center gap-1.5 shrink-0">
+                            <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
+                            <span class="hidden sm:inline">Exporter CSV</span>
+                            <span class="sm:hidden">CSV</span>
                         </button>
                     </div>
                 </div>
@@ -1199,10 +1359,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                         ` : `
                                             <i class="fa-solid ${escapeHTML(prod.icon || 'fa-box')} text-3xl text-slate-400"></i>
                                         `}
-                                        <span class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full text-xs font-black bg-slate-900/90 text-accent backdrop-blur-md shadow-sm tabular-nums">
-                                            ${Number(prod.price).toLocaleString('fr-FR')} F
-                                        </span>
-                                        <span class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-slate-800 backdrop-blur-md shadow-xs">
+                                        <span class="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-white/95 text-slate-700 backdrop-blur-md shadow-xs border border-slate-200/60">
                                             ${escapeHTML(prod.category || 'Général')}
                                         </span>
                                     </div>
@@ -1216,15 +1373,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                                 <i class="fa-solid fa-store text-[10px] text-slate-400"></i>
                                                 <span class="truncate">${escapeHTML(sellerName)}</span>
                                             </div>
+                                            <div class="mt-2 font-heading font-extrabold text-base text-primary tabular-nums">
+                                                ${Number(prod.price).toLocaleString('fr-FR')} FCFA
+                                            </div>
                                         </div>
 
                                         <button 
                                             data-action="delete-product" 
                                             data-id="${prod.id}" 
-                                            class="w-full mt-3.5 py-2 px-3 rounded-xl border border-rose-200/80 bg-rose-50/40 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer min-h-[38px]"
+                                            class="w-full mt-3.5 py-2 px-3 rounded-xl border border-rose-200/80 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer min-h-[38px]"
                                         >
                                             <i class="fa-solid fa-trash-can text-xs"></i>
-                                            <span>Supprimer</span>
+                                            <span>Supprimer du catalogue</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1237,158 +1397,254 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
     }
 
     function renderOrdersTab() {
-        if (allOrders.length === 0) {
-            return `
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-8 text-center text-slate-400 text-xs">
-                    <i class="fa-solid fa-truck-ramp-box text-3xl text-slate-300 mb-2 block"></i>
-                    Aucune commande enregistrée pour le moment.
-                </div>
-            `;
-        }
+        const query = (orderSearchQuery || '').toLowerCase().trim();
+        const filteredOrders = allOrders.filter((ord) => {
+            if (query) {
+                const ref = (ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6) : ''))).toLowerCase();
+                const buyer = (ord.buyer_name || '').toLowerCase();
+                const phone = (ord.buyer_phone || '').toLowerCase();
+                const loc = (ord.delivery_address || '').toLowerCase();
+                const prod = (ord.product?.title || '').toLowerCase();
+                if (!ref.includes(query) && !buyer.includes(query) && !phone.includes(query) && !loc.includes(query) && !prod.includes(query)) {
+                    return false;
+                }
+            }
+            if (orderPavillonFilter !== 'all') {
+                const addr = (ord.delivery_address || '').toLowerCase();
+                if (!addr.includes(orderPavillonFilter.toLowerCase())) {
+                    return false;
+                }
+            }
+            if (orderPaymentFilter !== 'all') {
+                const pMethod = ord.payment_method || 'cash';
+                if (pMethod !== orderPaymentFilter) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        // Extraire la liste unique des pavillons et zones de livraison
+        const allLocationNames = Array.from(new Set([
+            ...deliveryLocations.map((l) => l.name),
+            ...allOrders.map((o) => o.delivery_address).filter(Boolean)
+        ])).sort();
+
+        const renderPaymentBadge = (method) => {
+            if (method === 'wave') {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#1DA1F2]/10 text-[#0c7abf] border border-[#1DA1F2]/30"><i class="fa-solid fa-mobile-screen"></i> Wave</span>`;
+            }
+            if (method === 'om') {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF7900]/10 text-[#d95f00] border border-[#FF7900]/30"><i class="fa-solid fa-wallet"></i> OM</span>`;
+            }
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-money-bill-wave"></i> Espèces</span>`;
+        };
+
+        const renderOrderStatusBadge = (status) => {
+            const statusMap = {
+                pending: { label: 'En attente', class: 'bg-amber-50 text-amber-800 border border-amber-200' },
+                confirmed: { label: 'Confirmée', class: 'bg-sky-50 text-sky-800 border border-sky-200' },
+                shipped: { label: 'En livraison', class: 'bg-indigo-50 text-indigo-800 border border-indigo-200' },
+                delivered: { label: 'Livrée', class: 'bg-emerald-50 text-emerald-800 border border-emerald-200' },
+                cancelled: { label: 'Annulée', class: 'bg-rose-50 text-rose-800 border border-rose-200' },
+            };
+            const config = statusMap[status] || { label: status || 'En attente', class: 'bg-slate-100 text-slate-700 border border-slate-200' };
+            return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${config.class}">${config.label}</span>`;
+        };
 
         return `
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-                    <div>
-                        <h2 class="font-heading font-extrabold text-base text-slate-900">Historique des Commandes</h2>
-                        <p class="text-xs text-slate-500">Traçabilité des transactions et résolution directe des litiges campus</p>
+            <div class="flex flex-col gap-4">
+                <!-- Barre d'outils et Filtres Avancés Commandes -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div class="relative flex-1 max-w-sm">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input 
+                            type="text" 
+                            id="admin-order-search" 
+                            placeholder="Réf, client, pavillon, produit..." 
+                            value="${escapeHTML(orderSearchQuery)}"
+                            class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[40px]"
+                        >
+                        ${orderSearchQuery ? `
+                            <button id="btn-clear-order-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                                <i class="fa-solid fa-circle-xmark text-xs"></i>
+                            </button>
+                        ` : ''}
                     </div>
-                    <span class="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-full">${allOrders.length} commande${allOrders.length > 1 ? 's' : ''}</span>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <!-- Filtre Pavillon -->
+                        <div class="relative min-w-[150px]">
+                            <select 
+                                id="admin-order-pavillon-filter" 
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer min-h-[38px]"
+                            >
+                                <option value="all">Tous les pavillons</option>
+                                ${allLocationNames.map((loc) => `
+                                    <option value="${escapeHTML(loc)}" ${orderPavillonFilter === loc ? 'selected' : ''}>
+                                        ${escapeHTML(loc)}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Filtre Mode de Paiement -->
+                        <div class="relative min-w-[140px]">
+                            <select 
+                                id="admin-order-payment-filter" 
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer min-h-[38px]"
+                            >
+                                <option value="all">Tous paiements</option>
+                                <option value="wave" ${orderPaymentFilter === 'wave' ? 'selected' : ''}>Wave</option>
+                                <option value="om" ${orderPaymentFilter === 'om' ? 'selected' : ''}>Orange Money</option>
+                                <option value="cash" ${orderPaymentFilter === 'cash' ? 'selected' : ''}>Espèces (Cash)</option>
+                            </select>
+                        </div>
+
+                        <!-- Export CSV -->
+                        <button type="button" id="btn-export-orders-csv" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[38px] bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80 flex items-center gap-1.5 shrink-0">
+                            <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
+                            <span class="hidden sm:inline">Exporter CSV</span>
+                            <span class="sm:hidden">CSV</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- 1. Version Desktop (Tableau HTML stylisé avec Tailwind) -->
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="w-full text-left text-xs border-collapse">
-                        <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
-                            <tr>
-                                <th class="py-3 px-4">Réf / Date</th>
-                                <th class="py-3 px-4">Client</th>
-                                <th class="py-3 px-4">Pavillon / Lieu</th>
-                                <th class="py-3 px-4">Produit</th>
-                                <th class="py-3 px-4">Montant</th>
-                                <th class="py-3 px-4">Statut</th>
-                                <th class="py-3 px-4 text-right">Action SuperAdmin</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            ${allOrders.map((ord) => {
-                                const statusClass = ord.status === 'delivered'
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold'
-                                    : ord.status === 'cancelled'
-                                    ? 'bg-rose-50 text-rose-700 border border-rose-200 font-bold'
-                                    : ord.status === 'shipped'
-                                    ? 'bg-blue-50 text-blue-700 border border-blue-200 font-bold'
-                                    : 'bg-amber-50 text-amber-700 border border-amber-200 font-bold';
+                <!-- Conteneur Commandes -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h2 class="font-heading font-extrabold text-base text-slate-900">Historique des Commandes</h2>
+                            <p class="text-xs text-slate-500">Traçabilité des transactions et résolution directe des litiges campus</p>
+                        </div>
+                        <span class="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-full">${filteredOrders.length} commande${filteredOrders.length > 1 ? 's' : ''}</span>
+                    </div>
 
-                                return `
-                                    <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
-                                        <td class="py-3 px-4">
-                                            <span class="font-heading font-bold text-primary block">
-                                                ${escapeHTML(ord.reference || ('#CMD-' + ord.id.slice(0, 6).toUpperCase()))}
+                    ${filteredOrders.length === 0 ? `
+                        <div class="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+                            <i class="fa-solid fa-truck-ramp-box text-3xl text-slate-300"></i>
+                            <p class="font-semibold text-slate-600">Aucune commande trouvée</p>
+                            <p class="text-slate-400">Essayez d'ajuster vos critères de recherche ou de réinitialiser les filtres.</p>
+                        </div>
+                    ` : `
+                        <!-- 1. Version Desktop (Tableau HTML stylisé avec Tailwind) -->
+                        <div class="hidden md:block overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
+                                    <tr>
+                                        <th class="py-3 px-4">Réf / Date</th>
+                                        <th class="py-3 px-4">Client</th>
+                                        <th class="py-3 px-4">Pavillon / Lieu</th>
+                                        <th class="py-3 px-4">Produit</th>
+                                        <th class="py-3 px-4">Montant</th>
+                                        <th class="py-3 px-4">Paiement</th>
+                                        <th class="py-3 px-4">Statut</th>
+                                        <th class="py-3 px-4 text-right">Action SuperAdmin</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filteredOrders.map((ord) => `
+                                        <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
+                                            <td class="py-3 px-4">
+                                                <span class="font-mono font-bold text-xs text-primary block">
+                                                    ${escapeHTML(ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6).toUpperCase() : '')))}
+                                                </span>
+                                                <span class="text-[10px] text-slate-400">${ord.created_at ? new Date(ord.created_at).toLocaleDateString('fr-FR') : ''}</span>
+                                            </td>
+                                            <td class="py-3 px-4">
+                                                <span class="font-bold text-slate-900 block">${escapeHTML(ord.buyer_name || 'Invité')}</span>
+                                                <a href="tel:${escapeHTML(ord.buyer_phone || '')}" class="text-[11px] text-slate-500 hover:text-primary">${escapeHTML(ord.buyer_phone || '')}</a>
+                                            </td>
+                                            <td class="py-3 px-4 text-slate-600">
+                                                ${escapeHTML(ord.delivery_address || 'Non spécifié')}
+                                            </td>
+                                            <td class="py-3 px-4">
+                                                <span class="font-medium text-slate-800">${escapeHTML(ord.product?.title || 'Article')}</span>
+                                                <span class="text-[10px] text-slate-400 block">(x${ord.quantity || 1})</span>
+                                            </td>
+                                            <td class="py-3 px-4 font-extrabold text-slate-900 tabular-nums">
+                                                ${Number(ord.price).toLocaleString('fr-FR')} F
+                                            </td>
+                                            <td class="py-3 px-4">
+                                                ${renderPaymentBadge(ord.payment_method)}
+                                            </td>
+                                            <td class="py-3 px-4">
+                                                ${renderOrderStatusBadge(ord.status)}
+                                            </td>
+                                            <td class="py-3 px-4 text-right">
+                                                <select 
+                                                    data-action="change-order-status" 
+                                                    data-id="${ord.id}"
+                                                    class="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-h-[36px]"
+                                                >
+                                                    <option value="" disabled selected>Modifier...</option>
+                                                    <option value="pending" ${ord.status === 'pending' ? 'disabled' : ''}>En attente</option>
+                                                    <option value="confirmed" ${ord.status === 'confirmed' ? 'disabled' : ''}>Confirmée</option>
+                                                    <option value="shipped" ${ord.status === 'shipped' ? 'disabled' : ''}>Expédiée</option>
+                                                    <option value="delivered" ${ord.status === 'delivered' ? 'disabled' : ''}>Livrée</option>
+                                                    <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler (Litige)</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 2. Version Cartes pour Mobile (< md) : Padding réduit, badges contrastés, zones confortables -->
+                        <div class="md:hidden flex flex-col gap-3 p-3">
+                            ${filteredOrders.map((ord) => `
+                                <div class="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-3.5 flex flex-col gap-2.5">
+                                    <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                                        <div>
+                                            <span class="font-mono font-bold text-xs text-primary block">
+                                                ${escapeHTML(ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6).toUpperCase() : '')))}
                                             </span>
-                                            <span class="text-[10px] text-slate-400">${new Date(ord.created_at).toLocaleDateString('fr-FR')}</span>
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            <span class="font-bold text-slate-900 block">${escapeHTML(ord.buyer_name || 'Invité')}</span>
-                                            <a href="tel:${escapeHTML(ord.buyer_phone || '')}" class="text-[11px] text-slate-500 hover:text-primary">${escapeHTML(ord.buyer_phone || '')}</a>
-                                        </td>
-                                        <td class="py-3 px-4 text-slate-600">
-                                            ${escapeHTML(ord.delivery_address || 'Non spécifié')}
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            <span class="font-medium text-slate-800">${escapeHTML(ord.product?.title || 'Article')}</span>
-                                            <span class="text-[10px] text-slate-400 block">(x${ord.quantity || 1})</span>
-                                        </td>
-                                        <td class="py-3 px-4 font-extrabold text-slate-900 tabular-nums">
-                                            ${Number(ord.price).toLocaleString('fr-FR')} F
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] ${statusClass}">
-                                                ${escapeHTML(ord.status || 'pending')}
-                                            </span>
-                                        </td>
-                                        <td class="py-3 px-4 text-right">
+                                            <span class="text-[10px] text-slate-400">${ord.created_at ? new Date(ord.created_at).toLocaleDateString('fr-FR') : ''}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            ${renderPaymentBadge(ord.payment_method)}
+                                            ${renderOrderStatusBadge(ord.status)}
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                            <span class="text-[10px] text-slate-400 font-bold uppercase block">Client</span>
+                                            <span class="font-bold text-slate-900 block truncate">${escapeHTML(ord.buyer_name || 'Invité')}</span>
+                                            <a href="tel:${escapeHTML(ord.buyer_phone || '')}" class="text-[11px] text-primary hover:underline">${escapeHTML(ord.buyer_phone || '')}</a>
+                                        </div>
+                                        <div>
+                                            <span class="text-[10px] text-slate-400 font-bold uppercase block">Lieu Livraison</span>
+                                            <span class="text-slate-700 block truncate">${escapeHTML(ord.delivery_address || 'Non spécifié')}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center justify-between border-t border-slate-200/60 pt-2.5">
+                                        <div class="min-w-0 flex-1 pr-2">
+                                            <span class="text-xs font-semibold text-slate-800 block truncate">${escapeHTML(ord.product?.title || 'Article')} (x${ord.quantity || 1})</span>
+                                            <span class="font-heading font-extrabold text-sm text-slate-900 block mt-0.5 tabular-nums">${Number(ord.price).toLocaleString('fr-FR')} FCFA</span>
+                                        </div>
+
+                                        <div class="w-36 shrink-0">
                                             <select 
                                                 data-action="change-order-status" 
                                                 data-id="${ord.id}"
-                                                class="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-h-[36px]"
+                                                class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-h-[44px]"
                                             >
                                                 <option value="" disabled selected>Modifier...</option>
                                                 <option value="pending" ${ord.status === 'pending' ? 'disabled' : ''}>En attente</option>
                                                 <option value="confirmed" ${ord.status === 'confirmed' ? 'disabled' : ''}>Confirmée</option>
                                                 <option value="shipped" ${ord.status === 'shipped' ? 'disabled' : ''}>Expédiée</option>
                                                 <option value="delivered" ${ord.status === 'delivered' ? 'disabled' : ''}>Livrée</option>
-                                                <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler (Litige)</option>
+                                                <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler</option>
                                             </select>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- 2. Version Cartes pour Mobile (< md) : Padding réduit, badges contrastés, zones confortables -->
-                <div class="md:hidden flex flex-col gap-3 p-3">
-                    ${allOrders.map((ord) => {
-                        const statusClass = ord.status === 'delivered'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold'
-                            : ord.status === 'cancelled'
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200 font-bold'
-                            : ord.status === 'shipped'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200 font-bold'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200 font-bold';
-
-                        return `
-                            <div class="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-3.5 flex flex-col gap-2.5">
-                                <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
-                                    <div>
-                                        <span class="font-heading font-extrabold text-sm text-primary block">
-                                            ${escapeHTML(ord.reference || ('#CMD-' + ord.id.slice(0, 6).toUpperCase()))}
-                                        </span>
-                                        <span class="text-[10px] text-slate-400">${new Date(ord.created_at).toLocaleDateString('fr-FR')}</span>
-                                    </div>
-                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] ${statusClass}">
-                                        ${escapeHTML(ord.status || 'pending')}
-                                    </span>
-                                </div>
-
-                                <div class="grid grid-cols-2 gap-2 text-xs">
-                                    <div>
-                                        <span class="text-[10px] text-slate-400 font-bold uppercase block">Client</span>
-                                        <span class="font-bold text-slate-900 block truncate">${escapeHTML(ord.buyer_name || 'Invité')}</span>
-                                        <a href="tel:${escapeHTML(ord.buyer_phone || '')}" class="text-[11px] text-primary hover:underline">${escapeHTML(ord.buyer_phone || '')}</a>
-                                    </div>
-                                    <div>
-                                        <span class="text-[10px] text-slate-400 font-bold uppercase block">Lieu Livraison</span>
-                                        <span class="text-slate-700 block truncate">${escapeHTML(ord.delivery_address || 'Non spécifié')}</span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div class="flex items-center justify-between border-t border-slate-200/60 pt-2.5">
-                                    <div class="min-w-0 flex-1 pr-2">
-                                        <span class="text-xs font-semibold text-slate-800 block truncate">${escapeHTML(ord.product?.title || 'Article')} (x${ord.quantity || 1})</span>
-                                        <span class="font-heading font-extrabold text-sm text-slate-900 block mt-0.5 tabular-nums">${Number(ord.price).toLocaleString('fr-FR')} FCFA</span>
-                                    </div>
-
-                                    <div class="w-36 shrink-0">
-                                        <select 
-                                            data-action="change-order-status" 
-                                            data-id="${ord.id}"
-                                            class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-h-[44px]"
-                                        >
-                                            <option value="" disabled selected>Modifier...</option>
-                                            <option value="pending" ${ord.status === 'pending' ? 'disabled' : ''}>En attente</option>
-                                            <option value="confirmed" ${ord.status === 'confirmed' ? 'disabled' : ''}>Confirmée</option>
-                                            <option value="shipped" ${ord.status === 'shipped' ? 'disabled' : ''}>Expédiée</option>
-                                            <option value="delivered" ${ord.status === 'delivered' ? 'disabled' : ''}>Livrée</option>
-                                            <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
+                            `).join('')}
+                        </div>
+                    `}
                 </div>
             </div>
         `;
@@ -1566,37 +1822,42 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
 
     function renderLoginModal() {
         containerEl.innerHTML = `
-            <div class="w-full max-w-md mx-auto my-12 bg-white rounded-3xl shadow-2xl border border-slate-200/80 p-6 sm:p-7 flex flex-col gap-5 view-transition-enter">
-                <div class="flex items-center gap-3.5">
-                    <img src="/assets/logo.webp" alt="Campus Market" class="h-11 w-auto object-contain" onerror="this.src='/assets/logo.webp'">
-                    <div>
-                        <h2 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 leading-tight">Portail Administrateur</h2>
-                        <p class="text-xs text-slate-500">Accès institutionnel réservé à l'UIDT</p>
+            <div class="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-slate-50 relative overflow-hidden">
+                <div class="absolute -top-32 -left-32 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-8 flex flex-col gap-6 relative z-10 view-transition-enter">
+                    <div class="flex items-center gap-3.5">
+                        <img src="/assets/logo.webp" alt="Campus Market" class="h-11 w-auto object-contain" onerror="this.src='/assets/logo.webp'">
+                        <div>
+                            <h2 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 leading-tight">Portail Administrateur</h2>
+                            <p class="text-xs text-slate-500">Accès institutionnel réservé à l'UIDT</p>
+                        </div>
                     </div>
+
+                    <div id="admin-login-error" class="hidden p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-600 font-medium"></div>
+
+                    <form id="superadmin-login-form" class="flex flex-col gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1" for="admin-login-email">Email institutionnel SuperAdmin</label>
+                            <input type="email" id="admin-login-email" required placeholder="admin@univ-thies.sn" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1" for="admin-login-password">Mot de passe</label>
+                            <input type="password" id="admin-login-password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all">
+                        </div>
+
+                        <div class="flex items-center gap-2.5 pt-2">
+                            <button type="submit" id="btn-admin-submit" class="flex-1 py-3 bg-primary hover:bg-primary-hover active:scale-95 text-white font-heading font-bold text-xs sm:text-sm rounded-2xl shadow-md shadow-primary/25 transition-all flex items-center justify-center gap-2 min-h-[46px] cursor-pointer">
+                                <i class="fa-solid fa-key text-xs"></i>
+                                <span>Connexion sécurisée</span>
+                            </button>
+                            <button type="button" id="btn-admin-cancel" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs sm:text-sm rounded-2xl transition-colors min-h-[46px] cursor-pointer">
+                                Retour
+                            </button>
+                        </div>
+                    </form>
                 </div>
-
-                <div id="admin-login-error" class="hidden p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-600 font-medium"></div>
-
-                <form id="superadmin-login-form" class="flex flex-col gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1" for="admin-login-email">Email institutionnel SuperAdmin</label>
-                        <input type="email" id="admin-login-email" required placeholder="admin@univ-thies.sn" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1" for="admin-login-password">Mot de passe</label>
-                        <input type="password" id="admin-login-password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all">
-                    </div>
-
-                    <div class="flex items-center gap-2.5 pt-2">
-                        <button type="submit" id="btn-admin-submit" class="flex-1 py-3 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-heading font-bold text-xs sm:text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 min-h-[46px]">
-                            <i class="fa-solid fa-key text-xs"></i>
-                            <span>Connexion sécurisée</span>
-                        </button>
-                        <button type="button" id="btn-admin-cancel" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-2xl transition-colors min-h-[46px]">
-                            Retour
-                        </button>
-                    </div>
-                </form>
             </div>
         `;
 
@@ -1638,17 +1899,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
     }
 
     function bindEvents() {
-        // 1. Header SuperAdmin
+        // 1. Actions SuperAdmin (Sidebar Desktop)
         containerEl.querySelector('#hdr-btn-refresh-admin')?.addEventListener('click', loadAdminData);
         containerEl.querySelector('#btn-refresh-admin')?.addEventListener('click', loadAdminData);
 
-        containerEl.querySelector('#hdr-btn-admin-view-site')?.addEventListener('click', () => {
+        const handleViewSite = () => {
             if (typeof onBackToCatalog === 'function') {
                 onBackToCatalog();
             } else if (typeof onExit === 'function') {
                 onExit();
             }
-        });
+        };
+        containerEl.querySelector('#hdr-btn-admin-view-site')?.addEventListener('click', handleViewSite);
 
         const exitAdminHandler = async () => {
             await supabase.auth.signOut();
@@ -1658,6 +1920,28 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
         };
         containerEl.querySelector('#hdr-btn-exit-admin')?.addEventListener('click', exitAdminHandler);
         containerEl.querySelector('#btn-exit-admin')?.addEventListener('click', exitAdminHandler);
+
+        // Tiroir mobile (Bottom Sheet)
+        const drawerEl = containerEl.querySelector('#admin-mobile-drawer');
+        const openDrawer = () => drawerEl?.classList.remove('hidden');
+        const closeDrawer = () => drawerEl?.classList.add('hidden');
+
+        containerEl.querySelector('#hdr-btn-admin-menu-mobile')?.addEventListener('click', openDrawer);
+        containerEl.querySelector('#btn-close-admin-drawer')?.addEventListener('click', closeDrawer);
+        containerEl.querySelector('#admin-drawer-backdrop')?.addEventListener('click', closeDrawer);
+
+        containerEl.querySelector('#drawer-btn-refresh-admin')?.addEventListener('click', () => {
+            closeDrawer();
+            loadAdminData();
+        });
+        containerEl.querySelector('#drawer-btn-admin-view-site')?.addEventListener('click', () => {
+            closeDrawer();
+            handleViewSite();
+        });
+        containerEl.querySelector('#drawer-btn-exit-admin')?.addEventListener('click', () => {
+            closeDrawer();
+            exitAdminHandler();
+        });
 
         // 2. Navigation d'onglets (Sidebar desktop + Navbar mobile via data-tab-target et rétrocompatibilité)
         containerEl.querySelectorAll('[data-tab-target]').forEach((btn) => {
@@ -1781,6 +2065,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         bindAccountsEvents();
                     }
                 });
+            });
+
+            // Export CSV des comptes utilisateurs
+            containerEl.querySelector('#btn-export-accounts-csv')?.addEventListener('click', () => {
+                exportAccountsToCSV(allProfiles);
+                showToast('Export CSV des comptes utilisateurs généré avec succès !', 'success');
             });
 
             // Suspendre / Réactiver un compte
@@ -1919,6 +2209,55 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
         }
 
         function bindOrdersEvents() {
+            // Recherche commande
+            const searchInput = containerEl.querySelector('#admin-order-search');
+            searchInput?.addEventListener('input', (e) => {
+                orderSearchQuery = e.target.value;
+                const contentEl = containerEl.querySelector('#admin-tab-content');
+                if (contentEl && activeTab === 'orders') {
+                    contentEl.innerHTML = renderOrdersTab();
+                    bindOrdersEvents();
+                }
+            });
+
+            // Effacer la recherche commande
+            containerEl.querySelector('#btn-clear-order-search')?.addEventListener('click', () => {
+                orderSearchQuery = '';
+                const contentEl = containerEl.querySelector('#admin-tab-content');
+                if (contentEl && activeTab === 'orders') {
+                    contentEl.innerHTML = renderOrdersTab();
+                    bindOrdersEvents();
+                }
+            });
+
+            // Filtre Pavillon
+            const pavillonSelect = containerEl.querySelector('#admin-order-pavillon-filter');
+            pavillonSelect?.addEventListener('change', (e) => {
+                orderPavillonFilter = e.target.value;
+                const contentEl = containerEl.querySelector('#admin-tab-content');
+                if (contentEl && activeTab === 'orders') {
+                    contentEl.innerHTML = renderOrdersTab();
+                    bindOrdersEvents();
+                }
+            });
+
+            // Filtre Paiement
+            const paymentSelect = containerEl.querySelector('#admin-order-payment-filter');
+            paymentSelect?.addEventListener('change', (e) => {
+                orderPaymentFilter = e.target.value;
+                const contentEl = containerEl.querySelector('#admin-tab-content');
+                if (contentEl && activeTab === 'orders') {
+                    contentEl.innerHTML = renderOrdersTab();
+                    bindOrdersEvents();
+                }
+            });
+
+            // Export CSV commandes
+            containerEl.querySelector('#btn-export-orders-csv')?.addEventListener('click', () => {
+                exportOrdersToCSV(allOrders);
+                showToast('Export CSV des commandes généré avec succès !', 'success');
+            });
+
             // Modification du statut de commande par le SuperAdmin
             containerEl.querySelectorAll('select[data-action="change-order-status"]').forEach((sel) => {
                 sel.addEventListener('change', async (e) => {
@@ -2061,6 +2400,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         bindSellersEvents();
                     }
                 });
+            });
+
+            // Export CSV des marchands
+            containerEl.querySelector('#btn-export-sellers-csv')?.addEventListener('click', () => {
+                exportSellersToCSV([...pendingSellers, ...activeSellers]);
+                showToast('Export CSV des marchands généré avec succès !', 'success');
             });
 
             // Approuver un vendeur

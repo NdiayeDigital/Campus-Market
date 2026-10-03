@@ -10,6 +10,7 @@
 
 import { supabase } from './supabase.js';
 import { clearCart } from './cart-store.js';
+import { submitReview } from './review-service.js';
 
 const OFFLINE_QUEUE_KEY = 'pending_sync_orders';
 
@@ -404,33 +405,7 @@ export async function cancelOrderByBuyer(orderId) {
  * @returns {Promise<Object>}
  */
 export async function submitOrderReview({ sellerId, orderId = null, rating, comment = '' }) {
-    if (!sellerId) throw new Error('Identifiant marchand manquant.');
-    const note = Math.max(1, Math.min(5, parseInt(rating, 10) || 5));
-
-    let buyerId = null;
-    try {
-        const { data: authData } = await supabase.auth.getUser();
-        if (authData?.user) buyerId = authData.user.id;
-    } catch {
-        buyerId = null;
-    }
-
-    const { data, error } = await supabase
-        .from('reviews')
-        .insert([{
-            seller_id: sellerId,
-            order_id: orderId || null,
-            buyer_id: buyerId,
-            rating: note,
-            comment: comment.trim(),
-        }])
-        .select()
-        .single();
-
-    if (error) {
-        throw new Error(`Impossible d'enregistrer votre avis: ${error.message}`);
-    }
-    return data;
+    return submitReview({ sellerId, orderId, rating, comment });
 }
 
 export default {

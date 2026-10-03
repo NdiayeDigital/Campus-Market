@@ -12,7 +12,7 @@ import { escapeHTML, formatSenegalPhone } from '../utils/security.js';
  * @param {Function} props.onAddToCart - Callback lors de l'ajout au panier ({ product, quantity })
  * @returns {Object} Contrôleur du modal ({ element, open, close })
  */
-export function createProductDetailModal({ onAddToCart } = {}) {
+export function createProductDetailModal({ onAddToCart, onOpenSeller } = {}) {
     const modalEl = document.createElement('div');
     modalEl.id = 'product-detail-modal-overlay';
     modalEl.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
@@ -122,9 +122,20 @@ export function createProductDetailModal({ onAddToCart } = {}) {
                             <div class="w-10 h-10 rounded-full bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm">
                                 ${((sellerName[0] || 'V')).toUpperCase()}
                             </div>
-                            <div>
+                            <div class="flex flex-col">
                                 <span class="text-[11px] text-slate-400 block">Vendu par</span>
                                 <span class="font-heading font-bold text-slate-900 text-xs sm:text-sm leading-tight">${escapeHTML(sellerName)}</span>
+                                ${p.seller ? `
+                                    <button 
+                                        type="button" 
+                                        id="btn-detail-view-shop" 
+                                        class="text-[11px] font-bold text-primary hover:text-primary-hover flex items-center gap-1 transition-colors cursor-pointer mt-1 w-fit"
+                                    >
+                                        <i class="fa-solid fa-store text-[10px]"></i>
+                                        <span>Visiter la boutique</span>
+                                        <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
 
@@ -194,6 +205,14 @@ export function createProductDetailModal({ onAddToCart } = {}) {
             if (selectedQuantity < 20) {
                 selectedQuantity++;
                 if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;
+            }
+        });
+
+        modalEl.querySelector('#btn-detail-view-shop')?.addEventListener('click', () => {
+            const seller = currentProduct?.seller;
+            close();
+            if (seller && typeof onOpenSeller === 'function') {
+                onOpenSeller(seller);
             }
         });
 

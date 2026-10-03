@@ -12,6 +12,7 @@ import {
     createProduct,
     updateProduct,
     getSellerProducts,
+    updateProductStock,
     toggleProductStock,
     deleteProduct,
 } from '../../services/product-management.js';
@@ -383,14 +384,19 @@ export function createProductManager({
     function renderProductsListView(forSaleCount, soldCount, pausedCount) {
         if (products.length === 0) {
             return `
-                <div class="p-10 text-center bg-white rounded-2xl border border-dashed border-slate-200/90 shadow-xs my-2">
-                    <div class="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl mx-auto mb-3">
+                <div class="p-8 sm:p-12 text-center bg-gradient-to-br from-blue-50/60 via-white to-amber-50/40 rounded-3xl border border-primary/20 shadow-card my-2 relative overflow-hidden">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-blue-500 text-white flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-primary/25">
                         <i class="fa-solid fa-boxes-stacked"></i>
                     </div>
-                    <h4 class="font-heading font-extrabold text-slate-900 text-base mb-1">Votre catalogue est encore vide</h4>
-                    <p class="text-xs text-slate-500 max-w-sm mx-auto mb-4">Publiez votre premier article pour commencer à recevoir des commandes des étudiants de l'UIDT.</p>
+                    <span class="px-3 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-200 inline-block mb-2">
+                        Boutique prête aux ventes
+                    </span>
+                    <h4 class="font-heading font-extrabold text-slate-900 text-lg sm:text-xl mb-1.5">Votre catalogue est encore vide</h4>
+                    <p class="text-xs sm:text-sm text-slate-600 max-w-md mx-auto mb-6 leading-relaxed">
+                        Publiez votre premier article en moins de 30 secondes avec photo, prix en FCFA et stock pour commencer à recevoir des commandes des étudiants de l'UIDT.
+                    </p>
                     ${!isSuspended ? `
-                        <button type="button" id="btn-empty-add-product" class="px-4 py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition-all inline-flex items-center gap-1.5 min-h-[42px] cursor-pointer">
+                        <button type="button" id="btn-empty-add-product" class="px-6 py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary-dark hover:to-primary active:scale-95 text-white text-xs sm:text-sm font-heading font-extrabold rounded-xl shadow-lg shadow-primary/30 transition-all inline-flex items-center gap-2 min-h-[46px] cursor-pointer">
                             <i class="fa-solid fa-plus text-xs"></i>
                             <span>Publier mon premier article</span>
                         </button>
@@ -457,7 +463,7 @@ export function createProductManager({
                                 ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
                                 : rawImg;
 
-                            // Badge de statut (En vente, Vendu, Pause)
+                            // Badges de statut & alertes de stock
                             let statusBadge = '';
                             if (isSold) {
                                 statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">Vendu</span>`;
@@ -467,8 +473,19 @@ export function createProductManager({
                                 statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">En vente</span>`;
                             }
 
+                            let stockAlertBadge = '';
+                            if (prod.stock === 0) {
+                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation text-[9px]"></i> Épuisé</span>`;
+                            } else if (prod.stock > 0 && prod.stock <= 2) {
+                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1 animate-pulse"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Stock faible (${prod.stock})</span>`;
+                            } else if (prod.stock > 2) {
+                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Stock : ${prod.stock}</span>`;
+                            } else {
+                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">Illimité</span>`;
+                            }
+
                             return `
-                                <div class="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-xs transition-all">
+                                <div class="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-xs hover:shadow-card transition-all">
                                     <!-- Vignette carrée w-20 h-20 object-cover + Métadonnées au centre -->
                                     <div class="flex items-center gap-3.5 min-w-0 flex-1">
                                         <div class="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-100 shrink-0 flex items-center justify-center relative">
@@ -491,6 +508,7 @@ export function createProductManager({
                                                     ${escapeHTML(prod.title)}
                                                 </h4>
                                                 ${statusBadge}
+                                                ${stockAlertBadge}
                                             </div>
 
                                             <div class="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -501,16 +519,41 @@ export function createProductManager({
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
                                                     ${escapeHTML(prod.category || 'Général')}
                                                 </span>
-                                                <span class="text-slate-300">•</span>
-                                                <span class="text-[11px] text-slate-400">
-                                                    ${prod.stock > 0 ? `Stock : ${prod.stock}` : (prod.stock === 0 ? 'Stock épuisé' : 'Stock illimité')}
-                                                </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <!-- Actions rapides sur l'article (Boutons tactiles min-h-[44px] pour mobile) -->
-                                    <div class="flex items-center gap-2 self-end sm:self-center border-t sm:border-t-0 border-slate-100 pt-2.5 sm:pt-0 w-full sm:w-auto justify-end">
+                                    <!-- Contrôle rapide du stock Stepper + Actions (Boutons tactiles min-h-[44px]) -->
+                                    <div class="flex items-center gap-2 self-end sm:self-center border-t sm:border-t-0 border-slate-100 pt-2.5 sm:pt-0 w-full sm:w-auto justify-end flex-wrap">
+                                        <!-- Stepper Rapide de Stock [-] [qty] [+] -->
+                                        ${prod.stock !== -1 ? `
+                                            <div class="flex items-center gap-1 bg-slate-100/90 rounded-xl p-1 border border-slate-200/80 mr-1" title="Ajuster rapidement la quantité en stock">
+                                                <button 
+                                                    type="button" 
+                                                    data-action="quick-stock-dec" 
+                                                    data-id="${prod.id}" 
+                                                    data-current="${prod.stock}" 
+                                                    title="Diminuer stock" 
+                                                    class="w-8 h-8 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition-all shadow-xs active:scale-90 cursor-pointer min-h-[32px] min-w-[32px]"
+                                                >
+                                                    <i class="fa-solid fa-minus text-[10px]"></i>
+                                                </button>
+                                                <span class="px-2 font-heading font-extrabold text-xs text-slate-900 tabular-nums min-w-[28px] text-center">
+                                                    ${prod.stock > 0 ? prod.stock : '0'}
+                                                </span>
+                                                <button 
+                                                    type="button" 
+                                                    data-action="quick-stock-inc" 
+                                                    data-id="${prod.id}" 
+                                                    data-current="${prod.stock}" 
+                                                    title="Augmenter stock" 
+                                                    class="w-8 h-8 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition-all shadow-xs active:scale-90 cursor-pointer min-h-[32px] min-w-[32px]"
+                                                >
+                                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                                </button>
+                                            </div>
+                                        ` : ''}
+
                                         <button 
                                             type="button" 
                                             data-action="edit" 
@@ -737,12 +780,22 @@ export function createProductManager({
                 addFormData.description = e.target.value;
             });
 
+            // Sauvegarder la saisie en cours avant tout re-render
+            const snapshotInputs = () => {
+                if (titleInput) addFormData.title = titleInput.value;
+                if (priceInput) addFormData.price = priceInput.value;
+                if (stockInput) addFormData.stock = stockInput.value;
+                if (catSelect) addFormData.category = catSelect.value;
+                if (descInput) addFormData.description = descInput.value;
+            };
+
             // Gestion de sélection / Drag & drop d'image
             const processFile = (file) => {
                 if (!file || !file.type.startsWith('image/')) {
                     showToast('Veuillez sélectionner un fichier image valide (JPEG, PNG, WebP).', 'warning');
                     return;
                 }
+                snapshotInputs();
                 addFormData.imageFile = file;
                 const reader = new FileReader();
                 reader.onload = (ev) => {
@@ -765,6 +818,7 @@ export function createProductManager({
 
             containerEl.querySelector('#btn-remove-selected-photo')?.addEventListener('click', (e) => {
                 e.stopPropagation();
+                snapshotInputs();
                 addFormData.imageFile = null;
                 addFormData.imagePreviewUrl = null;
                 render();
@@ -839,6 +893,8 @@ export function createProductManager({
                         imageFile: null,
                         imagePreviewUrl: null,
                     };
+                    if (form) form.reset();
+                    if (fileInput) fileInput.value = '';
 
                     showToast('Produit publié au catalogue avec succès ! 🎉', 'success');
                     activeTab = 'list';
@@ -957,6 +1013,20 @@ export function createProductManager({
                 if (action === 'edit') {
                     const prod = products.find((p) => p.id === id);
                     if (prod) openEditModal(prod);
+                } else if (action === 'quick-stock-dec' || action === 'quick-stock-inc') {
+                    const currentStock = parseInt(btn.getAttribute('data-current'), 10) || 0;
+                    const isInc = action === 'quick-stock-inc';
+                    const nextStock = isInc ? currentStock + 1 : Math.max(0, currentStock - 1);
+                    btn.disabled = true;
+                    try {
+                        await updateProductStock(id, nextStock);
+                        await loadData();
+                        showToast(`Stock ajusté : ${nextStock}`, 'info');
+                        if (typeof onProductChanged === 'function') onProductChanged();
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        btn.disabled = false;
+                    }
                 } else if (action === 'toggle-stock') {
                     const currentStock = parseInt(btn.getAttribute('data-stock'), 10);
                     btn.disabled = true;

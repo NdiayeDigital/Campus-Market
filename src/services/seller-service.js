@@ -230,7 +230,7 @@ export async function getSellerDashboardData(sellerId) {
         try {
             const { data: ordersWithProd, error: joinErr } = await supabase
                 .from('orders')
-                .select('*, product:product_id(title, icon, color, image_url)')
+                .select('*, product:product_id(title, icon, image_url)')
                 .eq('seller_id', sellerId)
                 .order('created_at', { ascending: false });
 

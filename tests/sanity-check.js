@@ -346,8 +346,49 @@ try {
     console.error('Erreur test notifications:', e);
 }
 console.assert(notificationsOk, 'Les notifications modernes ont échoué');
-console.log('✅ [ModernNotifications] Module de toasts et confirmations modernes validé !');
+// 10. Test Review Service & Rating Statistics
+import { getSellerRatingStats, submitReview } from '../src/services/review-service.js';
+
+// Test stats avec liste vide
+const emptyStats = getSellerRatingStats([]);
+console.assert(emptyStats.totalReviews === 0, 'Total avis vide incorrect');
+console.assert(emptyStats.avgRating === 5.0, 'Moyenne par défaut incorrecte');
+console.assert(emptyStats.recommendationRate === 100, 'Taux de recommandation par défaut incorrect');
+
+// Test stats avec données réelles
+const sampleReviews = [
+    { rating: 5 },
+    { rating: 5 },
+    { rating: 4 },
+    { rating: 2 },
+];
+const calculatedStats = getSellerRatingStats(sampleReviews);
+console.assert(calculatedStats.totalReviews === 4, 'Total avis incorrect');
+console.assert(calculatedStats.avgRating === 4.0, `Moyenne incorrecte: ${calculatedStats.avgRating}`);
+console.assert(calculatedStats.recommendationRate === 75, `Taux recommandation incorrect: ${calculatedStats.recommendationRate}%`);
+console.assert(calculatedStats.distribution[5] === 2, 'Distribution 5 étoiles incorrecte');
+console.assert(calculatedStats.distribution[4] === 1, 'Distribution 4 étoiles incorrecte');
+console.assert(calculatedStats.distribution[2] === 1, 'Distribution 2 étoiles incorrecte');
+console.assert(calculatedStats.distribution[1] === 0, 'Distribution 1 étoile incorrecte');
+
+// Test clamping des notes extrêmes
+const clampedStats = getSellerRatingStats([{ rating: 10 }, { rating: -3 }]);
+console.assert(clampedStats.distribution[5] === 1, 'Clamping max (5) échoué');
+console.assert(clampedStats.distribution[1] === 1, 'Clamping min (1) échoué');
+console.assert(clampedStats.avgRating === 3.0, 'Moyenne notes clampées incorrecte');
+
+// Test validation soumission avis sans sellerId
+let rejectedReviewNoSellerId = false;
+try {
+    await submitReview({ rating: 5, comment: 'Top' });
+} catch (e) {
+    rejectedReviewNoSellerId = e.message.includes('Identifiant marchand requis');
+}
+console.assert(rejectedReviewNoSellerId, 'submitReview sans sellerId devrait être rejeté');
+
+console.log('✅ [ReviewService] Calculs de statistiques, distribution, clamping et validation avis validés !');
 
 console.log('🎉 Tous les tests unitaires des services de base sont passés avec succès !');
+
 
 

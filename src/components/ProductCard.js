@@ -11,9 +11,10 @@ import { escapeHTML } from '../utils/security.js';
  * @param {Object} props.product - Données du produit
  * @param {Function} props.onAddToCart - Callback lors du clic sur le bouton Ajouter
  * @param {Function} [props.onClickCard] - Callback pour voir les détails éventuels
+ * @param {Function} [props.onOpenSeller] - Callback pour ouvrir la vitrine du vendeur
  * @returns {HTMLElement}
  */
-export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
+export function createProductCard({ product, onAddToCart, onClickCard, onOpenSeller } = {}) {
     const cardEl = document.createElement('article');
     cardEl.className = 'group relative flex flex-col bg-white rounded-3xl border border-slate-200/70 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 overflow-hidden';
 
@@ -81,12 +82,17 @@ export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
         <!-- Informations Produit -->
         <div class="p-3.5 flex flex-col flex-1 justify-between gap-3">
             <div class="flex flex-col gap-1">
-                <span class="text-[11px] font-medium text-slate-500 line-clamp-1 flex items-center gap-1.5">
+                <button 
+                    type="button" 
+                    id="card-seller-btn"
+                    title="Voir la vitrine de ${escapeHTML(sellerName)}"
+                    class="text-[11px] font-medium text-slate-500 hover:text-primary line-clamp-1 flex items-center gap-1.5 transition-colors cursor-pointer text-left focus:outline-none w-fit"
+                >
                     <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">
                         ${(sellerName[0] || 'V').toUpperCase()}
                     </span>
-                    <span class="truncate">${escapeHTML(sellerName)}</span>
-                </span>
+                    <span class="truncate hover:underline">${escapeHTML(sellerName)}</span>
+                </button>
                 <h3 class="font-heading font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                     ${escapeHTML(product.title)}
                 </h3>
@@ -121,6 +127,14 @@ export function createProductCard({ product, onAddToCart, onClickCard } = {}) {
     `;
 
     // Attachement des événements
+    const sellerBtn = cardEl.querySelector('#card-seller-btn');
+    sellerBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (product.seller && typeof onOpenSeller === 'function') {
+            onOpenSeller(product.seller);
+        }
+    });
+
     const addBtn = cardEl.querySelector('#btn-add-to-cart');
     addBtn?.addEventListener('click', (e) => {
         e.stopPropagation();

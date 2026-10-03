@@ -29,3 +29,6 @@ Thumbs.db
 .antigravity/
 .agents/*
 !.agents/AGENTS.md
+
+# Fichiers et captures de tests temporaires
+tests/screenshots/
