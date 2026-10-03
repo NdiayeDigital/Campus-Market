@@ -15,9 +15,7 @@ import { createProductDetailModal } from './components/ProductDetailModal.js';
 import { createBottomNav } from './components/BottomNav.js';
 import { createHeroBanner } from './components/HeroBanner.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
-import { createSellerDashboard } from './components/seller/SellerDashboard.js';
 import { createSellerShowcase } from './components/seller/SellerShowcase.js';
-import { createSuperAdminDashboard } from './components/admin/SuperAdminDashboard.js';
 import { getCurrentSeller } from './services/seller-service.js';
 import { supabase } from './services/supabase.js';
 import { cartStore } from './services/cart-store.js';
@@ -471,6 +469,13 @@ async function initApp() {
         }
 
         // 3. Montage du tableau de bord vendeur
+        mainContentEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-24 gap-3 text-slate-500 animate-pulse">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
+                <p class="text-xs font-semibold">Chargement de votre Espace Vendeur...</p>
+            </div>
+        `;
+        const { createSellerDashboard } = await import('./components/seller/SellerDashboard.js');
         mainContentEl.innerHTML = '';
         activeDashboardEl = createSellerDashboard({
             seller: appState.currentSeller,
@@ -491,7 +496,14 @@ async function initApp() {
     }
 
     // Rendu de l'Administration UIDT (accessible exclusivement via /#admin)
-    function renderAdminView() {
+    async function renderAdminView() {
+        mainContentEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-24 gap-3 text-slate-500 animate-pulse">
+                <i class="fa-solid fa-shield-halved fa-spin text-3xl text-primary"></i>
+                <p class="text-xs font-semibold">Accès sécurisé au Portail SuperAdmin...</p>
+            </div>
+        `;
+        const { createSuperAdminDashboard } = await import('./components/admin/SuperAdminDashboard.js');
         mainContentEl.innerHTML = '';
         const adminDashboard = createSuperAdminDashboard({
             onExit: () => {
