@@ -63,30 +63,77 @@ export async function createProduct({
             // pour satisfaire la condition RLS : auth.uid() = seller_id
             activeSellerId = session.user.id;
 
-            // Contrôle préventif du rôle et du statut
+            // Contrôle préventif du rôle, du statut et du quota d'articles
             try {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role, is_open, is_suspended')
-                    .eq('id', session.user.id)
-                    .maybeSingle();
+                let profile = null;
+                try {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('role, is_open, subscription_plan, max_products')
+                        .eq('id', session.user.id)
+                        .maybeSingle();
+                    profile = data;
+                } catch {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('role, is_open')
+                        .eq('id', session.user.id)
+                        .maybeSingle();
+                    profile = data;
+                }
 
                 if (profile) {
                     if (profile.role === 'vendeur_pending') {
                         throw new Error("Votre candidature vendeur est en cours de validation par l'administration UIDT. Vous pourrez publier vos produits dès son approbation.");
                     }
-                    if (profile.role === 'vendeur_desactive' || profile.role === 'suspendu' || profile.is_suspended === true || profile.is_open === false) {
-                        throw new Error("Votre compte vendeur ou boutique a été suspendu par l'administration. Veuillez contacter le support.");
+                    if (profile.role === 'vendeur_desactive' || profile.role === 'suspendu') {
+                        throw new Error("Votre compte marchand a été suspendu par l'administration UIDT. Veuillez contacter le support.");
                     }
                     if (profile.role !== 'vendeur' && profile.role !== 'superadmin') {
                         throw new Error("Seuls les comptes marchands validés et administrateurs peuvent publier des articles.");
+                    }
+
+                    // CONTRÔLE STRICT DU NOMBRE DE PRODUITS SELON L'ABONNEMENT
+                    if (profile.role !== 'superadmin') {
+                        const plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'starter';
+                        const maxAllowed = Number(profile.max_products || session.user.user_metadata?.max_products) || (plan === 'pro' ? 10 : 5);
+
+                        let currentCount = 0;
+                        try {
+                            const { count, error: countErr } = await supabase
+                                .from('products')
+                                .select('id', { count: 'exact', head: true })
+                                .eq('seller_id', activeSellerId);
+
+                            if (!countErr && typeof count === 'number') {
+                                currentCount = count;
+                            } else {
+                                const prods = await getSellerProducts(activeSellerId);
+                                currentCount = prods.length;
+                            }
+                        } catch {
+                            const prods = await getSellerProducts(activeSellerId);
+                            currentCount = prods.length;
+                        }
+
+                        if (currentCount >= maxAllowed) {
+                            const planLabel = plan === 'pro' ? 'Pack Pro (10 produits max)' : 'Pack Starter (5 produits max)';
+                            throw new Error(
+                                `Limite de votre formule atteinte (${currentCount}/${maxAllowed} produits). ` +
+                                `Votre formule actuelle (${planLabel}) a atteint son quota maximal. ` +
+                                (plan === 'starter'
+                                    ? "Passez au Pack Pro (10 articles à 2 500 FCFA/mois) ou supprimez un produit existant pour continuer."
+                                    : "Veuillez supprimer ou archiver des articles existants pour en publier de nouveaux.")
+                            );
+                        }
                     }
                 }
             } catch (roleErr) {
                 if (roleErr.message && (
                     roleErr.message.includes('en cours de validation') || 
                     roleErr.message.includes('suspendu') || 
-                    roleErr.message.includes('Seuls les comptes')
+                    roleErr.message.includes('Seuls les comptes') ||
+                    roleErr.message.includes('Limite de votre formule atteinte')
                 )) {
                     throw roleErr;
                 }
@@ -96,7 +143,8 @@ export async function createProduct({
         if (authCheckErr.message && (
             authCheckErr.message.includes('en cours de validation') || 
             authCheckErr.message.includes('suspendu') || 
-            authCheckErr.message.includes('Seuls les comptes')
+            authCheckErr.message.includes('Seuls les comptes') ||
+            authCheckErr.message.includes('Limite de votre formule atteinte')
         )) {
             throw authCheckErr;
         }

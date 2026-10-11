@@ -32,3 +32,6 @@ Thumbs.db
 
 # Fichiers et captures de tests temporaires
 tests/screenshots/
+
+# Comptes et scripts SQL contenant des identifiants sensibles
+database/mon_compte_superadmin.sql

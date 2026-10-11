@@ -47,13 +47,21 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     }
 
     function renderPendingScreen() {
+        const planLabel = selectedPlan === 'pro' 
+            ? 'Pack Pro (10 produits max • 2 500 FCFA/mois)' 
+            : 'Pack Starter (5 produits max • 1 500 FCFA/mois)';
+
         return `
             <div class="p-6 flex flex-col items-center text-center my-auto overflow-y-auto">
                 <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-3xl mb-4 animate-pulse">
                     <i class="fa-solid fa-hourglass-half"></i>
                 </div>
                 <h3 class="font-heading font-extrabold text-xl text-slate-900 mb-2">Demande en cours d'examen</h3>
-                <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+                <div class="mb-4 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700">
+                    <span class="text-slate-400 text-[10px] uppercase font-bold block">Formule sélectionnée</span>
+                    <strong class="text-slate-900">${planLabel}</strong>
+                </div>
+                <p class="text-xs text-slate-600 mb-6 leading-relaxed">
                     Votre candidature pour ouvrir une boutique sur Campus Market a bien été transmise au Super Administrateur de l'UIDT.
                     <br><br>
                     Vous recevrez une confirmation sous <strong>24h à 48h</strong>.
@@ -444,6 +452,11 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     close();
                     if (typeof onAuthenticated === 'function') {
                         onAuthenticated({ user: res.user, profile: res.profile });
+                    }
+                } else if (res.status === 'unauthorized') {
+                    if (errorEl) {
+                        errorEl.textContent = "Ce compte est un profil étudiant acheteur. Pour ouvrir votre boutique, veuillez soumettre votre candidature via l'onglet 'Créer ma boutique'.";
+                        errorEl.classList.remove('hidden');
                     }
                 }
             } catch (err) {

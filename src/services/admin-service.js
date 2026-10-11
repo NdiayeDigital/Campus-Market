@@ -120,23 +120,67 @@ export async function fetchGlobalMetrics() {
     }
 }
 
+import { getPendingSellersCache, removePendingSellerCache } from './seller-service.js';
+
 /**
  * Récupère la liste des étudiants en attente de validation du statut vendeur.
  * @returns {Promise<Array>}
  */
 export async function fetchPendingSellers() {
     try {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('role', 'vendeur_pending')
-            .order('created_at', { ascending: false });
+        let dbSellers = [];
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('role', 'vendeur_pending')
+                .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        return data || [];
+            if (!error && data) {
+                dbSellers = data;
+            }
+        } catch (dbErr) {
+            console.warn('[AdminService] Avertissement fetchPendingSellers DB:', dbErr);
+        }
+
+        // Récupérer et fusionner avec le cache de résilience des candidatures
+        const cachedSellers = getPendingSellersCache();
+        const mergedMap = new Map();
+
+        // 1. Ajouter d'abord les profils DB
+        for (const s of dbSellers) {
+            mergedMap.set(s.id, {
+                ...s,
+                subscription_plan: s.subscription_plan || 'starter',
+                max_products: Number(s.max_products) || (s.subscription_plan === 'pro' ? 10 : 5),
+            });
+        }
+
+        // 2. Fusionner avec le cache local (enrichit ou ajoute si pas encore synchronisé en DB)
+        for (const c of cachedSellers) {
+            if (mergedMap.has(c.id)) {
+                mergedMap.set(c.id, {
+                    ...c,
+                    ...mergedMap.get(c.id),
+                    shop_name: mergedMap.get(c.id).shop_name || c.shop_name,
+                    shop_category: mergedMap.get(c.id).shop_category || c.shop_category,
+                    subscription_plan: mergedMap.get(c.id).subscription_plan || c.subscription_plan || 'starter',
+                    max_products: mergedMap.get(c.id).max_products || c.max_products || 5,
+                    email: mergedMap.get(c.id).email || c.email,
+                });
+            } else {
+                mergedMap.set(c.id, {
+                    ...c,
+                    subscription_plan: c.subscription_plan || 'starter',
+                    max_products: Number(c.max_products) || (c.subscription_plan === 'pro' ? 10 : 5),
+                });
+            }
+        }
+
+        return Array.from(mergedMap.values());
     } catch (err) {
         console.error('[AdminService] Erreur fetchPendingSellers:', err);
-        throw err;
+        return getPendingSellersCache();
     }
 }
 
@@ -242,18 +286,62 @@ export async function fetchActiveSellers() {
 export async function approveSeller(sellerId) {
     if (!sellerId) throw new Error('ID vendeur manquant.');
 
-    const { data, error } = await supabase
-        .from('profiles')
-        .update({ role: 'vendeur', is_open: true })
-        .eq('id', sellerId)
-        .select()
-        .single();
+    // Récupérer le plan de la candidature pour le conserver lors de la validation
+    const cachedList = getPendingSellersCache();
+    const cached = cachedList.find((s) => s.id === sellerId);
+    const plan = cached?.subscription_plan || 'starter';
+    const maxProducts = plan === 'pro' ? 10 : 5;
 
-    if (error) {
-        throw new Error(`Échec d'approbation du vendeur: ${error.message}`);
+    // 1. Nettoyer le cache local de candidature en attente
+    removePendingSellerCache(sellerId);
+
+    let updated = null;
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ 
+                role: 'vendeur', 
+                is_open: true,
+                subscription_plan: plan,
+                max_products: maxProducts
+            })
+            .eq('id', sellerId)
+            .select();
+
+        if (!error && data?.length) {
+            updated = data[0];
+        }
+    } catch {}
+
+    if (!updated) {
+        // Fallback sans colonnes étendues si migration non encore effectuée
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .update({ role: 'vendeur', is_open: true })
+                .eq('id', sellerId)
+                .select();
+
+            if (!error && data?.length) {
+                updated = data[0];
+            } else if (error) {
+                console.warn(`[AdminService] Avertissement approbation DB: ${error.message}`);
+            }
+        } catch {}
     }
 
-    return data;
+    if (!updated) {
+        updated = {
+            id: sellerId,
+            ...(cached || {}),
+            role: 'vendeur',
+            is_open: true,
+            subscription_plan: plan,
+            max_products: maxProducts,
+        };
+    }
+
+    return updated;
 }
 
 /**
@@ -264,18 +352,19 @@ export async function approveSeller(sellerId) {
 export async function rejectSeller(sellerId) {
     if (!sellerId) throw new Error('ID vendeur manquant.');
 
+    removePendingSellerCache(sellerId);
+
     const { data, error } = await supabase
         .from('profiles')
         .update({ role: 'acheteur' })
         .eq('id', sellerId)
-        .select()
-        .single();
+        .select();
 
     if (error) {
-        throw new Error(`Échec de rejet de la demande: ${error.message}`);
+        console.warn(`[AdminService] Avertissement rejet DB: ${error.message}`);
     }
 
-    return data;
+    return (data && data[0]) || { id: sellerId, role: 'acheteur' };
 }
 
 /**

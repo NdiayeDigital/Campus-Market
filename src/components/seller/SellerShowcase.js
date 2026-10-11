@@ -9,6 +9,7 @@ import { fetchSellerReviews, getSellerRatingStats } from '../../services/review-
 import { createProductCard } from '../ProductCard.js';
 import { createReviewModal } from '../ReviewModal.js';
 import { escapeHTML, formatSenegalPhone } from '../../utils/security.js';
+import { shareSellerShop } from '../../utils/share.js';
 
 /**
  * Crée la vue Vitrine Marchande pour un vendeur spécifique.
@@ -245,6 +246,16 @@ export function createSellerShowcase({
                                 <span>WhatsApp</span>
                             </a>
                         ` : ''}
+
+                        <button 
+                            type="button" 
+                            id="btn-showcase-share"
+                            title="Partager cette boutique (Lien & WhatsApp)"
+                            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-800 font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer min-h-[42px]"
+                        >
+                            <i class="fa-solid fa-share-nodes text-xs text-primary"></i>
+                            <span>Partager</span>
+                        </button>
 
                         <button 
                             type="button" 
@@ -497,6 +508,11 @@ export function createSellerShowcase({
         // Bouton retour
         containerEl.querySelector('#btn-showcase-back')?.addEventListener('click', () => {
             if (typeof onBackToCatalog === 'function') onBackToCatalog();
+        });
+
+        // Bouton Partager la boutique
+        containerEl.querySelector('#btn-showcase-share')?.addEventListener('click', () => {
+            shareSellerShop(seller, onShowToast);
         });
 
         // Boutons laisser avis

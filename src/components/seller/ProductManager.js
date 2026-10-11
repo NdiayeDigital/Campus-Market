@@ -19,6 +19,7 @@ import {
 import { CATEGORIES } from '../../services/catalog-service.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
+import { shareProduct } from '../../utils/share.js';
 
 /**
  * Crée le gestionnaire de catalogue vendeur.
@@ -31,6 +32,7 @@ import { showToast, showConfirm } from '../../utils/notifications.js';
  */
 export function createProductManager({
     sellerId,
+    sellerProfile = null,
     isSuspended = false,
     initialTab = 'list',
     onProductChanged,
@@ -55,6 +57,16 @@ export function createProductManager({
         imagePreviewUrl: null,
     };
 
+    // Calcul dynamique du quota d'articles autorisés selon l'abonnement
+    const getQuotaInfo = () => {
+        const plan = sellerProfile?.subscription_plan || 'starter';
+        const maxAllowed = Number(sellerProfile?.max_products) || (plan === 'pro' ? 10 : 5);
+        const count = products.length;
+        const isLimitReached = count >= maxAllowed;
+        const percent = Math.min(100, Math.round((count / maxAllowed) * 100));
+        return { plan, maxAllowed, count, isLimitReached, percent };
+    };
+
     async function loadData() {
         isLoading = true;
         render();
@@ -73,11 +85,12 @@ export function createProductManager({
         const forSaleCount = products.filter((p) => p.stock !== 0 && !p.is_paused).length;
         const soldCount = products.filter((p) => p.stock === 0).length;
         const pausedCount = products.filter((p) => p.is_paused === true || p.stock === -2).length;
+        const { plan, maxAllowed, count, isLimitReached, percent } = getQuotaInfo();
 
         containerEl.innerHTML = `
-            <!-- Barre de sous-navigation interne du catalogue -->
+            <!-- Barre de sous-navigation interne du catalogue avec jauge d'abonnement -->
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 sm:p-4 flex items-center justify-between gap-3 flex-wrap">
-                <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <button 
                         type="button" 
                         id="pm-tab-list" 
@@ -103,11 +116,11 @@ export function createProductManager({
                             class="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[42px] cursor-pointer active:scale-95 ${
                                 activeTab === 'add'
                                     ? 'bg-primary text-white shadow-xs'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                    : (isLimitReached ? 'bg-amber-50 text-amber-900 border border-amber-300' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
                             }"
                         >
-                            <i class="fa-solid fa-plus text-xs"></i>
-                            <span>Ajouter un produit</span>
+                            <i class="fa-solid ${isLimitReached ? 'fa-lock text-amber-600' : 'fa-plus text-xs'}"></i>
+                            <span>${isLimitReached ? `Ajouter (Complet : ${count}/${maxAllowed})` : 'Ajouter un produit'}</span>
                         </button>
                     ` : `
                         <div class="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1.5">
@@ -117,20 +130,34 @@ export function createProductManager({
                     `}
                 </div>
 
-                ${activeTab === 'list' ? `
-                    <div class="text-xs text-slate-500 font-medium">
-                        ${products.length} produit${products.length > 1 ? 's' : ''} au total
+                <!-- Pilule de Quota d'Abonnement Stricte (5 Starter / 10 Pro) -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                        isLimitReached
+                            ? 'bg-amber-50 text-amber-950 border-amber-300 shadow-2xs'
+                            : 'bg-slate-50 text-slate-700 border-slate-200/80'
+                    }">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid ${isLimitReached ? 'fa-lock text-amber-600' : 'fa-crown text-amber-500'} text-xs"></i>
+                            <span class="font-extrabold">${plan === 'pro' ? 'Pack Pro' : 'Pack Starter'} :</span>
+                            <span class="tabular-nums">${count} / ${maxAllowed} produits</span>
+                        </div>
+                        <span class="text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                            isLimitReached ? 'bg-amber-400 text-slate-950' : 'bg-slate-200 text-slate-700'
+                        }">${percent}%</span>
                     </div>
-                ` : `
-                    <button 
-                        type="button" 
-                        id="pm-btn-cancel-add" 
-                        class="text-xs text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                        <i class="fa-solid fa-arrow-left text-[11px]"></i>
-                        <span>Retour aux articles</span>
-                    </button>
-                `}
+
+                    ${activeTab === 'add' ? `
+                        <button 
+                            type="button" 
+                            id="pm-btn-cancel-add" 
+                            class="text-xs text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                        >
+                            <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                            <span>Retour aux articles</span>
+                        </button>
+                    ` : ''}
+                </div>
             </div>
 
             <!-- Contenu dynamique selon l'onglet actif -->
@@ -158,6 +185,7 @@ export function createProductManager({
      * Disposition 2 colonnes sur Desktop (Formulaire à gauche, Live Preview à droite).
      */
     function renderAddProductView() {
+        const { plan, maxAllowed, count, isLimitReached } = getQuotaInfo();
         const previewTitle = addFormData.title || 'Nom de votre article';
         const rawPrice = Number(addFormData.price || 1500);
         const previewPrice = rawPrice.toLocaleString('fr-FR');
@@ -169,9 +197,40 @@ export function createProductManager({
                 <!-- Colonne de gauche : Formulaire de saisie -->
                 <div class="lg:col-span-7 xl:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 flex flex-col gap-5">
                     <div>
-                        <h3 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg">Nouvelle Annonce</h3>
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <h3 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg">Nouvelle Annonce</h3>
+                            <span class="px-2.5 py-1 rounded-xl text-xs font-bold ${
+                                isLimitReached ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-slate-100 text-slate-700'
+                            }">
+                                ${plan === 'pro' ? 'Pack Pro' : 'Pack Starter'} • ${count} / ${maxAllowed} articles
+                            </span>
+                        </div>
                         <p class="text-xs text-slate-500 mt-0.5">Remplissez les détails pour publier immédiatement votre article aux étudiants de l'UIDT.</p>
                     </div>
+
+                    ${isLimitReached ? `
+                        <!-- Alerte Quota Atteint Stricte -->
+                        <div class="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex flex-col gap-2.5 shadow-2xs">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-amber-200 text-amber-950 flex items-center justify-center text-sm shrink-0">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <h4 class="font-heading font-extrabold text-sm text-amber-950">
+                                        Limite d'articles atteinte (${count} / ${maxAllowed} produits)
+                                    </h4>
+                                    <p class="text-xs text-amber-800">
+                                        Votre formule actuelle <strong>${plan === 'pro' ? 'Pack Pro (10 articles max)' : 'Pack Starter (5 articles max)'}</strong> est à son plafond.
+                                    </p>
+                                </div>
+                            </div>
+                            <p class="text-xs text-amber-900 leading-relaxed border-t border-amber-200/80 pt-2">
+                                ${plan === 'starter' 
+                                    ? "Pour publier jusqu'à <strong>10 articles</strong>, contactez le SuperAdmin pour basculer vers le <strong>Pack Pro</strong> (2 500 FCFA/mois), ou supprimez des articles existants depuis l'onglet 'Mes Articles'."
+                                    : "Pour publier de nouveaux articles, veuillez supprimer ou archiver des articles existants depuis l'onglet 'Mes Articles'."}
+                            </p>
+                        </div>
+                    ` : ''}
 
                     <div id="add-product-error" class="hidden p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium"></div>
 
@@ -303,10 +362,11 @@ export function createProductManager({
                         <button 
                             type="submit" 
                             id="btn-submit-new-product" 
-                            class="w-full mt-2 py-3.5 bg-primary hover:bg-primary-hover active:scale-[0.99] text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 min-h-[48px] cursor-pointer"
+                            ${isLimitReached ? 'disabled' : ''}
+                            class="w-full mt-2 py-3.5 bg-primary hover:bg-primary-hover active:scale-[0.99] text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
-                            <i class="fa-solid fa-check text-xs"></i>
-                            <span>Publier le produit sur Campus Market</span>
+                            <i class="fa-solid ${isLimitReached ? 'fa-lock' : 'fa-check'} text-xs"></i>
+                            <span>${isLimitReached ? `Quota atteint (${count}/${maxAllowed}) — Publication verrouillée` : 'Publier le produit sur Campus Market'}</span>
                         </button>
                     </form>
                 </div>
@@ -556,6 +616,16 @@ export function createProductManager({
 
                                         <button 
                                             type="button" 
+                                            data-action="share" 
+                                            data-id="${prod.id}" 
+                                            title="Partager cet article (Lien & WhatsApp)"
+                                            class="w-11 h-11 flex items-center justify-center rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-600 hover:text-emerald-700 hover:border-emerald-300 text-xs font-bold transition-all min-h-[44px] min-w-[44px] active:scale-95 cursor-pointer shadow-xs"
+                                        >
+                                            <i class="fa-solid fa-share-nodes text-xs"></i>
+                                        </button>
+
+                                        <button 
+                                            type="button" 
                                             data-action="edit" 
                                             data-id="${prod.id}" 
                                             title="Modifier l'article"
@@ -789,40 +859,90 @@ export function createProductManager({
                 if (descInput) addFormData.description = descInput.value;
             };
 
-            // Gestion de sélection / Drag & drop d'image
+            // Gestion in-place de la sélection / suppression d'image (sans render() destructif)
+            const updateDropzoneUI = (file, previewUrl) => {
+                if (!dropzone) return;
+                dropzone.innerHTML = `
+                    <input type="file" id="new-prod-image-file" accept="image/*" class="sr-only">
+                    <div class="flex items-center gap-4 w-full">
+                        <div class="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                            <img src="${previewUrl}" alt="Aperçu sélection" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 text-left min-w-0">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <i class="fa-solid fa-check text-[9px]"></i> Photo prête
+                            </span>
+                            <p class="text-xs font-bold text-slate-800 truncate mt-1">${escapeHTML(file.name)}</p>
+                            <p class="text-[11px] text-slate-400">Cliquez ou glissez pour remplacer</p>
+                        </div>
+                        <button type="button" id="btn-remove-selected-photo" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0 cursor-pointer" title="Retirer la photo">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                bindDropzoneInnerEvents();
+                if (liveImg) liveImg.src = previewUrl;
+            };
+
+            const resetDropzoneUI = () => {
+                if (!dropzone) return;
+                dropzone.innerHTML = `
+                    <input type="file" id="new-prod-image-file" accept="image/*" class="sr-only">
+                    <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-800">Cliquez pour choisir une photo</span>
+                    <span class="text-[11px] text-slate-500 mt-0.5">ou glissez-déposez le fichier ici</span>
+                    <span class="text-[10px] text-slate-400 mt-2 px-2.5 py-0.5 rounded-full bg-white border border-slate-200/80">
+                        JPEG, PNG, WebP • Compression automatique
+                    </span>
+                `;
+                bindDropzoneInnerEvents();
+                if (liveImg) liveImg.src = '/assets/placeholder.webp';
+            };
+
+            const bindDropzoneInnerEvents = () => {
+                const currentFileInput = dropzone?.querySelector('#new-prod-image-file');
+                currentFileInput?.addEventListener('change', (e) => {
+                    const f = e.target.files?.[0];
+                    if (f) processFile(f);
+                });
+
+                dropzone?.querySelector('#btn-remove-selected-photo')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
+                        URL.revokeObjectURL(addFormData.imagePreviewUrl);
+                    }
+                    addFormData.imageFile = null;
+                    addFormData.imagePreviewUrl = null;
+                    resetDropzoneUI();
+                });
+            };
+
             const processFile = (file) => {
                 if (!file || !file.type.startsWith('image/')) {
                     showToast('Veuillez sélectionner un fichier image valide (JPEG, PNG, WebP).', 'warning');
                     return;
                 }
-                snapshotInputs();
+                if (file.size > 20 * 1024 * 1024) {
+                    showToast("L'image sélectionnée est trop volumineuse (max 20 Mo).", 'warning');
+                    return;
+                }
+                if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(addFormData.imagePreviewUrl);
+                }
                 addFormData.imageFile = file;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    addFormData.imagePreviewUrl = ev.target.result;
-                    if (liveImg) liveImg.src = ev.target.result;
-                    render();
-                };
-                reader.readAsDataURL(file);
+                addFormData.imagePreviewUrl = URL.createObjectURL(file);
+                updateDropzoneUI(file, addFormData.imagePreviewUrl);
             };
 
             dropzone?.addEventListener('click', (e) => {
                 if (e.target.closest('#btn-remove-selected-photo')) return;
-                fileInput?.click();
+                const fi = dropzone?.querySelector('#new-prod-image-file');
+                fi?.click();
             });
 
-            fileInput?.addEventListener('change', (e) => {
-                const file = e.target.files?.[0];
-                if (file) processFile(file);
-            });
-
-            containerEl.querySelector('#btn-remove-selected-photo')?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                snapshotInputs();
-                addFormData.imageFile = null;
-                addFormData.imagePreviewUrl = null;
-                render();
-            });
+            bindDropzoneInnerEvents();
 
             // Événements Drag & Drop
             if (dropzone) {
@@ -853,6 +973,18 @@ export function createProductManager({
             // Soumission du formulaire d'ajout
             form?.addEventListener('submit', async (e) => {
                 e.preventDefault();
+
+                const { plan, maxAllowed, isLimitReached } = getQuotaInfo();
+                if (isLimitReached) {
+                    const planName = plan === 'pro' ? 'Pack Pro (10 articles max)' : 'Pack Starter (5 articles max)';
+                    if (errorEl) {
+                        errorEl.textContent = `Limite d'articles atteinte (${products.length}/${maxAllowed} produits). Votre formule (${planName}) ne vous permet pas d'ajouter d'autres articles.`;
+                        errorEl.classList.remove('hidden');
+                    }
+                    showToast(`Limite d'articles atteinte (${products.length}/${maxAllowed} produits).`, 'warning');
+                    return;
+                }
+
                 const title = titleInput?.value.trim();
                 const price = priceInput?.value;
                 const stock = stockInput?.value;
@@ -883,6 +1015,9 @@ export function createProductManager({
                         imageFile,
                     });
 
+                    if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
+                        URL.revokeObjectURL(addFormData.imagePreviewUrl);
+                    }
                     // Réinitialisation de l'état du formulaire
                     addFormData = {
                         title: '',
@@ -894,7 +1029,7 @@ export function createProductManager({
                         imagePreviewUrl: null,
                     };
                     if (form) form.reset();
-                    if (fileInput) fileInput.value = '';
+                    resetDropzoneUI();
 
                     showToast('Produit publié au catalogue avec succès ! 🎉', 'success');
                     activeTab = 'list';
@@ -1010,7 +1145,12 @@ export function createProductManager({
                 const action = btn.getAttribute('data-action');
                 const id = btn.getAttribute('data-id');
 
-                if (action === 'edit') {
+                if (action === 'share') {
+                    const prod = products.find((p) => p.id === id);
+                    if (prod) {
+                        shareProduct(prod, showToast);
+                    }
+                } else if (action === 'edit') {
                     const prod = products.find((p) => p.id === id);
                     if (prod) openEditModal(prod);
                 } else if (action === 'quick-stock-dec' || action === 'quick-stock-inc') {

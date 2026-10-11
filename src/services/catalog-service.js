@@ -348,9 +348,44 @@ export async function fetchSellerProducts(sellerId) {
     }
 }
 
+/**
+ * Récupère un produit unique par son identifiant.
+ * Vérifie d'abord dans le cache local puis interroge Supabase.
+ * @param {string} productId - UUID ou identifiant du produit
+ * @returns {Promise<Object|null>}
+ */
+export async function fetchProductById(productId) {
+    if (!productId) return null;
+
+    // 1. Recherche dans le cache local
+    const cachedProducts = getLocalCachedProducts();
+    const foundCached = cachedProducts.find((p) => String(p.id) === String(productId));
+    if (foundCached) return foundCached;
+
+    // 2. Requête Supabase si non présent en cache
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role)')
+            .eq('id', productId)
+            .single();
+
+        if (error) {
+            console.warn('[CatalogService] Erreur fetchProductById:', error);
+            return null;
+        }
+
+        return data;
+    } catch (err) {
+        console.error('[CatalogService] Exception fetchProductById:', err);
+        return null;
+    }
+}
+
 export default {
     CATEGORIES,
     fetchActiveProducts,
+    fetchProductById,
     searchProducts,
     fetchTopShops,
     fetchSellerProfile,

@@ -4,6 +4,8 @@
  */
 
 import { escapeHTML } from '../utils/security.js';
+import { shareProduct } from '../utils/share.js';
+import { showToast } from '../utils/notifications.js';
 
 /**
  * Crée une carte de produit.
@@ -16,6 +18,7 @@ import { escapeHTML } from '../utils/security.js';
  */
 export function createProductCard({ product, onAddToCart, onClickCard, onOpenSeller } = {}) {
     const cardEl = document.createElement('article');
+    cardEl.dataset.productId = product.id;
     cardEl.className = 'group relative flex flex-col bg-white rounded-3xl border border-slate-200/70 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 overflow-hidden';
 
     const isSuspended = product.seller 
@@ -75,6 +78,16 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
         <div class="relative w-full aspect-square bg-slate-100/80 overflow-hidden">
             ${statusBadge}
             ${imageContent}
+            <!-- Bouton Partager Rapide -->
+            <button 
+                type="button" 
+                id="btn-card-share" 
+                title="Partager cet article (Lien & WhatsApp)" 
+                aria-label="Partager cet article" 
+                class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-600 hover:text-emerald-700 shadow-xs flex items-center justify-center transition-all opacity-85 hover:opacity-100 active:scale-90 z-10 cursor-pointer"
+            >
+                <i class="fa-solid fa-share-nodes text-xs"></i>
+            </button>
             <!-- Overlay doux au survol -->
             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
         </div>
@@ -127,6 +140,12 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
     `;
 
     // Attachement des événements
+    const shareBtn = cardEl.querySelector('#btn-card-share');
+    shareBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        shareProduct(product, showToast);
+    });
+
     const sellerBtn = cardEl.querySelector('#card-seller-btn');
     sellerBtn?.addEventListener('click', (e) => {
         e.stopPropagation();

@@ -20,6 +20,7 @@ import { audioAlert, playNotificationSound } from '../../utils/audio-alert.js';
 import { escapeHTML, formatSenegalPhone } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
 import { exportOrdersToCSV } from '../../utils/export-csv.js';
+import { shareSellerShop } from '../../utils/share.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -75,7 +76,34 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             console.error('[SellerDashboard] Erreur chargement:', err);
         } finally {
             isLoading = false;
+            // Si le rechargement est silencieux (polling automatique ou événement temps réel)
+            // et que le vendeur est sur l'onglet 'add-product', NE PAS ré-exécuter render() pour ne pas perdre la saisie
+            if (silent && activeSubTab === 'add-product') {
+                updateBadgesOnly();
+                return;
+            }
             render();
+        }
+    }
+
+    /**
+     * Met à jour uniquement les compteurs et badges sans toucher au DOM du formulaire actif.
+     */
+    function updateBadgesOnly() {
+        const allOrders = dashboardData?.recentOrders || [];
+        const pendingCount = allOrders.filter((o) => o.status === 'pending').length;
+        const totalProductsCount = dashboardData?.totalProductsCount || 0;
+
+        const ordersBadge = containerEl.querySelector('#subtab-orders span:last-child');
+        if (ordersBadge) ordersBadge.textContent = allOrders.length;
+
+        const prodsBadge = containerEl.querySelector('#subtab-products span:last-child');
+        if (prodsBadge) prodsBadge.textContent = totalProductsCount;
+
+        const bnavOrdersBadge = containerEl.querySelector('#bnav-seller-orders .bg-amber-400');
+        if (bnavOrdersBadge) {
+            bnavOrdersBadge.textContent = pendingCount;
+            bnavOrdersBadge.classList.toggle('hidden', pendingCount === 0);
         }
     }
 
@@ -127,7 +155,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         }
                     }
 
-                    loadData();
+                    loadData(true);
                 }
             )
             .subscribe((status) => {
@@ -299,6 +327,16 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
                     <button 
                         type="button"
+                        id="sidebar-btn-seller-share-shop" 
+                        title="Partager le lien de ma boutique (Lien & WhatsApp)"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors cursor-pointer"
+                    >
+                        <i class="fa-solid fa-share-nodes text-xs text-emerald-600"></i>
+                        <span>Partager ma boutique</span>
+                    </button>
+
+                    <button 
+                        type="button"
                         id="hdr-btn-seller-back-shop" 
                         title="Voir la marketplace publique"
                         class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors cursor-pointer"
@@ -333,8 +371,8 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         </div>
                     </div>
 
-                    <!-- Droite : Badge Statut Compact + Menu ⋮ -->
-                    <div class="flex items-center gap-2 shrink-0">
+                    <!-- Droite : Badge Statut Compact + Déconnexion Directe + Menu ⋮ -->
+                    <div class="flex items-center gap-1.5 shrink-0">
                         ${!isSuspended ? `
                             <button 
                                 type="button" 
@@ -351,6 +389,26 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                             </button>
                         ` : ''}
 
+                        <!-- Bouton Partager Boutique Mobile -->
+                        <button 
+                            type="button" 
+                            id="hdr-btn-seller-share-mobile" 
+                            title="Partager ma boutique"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 transition-all active:scale-95 cursor-pointer"
+                        >
+                            <i class="fa-solid fa-share-nodes text-xs"></i>
+                        </button>
+
+                        <!-- Bouton Déconnexion Directe Mobile -->
+                        <button 
+                            type="button" 
+                            id="hdr-btn-seller-logout-mobile" 
+                            title="Se déconnecter de l'espace marchand"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 transition-all active:scale-95 cursor-pointer"
+                        >
+                            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                        </button>
+
                         <!-- Bouton Menu Unique Mobile ⋮ -->
                         <button 
                             type="button" 
@@ -364,10 +422,10 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                 </div>
             </header>
 
-            <!-- 3. TIROIR MOBILE (Bottom Sheet) pour actions essentielles -->
-            <div id="seller-mobile-drawer" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300 select-none">
+            <!-- 3. TIROIR MOBILE (Bottom Sheet) pour actions essentielles (z-[60] au-dessus de la barre fixe) -->
+            <div id="seller-mobile-drawer" class="hidden fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300 select-none">
                 <div class="flex-1 w-full" id="seller-drawer-backdrop"></div>
-                <div class="bg-white rounded-t-3xl border-t border-slate-200/80 p-5 pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full">
+                <div class="bg-white rounded-t-3xl border-t border-slate-200/80 p-5 pb-28 sm:pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full max-h-[85vh] overflow-y-auto">
                     <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1"></div>
                     
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -384,6 +442,12 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                     </div>
 
                     <div class="flex flex-col gap-2">
+                        <!-- Partager ma boutique -->
+                        <button type="button" id="drawer-btn-share-shop" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors cursor-pointer border border-emerald-200">
+                            <i class="fa-solid fa-share-nodes text-sm text-emerald-600 w-5 text-center"></i>
+                            <span>Partager ma boutique (Lien & WhatsApp)</span>
+                        </button>
+
                         <!-- Actualiser -->
                         <button type="button" id="drawer-btn-refresh-orders" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-arrows-rotate text-sm text-slate-500 w-5 text-center"></i>
@@ -480,6 +544,17 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         >
                             <i class="fa-solid fa-arrows-rotate text-xs"></i>
                             <span>Actualiser</span>
+                        </button>
+
+                        <!-- Bouton Partager Boutique Top -->
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-seller-share-shop" 
+                            title="Partager le lien de ma boutique (Lien & WhatsApp)"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                        >
+                            <i class="fa-solid fa-share-nodes text-xs text-emerald-600"></i>
+                            <span>Partager boutique</span>
                         </button>
 
                         <!-- Bouton Marketplace Top -->
@@ -855,11 +930,14 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
         `;
 
         if (activeSubTab === 'products' || activeSubTab === 'add-product') {
+            const currentProfile = dashboardData?.profile || seller;
             const productManagerEl = createProductManager({
                 sellerId,
+                sellerProfile: currentProfile,
                 isSuspended,
                 initialTab: activeSubTab === 'add-product' ? 'add' : 'list',
                 onProductChanged: () => {
+                    activeSubTab = 'products';
                     loadData(true);
                 },
             });
@@ -1245,6 +1323,18 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
         });
         containerEl.querySelector('#bnav-seller-shop')?.addEventListener('click', backShopHandler);
 
+        // Partage de la vitrine marchand (Sidebar, Top Header, Mobile Header, Mobile Drawer)
+        const shareShopHandler = () => {
+            shareSellerShop(seller, onShowToast);
+        };
+        containerEl.querySelector('#sidebar-btn-seller-share-shop')?.addEventListener('click', shareShopHandler);
+        containerEl.querySelector('#top-hdr-btn-seller-share-shop')?.addEventListener('click', shareShopHandler);
+        containerEl.querySelector('#hdr-btn-seller-share-mobile')?.addEventListener('click', shareShopHandler);
+        containerEl.querySelector('#drawer-btn-share-shop')?.addEventListener('click', () => {
+            closeDrawer();
+            shareShopHandler();
+        });
+
         // Déconnexion
         const logoutHandler = async () => {
             const confirmed = await showConfirm({
@@ -1264,6 +1354,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
         };
         containerEl.querySelector('#hdr-btn-seller-logout')?.addEventListener('click', logoutHandler);
         containerEl.querySelector('#top-hdr-btn-seller-logout')?.addEventListener('click', logoutHandler);
+        containerEl.querySelector('#hdr-btn-seller-logout-mobile')?.addEventListener('click', logoutHandler);
         containerEl.querySelector('#drawer-btn-logout')?.addEventListener('click', () => {
             closeDrawer();
             logoutHandler();

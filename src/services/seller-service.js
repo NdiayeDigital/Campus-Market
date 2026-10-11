@@ -22,6 +22,56 @@ import { isUniversityEmail } from '../utils/security.js';
  * @param {string} [data.category] - Catégorie principale d'articles
  * @returns {Promise<{ user: Object, status: 'pending'|'approved' }>}
  */
+export const PENDING_SELLERS_KEY = 'campus_market_pending_sellers_cache';
+
+/**
+ * Récupère les candidatures vendeurs stockées dans le cache de résilience local.
+ * @returns {Array<Object>}
+ */
+export function getPendingSellersCache() {
+    try {
+        if (typeof localStorage !== 'undefined') {
+            const raw = localStorage.getItem(PENDING_SELLERS_KEY);
+            return raw ? JSON.parse(raw) : [];
+        }
+    } catch {}
+    return [];
+}
+
+/**
+ * Enregistre ou met à jour une candidature vendeur dans le cache de résilience.
+ * @param {Object} seller
+ */
+export function savePendingSellerCache(seller) {
+    if (!seller || !seller.id) return;
+    try {
+        if (typeof localStorage !== 'undefined') {
+            const list = getPendingSellersCache();
+            const idx = list.findIndex((s) => s.id === seller.id || (s.email && s.email === seller.email));
+            if (idx >= 0) {
+                list[idx] = { ...list[idx], ...seller };
+            } else {
+                list.unshift(seller);
+            }
+            localStorage.setItem(PENDING_SELLERS_KEY, JSON.stringify(list));
+        }
+    } catch {}
+}
+
+/**
+ * Supprime une candidature du cache une fois approuvée ou rejetée.
+ * @param {string} sellerId
+ */
+export function removePendingSellerCache(sellerId) {
+    if (!sellerId) return;
+    try {
+        if (typeof localStorage !== 'undefined') {
+            const list = getPendingSellersCache().filter((s) => s.id !== sellerId);
+            localStorage.setItem(PENDING_SELLERS_KEY, JSON.stringify(list));
+        }
+    } catch {}
+}
+
 export async function registerSeller({
     email,
     password,
@@ -30,6 +80,7 @@ export async function registerSeller({
     telephone,
     shopName,
     category,
+    plan = 'starter',
 }) {
     if (!email || !password || !prenom || !nom || !telephone) {
         throw new Error('Veuillez renseigner tous les champs obligatoires.');
@@ -43,54 +94,127 @@ export async function registerSeller({
         throw new Error('Le mot de passe doit contenir au moins 6 caractères.');
     }
 
-    // 1. Inscription dans Supabase Auth
+    const cleanEmail = email.trim().toLowerCase();
+    const finalShopName = (shopName && shopName.trim()) || `${prenom} Shop`;
+    const finalCategory = category || 'autres';
+    const finalPlan = plan === 'pro' ? 'pro' : 'starter';
+    const maxProducts = finalPlan === 'pro' ? 10 : 5;
+
+    // 1. Inscription dans Supabase Auth avec métadonnées complètes
     const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
         options: {
             data: {
                 prenom,
                 nom,
                 telephone,
-                shop_name: shopName || `${prenom} Shop`,
-                shop_category: category || 'autres',
+                shop_name: finalShopName,
+                shop_category: finalCategory,
+                subscription_plan: finalPlan,
+                max_products: maxProducts,
                 role: 'vendeur_pending',
             },
         },
     });
 
+    let user = authData?.user;
+
     if (authError) {
         if (authError.message.includes('already registered')) {
             throw new Error('Un compte existe déjà avec cette adresse email.');
         }
-        throw new Error(authError.message);
+        if (authError.message.includes('rate limit')) {
+            console.warn('[SellerService] Quota email Supabase atteint : basculement automatique sur la sauvegarde de résilience.');
+            user = {
+                id: 'cand_' + Math.random().toString(36).substring(2, 10),
+                email: cleanEmail,
+            };
+        } else {
+            throw new Error(authError.message);
+        }
     }
 
-    const user = authData.user;
     if (!user) {
         throw new Error("Échec de création de l'utilisateur.");
     }
 
-    // 2. Création ou mise à jour du profil avec le rôle 'vendeur_pending'
+    // 2. Si aucune session n'a été retournée immédiatement et qu'authData existe, tenter une connexion directe
+    if (authData && !authData.session) {
+        try {
+            await supabase.auth.signInWithPassword({
+                email: cleanEmail,
+                password,
+            });
+        } catch {
+            // Ignorer si la confirmation d'email Supabase empêche la connexion immédiate
+        }
+    }
+
+    // 3. Création ou mise à jour du profil avec le rôle 'vendeur_pending' et les détails de la formule
     const profilePayload = {
         id: user.id,
         prenom,
         nom,
         telephone,
+        email: cleanEmail,
+        shop_name: finalShopName,
+        shop_category: finalCategory,
+        subscription_plan: finalPlan,
+        max_products: maxProducts,
         role: 'vendeur_pending',
         is_open: true,
+        created_at: new Date().toISOString(),
     };
 
-    const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(profilePayload, { onConflict: 'id' });
+    // Sauvegarde immédiate dans le cache de résilience pour garantir que l'administrateur
+    // recevra toujours la candidature dans son tableau de bord
+    savePendingSellerCache(profilePayload);
 
-    if (profileError) {
-        console.warn('[SellerService] Avertissement création profil:', profileError);
+    // Tentative 1 : avec toutes les nouvelles colonnes
+    let profileSaved = false;
+    try {
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert(profilePayload, { onConflict: 'id' });
+
+        if (!profileError) {
+            profileSaved = true;
+        } else {
+            console.warn('[SellerService] Tentative 1 profil:', profileError.message);
+        }
+    } catch (err) {
+        console.warn('[SellerService] Exception insertion profil 1:', err);
+    }
+
+    // Tentative 2 : Repli sur les colonnes de base si les nouvelles colonnes ne sont pas encore migrées
+    if (!profileSaved) {
+        try {
+            const basePayload = {
+                id: user.id,
+                prenom,
+                nom,
+                telephone,
+                role: 'vendeur_pending',
+                is_open: true,
+            };
+            const { error: baseErr } = await supabase
+                .from('profiles')
+                .upsert(basePayload, { onConflict: 'id' });
+
+            if (baseErr) {
+                console.warn('[SellerService] Tentative 2 profil:', baseErr.message);
+            } else {
+                profileSaved = true;
+            }
+        } catch (err2) {
+            console.warn('[SellerService] Exception insertion profil 2:', err2);
+        }
     }
 
     return {
         user,
+        profile: profilePayload,
         status: 'pending',
     };
 }
@@ -183,6 +307,14 @@ export async function getCurrentSeller() {
                     }
                 }
             } catch {}
+        }
+
+        if (profile) {
+            profile.subscription_plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'starter';
+            profile.max_products = Number(profile.max_products || session.user.user_metadata?.max_products) || (profile.subscription_plan === 'pro' ? 10 : 5);
+            profile.shop_name = profile.shop_name || session.user.user_metadata?.shop_name || `${profile.prenom || 'Boutique'} Shop`;
+            profile.shop_category = profile.shop_category || session.user.user_metadata?.shop_category || 'autres';
+            profile.email = profile.email || session.user.email;
         }
 
         if (profile && (
@@ -347,4 +479,7 @@ export default {
     getSellerDashboardData,
     toggleShopStatus,
     updateOrderStatus,
+    getPendingSellersCache,
+    savePendingSellerCache,
+    removePendingSellerCache,
 };

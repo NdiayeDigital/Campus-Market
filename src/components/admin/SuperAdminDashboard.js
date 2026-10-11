@@ -257,22 +257,32 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         </div>
                     </div>
 
-                    <!-- Bouton Menu Unique Mobile ⋮ -->
-                    <button 
-                        type="button" 
-                        id="hdr-btn-admin-menu-mobile" 
-                        title="Menu actions administration"
-                        class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 cursor-pointer"
-                    >
-                        <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
-                    </button>
+                    <!-- Droite : Sortie Directe & Bouton Menu Unique Mobile ⋮ -->
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-exit-admin-mobile" 
+                            title="Quitter l'administration"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 transition-all active:scale-95 cursor-pointer"
+                        >
+                            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                        </button>
+                        <button 
+                            type="button" 
+                            id="hdr-btn-admin-menu-mobile" 
+                            title="Menu actions administration"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 cursor-pointer"
+                        >
+                            <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            <!-- 3. TIROIR MOBILE (Bottom Sheet) pour actions SuperAdmin -->
-            <div id="admin-mobile-drawer" class="hidden fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300 select-none">
+            <!-- 3. TIROIR MOBILE (Bottom Sheet) pour actions SuperAdmin (z-[60] au-dessus de la barre fixe) -->
+            <div id="admin-mobile-drawer" class="hidden fixed inset-0 z-[60] bg-slate-950/40 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300 select-none">
                 <div class="flex-1 w-full" id="admin-drawer-backdrop"></div>
-                <div class="bg-white border-t border-slate-200/80 text-slate-900 rounded-t-3xl p-5 pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full">
+                <div class="bg-white border-t border-slate-200/80 text-slate-900 rounded-t-3xl p-5 pb-28 sm:pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full max-h-[85vh] overflow-y-auto">
                     <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-1"></div>
                     
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -1065,20 +1075,50 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
         return `
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 ${list.map((s) => `
-                    <div class="p-4 rounded-2xl border border-amber-200/80 bg-amber-50/40 flex flex-col justify-between gap-3">
+                    <div class="p-4 rounded-2xl border border-amber-200/80 bg-amber-50/40 flex flex-col justify-between gap-3 shadow-2xs">
                         <div>
-                            <div class="flex items-center justify-between">
-                                <h3 class="font-heading font-bold text-slate-900 text-sm">
+                            <div class="flex items-center justify-between gap-2 mb-1.5">
+                                <h3 class="font-heading font-extrabold text-slate-900 text-sm truncate">
                                     ${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}
                                 </h3>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">En attente</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 shrink-0">En attente</span>
                             </div>
-                            <p class="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
-                                <i class="fa-solid fa-phone text-slate-400 text-xs"></i>
-                                <span>${escapeHTML(s.telephone || 'Non renseigné')}</span>
-                            </p>
-                            <p class="text-[11px] text-slate-400 mt-0.5">
-                                Soumise le ${s.created_at ? new Date(s.created_at).toLocaleDateString('fr-FR') : 'Récemment'}
+
+                            <!-- Badge Formule Choisie -->
+                            <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                ${s.subscription_plan === 'pro' ? `
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 border border-amber-500/30 shadow-2xs">
+                                        <i class="fa-solid fa-crown text-[9px]"></i>
+                                        <span>Pack Pro • 10 produits (2 500 F/mois)</span>
+                                    </span>
+                                ` : `
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                        <i class="fa-solid fa-cube text-[9px]"></i>
+                                        <span>Pack Starter • 5 produits (1 500 F/mois)</span>
+                                    </span>
+                                `}
+                            </div>
+
+                            <!-- Informations Boutique et Contact -->
+                            <div class="flex flex-col gap-1 text-xs text-slate-600 bg-white/70 p-2.5 rounded-xl border border-amber-100">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-800 flex items-center gap-1.5 truncate">
+                                        <i class="fa-solid fa-store text-slate-400 text-[10px]"></i>
+                                        <span class="truncate">${escapeHTML(s.shop_name || 'Boutique Étudiante')}</span>
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 uppercase font-semibold shrink-0">
+                                        ${escapeHTML(s.shop_category || 'autres')}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-slate-500">
+                                    <i class="fa-solid fa-phone text-slate-400 text-[10px]"></i>
+                                    <span>${escapeHTML(s.telephone || 'Non renseigné')}</span>
+                                    ${s.email ? `<span class="text-slate-300">•</span><span class="truncate text-[11px]">${escapeHTML(s.email)}</span>` : ''}
+                                </div>
+                            </div>
+
+                            <p class="text-[10px] text-slate-400 mt-1.5">
+                                Candidature reçue le ${s.created_at ? new Date(s.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Récemment'}
                             </p>
                         </div>
 
@@ -1089,7 +1129,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                 class="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
                             >
                                 <i class="fa-solid fa-check text-xs"></i>
-                                <span>Approuver</span>
+                                <span>Approuver (${s.subscription_plan === 'pro' ? '10 prod.' : '5 prod.'})</span>
                             </button>
                             <button 
                                 data-action="reject" 
@@ -1152,8 +1192,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
-                                        <span class="font-semibold text-slate-700">${prodCount}</span>
-                                        <span class="text-[10px] text-slate-400">produit${prodCount > 1 ? 's' : ''}</span>
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="font-bold text-slate-800">${prodCount} / ${s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)}</span>
+                                            ${s.subscription_plan === 'pro' 
+                                                ? '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Pro</span>' 
+                                                : '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Starter</span>'}
+                                        </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-2">
@@ -1243,10 +1287,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                             ${s.is_open !== false ? 'Ouverte' : 'En pause'}
                                         </span>
                                     </div>
-                                    <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                                    <div class="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
                                         <span>${escapeHTML(s.telephone || 'Non renseigné')}</span>
                                         <span>•</span>
-                                        <span>${prodCount} produit${prodCount > 1 ? 's' : ''}</span>
+                                        <span class="font-bold text-slate-800">${prodCount} / ${s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)} prod.</span>
+                                        ${s.subscription_plan === 'pro' 
+                                            ? '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Pro</span>' 
+                                            : '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Starter</span>'}
                                     </div>
                                 </div>
                             </div>
@@ -1989,6 +2036,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
         };
         containerEl.querySelector('#hdr-btn-exit-admin')?.addEventListener('click', exitAdminHandler);
         containerEl.querySelector('#top-hdr-btn-exit-admin')?.addEventListener('click', exitAdminHandler);
+        containerEl.querySelector('#top-hdr-btn-exit-admin-mobile')?.addEventListener('click', exitAdminHandler);
         containerEl.querySelector('#btn-exit-admin')?.addEventListener('click', exitAdminHandler);
 
         // Tiroir mobile (Bottom Sheet)

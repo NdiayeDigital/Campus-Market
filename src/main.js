@@ -21,6 +21,7 @@ import { supabase } from './services/supabase.js';
 import { cartStore } from './services/cart-store.js';
 import {
     fetchActiveProducts,
+    fetchProductById,
     searchProducts,
     fetchTopShops,
 } from './services/catalog-service.js';
@@ -145,6 +146,11 @@ async function initApp() {
         onOpenSeller: (seller) => {
             if (seller?.id) {
                 navigateToView('shop', { sellerId: seller.id });
+            }
+        },
+        onClose: () => {
+            if (window.location.hash.toLowerCase().startsWith('#product/')) {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
             }
         },
     });
@@ -483,11 +489,13 @@ async function initApp() {
             onLogout: () => {
                 appState.currentSeller = null;
                 headerComponent?.updateSellerState?.(null);
+                bottomNavComponent?.setSeller?.(null);
                 try {
                     localStorage.removeItem(LOCAL_SELLER_KEY);
                 } catch {}
-                showToast('Déconnecté de votre espace marchand.', 'info');
-                navigateToView('catalog');
+                if (appState.currentView === 'seller') {
+                    navigateToView('catalog');
+                }
             },
             onShowToast: showToast,
         });
@@ -709,6 +717,20 @@ async function initApp() {
         }
     }
 
+    // Gestion du deep-linking vers un produit spécifique
+    async function handleProductDeepLink(productId) {
+        if (!productId) return;
+        let prod = appState.products.find((p) => String(p.id) === String(productId));
+        if (!prod) {
+            prod = await fetchProductById(productId);
+        }
+        if (prod) {
+            productDetailModalController.open(prod);
+        } else {
+            showToast('Article introuvable ou plus disponible.', 'warning');
+        }
+    }
+
     // Écoute des changements de fragment d'URL pour navigation directe
     window.addEventListener('hashchange', () => {
         const rawHash = window.location.hash;
@@ -719,8 +741,12 @@ async function initApp() {
         else if (hash.startsWith('#shop/')) {
             const sellerId = rawHash.slice(6);
             navigateToView('shop', { sellerId });
+        } else if (hash.startsWith('#product/')) {
+            const productId = rawHash.slice(9);
+            handleProductDeepLink(productId);
+        } else if (hash === '' || hash === '#') {
+            navigateToView('catalog');
         }
-        else if (hash === '' || hash === '#') navigateToView('catalog');
     });
 
     // Rendu immédiat selon le hash URL (ou affichage immédiat des squelettes de chargement)
@@ -735,6 +761,10 @@ async function initApp() {
     } else if (initialHash.startsWith('#shop/')) {
         const sellerId = rawInitialHash.slice(6);
         navigateToView('shop', { sellerId });
+    } else if (initialHash.startsWith('#product/')) {
+        const productId = rawInitialHash.slice(9);
+        navigateToView('catalog');
+        handleProductDeepLink(productId);
     } else {
         navigateToView('catalog');
     }

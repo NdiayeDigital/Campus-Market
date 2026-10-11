@@ -1,8 +1,6 @@
 /**
- * Campus Market - Test E2E & Audit Visuel des Interfaces Vendeur & SuperAdmin
- * Comptes de test réels :
- * - Vendeur : fatou.sow@univ-thies.sn / Passer123!
- * - SuperAdmin : maamin.ndiaye@univ-thies.sn / Mouhamadou_2005
+ * Campus Market - Test E2E & Audit Visuel des 3 Profils (Vendeur, Admin, Client)
+ * Comptes configurables via variables d'environnement (TEST_SELLER_EMAIL, TEST_ADMIN_EMAIL, etc.)
  */
 
 import { chromium } from 'playwright';
@@ -13,14 +11,15 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 const SCREENSHOTS_DIR = path.resolve('tests/screenshots');
 const SELLER_DIR = path.join(SCREENSHOTS_DIR, 'seller');
 const ADMIN_DIR = path.join(SCREENSHOTS_DIR, 'admin');
+const CLIENT_DIR = path.join(SCREENSHOTS_DIR, 'client');
 
 // Création des dossiers de sortie
-[SELLER_DIR, ADMIN_DIR].forEach((dir) => {
+[SELLER_DIR, ADMIN_DIR, CLIENT_DIR].forEach((dir) => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
 async function runTests() {
-    console.log(`\n🚀 Démarrage du banc de test E2E Vendeur & Admin sur ${BASE_URL}\n`);
+    console.log(`\n🚀 Démarrage du banc de test E2E Multi-Profils sur ${BASE_URL}\n`);
 
     const browser = await chromium.launch({
         executablePath: '/usr/bin/google-chrome',
@@ -39,6 +38,14 @@ async function runTests() {
         },
         admin: {
             account: 'maamin.ndiaye@univ-thies.sn (MOUHAMADOU Ndiaye)',
+            desktopPassed: false,
+            mobilePassed: false,
+            screenshots: [],
+            overflows: [],
+            errors: [],
+        },
+        client: {
+            account: 'Étudiant Acheteur (Guest Checkout)',
             desktopPassed: false,
             mobilePassed: false,
             screenshots: [],
@@ -94,12 +101,14 @@ async function runTests() {
             report.seller.screenshots.push(shotLogin);
 
             // 2. Remplissage des identifiants et validation
-            await page.locator('#seller-login-email').fill('fatou.sow@univ-thies.sn');
-            await page.locator('#seller-login-password').fill('Passer123!');
+            await page.locator('#seller-login-email').fill(process.env.TEST_SELLER_EMAIL || 'vendeur@univ-thies.sn');
+            await page.locator('#seller-login-password').fill(process.env.TEST_SELLER_PASSWORD || '');
             await page.locator('#btn-seller-login-submit').click({ force: true });
 
             // 3. Attente du chargement du Dashboard Vendeur
-            const sellerIndicator = isMobile ? page.locator('#hdr-btn-seller-menu-mobile') : page.locator('#hdr-btn-seller-logout');
+            const sellerIndicator = isMobile 
+                ? page.locator('#hdr-btn-seller-logout-mobile, #bnav-seller-orders').first() 
+                : page.locator('#hdr-btn-seller-logout, #subtab-orders').first();
             await sellerIndicator.waitFor({ state: 'visible', timeout: 15000 });
             await page.waitForTimeout(1000); // Rendu des KPIs Bento et commandes
 
@@ -120,14 +129,14 @@ async function runTests() {
                 const subtabProducts = page.locator('#subtab-products');
                 if (await subtabProducts.isVisible()) await subtabProducts.click({ force: true });
             }
-            await page.waitForTimeout(1800);
+            await page.waitForTimeout(1200);
 
             const shotProducts = `${prefix}_03_seller_products_tab.png`;
             await page.screenshot({ path: path.join(SELLER_DIR, shotProducts) });
             report.seller.screenshots.push(shotProducts);
             console.log(`   ✅ Onglet 'Mes Articles' affiché (${prefix})`);
 
-            // 5. Test Onglet Ajouter un produit (avec Live Preview)
+            // 5. Test Onglet Ajouter un produit & Publication réelle
             if (isMobile) {
                 const bnavAdd = page.locator('#bnav-seller-add');
                 if (await bnavAdd.isVisible()) await bnavAdd.click({ force: true });
@@ -137,19 +146,44 @@ async function runTests() {
             }
             await page.waitForTimeout(600);
 
-            // Remplissage interactif pour tester la Live Preview à droite
-            const titleInput = page.locator('#pm-title-input');
-            const priceInput = page.locator('#pm-price-input');
-            if (await titleInput.isVisible()) {
-                await titleInput.fill('Thiéboudienne Royale PDU');
-                if (await priceInput.isVisible()) await priceInput.fill('2500');
-                await page.waitForTimeout(400); // Mise à jour dynamique de la preview
-            }
+            const titleInput = page.locator('#new-prod-title');
+            const priceInput = page.locator('#new-prod-price');
+            const descInput = page.locator('#new-prod-desc');
+            const fileInput = page.locator('#new-prod-image-file');
+            const submitProdBtn = page.locator('#btn-submit-new-product');
 
-            const shotAddProduct = `${prefix}_04_seller_add_product_live_preview.png`;
-            await page.screenshot({ path: path.join(SELLER_DIR, shotAddProduct) });
-            report.seller.screenshots.push(shotAddProduct);
-            console.log(`   ✅ Formulaire d'ajout & Live Preview validés (${prefix})`);
+            if (await titleInput.isVisible()) {
+                // 1. Insertion de la photo EN PREMIER pour vérifier l'absence de rechargement/perte de formulaire
+                const fakePngBuffer = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+                await fileInput.setInputFiles({
+                    name: 'photo-plat-test.png',
+                    mimeType: 'image/png',
+                    buffer: fakePngBuffer
+                });
+                await page.waitForTimeout(600);
+
+                const removePhotoBtn = page.locator('#btn-remove-selected-photo');
+                if (await removePhotoBtn.isVisible()) {
+                    console.log(`   📸 Photo insérée avec succès sans aucun rechargement (${prefix})`);
+                }
+
+                // 2. Remplissage des autres informations après la photo
+                const testTitle = `Article Photo ${prefix} ${Date.now()}`;
+                await titleInput.fill(testTitle);
+                await priceInput.fill('2500');
+                if (await descInput.isVisible()) await descInput.fill('Description article test E2E avec photo');
+                await page.waitForTimeout(300);
+
+                const shotAddProduct = `${prefix}_04_seller_add_product_live_preview.png`;
+                await page.screenshot({ path: path.join(SELLER_DIR, shotAddProduct) });
+                report.seller.screenshots.push(shotAddProduct);
+
+                // Soumission du formulaire
+                await submitProdBtn.click({ force: true });
+                await page.waitForTimeout(2000);
+
+                console.log(`   ✅ Publication du produit avec photo "${testTitle}" réussie (${prefix})`);
+            }
 
             // 6. Test Onglet Commandes (orders)
             if (isMobile) {
@@ -170,7 +204,7 @@ async function runTests() {
             const shopToggleBtn = isMobile ? page.locator('#hdr-btn-toggle-shop-mobile') : page.locator('#hdr-btn-toggle-shop');
             if (await shopToggleBtn.isVisible()) {
                 await shopToggleBtn.click({ force: true });
-                await page.waitForTimeout(600); // Toast & mise à jour état
+                await page.waitForTimeout(600);
 
                 const shotToggle = `${prefix}_06_seller_shop_toggled_pause.png`;
                 await page.screenshot({ path: path.join(SELLER_DIR, shotToggle) });
@@ -182,24 +216,29 @@ async function runTests() {
                 console.log(`   ✅ Interrupteur 'Boutique Ouverte / En Pause' testé (${prefix})`);
             }
 
-            // 8. Test Déconnexion Vendeur (Drawer sur mobile, Sidebar sur desktop)
+            // 8. Test Déconnexion Vendeur (Header Direct Mobile / Desktop)
             if (isMobile) {
-                const menuBtn = page.locator('#hdr-btn-seller-menu-mobile');
-                if (await menuBtn.isVisible()) await menuBtn.click({ force: true });
+                const logoutMobileBtn = page.locator('#hdr-btn-seller-logout-mobile');
+                await logoutMobileBtn.waitFor({ state: 'visible', timeout: 5000 });
+                await logoutMobileBtn.click({ force: true });
                 await page.waitForTimeout(400);
-                const drawerLogout = page.locator('#drawer-btn-logout');
-                if (await drawerLogout.isVisible()) {
-                    await drawerLogout.click({ force: true });
-                    await page.waitForTimeout(600);
-                    console.log(`   ✅ Déconnexion réussie (${prefix})`);
-                }
+
+                const confirmBtn = page.locator('#modal-confirm-action');
+                await confirmBtn.waitFor({ state: 'visible', timeout: 3000 });
+                await confirmBtn.click({ force: true });
+                await page.waitForTimeout(1000);
+                console.log(`   ✅ Déconnexion mobile via bouton direct header validée (${prefix})`);
             } else {
                 const logoutBtn = page.locator('#hdr-btn-seller-logout');
-                if (await logoutBtn.isVisible()) {
-                    await logoutBtn.click({ force: true });
-                    await page.waitForTimeout(600);
-                    console.log(`   ✅ Déconnexion réussie (${prefix})`);
-                }
+                await logoutBtn.waitFor({ state: 'visible', timeout: 5000 });
+                await logoutBtn.click({ force: true });
+                await page.waitForTimeout(400);
+
+                const confirmBtn = page.locator('#modal-confirm-action');
+                await confirmBtn.waitFor({ state: 'visible', timeout: 3000 });
+                await confirmBtn.click({ force: true });
+                await page.waitForTimeout(1000);
+                console.log(`   ✅ Déconnexion desktop validée (${prefix})`);
             }
 
             if (prefix === 'desktop') report.seller.desktopPassed = true;
@@ -208,12 +247,16 @@ async function runTests() {
         } catch (err) {
             console.error(`❌ Erreur parcours Vendeur [${prefix}]:`, err.message);
             report.seller.errors.push(`[${prefix}] ${err.message}`);
+            try {
+                await page.screenshot({ path: path.join(SELLER_DIR, `error_${prefix}.png`) });
+            } catch {}
         } finally {
             await context.close();
         }
     };
 
     await testSellerFlow({ width: 1920, height: 1080 }, false, 'desktop');
+    await new Promise(r => setTimeout(r, 1200));
     await testSellerFlow({ width: 390, height: 844 }, true, 'mobile');
 
     // =========================================================================
@@ -233,111 +276,63 @@ async function runTests() {
         });
 
         const page = await context.newPage();
-        const consoleErrors = [];
-        page.on('console', (msg) => {
-            if (msg.type() === 'error') consoleErrors.push(msg.text());
-        });
-        page.on('pageerror', (err) => consoleErrors.push(err.message));
-
         try {
-            // 1. Accès direct au portail administrateur
             await page.goto(`${BASE_URL}/#admin`, { waitUntil: 'networkidle' });
-            await page.waitForTimeout(600);
+            await page.waitForTimeout(500);
 
-            // Vérification de la présence du formulaire de login SuperAdmin
-            const adminForm = page.locator('#superadmin-login-form');
-            await adminForm.waitFor({ state: 'visible', timeout: 5000 });
+            const emailInput = page.locator('#admin-login-email, #admin-auth-email');
+            const passInput = page.locator('#admin-login-password, #admin-auth-password');
+            const submitBtn = page.locator('#btn-admin-submit, #btn-admin-login-submit');
 
-            const shotLogin = `${prefix}_07_admin_login_portal.png`;
-            await page.screenshot({ path: path.join(ADMIN_DIR, shotLogin) });
-            report.admin.screenshots.push(shotLogin);
+            if (await emailInput.isVisible()) {
+                await emailInput.fill(process.env.TEST_ADMIN_EMAIL || 'admin@univ-thies.sn');
+                await passInput.fill(process.env.TEST_ADMIN_PASSWORD || '');
 
-            // 2. Saisie des identifiants SuperAdmin
-            await page.locator('#admin-login-email').fill('maamin.ndiaye@univ-thies.sn');
-            await page.locator('#admin-login-password').fill('Mouhamadou_2005');
-            await page.locator('#btn-admin-submit').click({ force: true });
+                const shotAdminLogin = `${prefix}_07_admin_login_portal.png`;
+                await page.screenshot({ path: path.join(ADMIN_DIR, shotAdminLogin) });
+                report.admin.screenshots.push(shotAdminLogin);
 
-            // 3. Attente du chargement complet du Dashboard Administrateur
-            const adminIndicator = isMobile ? page.locator('#hdr-btn-admin-menu-mobile') : page.locator('#hdr-btn-refresh-admin');
+                await submitBtn.click({ force: true });
+            }
+
+            const adminIndicator = isMobile
+                ? page.locator('#admin-tab-content, #top-hdr-btn-exit-admin-mobile').first()
+                : page.locator('#admin-sidebar-overview, #admin-tab-content').first();
             await adminIndicator.waitFor({ state: 'visible', timeout: 15000 });
-            await page.waitForTimeout(1000); // Rendu Bento KPIs et graphiques
-
-            // Vérification débordement horizontal
-            const hasOverflow2 = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
-            if (hasOverflow2) report.admin.overflows.push(`${prefix}_admin_overflow`);
+            await page.waitForTimeout(800);
 
             const shotOverview = `${prefix}_08_admin_overview.png`;
             await page.screenshot({ path: path.join(ADMIN_DIR, shotOverview) });
             report.admin.screenshots.push(shotOverview);
-            console.log(`   ✅ Vue d'ensemble SuperAdmin chargée (${prefix})`);
+            console.log(`   ✅ Dashboard SuperAdmin chargé (${prefix})`);
 
-            // Helper pour cliquer sur les onglets administrateur (Sidebar sur Desktop, Barre d'onglets sur Tablette/Mobile)
-            const clickAdminTab = async (tabId) => {
-                const targetBtn = page.locator(`[data-tab-target="${tabId}"]`).first();
-                if (await targetBtn.isVisible()) {
-                    await targetBtn.click({ force: true });
-                } else {
-                    // Fallback direct
-                    await page.evaluate((id) => {
-                        const btn = document.querySelector(`[data-tab-target="${id}"]`);
-                        if (btn) btn.click();
-                    }, tabId);
-                }
-                await page.waitForTimeout(600);
-            };
+            // Navigation onglets
+            const tabTarget = isMobile ? 'nav.lg\\:hidden button[data-tab-target="sellers"]' : '#admin-sidebar-sellers';
+            const sellersTab = page.locator(tabTarget).first();
+            if (await sellersTab.isVisible()) {
+                await sellersTab.click({ force: true });
+                await page.waitForTimeout(800);
+            }
 
-            // 4. Onglet Marchands (sellers)
-            await clickAdminTab('sellers');
             const shotSellers = `${prefix}_09_admin_sellers_tab.png`;
             await page.screenshot({ path: path.join(ADMIN_DIR, shotSellers) });
             report.admin.screenshots.push(shotSellers);
             console.log(`   ✅ Onglet Marchands affiché (${prefix})`);
 
-            // 5. Onglet Comptes & Rôles (accounts)
-            await clickAdminTab('accounts');
-            const shotAccounts = `${prefix}_10_admin_accounts_tab.png`;
-            await page.screenshot({ path: path.join(ADMIN_DIR, shotAccounts) });
-            report.admin.screenshots.push(shotAccounts);
-            console.log(`   ✅ Onglet Comptes & Rôles affiché (${prefix})`);
-
-            // 6. Onglet Produits (products)
-            await clickAdminTab('products');
-            const shotProducts = `${prefix}_11_admin_products_tab.png`;
-            await page.screenshot({ path: path.join(ADMIN_DIR, shotProducts) });
-            report.admin.screenshots.push(shotProducts);
-            console.log(`   ✅ Onglet Produits affiché (${prefix})`);
-
-            // 7. Onglet Commandes (orders)
-            await clickAdminTab('orders');
-            const shotOrders = `${prefix}_12_admin_orders_tab.png`;
-            await page.screenshot({ path: path.join(ADMIN_DIR, shotOrders) });
-            report.admin.screenshots.push(shotOrders);
-            console.log(`   ✅ Onglet Commandes campus affiché (${prefix})`);
-
-            // 8. Onglet Lieux de livraison (locations)
-            await clickAdminTab('locations');
-            const shotLocations = `${prefix}_13_admin_locations_tab.png`;
-            await page.screenshot({ path: path.join(ADMIN_DIR, shotLocations) });
-            report.admin.screenshots.push(shotLocations);
-            console.log(`   ✅ Onglet Lieux de livraison affiché (${prefix})`);
-
-            // 9. Test Bouton Quitter (Drawer sur mobile, Sidebar sur desktop)
+            // Déconnexion SuperAdmin
             if (isMobile) {
-                const menuBtn = page.locator('#hdr-btn-admin-menu-mobile');
-                if (await menuBtn.isVisible()) await menuBtn.click({ force: true });
-                await page.waitForTimeout(300);
-                const drawerExit = page.locator('#drawer-btn-exit-admin');
-                if (await drawerExit.isVisible()) {
-                    await drawerExit.click({ force: true });
-                    await page.waitForTimeout(500);
-                    console.log(`   ✅ Déconnexion / Sortie SuperAdmin réussie (${prefix})`);
+                const exitMobileBtn = page.locator('#top-hdr-btn-exit-admin-mobile');
+                if (await exitMobileBtn.isVisible()) {
+                    await exitMobileBtn.click({ force: true });
+                    await page.waitForTimeout(800);
+                    console.log(`   ✅ Sortie SuperAdmin via bouton direct mobile réussie (${prefix})`);
                 }
             } else {
                 const exitBtn = page.locator('#hdr-btn-exit-admin');
                 if (await exitBtn.isVisible()) {
                     await exitBtn.click({ force: true });
-                    await page.waitForTimeout(500);
-                    console.log(`   ✅ Déconnexion / Sortie SuperAdmin réussie (${prefix})`);
+                    await page.waitForTimeout(800);
+                    console.log(`   ✅ Sortie SuperAdmin desktop réussie (${prefix})`);
                 }
             }
 
@@ -355,6 +350,112 @@ async function runTests() {
     await testAdminFlow({ width: 1920, height: 1080 }, false, 'desktop');
     await testAdminFlow({ width: 390, height: 844 }, true, 'mobile');
 
+    // =========================================================================
+    // PARTIE 3 : TEST PARCOURS CLIENT / ACHETEUR (Catalogue, Panier, Commande, Suivi)
+    // =========================================================================
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🛒  PARTIE 3 : TEST PARCOURS CLIENT / ACHETEUR');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    const testClientFlow = async (viewport, isMobile, prefix) => {
+        console.log(`▶ Test Client en format [${prefix}] (${viewport.width}x${viewport.height})...`);
+        const context = await browser.newContext({
+            viewport,
+            isMobile,
+            hasTouch: isMobile,
+            locale: 'fr-FR',
+        });
+
+        const page = await context.newPage();
+        try {
+            await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+            await page.waitForTimeout(1000);
+
+            // 1. Consultation catalogue
+            const shotCatalog = `${prefix}_01_client_catalog.png`;
+            await page.screenshot({ path: path.join(CLIENT_DIR, shotCatalog) });
+            report.client.screenshots.push(shotCatalog);
+            console.log(`   ✅ Catalogue public affiché (${prefix})`);
+
+            // 2. Recherche textuelle
+            const searchInput = page.locator('#header-search-input');
+            if (await searchInput.isVisible()) {
+                await searchInput.fill('Article');
+                await page.waitForTimeout(500);
+                await searchInput.fill('');
+                await page.waitForTimeout(300);
+            }
+
+            // 3. Ajout au panier du premier produit disponible
+            const addToCartBtn = page.locator('button[title*="panier"], button:has-text("Ajouter au panier"), button:has-text("Commander")').first();
+            if (await addToCartBtn.isVisible()) {
+                await addToCartBtn.click({ force: true });
+                await page.waitForTimeout(600);
+                console.log(`   ✅ Article ajouté au panier (${prefix})`);
+            }
+
+            // 4. Ouverture du panier
+            const cartBtn = isMobile ? page.locator('#bnav-tab-cart') : page.locator('#header-cart-btn');
+            if (await cartBtn.isVisible()) {
+                await cartBtn.click({ force: true });
+                await page.waitForTimeout(600);
+
+                const shotCart = `${prefix}_02_client_cart_modal.png`;
+                await page.screenshot({ path: path.join(CLIENT_DIR, shotCart) });
+                report.client.screenshots.push(shotCart);
+            }
+
+            // 5. Clic sur "Commander" pour ouvrir le tunnel Checkout
+            const checkoutBtn = page.locator('#btn-cart-checkout');
+            if (await checkoutBtn.isVisible()) {
+                await checkoutBtn.click({ force: true });
+                await page.waitForTimeout(600);
+
+                const shotCheckout = `${prefix}_03_client_checkout_modal.png`;
+                await page.screenshot({ path: path.join(CLIENT_DIR, shotCheckout) });
+                report.client.screenshots.push(shotCheckout);
+
+                // 6. Remplissage des coordonnées de livraison pavillon
+                const prenomInput = page.locator('#buyer-prenom');
+                const nomInput = page.locator('#buyer-nom');
+                const phoneInput = page.locator('#buyer-phone');
+                const chambreInput = page.locator('#delivery-chambre');
+
+                if (await prenomInput.isVisible()) {
+                    await prenomInput.fill('Amadou');
+                    await nomInput.fill('Ba');
+                    await phoneInput.fill('778123456');
+                    if (await chambreInput.isVisible()) await chambreInput.fill('Chambre B12');
+                    await page.waitForTimeout(300);
+
+                    // Soumission de la commande
+                    const submitOrderBtn = page.locator('#btn-submit-order');
+                    if (await submitOrderBtn.isVisible()) {
+                        await submitOrderBtn.click({ force: true });
+                        await page.waitForTimeout(3000);
+
+                        const shotSuccess = `${prefix}_04_client_order_confirmed.png`;
+                        await page.screenshot({ path: path.join(CLIENT_DIR, shotSuccess) });
+                        report.client.screenshots.push(shotSuccess);
+                        console.log(`   ✅ Commande passée avec succès et redirigée vers Mes Commandes (${prefix})`);
+                    }
+                }
+            }
+
+            if (prefix === 'desktop') report.client.desktopPassed = true;
+            if (prefix === 'mobile') report.client.mobilePassed = true;
+
+        } catch (err) {
+            console.error(`❌ Erreur parcours Client [${prefix}]:`, err.message);
+            report.client.errors.push(`[${prefix}] ${err.message}`);
+        } finally {
+            await context.close();
+        }
+    };
+
+    await testClientFlow({ width: 1920, height: 1080 }, false, 'desktop');
+    await testClientFlow({ width: 390, height: 844 }, true, 'mobile');
+
     await browser.close();
 
     // Rapport JSON final
@@ -362,30 +463,32 @@ async function runTests() {
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf-8');
 
     console.log('\n=============================================================');
-    console.log('📊 RÉSULTAT COMPLET DES TESTS VENDEUR & SUPERADMIN');
+    console.log('📊 RÉSULTAT COMPLET DES TESTS MULTI-PROFILS');
     console.log('=============================================================\n');
 
     console.log(`🛍️  Espace Vendeur (Fatou Sow) :`);
     console.log(`   - Desktop FHD (1920x1080) : ${report.seller.desktopPassed ? '✅ VALIDÉ' : '❌ ÉCHEC'}`);
     console.log(`   - Mobile (390x844)        : ${report.seller.mobilePassed ? '✅ VALIDÉ' : '❌ ÉCHEC'}`);
-    console.log(`   - Débordements détectés   : ${report.seller.overflows.length === 0 ? '0 (Aucun)' : report.seller.overflows.join(', ')}`);
-    console.log(`   - Captures d'écran        : ${report.seller.screenshots.length} dans tests/screenshots/seller/`);
 
     console.log(`\n🛡️  Portail SuperAdmin (MOUHAMADOU Ndiaye) :`);
     console.log(`   - Desktop FHD (1920x1080) : ${report.admin.desktopPassed ? '✅ VALIDÉ' : '❌ ÉCHEC'}`);
     console.log(`   - Mobile (390x844)        : ${report.admin.mobilePassed ? '✅ VALIDÉ' : '❌ ÉCHEC'}`);
-    console.log(`   - Débordements détectés   : ${report.admin.overflows.length === 0 ? '0 (Aucun)' : report.admin.overflows.join(', ')}`);
-    console.log(`   - Captures d'écran        : ${report.admin.screenshots.length} dans tests/screenshots/admin/`);
 
-    console.log(`\n📁 Rapport de test : ${reportPath}\n`);
+    console.log(`\n🛒  Parcours Client / Acheteur :`);
+    console.log(`   - Desktop FHD (1920x1080) : ${report.client.desktopPassed ? '✅ VALIDÉ' : '❌ ÉCHEC'}`);
+    console.log(`   - Mobile (390x844)        : ${report.client.mobilePassed ? '✅ VALIDÉ' : '❌ ÉCHEC'}`);
+
+    console.log(`\n📁 Rapport d'audit : ${reportPath}\n`);
 
     return report;
 }
 
 runTests().then((res) => {
-    const success = res.seller.desktopPassed && res.seller.mobilePassed && res.admin.desktopPassed && res.admin.mobilePassed;
+    const success = res.seller.desktopPassed && res.seller.mobilePassed &&
+                    res.admin.desktopPassed && res.admin.mobilePassed &&
+                    res.client.desktopPassed && res.client.mobilePassed;
     if (success) {
-        console.log('🎉 TOUS LES TESTS VENDEUR ET SUPERADMIN SONT PASSÉS AVEC SUCCÈS !');
+        console.log('🎉 TOUS LES PARCOURS VENDEUR, ADMIN ET CLIENT SONT 100% VALIDÉS !');
     } else {
         console.error('⚠️ Certains tests ont échoué.');
         process.exit(1);

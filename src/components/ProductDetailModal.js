@@ -5,14 +5,18 @@
  */
 
 import { escapeHTML, formatSenegalPhone } from '../utils/security.js';
+import { shareProduct } from '../utils/share.js';
+import { showToast } from '../utils/notifications.js';
 
 /**
  * Crée le modal de détails d'un produit.
  * @param {Object} props
  * @param {Function} props.onAddToCart - Callback lors de l'ajout au panier ({ product, quantity })
+ * @param {Function} [props.onOpenSeller] - Callback ouverture de la boutique
+ * @param {Function} [props.onClose] - Callback fermeture du modal
  * @returns {Object} Contrôleur du modal ({ element, open, close })
  */
-export function createProductDetailModal({ onAddToCart, onOpenSeller } = {}) {
+export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } = {}) {
     const modalEl = document.createElement('div');
     modalEl.id = 'product-detail-modal-overlay';
     modalEl.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
@@ -64,10 +68,15 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller } = {}) {
                            </div>`
                     }
 
-                    <!-- Bouton Fermer -->
-                    <button id="btn-close-detail" class="absolute top-3 right-3 w-10 h-10 rounded-full bg-slate-900/60 hover:bg-slate-900/80 backdrop-blur-md text-white flex items-center justify-center transition-all shadow-md min-h-[44px] min-w-[44px]">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
+                    <!-- Boutons Partager & Fermer -->
+                    <div class="absolute top-3 right-3 flex items-center gap-2">
+                        <button id="btn-share-detail" title="Partager ce produit (Lien & WhatsApp)" aria-label="Partager ce produit" class="w-10 h-10 rounded-full bg-slate-900/60 hover:bg-slate-900/80 backdrop-blur-md text-white flex items-center justify-center transition-all shadow-md min-h-[44px] min-w-[44px] cursor-pointer active:scale-95">
+                            <i class="fa-solid fa-share-nodes text-sm"></i>
+                        </button>
+                        <button id="btn-close-detail" class="w-10 h-10 rounded-full bg-slate-900/60 hover:bg-slate-900/80 backdrop-blur-md text-white flex items-center justify-center transition-all shadow-md min-h-[44px] min-w-[44px] cursor-pointer active:scale-95">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
 
                     <!-- Badges flottants -->
                     <div class="absolute bottom-3 left-3 flex items-center gap-2">
@@ -139,16 +148,19 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller } = {}) {
                             </div>
                         </div>
 
-                        ${cleanPhone ? `
-                            <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btn-detail-share-product" title="Partager ce produit (Lien & WhatsApp)" aria-label="Partager ce produit" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-90 text-slate-700 flex items-center justify-center transition-all min-h-[44px] min-w-[44px] cursor-pointer">
+                                <i class="fa-solid fa-share-nodes text-xs text-primary"></i>
+                            </button>
+                            ${cleanPhone ? `
                                 <a href="tel:${cleanPhone}" title="Appeler le vendeur" aria-label="Appeler le vendeur" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-90 text-slate-700 flex items-center justify-center transition-all min-h-[44px] min-w-[44px]">
                                     <i class="fa-solid fa-phone text-xs text-emerald-600"></i>
                                 </a>
                                 <a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Bonjour ! Je vous contacte au sujet de votre article "${p.title}" sur Campus Market.`)}" target="_blank" rel="noopener" title="Discuter sur WhatsApp" aria-label="Discuter sur WhatsApp" class="w-10 h-10 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-90 text-[#25D366] flex items-center justify-center transition-all min-h-[44px] min-w-[44px]">
                                     <i class="fa-brands fa-whatsapp text-lg"></i>
                                 </a>
-                            </div>
-                        ` : ''}
+                            ` : ''}
+                        </div>
                     </div>
 
                     <!-- Sélecteur quantité et Bouton d'ajout -->
@@ -192,6 +204,15 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller } = {}) {
         modalEl.addEventListener('click', (e) => {
             if (e.target === modalEl) close();
         });
+
+        // Actions de partage du produit
+        const shareAction = () => {
+            if (currentProduct) {
+                shareProduct(currentProduct, showToast);
+            }
+        };
+        modalEl.querySelector('#btn-share-detail')?.addEventListener('click', shareAction);
+        modalEl.querySelector('#btn-detail-share-product')?.addEventListener('click', shareAction);
 
         const qtyDisplay = modalEl.querySelector('#detail-qty-display');
         modalEl.querySelector('#btn-detail-qty-minus')?.addEventListener('click', () => {
@@ -242,6 +263,9 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller } = {}) {
         modalEl.classList.add('opacity-0', 'pointer-events-none');
         document.body.style.overflow = '';
         currentProduct = null;
+        if (typeof onClose === 'function') {
+            onClose();
+        }
     }
 
     return {

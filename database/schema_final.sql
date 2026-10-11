@@ -19,6 +19,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     prenom TEXT NOT NULL,
     nom TEXT NOT NULL,
     telephone TEXT,
+    email TEXT,
+    shop_name TEXT,
+    shop_category TEXT DEFAULT 'autres',
+    subscription_plan TEXT DEFAULT 'starter',
+    max_products INTEGER DEFAULT 5,
     role TEXT DEFAULT 'acheteur' CHECK (role IN ('acheteur', 'vendeur_pending', 'vendeur', 'vendeur_desactive', 'superadmin')),
     is_open BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -217,6 +222,10 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
     assigned_role TEXT;
+    chosen_plan TEXT;
+    prod_limit INTEGER;
+    user_shop_name TEXT;
+    user_shop_cat TEXT;
 BEGIN
     -- Règle stricte anti-élévation de privilèges :
     -- Seul 'vendeur_pending' ou 'acheteur' peut être sollicité à l'inscription.
@@ -226,12 +235,35 @@ BEGIN
         assigned_role := 'acheteur';
     END IF;
 
-    INSERT INTO public.profiles (id, prenom, nom, telephone, role, is_open)
+    -- Formule et limite de produits
+    chosen_plan := COALESCE(NEW.raw_user_meta_data->>'subscription_plan', 'starter');
+    prod_limit := CASE WHEN chosen_plan = 'pro' THEN 10 ELSE 5 END;
+    user_shop_name := COALESCE(NEW.raw_user_meta_data->>'shop_name', (COALESCE(NEW.raw_user_meta_data->>'prenom', 'Étudiant') || ' Shop'));
+    user_shop_cat := COALESCE(NEW.raw_user_meta_data->>'shop_category', 'autres');
+
+    INSERT INTO public.profiles (
+        id, 
+        prenom, 
+        nom, 
+        telephone, 
+        email,
+        shop_name,
+        shop_category,
+        subscription_plan,
+        max_products,
+        role, 
+        is_open
+    )
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'prenom', 'Étudiant'),
         COALESCE(NEW.raw_user_meta_data->>'nom', 'UIDT'),
         COALESCE(NEW.raw_user_meta_data->>'telephone', ''),
+        NEW.email,
+        user_shop_name,
+        user_shop_cat,
+        chosen_plan,
+        prod_limit,
         assigned_role,
         true
     )
@@ -239,6 +271,11 @@ BEGIN
     SET 
         prenom = EXCLUDED.prenom,
         nom = EXCLUDED.nom,
+        email = COALESCE(EXCLUDED.email, public.profiles.email),
+        shop_name = COALESCE(EXCLUDED.shop_name, public.profiles.shop_name),
+        shop_category = COALESCE(EXCLUDED.shop_category, public.profiles.shop_category),
+        subscription_plan = COALESCE(EXCLUDED.subscription_plan, public.profiles.subscription_plan),
+        max_products = COALESCE(EXCLUDED.max_products, public.profiles.max_products),
         telephone = CASE WHEN EXCLUDED.telephone <> '' THEN EXCLUDED.telephone ELSE public.profiles.telephone END,
         role = CASE 
             WHEN public.profiles.role = 'superadmin' THEN 'superadmin'
@@ -283,7 +320,6 @@ USING (
 CREATE POLICY "L'utilisateur peut créer son profil" 
 ON public.profiles FOR INSERT 
 WITH CHECK (
-    auth.uid() = id AND 
     role IN ('acheteur', 'vendeur_pending')
 );
 
