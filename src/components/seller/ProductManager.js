@@ -74,15 +74,16 @@ export function createProductManager({
 
     // Calcul dynamique du quota d'articles autorisés selon l'abonnement
     const getQuotaInfo = () => {
-        const subStatus = computeSubscriptionStatus(sellerProfile);
-        const plan = sellerProfile?.subscription_plan || 'starter';
+        const profile = sellerProfile || {};
+        const subStatus = computeSubscriptionStatus(profile);
+        const plan = profile?.subscription_plan || 'starter';
         const planObj = SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.starter;
-        const maxAllowed = subStatus.isTrial
+        const maxAllowed = subStatus?.isTrial
             ? FREE_TRIAL_CONFIG.maxProducts
-            : (Number(sellerProfile?.max_products) || getMaxProductsForPlan(plan));
+            : (Number(profile?.max_products) || getMaxProductsForPlan(plan));
         const count = products.length;
         const isLimitReached = count >= maxAllowed;
-        const percent = Math.min(100, Math.round((count / maxAllowed) * 100));
+        const percent = Math.min(100, Math.round((count / Math.max(1, maxAllowed)) * 100));
         return { plan, planObj, maxAllowed, count, isLimitReached, percent, subStatus };
     };
 
@@ -104,7 +105,7 @@ export function createProductManager({
         const forSaleCount = products.filter((p) => p.stock !== 0 && !p.is_paused).length;
         const soldCount = products.filter((p) => p.stock === 0).length;
         const pausedCount = products.filter((p) => p.is_paused === true || p.stock === -2).length;
-        const { plan, maxAllowed, count, isLimitReached, percent } = getQuotaInfo();
+        const { plan, planObj, maxAllowed, count, isLimitReached, percent, subStatus } = getQuotaInfo();
 
         containerEl.innerHTML = `
             <!-- Barre de sous-navigation interne du catalogue avec jauge d'abonnement -->
@@ -158,7 +159,7 @@ export function createProductManager({
                     }">
                         <div class="flex items-center gap-1.5">
                             <i class="fa-solid ${isLimitReached ? 'fa-lock text-amber-600' : 'fa-crown text-amber-500'} text-xs"></i>
-                            <span class="font-extrabold">${subStatus.isTrial ? 'Essai Gratuit' : planObj.name} :</span>
+                            <span class="font-extrabold">${subStatus?.isTrial ? 'Essai Gratuit' : (planObj?.name || 'Pack Starter')} :</span>
                             <span class="tabular-nums">${count} / ${maxAllowed} produits</span>
                         </div>
                         <span class="text-[10px] font-black px-1.5 py-0.2 rounded-full ${
@@ -204,7 +205,7 @@ export function createProductManager({
      * Disposition 2 colonnes sur Desktop (Formulaire à gauche, Live Preview à droite).
      */
     function renderAddProductView() {
-        const { plan, maxAllowed, count, isLimitReached } = getQuotaInfo();
+        const { plan, planObj, maxAllowed, count, isLimitReached, percent, subStatus } = getQuotaInfo();
         const previewTitle = addFormData.title || 'Nom de votre article';
         const rawPrice = Number(addFormData.price || 1500);
         const previewPrice = rawPrice.toLocaleString('fr-FR');
