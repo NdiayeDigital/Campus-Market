@@ -6,6 +6,12 @@
 
 import { supabase } from './supabase.js';
 import { compressImage, dataURLtoBlob } from '../utils/image-compressor.js';
+import {
+    computeSubscriptionStatus,
+    getMaxProductsForPlan,
+    SUBSCRIPTION_PLANS,
+    FREE_TRIAL_CONFIG,
+} from '../config/subscription.js';
 
 const STORAGE_BUCKET = 'product-images';
 
@@ -69,7 +75,7 @@ export async function createProduct({
                 try {
                     const { data } = await supabase
                         .from('profiles')
-                        .select('role, is_open, subscription_plan, max_products')
+                        .select('role, is_open, subscription_plan, max_products, subscription_status, subscription_expires_at, trial_ends_at, created_at')
                         .eq('id', session.user.id)
                         .maybeSingle();
                     profile = data;
@@ -93,10 +99,18 @@ export async function createProduct({
                         throw new Error("Seuls les comptes marchands validés et administrateurs peuvent publier des articles.");
                     }
 
-                    // CONTRÔLE STRICT DU NOMBRE DE PRODUITS SELON L'ABONNEMENT
+                    // VÉRIFICATION DE LA PÉRIODE D'ESSAI OU DE L'ABONNEMENT
                     if (profile.role !== 'superadmin') {
+                        const subStatus = computeSubscriptionStatus(profile);
+                        if (subStatus.isExpired) {
+                            throw new Error("Votre période d'essai de 7 jours est terminée. Veuillez activer votre abonnement pour publier de nouveaux articles.");
+                        }
+
+                        // CONTRÔLE DU NOMBRE DE PRODUITS SELON LE STATUT (Essai 3 articles, ou Pack 5, 10, 50)
                         const plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'starter';
-                        const maxAllowed = Number(profile.max_products || session.user.user_metadata?.max_products) || (plan === 'pro' ? 10 : 5);
+                        const maxAllowed = subStatus.isTrial
+                            ? FREE_TRIAL_CONFIG.maxProducts
+                            : (Number(profile.max_products || session.user.user_metadata?.max_products) || getMaxProductsForPlan(plan));
 
                         let currentCount = 0;
                         try {
@@ -117,13 +131,21 @@ export async function createProduct({
                         }
 
                         if (currentCount >= maxAllowed) {
-                            const planLabel = plan === 'pro' ? 'Pack Pro (10 produits max)' : 'Pack Starter (5 produits max)';
+                            const planObj = SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.starter;
+                            let upgradeMsg = "Veuillez supprimer des articles existants pour en publier de nouveaux.";
+                            if (subStatus.isTrial) {
+                                upgradeMsg = "L'essai gratuit permet de publier jusqu'à 3 articles. Activez une formule Starter (5 arts), Pro (10 arts) ou Annuelle VIP (50 arts) pour débloquer votre catalogue.";
+                            } else if (plan === 'starter') {
+                                upgradeMsg = "Passez au Pack Pro (10 articles à 2 500 F) ou Annuel VIP (50 articles à 25 000 F/an) pour continuer.";
+                            } else if (plan === 'pro') {
+                                upgradeMsg = "Passez au Pack Annuel VIP (50 articles à 25 000 FCFA/an) pour maximiser votre catalogue toute l'année.";
+                            }
                             throw new Error(
                                 `Limite de votre formule atteinte (${currentCount}/${maxAllowed} produits). ` +
-                                `Votre formule actuelle (${planLabel}) a atteint son quota maximal. ` +
-                                (plan === 'starter'
-                                    ? "Passez au Pack Pro (10 articles à 2 500 FCFA/mois) ou supprimez un produit existant pour continuer."
-                                    : "Veuillez supprimer ou archiver des articles existants pour en publier de nouveaux.")
+                                (subStatus.isTrial 
+                                    ? `L'essai gratuit est plafonné à 3 articles. ` 
+                                    : `Votre formule actuelle (${planObj.name} - ${maxAllowed} articles) a atteint son plafond. `) +
+                                upgradeMsg
                             );
                         }
                     }
@@ -168,7 +190,7 @@ export async function createProduct({
             const blob = dataURLtoBlob(compressedDataUrl);
             const fileName = `${activeSellerId}/${Date.now()}_prod.jpg`;
 
-            const { data: uploadData, error: uploadErr } = await supabase.storage
+            let { data: uploadData, error: uploadErr } = await supabase.storage
                 .from(STORAGE_BUCKET)
                 .upload(fileName, blob, {
                     contentType: 'image/jpeg',
@@ -176,8 +198,28 @@ export async function createProduct({
                 });
 
             if (uploadErr) {
-                console.warn('[ProductManagement] Erreur upload image, fallback sans image:', uploadErr);
-            } else if (uploadData) {
+                console.warn('[ProductManagement] Erreur upload image tentative 1, rafraîchissement auth...', uploadErr);
+                try {
+                    await supabase.auth.refreshSession();
+                    const retry = await supabase.storage
+                        .from(STORAGE_BUCKET)
+                        .upload(fileName, blob, {
+                            contentType: 'image/jpeg',
+                            upsert: true,
+                        });
+                    uploadData = retry.data;
+                    uploadErr = retry.error;
+                } catch (retryEx) {
+                    console.warn('[ProductManagement] Exception rafraîchissement auth:', retryEx);
+                }
+            }
+
+            if (uploadErr) {
+                console.error('[ProductManagement] Erreur upload image définitive:', uploadErr);
+                throw new Error(`Échec du téléversement de la photo (${uploadErr.message || 'Erreur stockage'}). Veuillez réessayer.`);
+            }
+
+            if (uploadData) {
                 const { data: publicUrlData } = supabase.storage
                     .from(STORAGE_BUCKET)
                     .getPublicUrl(fileName);
@@ -185,7 +227,8 @@ export async function createProduct({
                 imageUrl = publicUrlData?.publicUrl || null;
             }
         } catch (imgError) {
-            console.warn('[ProductManagement] Échec de compression image:', imgError);
+            console.error('[ProductManagement] Échec traitement photo produit:', imgError);
+            throw imgError;
         }
     }
 

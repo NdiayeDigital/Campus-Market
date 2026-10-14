@@ -6,6 +6,7 @@
 import { supabase } from './supabase.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
 import { getSuspendedSellersCache } from './admin-service.js';
+import { computeSubscriptionStatus } from '../config/subscription.js';
 
 // Clés de persistance locale pour tolérance hors-ligne
 const PRODUCTS_CACHE_KEY = 'campus_market_cached_products';
@@ -120,7 +121,7 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
     try {
         let query = supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, subscription_plan, subscription_status, subscription_expires_at, trial_started_at, trial_ends_at, created_at)')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)
             .abortSignal(controller.signal);
@@ -147,6 +148,11 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
                 return false;
             }
             if (suspendedIds.includes(p.seller.id) || suspendedIds.includes(p.seller_id)) {
+                return false;
+            }
+            // Exclusion si la période d'essai ou l'abonnement du vendeur est expiré
+            const sub = computeSubscriptionStatus(p.seller);
+            if (sub.isExpired) {
                 return false;
             }
             return true;

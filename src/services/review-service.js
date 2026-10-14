@@ -25,11 +25,35 @@ export async function fetchSellerReviews(sellerId) {
             return [];
         }
 
-        return data || [];
+        const rawList = data || [];
+        return rawList.map((rev) => {
+            let extractedName = null;
+            let displayComment = rev.comment || '';
+            const match = displayComment.match(/^\[(?:Avis de )?([^\]]+)\]\s*:?\s*(.*)$/s);
+            if (match) {
+                extractedName = match[1].trim();
+                displayComment = match[2].trim();
+            }
+            return {
+                ...rev,
+                comment: displayComment,
+                buyer_name: extractedName || (rev.buyer ? `${rev.buyer.prenom || ''} ${rev.buyer.nom || ''}`.trim() : null),
+            };
+        });
     } catch (err) {
         console.error('[ReviewService] Exception récupération avis:', err);
         return [];
     }
+}
+
+/**
+ * Vérifie si une chaîne est un UUID v4 valide.
+ * @param {*} val
+ * @returns {boolean}
+ */
+function isValidUUID(val) {
+    if (!val || typeof val !== 'string') return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
 }
 
 /**
@@ -89,6 +113,17 @@ export async function submitReview({ sellerId, orderId = null, rating, comment =
 
     const note = Math.max(1, Math.min(5, parseInt(rating, 10) || 5));
     const cleanComment = (comment || '').trim();
+    const cleanBuyerName = (buyerName || '').trim();
+
+    // Construction du commentaire final avec attribution du nom de l'étudiant si invité
+    let finalComment = cleanComment;
+    if (cleanBuyerName && !finalComment.includes(`[Avis de ${cleanBuyerName}]`)) {
+        finalComment = finalComment ? `[Avis de ${cleanBuyerName}] : ${finalComment}` : `[Avis de ${cleanBuyerName}]`;
+    }
+
+    // Sécurisation stricte de l'orderId (PostgreSQL exige un format UUID valide)
+    // Si orderId est une référence de commande (ex: 'CMD-20261011-1234'), on l'annule pour éviter l'erreur 22P02
+    const cleanOrderId = isValidUUID(orderId) ? orderId.trim() : null;
 
     let buyerId = null;
     try {
@@ -102,24 +137,42 @@ export async function submitReview({ sellerId, orderId = null, rating, comment =
 
     const payload = {
         seller_id: sellerId,
-        order_id: orderId || null,
+        order_id: cleanOrderId,
         buyer_id: buyerId,
         rating: note,
-        comment: cleanComment,
+        comment: finalComment,
     };
 
-    const { data, error } = await supabase
-        .from('reviews')
-        .insert([payload])
-        .select('id, rating, comment, created_at, order_id, buyer_id')
-        .single();
+    try {
+        const { data, error } = await supabase
+            .from('reviews')
+            .insert([payload])
+            .select('id, rating, comment, created_at, order_id, buyer_id');
 
-    if (error) {
-        console.error('[ReviewService] Erreur insertion avis:', error);
-        throw new Error(`Impossible d'enregistrer votre avis: ${error.message}`);
+        if (error) {
+            // Repli sans .select() si RLS bloque la lecture du retour
+            console.warn('[ReviewService] Avertissement insertion avis avec select:', error.message);
+            const { error: insertErr } = await supabase.from('reviews').insert([payload]);
+            if (insertErr) {
+                throw new Error(`Impossible d'enregistrer votre avis: ${insertErr.message}`);
+            }
+            return {
+                id: 'rev_' + Date.now(),
+                ...payload,
+                created_at: new Date().toISOString(),
+                buyer_name: cleanBuyerName || null,
+            };
+        }
+
+        const inserted = (data && data[0]) || { ...payload, id: 'rev_' + Date.now() };
+        return {
+            ...inserted,
+            buyer_name: cleanBuyerName || null,
+        };
+    } catch (err) {
+        console.error('[ReviewService] Erreur insertion avis:', err);
+        throw err;
     }
-
-    return data;
 }
 
 export default {

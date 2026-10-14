@@ -98,6 +98,9 @@ export function exportSellersToCSV(sellers = [], filename = 'marchands-uidt.csv'
         'Prénom & Nom',
         'Téléphone',
         'Rôle',
+        'Formule',
+        'Statut Abonnement',
+        'Fin Essai / Expiration',
         'Statut Boutique',
         'Date Création',
     ];
@@ -107,6 +110,9 @@ export function exportSellersToCSV(sellers = [], filename = 'marchands-uidt.csv'
         `${s.prenom || ''} ${s.nom || ''}`.trim(),
         s.telephone || '',
         s.role || '',
+        s.subscription_plan || 'starter',
+        s.subscription_status || 'trial',
+        s.subscription_expires_at || s.trial_ends_at || '',
         s.is_open === false ? 'En pause' : 'Ouvert',
         s.created_at ? new Date(s.created_at).toLocaleDateString('fr-FR') : '',
     ]);

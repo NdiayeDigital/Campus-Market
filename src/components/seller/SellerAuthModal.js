@@ -6,6 +6,8 @@
 
 import { loginSeller, registerSeller } from '../../services/seller-service.js';
 import { CATEGORIES } from '../../services/catalog-service.js';
+import { SUPPORT_CONFIG } from '../../config/support.js';
+import { SUBSCRIPTION_PLANS } from '../../config/subscription.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -61,11 +63,30 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     <span class="text-slate-400 text-[10px] uppercase font-bold block">Formule sélectionnée</span>
                     <strong class="text-slate-900">${planLabel}</strong>
                 </div>
-                <p class="text-xs text-slate-600 mb-6 leading-relaxed">
+                <p class="text-xs text-slate-600 mb-4 leading-relaxed">
                     Votre candidature pour ouvrir une boutique sur Campus Market a bien été transmise au Super Administrateur de l'UIDT.
                     <br><br>
                     Vous recevrez une confirmation sous <strong>24h à 48h</strong>.
                 </p>
+
+                <div class="w-full mb-5 p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex flex-col gap-2 text-left">
+                    <span class="text-[10px] font-bold text-blue-900 uppercase flex items-center gap-1.5">
+                        <i class="fa-solid fa-headset text-blue-600"></i> Support & Assistance
+                    </span>
+                    <p class="text-[11px] text-slate-600">
+                        Une question sur votre dossier ? Contactez directement notre équipe au <strong>${SUPPORT_CONFIG.phoneDisplay}</strong>.
+                    </p>
+                    <a 
+                        href="${SUPPORT_CONFIG.whatsappUrl}" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        class="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer min-h-[38px]"
+                    >
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
+                        <span>Assistance WhatsApp (${SUPPORT_CONFIG.phoneDisplay})</span>
+                    </a>
+                </div>
+
                 <button id="btn-back-to-login" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl transition-colors min-h-[44px] cursor-pointer">
                     Retour à la connexion
                 </button>
@@ -106,14 +127,27 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     </ul>
                 </div>
 
+                <!-- Offre de bienvenue Free Tier -->
+                <div class="bg-emerald-50 rounded-2xl border border-emerald-200/90 p-3.5 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-sm shrink-0 mt-0.5 shadow-xs">
+                        <i class="fa-solid fa-gift"></i>
+                    </div>
+                    <div>
+                        <span class="font-heading font-extrabold text-xs text-emerald-950 block">🎉 7 Jours d'essai 100% GRATUIT</span>
+                        <p class="text-[11px] text-emerald-800 leading-snug mt-0.5">
+                            Dès validation de votre candidature, profitez de <strong>7 jours d'essai offerts (3 articles inclus)</strong> pour tester la vente sans aucun frais initial.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Formules d'abonnement -->
                 <div class="flex flex-col gap-2.5">
                     <div class="flex items-center justify-between">
                         <h4 class="font-heading font-bold text-xs text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
                             <i class="fa-solid fa-crown text-amber-500 text-xs"></i>
-                            <span>Tarifs d'abonnement</span>
+                            <span>Formules d'abonnement post-essai</span>
                         </h4>
-                        <span class="text-[10px] text-slate-400 font-semibold">Mensuel</span>
+                        <span class="text-[10px] text-slate-400 font-semibold">Tarifs transparents</span>
                     </div>
 
                     <!-- Option Starter -->
@@ -136,7 +170,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                                     <span class="font-heading font-extrabold text-sm text-slate-900">Pack Starter</span>
                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">5 produits</span>
                                 </div>
-                                <span class="text-[11px] text-slate-500">Catalogue de 5 produits par mois</span>
+                                <span class="text-[11px] text-slate-500">Catalogue de 5 produits</span>
                             </div>
                         </div>
                         <div class="text-right shrink-0">
@@ -165,7 +199,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                                     <span class="font-heading font-extrabold text-sm text-slate-900">Pack Pro</span>
                                     <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-400 text-slate-950">10 produits</span>
                                 </div>
-                                <span class="text-[11px] text-slate-500">Catalogue de 10 produits par mois</span>
+                                <span class="text-[11px] text-slate-500">Catalogue de 10 produits & stats avancées</span>
                             </div>
                         </div>
                         <div class="text-right shrink-0">
@@ -175,17 +209,15 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     </div>
                 </div>
 
-                <!-- Garantie 100% Remboursé -->
-                <div class="bg-emerald-50 rounded-2xl border border-emerald-200/90 p-3 flex items-start gap-2.5">
-                    <div class="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs shrink-0 mt-0.5">
-                        <i class="fa-solid fa-shield-heart"></i>
+                <!-- Information Paiement SasPay Wave & OM -->
+                <div class="bg-sky-50/70 rounded-2xl border border-sky-200/90 p-3 flex items-start gap-2.5">
+                    <div class="w-7 h-7 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                        <i class="fa-solid fa-mobile-screen"></i>
                     </div>
                     <div>
-                        <span class="font-heading font-bold text-xs text-emerald-900 block">Garantie 100% Remboursé</span>
-                        <p class="text-[11px] text-emerald-800 leading-snug mt-0.5">
-                            La souscription à un abonnement est demandée avant votre demande d'adhésion. 
-                            <strong>Si votre demande est annulée ou rejetée par l'administration</strong>, 
-                            la <strong>totalité de la somme vous sera intégralement remboursée</strong> sans aucun frais.
+                        <span class="font-heading font-bold text-xs text-sky-950 block">Paiement Mobile Wave & Orange Money</span>
+                        <p class="text-[11px] text-sky-800 leading-snug mt-0.5">
+                            Aucun paiement immédiat n'est requis aujourd'hui. Vos 7 jours d'essai démarrent gratuitement. Vous choisirez ensuite votre opérateur (Wave ou OM) pour vous abonner.
                         </p>
                     </div>
                 </div>
@@ -299,9 +331,11 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full shrink-0 ${selectedPlan === 'pro' ? 'bg-amber-400' : 'bg-primary'}"></span>
                         <div class="truncate">
-                            <span class="text-slate-500 text-[10px] block leading-none">Formule choisie</span>
+                            <span class="text-slate-500 text-[10px] block leading-none">Formule choisie (Essai 7j inclus)</span>
                             <span class="text-slate-800 font-bold text-xs truncate">
-                                ${selectedPlan === 'pro' ? 'Pack Pro (2 500 FCFA/mois — 10 produits)' : 'Pack Starter (1 500 FCFA/mois — 5 produits)'}
+                                ${selectedPlan === 'pro' 
+                                    ? 'Pack Pro (2 500 FCFA/mois — 10 produits)' 
+                                    : 'Pack Starter (1 500 FCFA/mois — 5 produits)'}
                             </span>
                         </div>
                     </div>

@@ -27,6 +27,7 @@ import {
 } from './services/catalog-service.js';
 import { escapeHTML } from './utils/security.js';
 import { showToast } from './utils/notifications.js';
+import { SUPPORT_CONFIG } from './config/support.js';
 import logoUrl from './assets/logo.webp';
 
 export { showToast };
@@ -292,16 +293,16 @@ async function initApp() {
                 <button id="footer-link-catalog" class="hover:text-primary transition-colors">Offres</button>
                 <button id="footer-link-orders" class="hover:text-primary transition-colors">Mes commandes</button>
                 <button id="footer-link-seller" class="hover:text-amber-700 text-amber-900 font-semibold transition-colors">Espace Vendeur</button>
-                <a href="https://wa.me/221784799882" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> Aide & Support
+                <a href="${SUPPORT_CONFIG.whatsappUrl}" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> Aide & Support (${SUPPORT_CONFIG.phoneDisplay})
                 </a>
             </div>
 
             <!-- Bouton Support WhatsApp Mobile (visible uniquement sur smartphone au lieu des liens doublons) -->
             <div class="flex sm:hidden items-center justify-center w-full">
-                <a href="https://wa.me/221784799882" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 rounded-full font-bold text-xs transition-all shadow-sm active:scale-95 min-h-[44px]">
+                <a href="${SUPPORT_CONFIG.whatsappUrl}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 rounded-full font-bold text-xs transition-all shadow-sm active:scale-95 min-h-[44px]">
                     <i class="fa-brands fa-whatsapp text-base"></i>
-                    <span>Besoin d'aide ? Support WhatsApp UIDT</span>
+                    <span>Besoin d'aide ? Support WhatsApp (${SUPPORT_CONFIG.phoneDisplay})</span>
                 </a>
             </div>
 
@@ -486,6 +487,9 @@ async function initApp() {
         activeDashboardEl = createSellerDashboard({
             seller: appState.currentSeller,
             onBackToCatalog: () => navigateToView('catalog'),
+            onOpenAdminDashboard: () => {
+                navigateToView('admin');
+            },
             onLogout: () => {
                 appState.currentSeller = null;
                 headerComponent?.updateSellerState?.(null);
@@ -514,6 +518,7 @@ async function initApp() {
         const { createSuperAdminDashboard } = await import('./components/admin/SuperAdminDashboard.js');
         mainContentEl.innerHTML = '';
         const adminDashboard = createSuperAdminDashboard({
+            admin: appState.currentSeller?.role === 'superadmin' ? appState.currentSeller : null,
             onExit: () => {
                 if (window.location.hash.toLowerCase() === '#admin') {
                     history.replaceState(null, '', window.location.pathname);
@@ -522,6 +527,17 @@ async function initApp() {
             },
             onBackToCatalog: () => {
                 navigateToView('catalog');
+            },
+            onOpenSellerDashboard: async (adminSellerProfile) => {
+                if (adminSellerProfile) {
+                    appState.currentSeller = adminSellerProfile;
+                    headerComponent?.updateSellerState?.(adminSellerProfile);
+                    bottomNavComponent?.setSeller?.(adminSellerProfile);
+                    try {
+                        localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(adminSellerProfile));
+                    } catch {}
+                }
+                navigateToView('seller');
             },
             onShowToast: showToast,
         });

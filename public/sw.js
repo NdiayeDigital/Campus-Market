@@ -7,7 +7,7 @@
  * 3. NETWORK-FIRST (avec fallback offline) : HTML et bundles JS/CSS Vite pour réception immédiate des mises à jour.
  */
 
-const CACHE_NAME = 'campus-market-v20';
+const CACHE_NAME = 'campus-market-v21';
 
 const STATIC_PRECACHE = [
     '/',
@@ -54,6 +54,11 @@ self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
 
+    // Ignorer immédiatement les schémas non HTTP/HTTPS (chrome-extension:, moz-extension:, blob:, data:, etc.)
+    if (!url.protocol.startsWith('http')) {
+        return;
+    }
+
     // RÈGLE 1 : Exclusion stricte de toutes les requêtes Supabase (Auth, REST, Storage, Realtime)
     if (url.hostname.includes('supabase.co') || url.pathname.startsWith('/rest/v1')) {
         return; // Requête réseau directe sans interception
@@ -87,7 +92,11 @@ self.addEventListener('fetch', (event) => {
                 return fetch(request).then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
                         const copy = networkResponse.clone();
-                        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(request, copy).catch((err) => {
+                                console.warn('[SW] Cache.put (statique) ignoré:', err?.message);
+                            });
+                        });
                     }
                     return networkResponse;
                 }).catch(() => caches.match('/assets/logo.webp'));
@@ -103,7 +112,11 @@ self.addEventListener('fetch', (event) => {
             .then((networkResponse) => {
                 if (networkResponse && networkResponse.status === 200) {
                     const copy = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(request, copy).catch((err) => {
+                            console.warn('[SW] Cache.put (network-first) ignoré:', err?.message);
+                        });
+                    });
                 }
                 return networkResponse;
             })
@@ -144,15 +157,19 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
+    const targetUrl = event.notification.data?.url || '/#seller';
     event.waitUntil(
-        clients.matchAll({ type: 'window' }).then((windowClients) => {
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
             for (let client of windowClients) {
-                if (client.url === '/' && 'focus' in client) {
+                if ('focus' in client) {
+                    if ('navigate' in client && targetUrl) {
+                        client.navigate(targetUrl);
+                    }
                     return client.focus();
                 }
             }
             if (clients.openWindow) {
-                return clients.openWindow('/');
+                return clients.openWindow(targetUrl);
             }
         })
     );

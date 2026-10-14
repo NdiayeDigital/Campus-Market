@@ -5,6 +5,7 @@
  */
 
 import { subscribeCart } from '../services/cart-store.js';
+import { SUPPORT_CONFIG } from '../config/support.js';
 import logoUrl from '../assets/logo.webp';
 
 /**
@@ -205,13 +206,17 @@ export function createBottomNav({
 
                     <!-- Support WhatsApp Campus -->
                     <a 
-                        href="https://wa.me/221784799882" 
+                        href="${SUPPORT_CONFIG.whatsappUrl}" 
                         target="_blank" 
                         rel="noopener" 
+                        title="Assistance WhatsApp ${SUPPORT_CONFIG.phoneDisplay}"
                         class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold transition-all cursor-pointer"
                     >
                         <i class="fa-brands fa-whatsapp text-emerald-600 text-base"></i>
-                        <span>Support WhatsApp</span>
+                        <div class="flex flex-col text-left">
+                            <span>Support WhatsApp</span>
+                            <span class="text-[10px] text-emerald-600 font-semibold leading-none">${SUPPORT_CONFIG.phoneDisplay}</span>
+                        </div>
                     </a>
 
                     <!-- Indicateur Réseau & Version -->

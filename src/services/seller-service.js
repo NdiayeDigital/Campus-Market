@@ -6,6 +6,13 @@
 
 import { supabase } from './supabase.js';
 import { isUniversityEmail } from '../utils/security.js';
+import { SUPPORT_CONFIG } from '../config/support.js';
+import {
+    SUBSCRIPTION_PLANS,
+    FREE_TRIAL_CONFIG,
+    computeSubscriptionStatus,
+    getMaxProductsForPlan,
+} from '../config/subscription.js';
 
 /**
  * Enregistre un nouvel étudiant candidat au statut de vendeur.
@@ -97,8 +104,10 @@ export async function registerSeller({
     const cleanEmail = email.trim().toLowerCase();
     const finalShopName = (shopName && shopName.trim()) || `${prenom} Shop`;
     const finalCategory = category || 'autres';
-    const finalPlan = plan === 'pro' ? 'pro' : 'starter';
-    const maxProducts = finalPlan === 'pro' ? 10 : 5;
+    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    const maxProducts = getMaxProductsForPlan(validPlan);
+    const nowIso = new Date().toISOString();
+    const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
 
     // 1. Inscription dans Supabase Auth avec métadonnées complètes
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -111,8 +120,11 @@ export async function registerSeller({
                 telephone,
                 shop_name: finalShopName,
                 shop_category: finalCategory,
-                subscription_plan: finalPlan,
-                max_products: maxProducts,
+                subscription_plan: validPlan,
+                max_products: FREE_TRIAL_CONFIG.maxProducts,
+                subscription_status: 'trial',
+                trial_started_at: nowIso,
+                trial_ends_at: trialEndIso,
                 role: 'vendeur_pending',
             },
         },
@@ -122,14 +134,22 @@ export async function registerSeller({
 
     if (authError) {
         if (authError.message.includes('already registered')) {
-            throw new Error('Un compte existe déjà avec cette adresse email.');
-        }
-        if (authError.message.includes('rate limit')) {
-            console.warn('[SellerService] Quota email Supabase atteint : basculement automatique sur la sauvegarde de résilience.');
-            user = {
-                id: 'cand_' + Math.random().toString(36).substring(2, 10),
+            // Tentative de connexion avec le mot de passe fourni pour un étudiant ayant déjà un compte
+            const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
                 email: cleanEmail,
-            };
+                password,
+            });
+
+            if (loginErr || !loginData?.user) {
+                throw new Error(
+                    `Un compte étudiant existe déjà avec cette adresse email. Veuillez vérifier votre mot de passe pour soumettre votre candidature vendeur, ou contacter l'assistance au ${SUPPORT_CONFIG.phoneDisplay}.`
+                );
+            }
+            user = loginData.user;
+        } else if (authError.message.includes('rate limit') || authError.code === 'over_email_send_rate_limit') {
+            throw new Error(
+                `Le quota d'emails d'inscription est temporairement atteint. Veuillez réessayer dans quelques minutes ou contacter l'assistance au ${SUPPORT_CONFIG.phoneDisplay}.`
+            );
         } else {
             throw new Error(authError.message);
         }
@@ -139,16 +159,17 @@ export async function registerSeller({
         throw new Error("Échec de création de l'utilisateur.");
     }
 
-    // 2. Si aucune session n'a été retournée immédiatement et qu'authData existe, tenter une connexion directe
-    if (authData && !authData.session) {
-        try {
+    // 2. Si aucune session n'a été retournée immédiatement, tenter une connexion directe pour activer RLS
+    try {
+        const { data: sessionCheck } = await supabase.auth.getSession();
+        if (!sessionCheck?.session) {
             await supabase.auth.signInWithPassword({
                 email: cleanEmail,
                 password,
             });
-        } catch {
-            // Ignorer si la confirmation d'email Supabase empêche la connexion immédiate
         }
+    } catch {
+        // Ignorer si la confirmation d'email Supabase empêche la connexion immédiate
     }
 
     // 3. Création ou mise à jour du profil avec le rôle 'vendeur_pending' et les détails de la formule
@@ -160,11 +181,14 @@ export async function registerSeller({
         email: cleanEmail,
         shop_name: finalShopName,
         shop_category: finalCategory,
-        subscription_plan: finalPlan,
-        max_products: maxProducts,
+        subscription_plan: validPlan,
+        max_products: FREE_TRIAL_CONFIG.maxProducts,
+        subscription_status: 'trial',
+        trial_started_at: nowIso,
+        trial_ends_at: trialEndIso,
         role: 'vendeur_pending',
         is_open: true,
-        created_at: new Date().toISOString(),
+        created_at: nowIso,
     };
 
     // Sauvegarde immédiate dans le cache de résilience pour garantir que l'administrateur
@@ -311,10 +335,16 @@ export async function getCurrentSeller() {
 
         if (profile) {
             profile.subscription_plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'starter';
-            profile.max_products = Number(profile.max_products || session.user.user_metadata?.max_products) || (profile.subscription_plan === 'pro' ? 10 : 5);
+            profile.max_products = Number(profile.max_products || session.user.user_metadata?.max_products) || getMaxProductsForPlan(profile.subscription_plan);
             profile.shop_name = profile.shop_name || session.user.user_metadata?.shop_name || `${profile.prenom || 'Boutique'} Shop`;
             profile.shop_category = profile.shop_category || session.user.user_metadata?.shop_category || 'autres';
             profile.email = profile.email || session.user.email;
+
+            // Calcul dynamique de l'état de l'abonnement
+            const subCalc = computeSubscriptionStatus(profile);
+            profile.subscription_status = profile.subscription_status || subCalc.status;
+            profile.trial_ends_at = profile.trial_ends_at || (subCalc.expiresAt ? subCalc.expiresAt.toISOString() : null);
+            profile._subscription = subCalc;
         }
 
         if (profile && (
@@ -471,6 +501,154 @@ export async function updateOrderStatus(orderId, nextStatus) {
     return data;
 }
 
+/**
+ * Récupère le statut d'abonnement calculé d'un vendeur.
+ * @param {Object} profile
+ * @returns {Object}
+ */
+export function getSellerSubscription(profile) {
+    return computeSubscriptionStatus(profile);
+}
+
+/**
+ * Initie une session de paiement d'abonnement (SasPay ou Sandbox).
+ * @param {Object} params
+ * @param {string} params.sellerId
+ * @param {string} params.plan - 'starter', 'pro' ou 'premium'
+ * @param {string} params.operator - 'wave' ou 'om'
+ * @param {string} [params.sellerEmail]
+ * @param {string} [params.sellerName]
+ * @returns {Promise<Object>}
+ */
+export async function initiateSubscriptionPayment({ sellerId, plan, operator, sellerEmail, sellerName }) {
+    if (!sellerId) throw new Error('ID vendeur manquant.');
+    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    const validOperator = operator === 'om' ? 'om' : 'wave';
+
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+
+    const response = await fetch('/api/create-subscription-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            sellerId,
+            plan: validPlan,
+            operator: validOperator,
+            sellerEmail,
+            sellerName,
+            origin,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur lors de l\'initialisation du paiement.');
+    }
+
+    return await response.json();
+}
+
+/**
+ * Confirme et valide l'activation de l'abonnement du vendeur après règlement (Wave / OM).
+ * Met à jour le profil dans Supabase avec 30 jours de validité et enregistre la transaction.
+ *
+ * @param {Object} params
+ * @param {string} params.sessionId
+ * @param {string} params.sellerId
+ * @param {string} params.plan
+ * @param {string} params.operator
+ * @returns {Promise<Object>} Profil mis à jour
+ */
+export async function confirmSubscriptionPayment({ sessionId, sellerId, plan, operator }) {
+    if (!sessionId || !sellerId) throw new Error('Informations de confirmation incomplètes.');
+
+    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    const validOperator = operator === 'om' ? 'om' : 'wave';
+    const maxProducts = getMaxProductsForPlan(validPlan);
+
+    // 1. Appel du point d'API de vérification
+    const verifyRes = await fetch('/api/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            sessionId,
+            sellerId,
+            plan: validPlan,
+            operator: validOperator,
+        }),
+    });
+
+    if (!verifyRes.ok) {
+        const errJson = await verifyRes.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Impossible de vérifier le paiement.');
+    }
+
+    const verification = await verifyRes.json();
+    const durationDays = verification.durationDays || 30;
+    const expiresAt = verification.expiresAt || new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+    const nowIso = new Date().toISOString();
+
+    // 2. Mise à jour de la table profiles dans Supabase
+    const updatePayload = {
+        subscription_status: 'active',
+        subscription_plan: validPlan,
+        max_products: maxProducts,
+        subscription_expires_at: expiresAt,
+        last_payment_date: nowIso,
+        last_payment_id: sessionId,
+        is_open: true,
+    };
+
+    let updatedProfile = null;
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .update(updatePayload)
+            .eq('id', sellerId)
+            .select()
+            .single();
+
+        if (!error && data) {
+            updatedProfile = data;
+        } else {
+            console.warn('[SellerService] Avertissement update profil:', error?.message);
+        }
+    } catch (dbErr) {
+        console.warn('[SellerService] Exception mise à jour profil:', dbErr);
+    }
+
+    // 3. Enregistrement dans la table seller_payments pour traçabilité
+    try {
+        const planObj = SUBSCRIPTION_PLANS[validPlan];
+        await supabase.from('seller_payments').insert({
+            seller_id: sellerId,
+            amount: planObj.price,
+            currency: 'XOF',
+            plan: validPlan,
+            operator: validOperator,
+            provider: verification.mode === 'live' ? 'saspay' : 'sandbox',
+            provider_session_id: sessionId,
+            status: 'success',
+            metadata: { confirmed_at: nowIso, mode: verification.mode },
+        });
+    } catch (payErr) {
+        console.warn('[SellerService] Trace paiement optionnelle non bloquante:', payErr.message);
+    }
+
+    // 4. Mettre à jour le cache local du profil
+    if (typeof localStorage !== 'undefined' && updatedProfile) {
+        try {
+            localStorage.setItem('campus_market_cached_seller', JSON.stringify(updatedProfile));
+        } catch {}
+    }
+
+    return {
+        success: true,
+        profile: updatedProfile || { id: sellerId, ...updatePayload },
+        verification,
+    };
+}
+
 export default {
     registerSeller,
     loginSeller,
@@ -482,4 +660,7 @@ export default {
     getPendingSellersCache,
     savePendingSellerCache,
     removePendingSellerCache,
+    getSellerSubscription,
+    initiateSubscriptionPayment,
+    confirmSubscriptionPayment,
 };

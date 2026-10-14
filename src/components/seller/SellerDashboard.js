@@ -17,10 +17,14 @@ import {
 import { createProductManager } from './ProductManager.js';
 import { isSellerSuspended } from '../../services/admin-service.js';
 import { audioAlert, playNotificationSound } from '../../utils/audio-alert.js';
+import { showOrderNotification, requestNotificationPermission } from '../../utils/background-notifications.js';
+import { SUPPORT_CONFIG } from '../../config/support.js';
 import { escapeHTML, formatSenegalPhone } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
 import { exportOrdersToCSV } from '../../utils/export-csv.js';
 import { shareSellerShop } from '../../utils/share.js';
+import { createSubscriptionModal } from './SubscriptionModal.js';
+import { computeSubscriptionStatus, SUBSCRIPTION_PLANS } from '../../config/subscription.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -28,11 +32,12 @@ import logoUrl from '../../assets/logo.webp';
  * @param {Object} props
  * @param {Object} props.seller - Données du vendeur ({ id, prenom, nom, ... })
  * @param {Function} [props.onBackToCatalog] - Callback pour retourner à la boutique
+ * @param {Function} [props.onOpenAdminDashboard] - Callback pour retourner au portail SuperAdmin
  * @param {Function} props.onLogout - Callback lors de la déconnexion
  * @param {Function} props.onShowToast - Callback pour afficher un toast
  * @returns {HTMLElement}
  */
-export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onShowToast } = {}) {
+export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDashboard, onLogout, onShowToast } = {}) {
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full flex flex-col bg-slate-50 min-h-screen text-slate-900';
 
@@ -45,6 +50,24 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
     let orderPavillonFilter = 'all';
     let realtimeChannel = null;
     let pollingTimer = null;
+
+    /**
+     * Vérifie de façon centralisée si la boutique ou le profil vendeur est suspendu.
+     * @returns {boolean}
+     */
+    function checkSellerSuspended() {
+        const currentProfile = dashboardData?.profile || seller;
+        return (
+            isSellerSuspended(currentProfile) || 
+            isSellerSuspended(seller) || 
+            currentProfile?.is_suspended === true || 
+            currentProfile?.role === 'vendeur_desactive' || 
+            currentProfile?.role === 'suspendu' ||
+            seller?.is_suspended === true || 
+            seller?.role === 'vendeur_desactive' || 
+            seller?.role === 'suspendu'
+        );
+    }
 
     async function loadData(silent = false) {
         if (!silent) {
@@ -63,10 +86,21 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
                 if (newlyAdded.length > 0) {
                     playNotificationSound();
-                    const firstNew = newlyAdded[0];
-                    const buyerName = firstNew.buyer_name || 'Un étudiant';
-                    if (typeof onShowToast === 'function') {
-                        onShowToast(`🔔 Nouvelle commande de ${buyerName} !`, 'info');
+                    for (const newOrd of newlyAdded) {
+                        const buyerName = newOrd.buyer_name || 'Un étudiant';
+                        const total = newOrd.total_price || newOrd.price || '';
+                        const pavillon = newOrd.delivery_location || newOrd.room_delivery || newOrd.delivery_address || 'UIDT';
+                        
+                        showOrderNotification({
+                            title: '🛍️ Nouvelle commande - Campus Market',
+                            body: `Commande de ${buyerName} (${total ? Number(total).toLocaleString('fr-FR') + ' FCFA' : ''}) au ${pavillon}`,
+                            url: '/#seller',
+                            order: newOrd,
+                        });
+
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`🔔 Nouvelle commande de ${buyerName} !`, 'info');
+                        }
                     }
                 }
             }
@@ -76,9 +110,9 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             console.error('[SellerDashboard] Erreur chargement:', err);
         } finally {
             isLoading = false;
-            // Si le rechargement est silencieux (polling automatique ou événement temps réel)
-            // et que le vendeur est sur l'onglet 'add-product', NE PAS ré-exécuter render() pour ne pas perdre la saisie
-            if (silent && activeSubTab === 'add-product') {
+            // Si le rechargement est silencieux (polling régulier ou notification temps réel),
+            // NE JAMAIS ré-exécuter render() pour ne pas détruire la saisie de l'utilisateur ni écraser les formulaires
+            if (silent) {
                 updateBadgesOnly();
                 return;
             }
@@ -114,7 +148,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
     function startPolling() {
         if (pollingTimer) clearInterval(pollingTimer);
         pollingTimer = setInterval(() => {
-            if (typeof document !== 'undefined' && document.visibilityState === 'visible' && containerEl.isConnected) {
+            if (typeof document !== 'undefined' && containerEl.isConnected) {
                 loadData(true);
             }
         }, 12000);
@@ -146,6 +180,16 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
                     if (payload.eventType === 'INSERT') {
                         const buyer = payload.new.buyer_name || 'Un étudiant';
+                        const total = payload.new.total_price || payload.new.price || '';
+                        const pavillon = payload.new.delivery_location || payload.new.room_delivery || payload.new.delivery_address || 'UIDT';
+
+                        showOrderNotification({
+                            title: '🛍️ Nouvelle commande - Campus Market',
+                            body: `Commande de ${buyer} (${total ? Number(total).toLocaleString('fr-FR') + ' FCFA' : ''}) au ${pavillon}`,
+                            url: '/#seller',
+                            order: payload.new,
+                        });
+
                         if (typeof onShowToast === 'function') {
                             onShowToast(`🔔 Nouvelle commande de ${buyer} !`, 'info');
                         }
@@ -161,6 +205,131 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
             .subscribe((status) => {
                 console.log(`[Realtime] Statut du canal seller-orders: ${status}`);
             });
+    }
+
+    let subscriptionModal = null;
+
+    function renderSubscriptionBanner(subCalc) {
+        if (!subCalc || subCalc.status === 'superadmin') return '';
+
+        if (subCalc.status === 'trial_active') {
+            return `
+                <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border border-emerald-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shrink-0 shadow-xs">
+                            <i class="fa-solid fa-gift"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-heading font-extrabold text-sm sm:text-base text-emerald-950">
+                                    🎁 Essai Gratuit : ${subCalc.daysLeft} jour${subCalc.daysLeft > 1 ? 's' : ''} restant${subCalc.daysLeft > 1 ? 's' : ''}
+                                </span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-200 text-emerald-900">
+                                    3 articles inclus
+                                </span>
+                            </div>
+                            <p class="text-xs text-emerald-800 mt-0.5 leading-relaxed">
+                                Profitez de vos 7 jours offerts pour publier jusqu'à 3 articles et enregistrer vos commandes sans aucun frais.
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="btn-trigger-subscription px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-extrabold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                    >
+                        <i class="fa-solid fa-crown text-xs"></i>
+                        <span>S'abonner dès maintenant</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        if (subCalc.status === 'trial_expiring') {
+            return `
+                <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/60 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-pulse-slow">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shrink-0 shadow-xs">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-heading font-extrabold text-sm sm:text-base text-amber-950">
+                                    ⏰ Attention : Votre essai gratuit expire dans ${subCalc.daysLeft} jour${subCalc.daysLeft > 1 ? 's' : ''} !
+                                </span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 text-amber-950">
+                                    Action recommandée
+                                </span>
+                            </div>
+                            <p class="text-xs text-amber-900 mt-0.5 leading-relaxed">
+                                Sécurisez votre boutique avant la fin de l'essai pour éviter que vos articles ne soient mis en pause. Règlement Wave ou Orange Money.
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="btn-trigger-subscription px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-heading font-extrabold text-xs rounded-xl shadow-md shadow-amber-500/25 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                    >
+                        <i class="fa-solid fa-wallet text-xs"></i>
+                        <span>Pérenniser ma boutique (Wave / OM)</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        if (subCalc.isExpired) {
+            return `
+                <div class="bg-rose-50 border-2 border-rose-300 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shrink-0 shadow-xs">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-heading font-extrabold text-base text-rose-950">
+                                    ⛔ Période d'essai terminée — Boutique en pause
+                                </span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-200 text-rose-950">
+                                    Paywall
+                                </span>
+                            </div>
+                            <p class="text-xs text-rose-800 mt-1 leading-relaxed">
+                                Votre période d'essai de 7 jours est terminée. Vos articles sont temporairement masqués aux acheteurs sur le campus. Activez votre formule dès 1 500 F/mois pour réactiver votre boutique immédiatement.
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="btn-trigger-subscription px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white font-heading font-extrabold text-xs sm:text-sm rounded-xl shadow-lg shadow-rose-600/30 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                    >
+                        <i class="fa-solid fa-bolt text-xs"></i>
+                        <span>Activer mon abonnement</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        if (subCalc.status === 'active') {
+            return `
+                <div class="bg-white border border-slate-200/80 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-xs shadow-2xs flex-wrap">
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+                        <span class="text-slate-600">Abonnement actif :</span>
+                        <strong class="text-slate-900 font-extrabold">${subCalc.plan.name} (${subCalc.plan.maxProducts} articles max)</strong>
+                        <span class="text-slate-400">•</span>
+                        <span class="text-slate-500 font-medium">${subCalc.daysLeft} jours restants</span>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="btn-trigger-subscription text-primary font-bold hover:underline text-xs cursor-pointer shrink-0 flex items-center gap-1"
+                    >
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        <span>Gérer mon pack / Changer</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        return '';
     }
 
     function render() {
@@ -180,7 +349,9 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
         }
 
         const data = dashboardData || {};
-        const isSuspended = isSellerSuspended(seller) || seller.is_suspended === true || seller.role === 'vendeur_desactive' || seller.role === 'suspendu';
+        const currentProfile = data.profile || seller;
+        const subCalc = computeSubscriptionStatus(currentProfile);
+        const isSuspended = checkSellerSuspended();
         const isOpen = !isSuspended && (data.isOpen !== false);
         const allOrders = data.recentOrders || [];
 
@@ -337,6 +508,16 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
                     <button 
                         type="button"
+                        id="sidebar-btn-subscription" 
+                        title="Gérer mon abonnement et mes formules"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors cursor-pointer"
+                    >
+                        <i class="fa-solid fa-crown text-xs text-amber-600"></i>
+                        <span>Mon Abonnement</span>
+                    </button>
+
+                    <button 
+                        type="button"
                         id="hdr-btn-seller-back-shop" 
                         title="Voir la marketplace publique"
                         class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors cursor-pointer"
@@ -344,6 +525,18 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                         <i class="fa-solid fa-store text-xs"></i>
                         <span>Voir Marketplace</span>
                     </button>
+
+                    ${seller.role === 'superadmin' ? `
+                        <button 
+                            type="button"
+                            id="sidebar-btn-seller-back-admin" 
+                            title="Retourner au portail SuperAdmin"
+                            class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors cursor-pointer active:scale-95 shadow-xs"
+                        >
+                            <i class="fa-solid fa-shield-halved text-xs text-indigo-600"></i>
+                            <span>Supervision SuperAdmin</span>
+                        </button>
+                    ` : ''}
 
                     <button 
                         type="button"
@@ -448,6 +641,12 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                             <span>Partager ma boutique (Lien & WhatsApp)</span>
                         </button>
 
+                        <!-- Mon Abonnement -->
+                        <button type="button" id="drawer-btn-subscription" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer border border-amber-200">
+                            <i class="fa-solid fa-crown text-sm text-amber-600 w-5 text-center"></i>
+                            <span>Mon Abonnement (3 Formules)</span>
+                        </button>
+
                         <!-- Actualiser -->
                         <button type="button" id="drawer-btn-refresh-orders" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-arrows-rotate text-sm text-slate-500 w-5 text-center"></i>
@@ -468,6 +667,14 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                             <i class="fa-solid fa-store text-sm w-5 text-center"></i>
                             <span>Voir la marketplace publique</span>
                         </button>
+
+                        ${seller.role === 'superadmin' ? `
+                            <!-- Supervision SuperAdmin -->
+                            <button type="button" id="drawer-btn-seller-back-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors cursor-pointer border border-indigo-200">
+                                <i class="fa-solid fa-shield-halved text-sm text-indigo-600 w-5 text-center"></i>
+                                <span>Supervision SuperAdmin</span>
+                            </button>
+                        ` : ''}
 
                         <!-- Déconnexion -->
                         <button type="button" id="drawer-btn-logout" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition-colors cursor-pointer">
@@ -568,6 +775,19 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                             <span>Marketplace</span>
                         </button>
 
+                        ${seller.role === 'superadmin' ? `
+                            <!-- Bouton Retour Supervision SuperAdmin Top -->
+                            <button 
+                                type="button" 
+                                id="top-hdr-btn-seller-back-admin" 
+                                title="Retourner au portail SuperAdmin"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                            >
+                                <i class="fa-solid fa-shield-halved text-xs text-indigo-600"></i>
+                                <span>SuperAdmin</span>
+                            </button>
+                        ` : ''}
+
                         <div class="h-4 w-px bg-slate-200"></div>
 
                         <!-- Profil Marchand & Déconnexion -->
@@ -592,9 +812,11 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                 </header>
 
                 <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex flex-col gap-6 flex-1">
+                ${renderSubscriptionBanner(subCalc)}
+
                 ${isSuspended ? `
                     <!-- Alerte rouge Vendeur Suspendu -->
-                    <div class="bg-rose-50 border border-rose-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-rose-950 animate-fade-in">
+                    <div class="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-rose-950 animate-fade-in shadow-xs">
                         <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 text-lg shadow-xs">
                             <i class="fa-solid fa-ban"></i>
                         </div>
@@ -606,9 +828,24 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                             <p class="text-xs text-rose-700 mt-1 leading-relaxed">
                                 Votre compte marchand a été suspendu par l'administration centrale de l'UIDT. Vos articles ne sont plus visibles ni commandables par les étudiants dans le catalogue public.
                             </p>
-                            <p class="text-[11px] text-rose-600 font-semibold mt-2 flex items-center gap-1.5">
-                                <i class="fa-solid fa-headset text-xs"></i> Contactez la direction de la scolarité ou l'administration pour régulariser votre compte.
-                            </p>
+                            <div class="mt-3 flex items-center gap-3 flex-wrap">
+                                <a 
+                                    href="${SUPPORT_CONFIG.whatsappUrl}" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    class="inline-flex items-center gap-2 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[40px]"
+                                >
+                                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                                    <span>Assistance et Déblocage (${SUPPORT_CONFIG.phoneDisplay})</span>
+                                </a>
+                                <a 
+                                    href="tel:${SUPPORT_CONFIG.phoneRaw}" 
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-rose-200 text-rose-800 font-semibold text-xs rounded-xl hover:bg-rose-50 transition-colors min-h-[40px]"
+                                >
+                                    <i class="fa-solid fa-phone text-xs"></i>
+                                    <span>Appeler</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 ` : ''}
@@ -717,26 +954,35 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                 <!-- Grille Bento KPI (2 colonnes mobile, 4 colonnes desktop) -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
                     <!-- Revenus Cumulés -->
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div 
+                        data-seller-kpi="orders-delivered" 
+                        title="Cliquer pour afficher les commandes livrées"
+                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate">Revenus réalisés</span>
-                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Revenus réalisés</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
                                 <i class="fa-solid fa-sack-dollar"></i>
                             </div>
                         </div>
                         <span class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight tabular-nums">
                             ${Number(data.totalRevenue || 0).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
                         </span>
-                        <span class="text-[11px] font-medium text-emerald-600 mt-1 flex items-center gap-1">
-                            <i class="fa-solid fa-circle-check text-[9px]"></i> Ventes confirmées
-                        </span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-emerald-600 mt-1">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-circle-check text-[9px]"></i> Ventes confirmées</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Voir <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
                     </div>
 
                     <!-- Commandes en cours -->
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between relative overflow-hidden">
+                    <div 
+                        data-seller-kpi="orders-pending" 
+                        title="Cliquer pour afficher les commandes actives à traiter"
+                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate">Commandes actives</span>
-                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-amber-700 transition-colors">Commandes actives</span>
+                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0 group-hover:bg-blue-100 transition-colors">
                                 <i class="fa-solid fa-bell"></i>
                             </div>
                         </div>
@@ -750,35 +996,52 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                 </span>
                             ` : ''}
                         </div>
-                        <span class="text-[11px] font-medium text-slate-400 mt-1">Flux direct campus</span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                            <span>Flux direct campus</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-primary flex items-center gap-0.5 transition-colors">Voir <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
                     </div>
 
                     <!-- Articles en ligne -->
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div 
+                        data-seller-kpi="products" 
+                        title="Cliquer pour gérer mes articles en ligne"
+                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate">Articles en ligne</span>
-                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-amber-700 transition-colors">Articles en ligne</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-amber-100 transition-colors">
                                 <i class="fa-solid fa-boxes-stacked"></i>
                             </div>
                         </div>
                         <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">
                             ${data.activeProductsCount || 0} <span class="text-xs font-bold text-slate-400">/ ${data.totalProductsCount || 0}</span>
                         </span>
-                        <span class="text-[11px] font-medium text-slate-400 mt-1">Catalogue actif</span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                            <span>Catalogue actif</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-amber-600 flex items-center gap-0.5 transition-colors">Gérer <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
                     </div>
 
                     <!-- Disponibilité Boutique -->
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div 
+                        data-seller-kpi="toggle-shop" 
+                        title="${isOpen ? 'Cliquer pour mettre la boutique en pause' : 'Cliquer pour ouvrir la boutique aux commandes'}"
+                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate">Statut boutique</span>
-                            <div class="w-8 h-8 rounded-xl ${isOpen ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'} flex items-center justify-center text-xs shrink-0">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-slate-900 transition-colors">Statut boutique</span>
+                            <div class="w-8 h-8 rounded-xl ${isOpen ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 group-hover:bg-amber-100'} flex items-center justify-center text-xs shrink-0 transition-colors">
                                 <i class="fa-solid ${isOpen ? 'fa-store' : 'fa-pause'}"></i>
                             </div>
                         </div>
                         <span class="font-heading font-extrabold text-lg sm:text-xl ${isOpen ? 'text-emerald-700' : 'text-amber-700'} tracking-tight">
                             ${isOpen ? 'Boutique Ouverte' : 'En Pause'}
                         </span>
-                        <span class="text-[11px] font-medium text-slate-400 mt-1">Commandes étudiantes</span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                            <span>Commandes étudiantes</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-slate-700 flex items-center gap-0.5 transition-colors">Changer <i class="fa-solid fa-arrows-rotate text-[8px]"></i></span>
+                        </div>
                     </div>
                 </div>
 
@@ -936,6 +1199,9 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                 sellerProfile: currentProfile,
                 isSuspended,
                 initialTab: activeSubTab === 'add-product' ? 'add' : 'list',
+                onTabChange: (tab) => {
+                    activeSubTab = tab;
+                },
                 onProductChanged: () => {
                     activeSubTab = 'products';
                     loadData(true);
@@ -948,6 +1214,8 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
     }
 
     function renderOrdersTab(orders) {
+        const isSuspended = checkSellerSuspended();
+
         // Filtrage multi-critères : statut, recherche textuelle, pavillon
         const filtered = orders.filter((o) => {
             // 1. Statut
@@ -1149,6 +1417,15 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
                                     break;
                             }
 
+                            if (isSuspended) {
+                                nextActionBtn = `
+                                    <span class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1.5 cursor-not-allowed" title="Compte suspendu par l'administration">
+                                        <i class="fa-solid fa-lock text-[10px]"></i>
+                                        <span>Action bloquée (Suspendu)</span>
+                                    </span>
+                                `;
+                            }
+
                             const orderRef = o.reference || `#CMD-${o.id.slice(0, 6).toUpperCase()}`;
 
                             // Badges officiels de mode de règlement (Wave cyan, OM orange, Cash vert)
@@ -1272,6 +1549,33 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
     }
 
     function bindEvents() {
+        // Gestion de l'Abonnement Marchand (Modal SasPay / Sandbox)
+        const openSubscriptionHandler = () => {
+            if (!subscriptionModal) {
+                subscriptionModal = createSubscriptionModal({
+                    seller: dashboardData?.profile || seller,
+                    onSubscribed: ({ profile, plan }) => {
+                        if (dashboardData) {
+                            dashboardData.profile = profile;
+                        }
+                        loadData();
+                    },
+                    onShowToast,
+                });
+                document.body.appendChild(subscriptionModal.element);
+            }
+            subscriptionModal.open();
+        };
+
+        containerEl.querySelectorAll('.btn-trigger-subscription').forEach((btn) => {
+            btn.addEventListener('click', openSubscriptionHandler);
+        });
+        containerEl.querySelector('#sidebar-btn-subscription')?.addEventListener('click', openSubscriptionHandler);
+        containerEl.querySelector('#drawer-btn-subscription')?.addEventListener('click', () => {
+            closeDrawer();
+            openSubscriptionHandler();
+        });
+
         // Toggle Audio (Header, Sidebar & Drawer)
         const toggleAudioHandler = async () => {
             await audioAlert.toggle();
@@ -1290,9 +1594,9 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
 
         // Toggle Boutique (Desktop Sidebar, Mobile Header & Drawer)
         const toggleShopHandler = async () => {
-            const isSuspended = isSellerSuspended(seller) || seller.is_suspended === true || seller.role === 'vendeur_desactive' || seller.role === 'suspendu';
+            const isSuspended = checkSellerSuspended();
             if (isSuspended) {
-                showToast("Votre boutique est suspendue par l'administration. Impossible de modifier la disponibilité.", 'warning');
+                showToast(`Votre boutique est suspendue par l'administration. Veuillez contacter le support au ${SUPPORT_CONFIG.phoneDisplay}`, 'warning');
                 return;
             }
             const currentIsOpen = dashboardData?.isOpen !== false;
@@ -1388,6 +1692,44 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
         containerEl.querySelector('#drawer-btn-refresh-orders')?.addEventListener('click', (e) => {
             closeDrawer();
             refreshHandler(e);
+        });
+
+        // Retour SuperAdmin (pour les comptes avec rôle superadmin)
+        const handleBackAdmin = () => {
+            if (typeof onOpenAdminDashboard === 'function') {
+                onOpenAdminDashboard();
+            }
+        };
+        containerEl.querySelector('#sidebar-btn-seller-back-admin')?.addEventListener('click', handleBackAdmin);
+        containerEl.querySelector('#top-hdr-btn-seller-back-admin')?.addEventListener('click', handleBackAdmin);
+        containerEl.querySelector('#drawer-btn-seller-back-admin')?.addEventListener('click', () => {
+            closeDrawer();
+            handleBackAdmin();
+        });
+
+        // Cartes Bento KPI interactives [data-seller-kpi]
+        containerEl.querySelectorAll('[data-seller-kpi]').forEach((kpiCard) => {
+            kpiCard.addEventListener('click', () => {
+                const action = kpiCard.getAttribute('data-seller-kpi');
+                if (action === 'orders-delivered') {
+                    activeSubTab = 'orders';
+                    orderFilter = 'delivered';
+                    orderSearchQuery = '';
+                    orderPavillonFilter = 'all';
+                    render();
+                } else if (action === 'orders-pending') {
+                    activeSubTab = 'orders';
+                    orderFilter = 'pending';
+                    orderSearchQuery = '';
+                    orderPavillonFilter = 'all';
+                    render();
+                } else if (action === 'products') {
+                    activeSubTab = 'products';
+                    render();
+                } else if (action === 'toggle-shop') {
+                    toggleShopHandler();
+                }
+            });
         });
 
         // Sous-onglets de navigation Sidebar Desktop
@@ -1496,6 +1838,13 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
         // Actions sur statut commande
         containerEl.querySelectorAll('button[data-action="update-status"]').forEach((btn) => {
             btn.addEventListener('click', async () => {
+                const isSuspended = checkSellerSuspended();
+
+                if (isSuspended) {
+                    showToast(`Action bloquée : votre boutique est suspendue par l'administration UIDT. Contactez le support au ${SUPPORT_CONFIG.phoneDisplay}.`, 'warning');
+                    return;
+                }
+
                 const id = btn.getAttribute('data-id');
                 const next = btn.getAttribute('data-next');
                 btn.disabled = true;
@@ -1522,6 +1871,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onLogout, onSho
     }
 
     // Démarrage
+    requestNotificationPermission();
     loadData();
     initRealtime();
     startPolling();

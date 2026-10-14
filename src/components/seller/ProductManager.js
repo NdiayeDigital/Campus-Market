@@ -20,6 +20,12 @@ import { CATEGORIES } from '../../services/catalog-service.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
 import { shareProduct } from '../../utils/share.js';
+import {
+    SUBSCRIPTION_PLANS,
+    getMaxProductsForPlan,
+    computeSubscriptionStatus,
+    FREE_TRIAL_CONFIG,
+} from '../../config/subscription.js';
 
 /**
  * Crée le gestionnaire de catalogue vendeur.
@@ -36,6 +42,7 @@ export function createProductManager({
     isSuspended = false,
     initialTab = 'list',
     onProductChanged,
+    onTabChange,
 } = {}) {
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full flex flex-col gap-5 view-transition-enter';
@@ -45,6 +52,14 @@ export function createProductManager({
     let activeTab = initialTab; // 'list' | 'add'
     let articleFilter = 'all'; // 'all' | 'active' | 'sold' | 'paused'
     let editingProduct = null;
+
+    const changeActiveTab = (tab) => {
+        activeTab = tab;
+        if (typeof onTabChange === 'function') {
+            onTabChange(tab === 'add' ? 'add-product' : 'products');
+        }
+        render();
+    };
 
     // Formulaire d'ajout & état dynamique Live Preview
     let addFormData = {
@@ -59,12 +74,16 @@ export function createProductManager({
 
     // Calcul dynamique du quota d'articles autorisés selon l'abonnement
     const getQuotaInfo = () => {
+        const subStatus = computeSubscriptionStatus(sellerProfile);
         const plan = sellerProfile?.subscription_plan || 'starter';
-        const maxAllowed = Number(sellerProfile?.max_products) || (plan === 'pro' ? 10 : 5);
+        const planObj = SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.starter;
+        const maxAllowed = subStatus.isTrial
+            ? FREE_TRIAL_CONFIG.maxProducts
+            : (Number(sellerProfile?.max_products) || getMaxProductsForPlan(plan));
         const count = products.length;
         const isLimitReached = count >= maxAllowed;
         const percent = Math.min(100, Math.round((count / maxAllowed) * 100));
-        return { plan, maxAllowed, count, isLimitReached, percent };
+        return { plan, planObj, maxAllowed, count, isLimitReached, percent, subStatus };
     };
 
     async function loadData() {
@@ -139,7 +158,7 @@ export function createProductManager({
                     }">
                         <div class="flex items-center gap-1.5">
                             <i class="fa-solid ${isLimitReached ? 'fa-lock text-amber-600' : 'fa-crown text-amber-500'} text-xs"></i>
-                            <span class="font-extrabold">${plan === 'pro' ? 'Pack Pro' : 'Pack Starter'} :</span>
+                            <span class="font-extrabold">${subStatus.isTrial ? 'Essai Gratuit' : planObj.name} :</span>
                             <span class="tabular-nums">${count} / ${maxAllowed} produits</span>
                         </div>
                         <span class="text-[10px] font-black px-1.5 py-0.2 rounded-full ${
@@ -202,35 +221,66 @@ export function createProductManager({
                             <span class="px-2.5 py-1 rounded-xl text-xs font-bold ${
                                 isLimitReached ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-slate-100 text-slate-700'
                             }">
-                                ${plan === 'pro' ? 'Pack Pro' : 'Pack Starter'} • ${count} / ${maxAllowed} articles
+                                ${subStatus?.isTrial ? 'Essai Gratuit' : planObj.name} • ${count} / ${maxAllowed} articles
                             </span>
                         </div>
                         <p class="text-xs text-slate-500 mt-0.5">Remplissez les détails pour publier immédiatement votre article aux étudiants de l'UIDT.</p>
                     </div>
 
-                    ${isLimitReached ? `
+                    ${subStatus?.isExpired ? `
+                        <!-- Alerte Période d'essai Terminée -->
+                        <div class="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex flex-col gap-2.5 shadow-2xs">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-rose-200 text-rose-950 flex items-center justify-center text-sm shrink-0">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <h4 class="font-heading font-extrabold text-sm text-rose-950">
+                                        Période d'essai terminée
+                                    </h4>
+                                    <p class="text-xs text-rose-800">
+                                        Votre période d'essai de 7 jours est terminée. Veuillez activer votre formule pour continuer à ajouter des articles.
+                                    </p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-trigger-subscription px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-heading font-extrabold text-xs rounded-xl self-start flex items-center gap-2 cursor-pointer shadow-xs active:scale-95">
+                                <i class="fa-solid fa-crown text-xs"></i>
+                                <span>Activer mon abonnement (Dès 1 500 F)</span>
+                            </button>
+                        </div>
+                    ` : (isLimitReached ? `
                         <!-- Alerte Quota Atteint Stricte -->
                         <div class="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex flex-col gap-2.5 shadow-2xs">
                             <div class="flex items-center gap-3">
                                 <div class="w-9 h-9 rounded-xl bg-amber-200 text-amber-950 flex items-center justify-center text-sm shrink-0">
-                                    <i class="fa-solid fa-lock"></i>
+                                    <i class="fa-solid fa-layer-group"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <h4 class="font-heading font-extrabold text-sm text-amber-950">
-                                        Limite d'articles atteinte (${count} / ${maxAllowed} produits)
+                                        Plafond de catalogue atteint (${count} / ${maxAllowed} produits)
                                     </h4>
                                     <p class="text-xs text-amber-800">
-                                        Votre formule actuelle <strong>${plan === 'pro' ? 'Pack Pro (10 articles max)' : 'Pack Starter (5 articles max)'}</strong> est à son plafond.
+                                        Votre formule actuelle <strong>${subStatus?.isTrial ? 'Essai Gratuit (3 articles max)' : `${planObj.name} (${maxAllowed} articles max)`}</strong> est complète.
                                     </p>
                                 </div>
                             </div>
-                            <p class="text-xs text-amber-900 leading-relaxed border-t border-amber-200/80 pt-2">
-                                ${plan === 'starter' 
-                                    ? "Pour publier jusqu'à <strong>10 articles</strong>, contactez le SuperAdmin pour basculer vers le <strong>Pack Pro</strong> (2 500 FCFA/mois), ou supprimez des articles existants depuis l'onglet 'Mes Articles'."
-                                    : "Pour publier de nouveaux articles, veuillez supprimer ou archiver des articles existants depuis l'onglet 'Mes Articles'."}
-                            </p>
+                            <div class="flex items-center justify-between gap-3 border-t border-amber-200/80 pt-2 flex-wrap">
+                                <p class="text-xs text-amber-900 leading-relaxed">
+                                    ${subStatus?.isTrial
+                                        ? "L'essai gratuit est limité à 3 articles. Passez au <strong>Pack Starter (5 prod.)</strong> ou <strong>Pack Pro (10 prod.)</strong> pour publier plus d'articles."
+                                        : (plan === 'starter' 
+                                            ? "Passez au <strong>Pack Pro (10 prod.)</strong> pour publier jusqu'à 10 articles."
+                                            : "Vous avez atteint votre quota de 10 articles. Archivez ou supprimez des articles pour en ajouter de nouveaux.")}
+                                </p>
+                                ${plan === 'starter' || subStatus?.isTrial ? `
+                                    <button type="button" class="btn-trigger-subscription px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-heading font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
+                                        <i class="fa-solid fa-arrow-up text-xs"></i>
+                                        <span>Augmenter mon quota</span>
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
-                    ` : ''}
+                    ` : '')}
 
                     <div id="add-product-error" class="hidden p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium"></div>
 
@@ -763,8 +813,7 @@ export function createProductManager({
     function bindEvents() {
         // 1. Bascule d'onglets internes (Mes Articles / Ajouter un produit)
         containerEl.querySelector('#pm-tab-list')?.addEventListener('click', () => {
-            activeTab = 'list';
-            render();
+            changeActiveTab('list');
         });
 
         containerEl.querySelector('#pm-tab-add')?.addEventListener('click', () => {
@@ -772,18 +821,15 @@ export function createProductManager({
                 showToast("Action bloquée : votre boutique est suspendue.", 'warning');
                 return;
             }
-            activeTab = 'add';
-            render();
+            changeActiveTab('add');
         });
 
         containerEl.querySelector('#pm-btn-cancel-add')?.addEventListener('click', () => {
-            activeTab = 'list';
-            render();
+            changeActiveTab('list');
         });
 
         containerEl.querySelector('#btn-empty-add-product')?.addEventListener('click', () => {
-            activeTab = 'add';
-            render();
+            changeActiveTab('add');
         });
 
         // 2. Filtres par statut d'articles (Tous, En vente, Vendu, Pause)
@@ -937,7 +983,7 @@ export function createProductManager({
             };
 
             dropzone?.addEventListener('click', (e) => {
-                if (e.target.closest('#btn-remove-selected-photo')) return;
+                if (e.target.tagName === 'INPUT' || e.target.closest('#btn-remove-selected-photo')) return;
                 const fi = dropzone?.querySelector('#new-prod-image-file');
                 fi?.click();
             });
@@ -974,11 +1020,19 @@ export function createProductManager({
             form?.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                const { plan, maxAllowed, isLimitReached } = getQuotaInfo();
-                if (isLimitReached) {
-                    const planName = plan === 'pro' ? 'Pack Pro (10 articles max)' : 'Pack Starter (5 articles max)';
+                const { plan, planObj, maxAllowed, isLimitReached, subStatus } = getQuotaInfo();
+                if (subStatus?.isExpired) {
                     if (errorEl) {
-                        errorEl.textContent = `Limite d'articles atteinte (${products.length}/${maxAllowed} produits). Votre formule (${planName}) ne vous permet pas d'ajouter d'autres articles.`;
+                        errorEl.textContent = "Votre période d'essai de 7 jours est terminée. Veuillez activer votre abonnement pour publier de nouveaux articles.";
+                        errorEl.classList.remove('hidden');
+                    }
+                    showToast("Votre période d'essai de 7 jours est terminée.", 'warning');
+                    return;
+                }
+
+                if (isLimitReached) {
+                    if (errorEl) {
+                        errorEl.textContent = `Limite d'articles atteinte (${products.length}/${maxAllowed} produits). Votre formule (${planObj.name}) ne vous permet pas d'ajouter d'autres articles.`;
                         errorEl.classList.remove('hidden');
                     }
                     showToast(`Limite d'articles atteinte (${products.length}/${maxAllowed} produits).`, 'warning');
@@ -990,7 +1044,7 @@ export function createProductManager({
                 const stock = stockInput?.value;
                 const category = catSelect?.value;
                 const description = descInput?.value.trim();
-                const imageFile = addFormData.imageFile;
+                const imageFile = addFormData.imageFile || dropzone?.querySelector('#new-prod-image-file')?.files?.[0];
 
                 if (!title || !price) {
                     if (errorEl) {
@@ -1032,7 +1086,7 @@ export function createProductManager({
                     resetDropzoneUI();
 
                     showToast('Produit publié au catalogue avec succès ! 🎉', 'success');
-                    activeTab = 'list';
+                    changeActiveTab('list');
                     await loadData();
                     if (typeof onProductChanged === 'function') onProductChanged();
                 } catch (err) {

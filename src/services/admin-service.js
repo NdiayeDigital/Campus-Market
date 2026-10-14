@@ -5,6 +5,12 @@
  */
 
 import { supabase } from './supabase.js';
+import {
+    computeSubscriptionStatus,
+    getMaxProductsForPlan,
+    SUBSCRIPTION_PLANS,
+    FREE_TRIAL_CONFIG,
+} from '../config/subscription.js';
 
 /**
  * Vérifie formellement si l'utilisateur possède le rôle 'superadmin'.
@@ -152,7 +158,7 @@ export async function fetchPendingSellers() {
             mergedMap.set(s.id, {
                 ...s,
                 subscription_plan: s.subscription_plan || 'starter',
-                max_products: Number(s.max_products) || (s.subscription_plan === 'pro' ? 10 : 5),
+                max_products: Number(s.max_products) || getMaxProductsForPlan(s.subscription_plan),
             });
         }
 
@@ -172,7 +178,7 @@ export async function fetchPendingSellers() {
                 mergedMap.set(c.id, {
                     ...c,
                     subscription_plan: c.subscription_plan || 'starter',
-                    max_products: Number(c.max_products) || (c.subscription_plan === 'pro' ? 10 : 5),
+                    max_products: Number(c.max_products) || getMaxProductsForPlan(c.subscription_plan),
                 });
             }
         }
@@ -238,7 +244,51 @@ export function isSellerSuspended(seller) {
 }
 
 /**
- * Récupère la liste des vendeurs actifs certifiés et suspendus.
+ * Garantit que chaque compte administrateur possède un profil vendeur complet et opérationnel.
+ * Initialise les champs de boutique par défaut (quota pro, statut ouvert, nom de boutique).
+ * @param {Object} adminProfile - Profil de l'administrateur
+ * @returns {Promise<Object>} Profil enrichi
+ */
+export async function ensureAdminSellerProfile(adminProfile) {
+    if (!adminProfile) return null;
+    if (adminProfile.role !== 'superadmin') return adminProfile;
+
+    const needsUpdate = !adminProfile.shop_name || !adminProfile.subscription_plan || !adminProfile.max_products;
+    const defaultShopName = adminProfile.shop_name || `${adminProfile.prenom || 'Admin'} UIDT Shop`;
+
+    const enriched = {
+        ...adminProfile,
+        shop_name: defaultShopName,
+        subscription_plan: adminProfile.subscription_plan || 'pro',
+        max_products: adminProfile.max_products || 20,
+        is_open: adminProfile.is_open !== false,
+        shop_category: adminProfile.shop_category || 'autres',
+        description: adminProfile.description || 'Boutique officielle de l\'administration UIDT',
+    };
+
+    if (needsUpdate && supabase) {
+        try {
+            await supabase
+                .from('profiles')
+                .update({
+                    shop_name: enriched.shop_name,
+                    subscription_plan: enriched.subscription_plan,
+                    max_products: enriched.max_products,
+                    is_open: enriched.is_open,
+                    shop_category: enriched.shop_category,
+                    description: enriched.description,
+                })
+                .eq('id', adminProfile.id);
+        } catch (err) {
+            console.warn('[AdminService] Note mise à jour profil vendeur admin:', err);
+        }
+    }
+
+    return enriched;
+}
+
+/**
+ * Récupère la liste des vendeurs actifs certifiés, suspendus et superadmins avec profil vendeur.
  * Synchronise l'état avec le cache local pour une persistance immédiate.
  * @returns {Promise<Array>}
  */
@@ -247,7 +297,7 @@ export async function fetchActiveSellers() {
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .in('role', ['vendeur', 'vendeur_desactive', 'suspendu'])
+            .in('role', ['vendeur', 'vendeur_desactive', 'suspendu', 'superadmin'])
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -255,10 +305,13 @@ export async function fetchActiveSellers() {
         const suspendedIds = getSuspendedSellersCache();
 
         return sellers.map((s) => {
-            const suspended = s.is_suspended === true || 
+            const isSuperAdmin = s.role === 'superadmin';
+            const suspended = !isSuperAdmin && (
+                s.is_suspended === true || 
                 s.role === 'vendeur_desactive' || 
                 s.role === 'suspendu' || 
-                suspendedIds.includes(s.id);
+                suspendedIds.includes(s.id)
+            );
 
             if (suspended) {
                 setSuspendedSellerInCache(s.id, true);
@@ -269,6 +322,19 @@ export async function fetchActiveSellers() {
                     is_open: false,
                 };
             }
+
+            if (isSuperAdmin) {
+                return {
+                    ...s,
+                    shop_name: s.shop_name || `${s.prenom || 'Admin'} UIDT Shop`,
+                    subscription_plan: s.subscription_plan || 'pro',
+                    max_products: s.max_products || 20,
+                    is_open: s.is_open !== false,
+                    shop_category: s.shop_category || 'autres',
+                    isAdminSeller: true,
+                };
+            }
+
             return s;
         });
     } catch (err) {
@@ -290,7 +356,10 @@ export async function approveSeller(sellerId) {
     const cachedList = getPendingSellersCache();
     const cached = cachedList.find((s) => s.id === sellerId);
     const plan = cached?.subscription_plan || 'starter';
-    const maxProducts = plan === 'pro' ? 10 : 5;
+    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    const maxProducts = getMaxProductsForPlan(validPlan);
+    const nowIso = new Date().toISOString();
+    const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
 
     // 1. Nettoyer le cache local de candidature en attente
     removePendingSellerCache(sellerId);
@@ -302,8 +371,11 @@ export async function approveSeller(sellerId) {
             .update({ 
                 role: 'vendeur', 
                 is_open: true,
-                subscription_plan: plan,
-                max_products: maxProducts
+                subscription_plan: validPlan,
+                max_products: FREE_TRIAL_CONFIG.maxProducts,
+                subscription_status: 'trial',
+                trial_started_at: nowIso,
+                trial_ends_at: trialEndIso,
             })
             .eq('id', sellerId)
             .select();
@@ -706,7 +778,70 @@ export async function updateUserRoleAdmin(userId, newRole) {
     return data;
 }
 
+/**
+ * Accorde une extension de la période d'essai gratuit à un vendeur (ex: +7 jours).
+ * @param {string} sellerId
+ * @param {number} [extraDays=7]
+ * @returns {Promise<Object>}
+ */
+export async function grantSellerTrialExtension(sellerId, extraDays = 7) {
+    if (!sellerId) throw new Error('ID vendeur requis.');
+
+    const newTrialEnd = new Date(Date.now() + extraDays * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+        .from('profiles')
+        .update({
+            subscription_status: 'trial',
+            trial_ends_at: newTrialEnd,
+            is_open: true,
+        })
+        .eq('id', sellerId)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec de l'extension d'essai: ${error.message}`);
+    }
+    return data;
+}
+
+/**
+ * Active manuellement un abonnement vendeur pour 30 jours (ex: règlement direct en cash sur le campus).
+ * @param {string} sellerId
+ * @param {string} [plan='starter']
+ * @param {number} [durationDays=30]
+ * @returns {Promise<Object>}
+ */
+export async function manuallyActivateSubscription(sellerId, plan = 'starter', durationDays = null) {
+    if (!sellerId) throw new Error('ID vendeur requis.');
+    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    const maxProducts = getMaxProductsForPlan(validPlan);
+    const finalDurationDays = durationDays || 30;
+    const expiresAt = new Date(Date.now() + finalDurationDays * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .update({
+            subscription_status: 'active',
+            subscription_plan: validPlan,
+            max_products: maxProducts,
+            subscription_expires_at: expiresAt,
+            last_payment_date: new Date().toISOString(),
+            last_payment_id: 'manual_admin',
+            is_open: true,
+        })
+        .eq('id', sellerId)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec de l'activation d'abonnement: ${error.message}`);
+    }
+    return data;
+}
+
 export default {
+    ensureAdminSellerProfile,
     verifyAdminRole,
     loginAdmin,
     fetchGlobalMetrics,
@@ -727,6 +862,8 @@ export default {
     deleteDeliveryLocation,
     updateOrderStatusAdmin,
     updateUserRoleAdmin,
+    grantSellerTrialExtension,
+    manuallyActivateSubscription,
     DEFAULT_DELIVERY_LOCATIONS,
 };
 

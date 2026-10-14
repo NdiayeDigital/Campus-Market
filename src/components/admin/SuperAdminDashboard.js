@@ -26,7 +26,11 @@ import {
     updateUserRoleAdmin,
     loginAdmin,
     isSellerSuspended,
+    ensureAdminSellerProfile,
+    grantSellerTrialExtension,
+    manuallyActivateSubscription,
 } from '../../services/admin-service.js';
+import { computeSubscriptionStatus, getPlanDetails } from '../../config/subscription.js';
 import { supabase } from '../../services/supabase.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
@@ -38,10 +42,12 @@ import logoUrl from '../../assets/logo.webp';
  * @param {Object} props
  * @param {Function} props.onExit - Callback lors de la fermeture ou déconnexion
  * @param {Function} [props.onBackToCatalog] - Callback pour retourner au site public
+ * @param {Function} [props.onOpenSellerDashboard] - Callback pour ouvrir l'espace vendeur de l'admin
+ * @param {Object} [props.admin] - Profil admin pré-authentifié
  * @param {Function} props.onShowToast - Callback pour afficher les toasts
  * @returns {HTMLElement}
  */
-export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast } = {}) {
+export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSellerDashboard, onShowToast, admin } = {}) {
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full flex flex-col min-h-screen text-slate-900';
 
@@ -89,6 +95,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
         isLoading = false;
         render();
     }
+
 
     async function loadAdminData() {
         isLoading = true;
@@ -230,6 +237,17 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         </button>
                     </div>
 
+                    <!-- Mon Profil Vendeur -->
+                    <button 
+                        type="button"
+                        id="sidebar-btn-switch-to-seller" 
+                        title="Gérer mes articles et ma boutique en tant que vendeur"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all cursor-pointer active:scale-95 shadow-xs"
+                    >
+                        <i class="fa-solid fa-shop text-xs text-emerald-600"></i>
+                        <span>Mon Profil Vendeur</span>
+                    </button>
+
                     <button 
                         id="hdr-btn-exit-admin" 
                         title="Quitter l'administration"
@@ -259,6 +277,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
 
                     <!-- Droite : Sortie Directe & Bouton Menu Unique Mobile ⋮ -->
                     <div class="flex items-center gap-1.5 shrink-0">
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-switch-to-seller-mobile" 
+                            title="Mon Profil Vendeur"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 transition-all active:scale-95 cursor-pointer"
+                        >
+                            <i class="fa-solid fa-shop text-xs"></i>
+                        </button>
                         <button 
                             type="button" 
                             id="top-hdr-btn-exit-admin-mobile" 
@@ -303,6 +329,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         <button type="button" id="drawer-btn-refresh-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-arrows-rotate text-sm text-primary w-5 text-center"></i>
                             <span>Actualiser toutes les données</span>
+                        </button>
+
+                        <!-- Mon Profil Vendeur -->
+                        <button type="button" id="drawer-btn-switch-to-seller" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-bold text-xs transition-colors cursor-pointer">
+                            <i class="fa-solid fa-shop text-sm text-emerald-600 w-5 text-center"></i>
+                            <span>Mon Profil Vendeur (Boutique UIDT)</span>
                         </button>
 
                         <!-- Voir Boutique -->
@@ -391,6 +423,17 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         >
                             <i class="fa-solid fa-store text-xs"></i>
                             <span>Boutique</span>
+                        </button>
+
+                        <!-- Bouton Mon Profil Vendeur Top -->
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-switch-to-seller" 
+                            title="Accéder à mon espace marchand et gérer mes articles"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                        >
+                            <i class="fa-solid fa-shop text-xs text-emerald-600"></i>
+                            <span>Mon Profil Vendeur</span>
                         </button>
 
                         <div class="h-4 w-px bg-slate-200"></div>
@@ -486,24 +529,33 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                 <!-- Grille Bento KPI réelles (4 Métriques Clés : 2 col mobile / 4 col desktop) -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
                     <!-- Marchands certifiés -->
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div 
+                        data-stat-target="sellers-active" 
+                        title="Cliquer pour afficher la liste des marchands certifiés"
+                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate">Marchands certifiés</span>
-                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Marchands certifiés</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
                                 <i class="fa-solid fa-store"></i>
                             </div>
                         </div>
                         <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${m.activeSellersCount}</span>
-                        <span class="text-[11px] font-medium text-emerald-600 mt-1 flex items-center gap-1">
-                            <i class="fa-solid fa-circle-check text-[9px]"></i> Boutiques actives
-                        </span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-emerald-600 mt-1">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-circle-check text-[9px]"></i> Boutiques actives</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
                     </div>
 
                     <!-- Demandes en attente -->
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between relative overflow-hidden">
+                    <div 
+                        data-stat-target="sellers-pending" 
+                        title="Cliquer pour afficher et modérer les candidatures en attente"
+                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate">Demandes d'adhésion</span>
-                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-amber-700 transition-colors">Demandes d'adhésion</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-amber-100 transition-colors">
                                 <i class="fa-solid fa-hourglass-half"></i>
                             </div>
                         </div>
@@ -515,46 +567,67 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                 </span>
                             ` : ''}
                         </div>
-                        <span class="text-[11px] font-medium text-slate-400 mt-1">Candidatures</span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                            <span>Candidatures</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-amber-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
                     </div>
 
                     <!-- Total Commandes -->
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div 
+                        data-stat-target="orders-all" 
+                        title="Cliquer pour afficher la liste de toutes les commandes"
+                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-primary hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate">Total Commandes</span>
-                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-primary transition-colors">Total Commandes</span>
+                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0 group-hover:bg-blue-100 transition-colors">
                                 <i class="fa-solid fa-boxes-packing"></i>
                             </div>
                         </div>
                         <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${m.totalOrdersCount}</span>
-                        <span class="text-[11px] font-medium text-slate-400 mt-1">Transactions campus</span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                            <span>Transactions campus</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-primary flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
                     </div>
 
                     <!-- Volume d'affaires vendeur -->
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div 
+                        data-stat-target="orders-delivered" 
+                        title="Cliquer pour afficher les commandes livrées générant ce chiffre d'affaires"
+                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate">Volume d'affaires</span>
-                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Volume d'affaires</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
                                 <i class="fa-solid fa-coins"></i>
                             </div>
                         </div>
                         <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
                             ${Number(m.totalDeliveredRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
                         </span>
-                        <span class="text-[11px] font-medium text-slate-400 mt-1">Commandes livrées</span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                            <span>Commandes livrées</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Analyse Financière et Modèle Économique UIDT -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <div 
+                        data-stat-target="sellers-active" 
+                        title="Cliquer pour gérer les marchands et leurs abonnements"
+                        class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-indigo-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs shrink-0">
+                                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-indigo-100 transition-colors">
                                     <i class="fa-solid fa-hand-holding-dollar"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-heading font-bold text-sm text-slate-900">Abonnements Plateforme</h3>
+                                    <h3 class="font-heading font-bold text-sm text-slate-900 group-hover:text-indigo-700 transition-colors">Abonnements Plateforme</h3>
                                     <p class="text-xs text-slate-500">${m.activeSellersCount} marchands certifiés actifs</p>
                                 </div>
                             </div>
@@ -564,21 +637,25 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         </div>
                         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                             <span class="text-[11px] text-slate-400">Recettes récurrentes (2 000 F / boutique)</span>
-                            <button data-jump-tab="sellers" class="text-xs font-bold text-primary hover:text-primary-hover flex items-center gap-1 active:scale-95 cursor-pointer">
+                            <span class="text-xs font-bold text-primary group-hover:text-primary-hover flex items-center gap-1">
                                 <span>Gérer</span>
                                 <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                            </button>
+                            </span>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <div 
+                        data-stat-target="orders-delivered" 
+                        title="Cliquer pour analyser les transactions livrées"
+                        class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0">
+                                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
                                     <i class="fa-solid fa-chart-line"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-heading font-bold text-sm text-slate-900">Volume d'Affaires Brut (GMV)</h3>
+                                    <h3 class="font-heading font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">Volume d'Affaires Brut (GMV)</h3>
                                     <p class="text-xs text-slate-500">${deliveredOrdersCount} commande${deliveredOrdersCount > 1 ? 's' : ''} livrée${deliveredOrdersCount > 1 ? 's' : ''}</p>
                                 </div>
                             </div>
@@ -588,10 +665,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                         </div>
                         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                             <span class="text-[11px] text-slate-400">Transactions Pavillon-à-Pavillon</span>
-                            <button data-jump-tab="orders" class="text-xs font-bold text-primary hover:text-primary-hover flex items-center gap-1 active:scale-95 cursor-pointer">
+                            <span class="text-xs font-bold text-primary group-hover:text-primary-hover flex items-center gap-1">
                                 <span>Consulter</span>
                                 <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                            </button>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -605,7 +682,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                             </div>
                             <div>
                                 <h3 class="font-heading font-bold text-sm text-slate-900">Répartition Logistique par Pavillon / Zone</h3>
-                                <p class="text-xs text-slate-500">Volume de commandes par destination sur le campus UIDT</p>
+                                <p class="text-xs text-slate-500">Volume de commandes par destination sur le campus UIDT (Cliquer pour filtrer)</p>
                             </div>
                         </div>
                         <span class="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
@@ -619,22 +696,27 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                             Aucune commande enregistrée pour établir la répartition géographique.
                         </div>
                     ` : `
-                        <div class="flex flex-col gap-3 pt-1">
+                        <div class="flex flex-col gap-2 pt-1">
                             ${sortedLocations.slice(0, 6).map(([locName, count], idx) => {
                                 const percent = Math.round((count / (allOrders.length || 1)) * 100);
                                 const barPercent = Math.max(8, Math.round((count / maxLocationCount) * 100));
                                 const isTop = idx === 0;
 
                                 return `
-                                    <div class="flex flex-col gap-1.5 group">
+                                    <div 
+                                        data-stat-pavillon="${escapeHTML(locName)}" 
+                                        title="Cliquer pour afficher les commandes expédiées à ${escapeHTML(locName)}"
+                                        class="flex flex-col gap-1.5 p-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-all group active:scale-[0.99]"
+                                    >
                                         <div class="flex items-center justify-between text-xs">
-                                            <span class="font-semibold text-slate-800 flex items-center gap-2 truncate max-w-[70%]">
-                                                <i class="fa-solid fa-location-dot text-[11px] ${isTop ? 'text-primary' : 'text-slate-400'}"></i>
+                                            <span class="font-semibold text-slate-800 flex items-center gap-2 truncate max-w-[70%] group-hover:text-primary transition-colors">
+                                                <i class="fa-solid fa-location-dot text-[11px] ${isTop ? 'text-primary' : 'text-slate-400 group-hover:text-primary'}"></i>
                                                 <span class="truncate">${escapeHTML(locName)}</span>
                                             </span>
                                             <div class="flex items-center gap-2 shrink-0">
                                                 <span class="font-bold text-slate-900 tabular-nums">${count} cmd</span>
-                                                <span class="text-[11px] font-bold ${isTop ? 'text-primary bg-primary/10' : 'text-slate-500 bg-slate-100'} tabular-nums px-2 py-0.5 rounded-md">(${percent}%)</span>
+                                                <span class="text-[11px] font-bold ${isTop ? 'text-primary bg-primary/10' : 'text-slate-500 bg-slate-100 group-hover:bg-primary/10 group-hover:text-primary'} tabular-nums px-2 py-0.5 rounded-md transition-colors">(${percent}%)</span>
+                                                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 group-hover:text-primary transition-colors"></i>
                                             </div>
                                         </div>
                                         <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -1097,6 +1179,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                         <span>Pack Starter • 5 produits (1 500 F/mois)</span>
                                     </span>
                                 `}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                    <i class="fa-solid fa-gift text-[9px]"></i> Essai 7j
+                                </span>
                             </div>
 
                             <!-- Informations Boutique et Contact -->
@@ -1129,7 +1214,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                 class="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
                             >
                                 <i class="fa-solid fa-check text-xs"></i>
-                                <span>Approuver (${s.subscription_plan === 'pro' ? '10 prod.' : '5 prod.'})</span>
+                                <span>Approuver (Essai 7j • 3 prod.)</span>
                             </button>
                             <button 
                                 data-action="reject" 
@@ -1155,6 +1240,30 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
             `;
         }
 
+        const getPlanBadgeHTML = (plan) => {
+            if (plan === 'pro') {
+                return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Pro</span>';
+            }
+            return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Starter</span>';
+        };
+
+        const getSubscriptionBadgeHTML = (seller) => {
+            const subCalc = computeSubscriptionStatus(seller);
+            if (subCalc.status === 'superadmin') {
+                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">Illimité</span>';
+            }
+            if (subCalc.status === 'trial_active') {
+                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Fin essai : ${seller.trial_ends_at ? new Date(seller.trial_ends_at).toLocaleDateString('fr-FR') : ''}">Essai (${subCalc.daysRemaining}j)</span>`;
+            }
+            if (subCalc.status === 'trial_expiring') {
+                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Fin essai : ${seller.trial_ends_at ? new Date(seller.trial_ends_at).toLocaleDateString('fr-FR') : ''}">Essai J-${subCalc.daysRemaining}</span>`;
+            }
+            if (subCalc.status === 'active') {
+                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Expire le : ${seller.subscription_expires_at ? new Date(seller.subscription_expires_at).toLocaleDateString('fr-FR') : ''}">Actif (${subCalc.daysRemaining}j)</span>`;
+            }
+            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expiré</span>';
+        };
+
         return `
             <!-- Version Desktop (Tableau HTML stylisé) -->
             <div class="hidden md:block overflow-x-auto">
@@ -1162,16 +1271,19 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                     <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
                         <tr>
                             <th class="py-3 px-4">Marchand</th>
-                            <th class="py-3 px-4">Articles</th>
+                            <th class="py-3 px-4">Articles & Pack</th>
+                            <th class="py-3 px-4">Abonnement</th>
                             <th class="py-3 px-4">Contact</th>
-                            <th class="py-3 px-4">Disponibilité</th>
-                            <th class="py-3 px-4">Statut Compte</th>
+                            <th class="py-3 px-4">Boutique</th>
+                            <th class="py-3 px-4">Statut</th>
                             <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${list.map((s) => {
                             const isSuspended = isSellerSuspended(s);
+                            const subCalc = computeSubscriptionStatus(s);
+                            const maxQuota = subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5));
                             const prodCount = allProducts.filter((p) => p.seller_id === s.id).length;
                             const cleanPhone = (s.telephone || '').replace(/\D/g, '');
                             const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
@@ -1193,11 +1305,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
-                                            <span class="font-bold text-slate-800">${prodCount} / ${s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)}</span>
-                                            ${s.subscription_plan === 'pro' 
-                                                ? '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Pro</span>' 
-                                                : '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Starter</span>'}
+                                            <span class="font-bold text-slate-800">${prodCount} / ${maxQuota}</span>
+                                            ${getPlanBadgeHTML(s.subscription_plan)}
                                         </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        ${getSubscriptionBadgeHTML(s)}
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-2">
@@ -1220,7 +1333,26 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                         </span>
                                     </td>
                                     <td class="py-3 px-4 text-right">
-                                        <div class="flex items-center justify-end gap-1.5">
+                                        <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                                            <button 
+                                                type="button" 
+                                                data-action="extend-trial" 
+                                                data-id="${s.id}" 
+                                                class="px-2 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-[11px] font-semibold cursor-pointer"
+                                                title="Prolonger l'essai gratuit de 7 jours"
+                                            >
+                                                +7j Essai
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                data-action="activate-sub" 
+                                                data-id="${s.id}" 
+                                                data-plan="${s.subscription_plan || 'starter'}"
+                                                class="px-2 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-[11px] font-semibold cursor-pointer"
+                                                title="Activer manuellement 30 jours (règlement cash sur campus)"
+                                            >
+                                                Activer 30j
+                                            </button>
                                             <button 
                                                 type="button" 
                                                 data-action="toggle-suspend" 
@@ -1265,6 +1397,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
             <div class="md:hidden flex flex-col divide-y divide-slate-100 p-3">
                 ${list.map((s) => {
                     const isSuspended = isSellerSuspended(s);
+                    const subCalc = computeSubscriptionStatus(s);
+                    const maxQuota = subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5));
                     const prodCount = allProducts.filter((p) => p.seller_id === s.id).length;
                     const cleanPhone = (s.telephone || '').replace(/\D/g, '');
                     const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
@@ -1290,15 +1424,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                     <div class="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
                                         <span>${escapeHTML(s.telephone || 'Non renseigné')}</span>
                                         <span>•</span>
-                                        <span class="font-bold text-slate-800">${prodCount} / ${s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)} prod.</span>
-                                        ${s.subscription_plan === 'pro' 
-                                            ? '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Pro</span>' 
-                                            : '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Starter</span>'}
+                                        <span class="font-bold text-slate-800">${prodCount} / ${maxQuota} prod.</span>
+                                        ${getPlanBadgeHTML(s.subscription_plan)}
+                                        ${getSubscriptionBadgeHTML(s)}
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-2 pt-1">
+                            <div class="flex items-center gap-2 pt-1 flex-wrap">
                                 ${waUrl ? `
                                     <a 
                                         href="${waUrl}" 
@@ -1310,6 +1443,27 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                                         <i class="fa-brands fa-whatsapp text-sm"></i>
                                     </a>
                                 ` : ''}
+
+                                <button 
+                                    type="button" 
+                                    data-action="extend-trial" 
+                                    data-id="${s.id}" 
+                                    class="py-2 px-2.5 rounded-xl border border-indigo-200 text-indigo-700 bg-indigo-50/50 text-xs font-semibold min-h-[44px] cursor-pointer"
+                                    title="Prolonger l'essai gratuit de 7 jours"
+                                >
+                                    +7j Essai
+                                </button>
+
+                                <button 
+                                    type="button" 
+                                    data-action="activate-sub" 
+                                    data-id="${s.id}" 
+                                    data-plan="${s.subscription_plan || 'starter'}"
+                                    class="py-2 px-2.5 rounded-xl border border-emerald-200 text-emerald-700 bg-emerald-50/50 text-xs font-semibold min-h-[44px] cursor-pointer"
+                                    title="Activer manuellement 30 jours"
+                                >
+                                    Activer 30j
+                                </button>
 
                                 <button 
                                     type="button"
@@ -2061,6 +2215,34 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
             exitAdminHandler();
         });
 
+        // 1.b. Accès direct au Profil Vendeur de l'Admin
+        const handleOpenSellerDashboard = async () => {
+            if (!currentAdmin) {
+                showToast('Profil administrateur non initialisé.', 'error');
+                return;
+            }
+            try {
+                const enriched = await ensureAdminSellerProfile(currentAdmin);
+                currentAdmin = enriched;
+                if (typeof onOpenSellerDashboard === 'function') {
+                    onOpenSellerDashboard(enriched);
+                } else {
+                    showToast('Profil vendeur opérationnel !', 'success');
+                }
+            } catch (err) {
+                console.error('[SuperAdmin] Erreur accès profil vendeur:', err);
+                showToast('Impossible d\'ouvrir votre profil vendeur.', 'error');
+            }
+        };
+
+        containerEl.querySelector('#sidebar-btn-switch-to-seller')?.addEventListener('click', handleOpenSellerDashboard);
+        containerEl.querySelector('#top-hdr-btn-switch-to-seller')?.addEventListener('click', handleOpenSellerDashboard);
+        containerEl.querySelector('#top-hdr-btn-switch-to-seller-mobile')?.addEventListener('click', handleOpenSellerDashboard);
+        containerEl.querySelector('#drawer-btn-switch-to-seller')?.addEventListener('click', () => {
+            closeDrawer();
+            handleOpenSellerDashboard();
+        });
+
         // 2. Navigation d'onglets (Sidebar desktop + Navbar mobile via data-tab-target et rétrocompatibilité)
         containerEl.querySelectorAll('[data-tab-target]').forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -2094,6 +2276,49 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                 const targetTab = btn.getAttribute('data-jump-tab');
                 if (targetTab && activeTab !== targetTab) {
                     activeTab = targetTab;
+                    render();
+                }
+            });
+        });
+
+        // 3.b. Cartes statistiques interactives [data-stat-target]
+        containerEl.querySelectorAll('[data-stat-target]').forEach((card) => {
+            card.addEventListener('click', () => {
+                const target = card.getAttribute('data-stat-target');
+                if (target === 'sellers-active') {
+                    activeTab = 'sellers';
+                    sellerFilterTab = 'active';
+                    sellerSearchQuery = '';
+                    render();
+                } else if (target === 'sellers-pending') {
+                    activeTab = 'sellers';
+                    sellerFilterTab = 'pending';
+                    sellerSearchQuery = '';
+                    render();
+                } else if (target === 'orders-all') {
+                    activeTab = 'orders';
+                    orderSearchQuery = '';
+                    orderPavillonFilter = 'all';
+                    orderPaymentFilter = 'all';
+                    render();
+                } else if (target === 'orders-delivered') {
+                    activeTab = 'orders';
+                    orderSearchQuery = 'livré';
+                    orderPavillonFilter = 'all';
+                    orderPaymentFilter = 'all';
+                    render();
+                }
+            });
+        });
+
+        // 3.c. Filtrage par pavillon direct [data-stat-pavillon]
+        containerEl.querySelectorAll('[data-stat-pavillon]').forEach((row) => {
+            row.addEventListener('click', () => {
+                const pavillon = row.getAttribute('data-stat-pavillon');
+                if (pavillon) {
+                    activeTab = 'orders';
+                    orderPavillonFilter = pavillon;
+                    orderSearchQuery = '';
                     render();
                 }
             });
@@ -2588,6 +2813,89 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
                 });
             });
 
+            // Prolonger l'essai gratuit (+7 jours)
+            containerEl.querySelectorAll('button[data-action="extend-trial"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const confirmed = await showConfirm({
+                        title: 'Prolonger l\'essai gratuit',
+                        message: 'Accorder 7 jours supplémentaires d\'accès gratuit à ce marchand ?',
+                        confirmText: 'Prolonger de 7 jours',
+                        cancelText: 'Annuler',
+                        isDestructive: false,
+                        icon: 'fa-gift',
+                    });
+
+                    if (!confirmed) return;
+
+                    btn.disabled = true;
+                    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i>`;
+                    try {
+                        const updated = await grantSellerTrialExtension(id, 7);
+                        const target = activeSellers.find((s) => s.id === id);
+                        if (target) {
+                            target.subscription_status = 'trial';
+                            target.trial_ends_at = updated.trial_ends_at;
+                            target.is_open = true;
+                        }
+                        showToast('Période d\'essai prolongée de 7 jours ! 🎁', 'success');
+                        const contentEl = containerEl.querySelector('#admin-tab-content');
+                        if (contentEl && activeTab === 'sellers') {
+                            contentEl.innerHTML = renderSellersTab();
+                            bindSellersEvents();
+                        }
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        btn.disabled = false;
+                        btn.textContent = '+7j Essai';
+                    }
+                });
+            });
+
+            // Activer manuellement l'abonnement pour 30 jours (règlement campus)
+            containerEl.querySelectorAll('button[data-action="activate-sub"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const currentPlan = btn.getAttribute('data-plan') || 'starter';
+                    const planLabel = currentPlan === 'pro' ? 'Pack Pro (10 arts)' : 'Pack Starter (5 arts)';
+
+                    const confirmed = await showConfirm({
+                        title: "Activer l'abonnement (30 jours)",
+                        message: `Confirmer le règlement manuel pour 30 jours (${planLabel}) ? Le vendeur aura accès direct sans paiement en ligne.`,
+                        confirmText: 'Activer 30 jours',
+                        cancelText: 'Annuler',
+                        isDestructive: false,
+                        icon: 'fa-credit-card',
+                    });
+
+                    if (!confirmed) return;
+
+                    btn.disabled = true;
+                    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i>`;
+                    try {
+                        const updated = await manuallyActivateSubscription(id, currentPlan, 30);
+                        const target = activeSellers.find((s) => s.id === id);
+                        if (target) {
+                            target.subscription_status = 'active';
+                            target.subscription_plan = updated.subscription_plan;
+                            target.max_products = updated.max_products;
+                            target.subscription_expires_at = updated.subscription_expires_at;
+                            target.is_open = true;
+                        }
+                        showToast(`Abonnement 30 jours activé (${planLabel}) ! 💳`, 'success');
+                        const contentEl = containerEl.querySelector('#admin-tab-content');
+                        if (contentEl && activeTab === 'sellers') {
+                            contentEl.innerHTML = renderSellersTab();
+                            bindSellersEvents();
+                        }
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        btn.disabled = false;
+                        btn.textContent = 'Activer 30j';
+                    }
+                });
+            });
+
             // Suspendre ou Réactiver un vendeur
             containerEl.querySelectorAll('button[data-action="toggle-suspend"]').forEach((btn) => {
                 btn.addEventListener('click', async () => {
@@ -2714,7 +3022,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onShowToast
         if (activeTab === 'locations') bindLocationsEvents();
     }
 
-    checkExistingAuth();
+    if (admin && admin.role === 'superadmin') {
+        currentAdmin = admin;
+        isAuthenticated = true;
+        loadAdminData();
+    } else {
+        checkExistingAuth();
+    }
     return containerEl;
 }
 

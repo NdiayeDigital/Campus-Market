@@ -464,11 +464,16 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
             submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Envoi...`;
 
             try {
+                const buyerName = reviewModalOrder.client_prenom 
+                    ? `${reviewModalOrder.client_prenom} ${reviewModalOrder.client_nom || ''}`.trim()
+                    : (reviewModalOrder.buyer_name || reviewModalOrder.clientName || '');
+
                 await submitOrderReview({
                     sellerId,
                     orderId: reviewModalOrder.orderId || reviewModalOrder.id || null,
                     rating: currentRating,
                     comment,
+                    buyerName,
                 });
 
                 reviewModalOrder.hasReviewed = true;

@@ -26,6 +26,8 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
     let currentOrderId = null;
     let selectedRating = 5;
     let isSubmitting = false;
+    let enteredBuyerName = '';
+    let enteredComment = '';
 
     const modalEl = document.createElement('div');
     modalEl.id = 'seller-review-modal';
@@ -93,6 +95,7 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
                         <input 
                             type="text" 
                             id="review-buyer-name" 
+                            value="${escapeHTML(enteredBuyerName)}"
                             placeholder="Ex : Moussa Diop (L2 Informatique)" 
                             class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"
                         >
@@ -107,7 +110,7 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
                             rows="3" 
                             placeholder="Livraison rapide au pavillon, article bien emballé et conforme... Partagez votre avis aux autres étudiants !" 
                             class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all resize-none"
-                        ></textarea>
+                        >${escapeHTML(enteredComment)}</textarea>
                     </div>
                 </div>
 
@@ -178,6 +181,16 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
             });
         });
 
+        // Suivi en continu des saisies
+        const commentInput = modalEl.querySelector('#review-comment-textarea');
+        const nameInput = modalEl.querySelector('#review-buyer-name');
+        commentInput?.addEventListener('input', (e) => {
+            enteredComment = e.target.value;
+        });
+        nameInput?.addEventListener('input', (e) => {
+            enteredBuyerName = e.target.value;
+        });
+
         // Soumission
         modalEl.querySelector('#btn-submit-review-action')?.addEventListener('click', handleSubmit);
     }
@@ -187,11 +200,18 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
 
         const commentInput = modalEl.querySelector('#review-comment-textarea');
         const nameInput = modalEl.querySelector('#review-buyer-name');
-        const comment = (commentInput?.value || '').trim();
-        const buyerName = (nameInput?.value || '').trim();
+        const comment = (commentInput?.value || enteredComment || '').trim();
+        const buyerName = (nameInput?.value || enteredBuyerName || '').trim();
 
+        enteredComment = comment;
+        enteredBuyerName = buyerName;
+
+        const submitBtn = modalEl.querySelector('#btn-submit-review-action');
         isSubmitting = true;
-        renderContent();
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-xs"></i><span>Publication...</span>`;
+        }
 
         try {
             const review = await submitReview({
@@ -206,6 +226,8 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
                 onShowToast(`🎉 Merci pour votre avis sur ${currentSeller.prenom || 'la boutique'} !`, 'success');
             }
 
+            enteredComment = '';
+            enteredBuyerName = '';
             close();
 
             if (typeof onReviewSubmitted === 'function') {
@@ -217,7 +239,10 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
                 onShowToast(err.message || 'Impossible d\'enregistrer votre avis.', 'error');
             }
             isSubmitting = false;
-            renderContent();
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane text-xs"></i><span>Publier mon avis</span>`;
+            }
         }
     }
 
@@ -227,6 +252,8 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
         currentOrderId = orderId;
         selectedRating = 5;
         isSubmitting = false;
+        enteredComment = '';
+        enteredBuyerName = '';
 
         renderContent();
         modalEl.classList.remove('hidden');

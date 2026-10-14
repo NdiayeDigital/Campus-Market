@@ -404,8 +404,8 @@ export async function cancelOrderByBuyer(orderId) {
  * @param {string} [reviewData.comment] - Commentaire libre
  * @returns {Promise<Object>}
  */
-export async function submitOrderReview({ sellerId, orderId = null, rating, comment = '' }) {
-    return submitReview({ sellerId, orderId, rating, comment });
+export async function submitOrderReview({ sellerId, orderId = null, rating, comment = '', buyerName = '' }) {
+    return submitReview({ sellerId, orderId, rating, comment, buyerName });
 }
 
 export default {
