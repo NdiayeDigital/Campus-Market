@@ -1,7 +1,7 @@
 /**
  * API Serverless Endpoint : /api/create-subscription-checkout
- * Crée une session de paiement pour l'abonnement d'un vendeur (Pack Starter, Pro ou Premium)
- * via SasPay (Wave ou Orange Money) ou bascule sur le simulateur Sandbox si aucune clé n'est configurée.
+ * Crée une session de paiement pour l'abonnement d'un vendeur (Pack Starter ou Pro)
+ * via SasPay (Wave ou Orange Money) ou génère les informations de paiement par lien direct.
  */
 
 const PLAN_PRICES = {
@@ -19,7 +19,7 @@ const PLAN_PRICES = {
         label: 'Pack Pro', 
         period: 'mois', 
         durationDays: 30,
-        paymentLink: 'https://link.saspay.me/hgc4jifsarq',
+        paymentLink: 'https://link.saspay.me/gxky6adwejc',
     },
 };
 
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
 
         const effectiveOrigin = origin || req.headers?.origin || 'http://localhost:5173';
 
-        // 1. Mode Production / Test avec clé API SasPay
+        // 1. Mode API SasPay (si clé secrète configurée dans l'environnement)
         if (saspaySecretKey && saspaySecretKey.startsWith('sk_')) {
             try {
                 const saspayRes = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
@@ -90,18 +90,17 @@ export default async function handler(req, res) {
                 } else {
                     const errorText = await saspayRes.text();
                     console.warn('[SasPay API] Erreur retournée:', errorText);
-                    // Repli transparent sur le simulateur si la clé de test a expiré
                 }
             } catch (apiErr) {
                 console.warn('[SasPay API] Exception réseau:', apiErr.message);
             }
         }
 
-        // 2. Mode Sandbox / Simulateur Réaliste (Actif par défaut tant que les clés ne sont pas configurées)
-        const sandboxSessionId = `sandbox_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        // 2. Mode Lien Direct SasPay (utilisé pour les liens marchands directs Wave / Orange Money)
+        const directSessionId = `saspay_link_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         return res.status(200).json({
-            mode: 'sandbox',
-            sessionId: sandboxSessionId,
+            mode: 'direct_link',
+            sessionId: directSessionId,
             plan,
             operator: validOperator,
             amount: planConfig.amount,
@@ -113,7 +112,6 @@ export default async function handler(req, res) {
             operatorLabel: validOperator === 'wave' ? 'Wave Sénégal' : 'Orange Money Sénégal',
             checkoutUrl: planConfig.paymentLink,
             paymentLink: planConfig.paymentLink,
-            message: 'Session de simulation créée avec succès. Vous pouvez tester le paiement sans clé API.',
         });
     } catch (err) {
         console.error('[CreateCheckout] Erreur:', err);

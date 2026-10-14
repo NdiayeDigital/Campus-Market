@@ -43,7 +43,7 @@ assert(SUBSCRIPTION_PLANS.starter.paymentLink === 'https://link.saspay.me/hgc4ji
 
 assert(SUBSCRIPTION_PLANS.pro.price === 2500, 'Pack Pro = 2 500 FCFA/mois');
 assert(SUBSCRIPTION_PLANS.pro.maxProducts === 10, 'Pack Pro = 10 articles max');
-assert(SUBSCRIPTION_PLANS.pro.paymentLink === 'https://link.saspay.me/hgc4jifsarq', 'Lien direct SasPay configuré pour Pro');
+assert(SUBSCRIPTION_PLANS.pro.paymentLink === 'https://link.saspay.me/gxky6adwejc', 'Lien direct SasPay configuré pour Pro');
 
 assert(SUBSCRIPTION_PLANS.premium === undefined, 'Pack Annuel VIP retiré du catalogue');
 
@@ -139,7 +139,7 @@ assert(paidExpiredStatus.status === 'expired', 'Statut = expired après fin des 
 assert(paidExpiredStatus.canSell === false, 'Vendeur abonné expiré bloqué');
 
 // -------------------------------------------------------------
-// 4. API Checkout SasPay (Lien Direct & Sandbox)
+// 4. API Checkout SasPay (Lien Direct)
 // -------------------------------------------------------------
 console.log('\n🌐 4. Vérification de l\'API /api/create-subscription-checkout...');
 
@@ -184,11 +184,11 @@ const starterCtx = createMockReqRes({
 await createCheckoutHandler(starterCtx.req, starterCtx.res);
 assert(starterCtx.getStatusCode() === 200, 'Code 200 pour session Starter Checkout');
 const starterResp = starterCtx.getResponse();
-assert(starterResp.mode === 'sandbox', 'Sandbox activé sans clés SasPay');
+assert(starterResp.mode === 'direct_link', 'Mode direct_link activé pour lien SasPay');
 assert(Number(starterResp.amount) === 1500, 'Montant de 1 500 F pour Pack Starter');
 assert(starterResp.paymentLink === 'https://link.saspay.me/hgc4jifsarq', 'Lien SasPay 1500 F présent');
 assert(starterResp.durationDays === 30, 'Durée de 30 jours pour Pack Starter');
-assert(starterResp.sessionId && starterResp.sessionId.startsWith('sandbox_'), 'Session ID généré');
+assert(starterResp.sessionId && starterResp.sessionId.startsWith('saspay_link_'), 'Session ID direct SasPay généré');
 
 // Test Checkout pour Pack Pro
 const proCtx = createMockReqRes({
@@ -201,7 +201,7 @@ await createCheckoutHandler(proCtx.req, proCtx.res);
 assert(proCtx.getStatusCode() === 200, 'Code 200 pour session Pro Checkout');
 const proResp = proCtx.getResponse();
 assert(Number(proResp.amount) === 2500, 'Montant de 2 500 F pour Pro');
-assert(proResp.paymentLink === 'https://link.saspay.me/hgc4jifsarq', 'Lien SasPay 2500 F (temporaire) présent');
+assert(proResp.paymentLink === 'https://link.saspay.me/gxky6adwejc', 'Lien SasPay 2500 F présent');
 assert(proResp.durationDays === 30, 'Durée de 30 jours pour Pro');
 
 // -------------------------------------------------------------

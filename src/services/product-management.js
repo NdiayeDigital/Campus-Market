@@ -382,12 +382,19 @@ export async function updateProduct({
  * @returns {Promise<Array>}
  */
 export async function getSellerProducts(sellerId) {
-    if (!sellerId) return [];
+    let targetId = sellerId;
+    if (!targetId) {
+        try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            targetId = sessionData?.session?.user?.id;
+        } catch {}
+    }
+    if (!targetId) return [];
 
     const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('seller_id', sellerId)
+        .eq('seller_id', targetId)
         .order('created_at', { ascending: false });
 
     if (error) {

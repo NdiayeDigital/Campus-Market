@@ -340,6 +340,22 @@ export async function getCurrentSeller() {
             profile.shop_category = profile.shop_category || session.user.user_metadata?.shop_category || 'autres';
             profile.email = profile.email || session.user.email;
 
+            // Si le vendeur actif n'a pas encore scellé sa date d'essai ou si elle est nulle, lui accorder 7 jours pleins
+            if (profile.role === 'vendeur' && (!profile.trial_ends_at || !profile.trial_started_at) && !profile.subscription_expires_at) {
+                const nowIso = new Date().toISOString();
+                const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
+                profile.trial_started_at = profile.trial_started_at || nowIso;
+                profile.trial_ends_at = trialEndIso;
+                profile.subscription_status = 'trial';
+
+                // Sauvegarde non bloquante dans Supabase
+                supabase.from('profiles').update({
+                    trial_started_at: profile.trial_started_at,
+                    trial_ends_at: profile.trial_ends_at,
+                    subscription_status: 'trial',
+                }).eq('id', session.user.id).then().catch(() => {});
+            }
+
             // Calcul dynamique de l'état de l'abonnement
             const subCalc = computeSubscriptionStatus(profile);
             profile.subscription_status = profile.subscription_status || subCalc.status;
@@ -440,6 +456,10 @@ export async function getSellerDashboardData(sellerId) {
         );
 
         const activeProducts = productsList.filter((p) => p.stock !== 0);
+        const subCalc = computeSubscriptionStatus(profile);
+        const maxAllowed = subCalc.isTrial 
+            ? FREE_TRIAL_CONFIG.maxProducts 
+            : (Number(profile?.max_products) || getMaxProductsForPlan(profile?.subscription_plan));
 
         return {
             profile: profile || {},
@@ -449,6 +469,7 @@ export async function getSellerDashboardData(sellerId) {
             pendingCount: pendingOrders.length,
             totalProductsCount: productsList.length,
             activeProductsCount: activeProducts.length,
+            maxAllowed,
             recentOrders: ordersList.slice(0, 20),
         };
     } catch (err) {
@@ -511,7 +532,7 @@ export function getSellerSubscription(profile) {
 }
 
 /**
- * Initie une session de paiement d'abonnement (SasPay ou Sandbox).
+ * Initie une session de paiement d'abonnement SasPay.
  * @param {Object} params
  * @param {string} params.sellerId
  * @param {string} params.plan - 'starter', 'pro' ou 'premium'
@@ -626,10 +647,10 @@ export async function confirmSubscriptionPayment({ sessionId, sellerId, plan, op
             currency: 'XOF',
             plan: validPlan,
             operator: validOperator,
-            provider: verification.mode === 'live' ? 'saspay' : 'sandbox',
+            provider: 'saspay',
             provider_session_id: sessionId,
             status: 'success',
-            metadata: { confirmed_at: nowIso, mode: verification.mode },
+            metadata: { confirmed_at: nowIso, mode: verification.mode || 'saspay' },
         });
     } catch (payErr) {
         console.warn('[SellerService] Trace paiement optionnelle non bloquante:', payErr.message);

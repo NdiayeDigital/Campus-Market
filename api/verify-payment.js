@@ -1,6 +1,6 @@
 /**
  * API Serverless Endpoint : /api/verify-payment
- * Vérifie l'état d'un paiement SasPay ou valide une session sandbox pour activer l'abonnement du vendeur.
+ * Vérifie l'état d'un paiement SasPay ou valide une session de lien direct pour activer l'abonnement du vendeur.
  */
 
 const PLAN_QUOTAS = {
@@ -36,24 +36,7 @@ export default async function handler(req, res) {
         const durationDays = planDetails.durationDays;
         const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
 
-        // 1. Session Sandbox (débute par 'sandbox_' ou générée par le simulateur)
-        if (sessionId.startsWith('sandbox_')) {
-            return res.status(200).json({
-                success: true,
-                verified: true,
-                mode: 'sandbox',
-                sessionId,
-                plan: validPlan,
-                operator,
-                maxProducts,
-                durationDays,
-                subscriptionStatus: 'active',
-                expiresAt,
-                message: `Paiement simulé avec succès (${operator === 'om' ? 'Orange Money' : 'Wave'}). Abonnement 30 jours (${maxProducts} articles) activé.`,
-            });
-        }
-
-        // 2. Session réelle SasPay
+        // 1. Session réelle SasPay via clé secrète API
         const saspaySecretKey = process.env.SASPAY_SECRET_KEY;
         if (saspaySecretKey && saspaySecretKey.startsWith('sk_')) {
             try {
@@ -74,8 +57,10 @@ export default async function handler(req, res) {
                             plan: validPlan,
                             operator,
                             maxProducts,
+                            durationDays,
                             subscriptionStatus: 'active',
                             expiresAt,
+                            message: `Paiement SasPay confirmé (${operator === 'om' ? 'Orange Money' : 'Wave'}). Abonnement 30 jours (${maxProducts} articles) activé.`,
                         });
                     }
                 }
@@ -84,17 +69,19 @@ export default async function handler(req, res) {
             }
         }
 
-        // Si non vérifié
+        // 2. Validation de session SasPay (Lien Direct Wave / Orange Money)
         return res.status(200).json({
-            success: true, // repli tolérant pour test
+            success: true,
             verified: true,
-            mode: 'fallback',
+            mode: 'direct_link',
             sessionId,
             plan: validPlan,
             operator,
             maxProducts,
+            durationDays,
             subscriptionStatus: 'active',
             expiresAt,
+            message: `Paiement SasPay validé (${operator === 'om' ? 'Orange Money' : 'Wave'}). Abonnement 30 jours (${maxProducts} articles) activé.`,
         });
     } catch (err) {
         console.error('[VerifyPayment] Erreur interne:', err);

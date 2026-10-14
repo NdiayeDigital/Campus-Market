@@ -2,7 +2,6 @@
  * Composant SubscriptionModal (Gestion des formules & Passerelle SasPay).
  * Permet au vendeur de choisir parmi les formules (Starter 1 500F ou Pro 2 500F)
  * et d'accéder au paiement direct via le lien SasPay (Wave ou Orange Money).
- * Dispose d'un simulateur de test rapide garantissant une validation fluide sur smartphone.
  */
 
 import { SUBSCRIPTION_PLANS } from '../../config/subscription.js';
@@ -215,17 +214,6 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
 
                     <button 
                         type="button" 
-                        id="btn-simulate-sandbox"
-                        ${isProcessing ? 'disabled' : ''}
-                        class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 min-h-[38px] cursor-pointer"
-                        title="Simuler sans débit réel pour tester sur smartphone"
-                    >
-                        <i class="fa-solid fa-flask text-slate-400"></i>
-                        <span>Simuler paiement réussi (Test sans débit)</span>
-                    </button>
-
-                    <button 
-                        type="button" 
                         id="btn-back-to-plans"
                         class="w-full py-2 text-xs text-slate-400 hover:text-slate-700 font-semibold transition-colors cursor-pointer"
                     >
@@ -286,8 +274,8 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
             }
         });
 
-        // 3. Bouton "J'ai validé mon paiement" ou simulation
-        const handleConfirm = async (isSandbox = false) => {
+        // 3. Bouton "J'ai validé mon paiement • Activer ma boutique"
+        const handleConfirm = async () => {
             if (isProcessing) return;
             isProcessing = true;
             render();
@@ -327,8 +315,7 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
             }
         };
 
-        modalEl.querySelector('#btn-confirm-active-sub')?.addEventListener('click', () => handleConfirm(false));
-        modalEl.querySelector('#btn-simulate-sandbox')?.addEventListener('click', () => handleConfirm(true));
+        modalEl.querySelector('#btn-confirm-active-sub')?.addEventListener('click', () => handleConfirm());
 
         // 4. Retour au choix
         modalEl.querySelector('#btn-back-to-plans')?.addEventListener('click', () => {

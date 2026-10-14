@@ -12,7 +12,7 @@ export const FREE_TRIAL_CONFIG = {
 
 export const SASPAY_PAYMENT_LINKS = {
     starter: 'https://link.saspay.me/hgc4jifsarq',
-    pro: 'https://link.saspay.me/hgc4jifsarq', // Temporaire : en attente du lien dédié 2 500 F
+    pro: 'https://link.saspay.me/gxky6adwejc',
 };
 
 export const SUBSCRIPTION_PLANS = {
@@ -199,8 +199,13 @@ export function computeSubscriptionStatus(profile) {
     let trialEndMs = null;
     if (profile.trial_ends_at) {
         trialEndMs = new Date(profile.trial_ends_at).getTime();
+    } else if (profile.trial_started_at) {
+        trialEndMs = new Date(profile.trial_started_at).getTime() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000;
+    } else if (profile.role === 'vendeur' && (profile.subscription_status === 'trial' || !profile.subscription_status)) {
+        // Nouveau vendeur actif : accorder 7 jours complets dès l'activation
+        trialEndMs = now + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000;
     } else if (profile.created_at) {
-        // Rétrocompatibilité : 7 jours après la date de création si trial_ends_at non renseigné
+        // Rétrocompatibilité si trial_ends_at non renseigné
         trialEndMs = new Date(profile.created_at).getTime() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000;
     }
 

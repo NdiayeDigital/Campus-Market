@@ -44,7 +44,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
     const sellerId = seller.id;
     let dashboardData = null;
     let isLoading = true;
-    let activeSubTab = 'orders'; // 'orders' | 'products' | 'add-product'
+    let activeSubTab = 'dashboard'; // 'dashboard' | 'orders' | 'products' | 'add-product'
     let orderFilter = 'all'; // 'all' | 'pending' | 'in_progress' | 'delivered'
     let orderSearchQuery = '';
     let orderPavillonFilter = 'all';
@@ -406,6 +406,22 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                             Gestion Marchande
                         </span>
 
+                        <!-- Tableau de bord -->
+                        <button 
+                            type="button" 
+                            id="subtab-dashboard" 
+                            class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
+                                activeSubTab === 'dashboard'
+                                    ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                            }"
+                        >
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-chart-pie text-xs w-4 text-center ${activeSubTab === 'dashboard' ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
+                                <span>Tableau de bord</span>
+                            </div>
+                        </button>
+
                         <!-- Commandes -->
                         <button 
                             type="button" 
@@ -696,7 +712,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                             <span class="hover:text-slate-600 transition-colors">Espace Marchand</span>
                             <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
                             <span class="text-primary font-bold">
-                                ${activeSubTab === 'orders' ? 'Commandes en direct' : activeSubTab === 'products' ? 'Mes Articles' : 'Ajouter un produit'}
+                                ${activeSubTab === 'dashboard' ? 'Tableau de bord' : activeSubTab === 'orders' ? 'Commandes en direct' : activeSubTab === 'products' ? 'Mes Articles' : 'Ajouter un produit'}
                             </span>
                         </div>
                     </div>
@@ -812,8 +828,6 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                 </header>
 
                 <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex flex-col gap-6 flex-1">
-                ${renderSubscriptionBanner(subCalc)}
-
                 ${isSuspended ? `
                     <!-- Alerte rouge Vendeur Suspendu -->
                     <div class="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-rose-950 animate-fade-in shadow-xs">
@@ -850,8 +864,206 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                     </div>
                 ` : ''}
 
+                <!-- Barre d'onglets de navigation Tablette (sm à lg uniquement, masquée sur desktop et mobile) -->
+                <div class="hidden sm:flex lg:hidden items-center gap-1.5 border-b border-slate-200/80 overflow-x-auto no-scrollbar pb-2">
+                    <button 
+                        type="button" 
+                        data-seller-tab="dashboard"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'dashboard'
+                                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }"
+                    >
+                        <i class="fa-solid fa-chart-pie text-xs"></i>
+                        <span>Dashboard</span>
+                    </button>
+
+                    <button 
+                        type="button" 
+                        data-seller-tab="orders"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'orders'
+                                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }"
+                    >
+                        <i class="fa-solid fa-clipboard-list text-xs"></i>
+                        <span>Commandes</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            activeSubTab === 'orders' 
+                                ? 'bg-white/20 text-white' 
+                                : (pendingCount > 0 ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-slate-100 text-slate-600')
+                        }">
+                            ${allOrders.length}
+                        </span>
+                    </button>
+
+                    <button 
+                        type="button" 
+                        data-seller-tab="products"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'products'
+                                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }"
+                    >
+                        <i class="fa-solid fa-tags text-xs"></i>
+                        <span>Mes Articles</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            activeSubTab === 'products' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                        }">
+                            ${data.totalProductsCount || 0}
+                        </span>
+                    </button>
+
+                    ${!isSuspended ? `
+                        <button 
+                            type="button" 
+                            data-seller-tab="add-product"
+                            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
+                                activeSubTab === 'add-product'
+                                    ? 'bg-primary text-white shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }"
+                        >
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            <span>Ajouter un produit</span>
+                        </button>
+                    ` : ''}
+                </div>
+
+                <!-- Zone de contenu dynamique -->
+                <div id="seller-tab-content" class="w-full">
+                    ${activeSubTab === 'dashboard' ? renderDashboardHomeTab(data, allOrders, subCalc, isSuspended, isOpen) : ''}
+                    ${activeSubTab === 'orders' ? renderOrdersTab(allOrders) : ''}
+                </div>
+            </main>
+
+            <!-- 5. BARRE INFÉRIEURE FIXE MOBILE VENDEUR (lg:hidden, TOUJOURS visible, z-50) -->
+            <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation vendeur mobile">
+                <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around">
+                    <!-- Dashboard -->
+                    <button 
+                        type="button" 
+                        id="bnav-seller-dashboard" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'dashboard'
+                                ? 'text-primary font-bold'
+                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                        }"
+                    >
+                        ${activeSubTab === 'dashboard' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
+                        <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>
+                        <span class="text-[10px] leading-tight">Dashboard</span>
+                    </button>
+
+                    <!-- Commandes -->
+                    <button 
+                        type="button" 
+                        id="bnav-seller-orders" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'orders'
+                                ? 'text-primary font-bold'
+                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                        }"
+                    >
+                        ${activeSubTab === 'orders' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
+                        <div class="relative">
+                            <i class="fa-solid fa-clipboard-list text-lg mb-0.5"></i>
+                            ${pendingCount > 0 ? `
+                                <span class="absolute -top-1.5 -right-2.5 bg-amber-400 text-slate-950 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full border-2 border-white shadow-sm min-w-[18px] text-center transform scale-100 animate-pulse">
+                                    ${pendingCount}
+                                </span>
+                            ` : ''}
+                        </div>
+                        <span class="text-[10px] leading-tight">Commandes</span>
+                    </button>
+
+                    <!-- Mes Articles -->
+                    <button 
+                        type="button" 
+                        id="bnav-seller-products" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'products'
+                                ? 'text-primary font-bold'
+                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                        }"
+                    >
+                        ${activeSubTab === 'products' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
+                        <div class="relative">
+                            <i class="fa-solid fa-tags text-lg mb-0.5"></i>
+                            <span class="absolute -top-1.5 -right-2.5 bg-slate-100 text-slate-700 font-bold text-[9px] px-1 py-0.2 rounded-full border border-slate-200 min-w-[16px] text-center">
+                                ${data.totalProductsCount || 0}
+                            </span>
+                        </div>
+                        <span class="text-[10px] leading-tight">Articles</span>
+                    </button>
+
+                    <!-- Ajouter un produit (si non suspendu) -->
+                    ${!isSuspended ? `
+                        <button 
+                            type="button" 
+                            id="bnav-seller-add" 
+                            class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
+                                activeSubTab === 'add-product'
+                                    ? 'text-emerald-700 font-bold'
+                                    : 'text-emerald-600 hover:text-emerald-800 font-medium'
+                            }"
+                        >
+                            ${activeSubTab === 'add-product' ? '<span class="absolute top-0 w-8 h-1 bg-emerald-600 rounded-full"></span>' : ''}
+                            <i class="fa-solid fa-circle-plus text-lg mb-0.5"></i>
+                            <span class="text-[10px] leading-tight">Ajouter</span>
+                        </button>
+                    ` : ''}
+
+                    <!-- Voir Boutique Publique -->
+                    <button 
+                        type="button" 
+                        id="bnav-seller-shop" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] text-slate-500 hover:text-primary font-medium cursor-pointer active:scale-95"
+                    >
+                        <i class="fa-solid fa-store text-lg mb-0.5"></i>
+                        <span class="text-[10px] leading-tight">Boutique</span>
+                    </button>
+                </div>
+            </nav>
+        `;
+
+        if (activeSubTab === 'products' || activeSubTab === 'add-product') {
+            const currentProfile = dashboardData?.profile || seller;
+            const productManagerEl = createProductManager({
+                sellerId,
+                sellerProfile: currentProfile,
+                isSuspended,
+                initialTab: activeSubTab === 'add-product' ? 'add' : 'list',
+                onTabChange: (tab) => {
+                    activeSubTab = tab;
+                },
+                onProductChanged: () => {
+                    activeSubTab = 'products';
+                    loadData(true);
+                },
+            });
+            containerEl.querySelector('#seller-tab-content')?.appendChild(productManagerEl);
+        }
+
+        bindEvents();
+    }
+
+    function renderDashboardHomeTab(data, allOrders, subCalc, isSuspended, isOpen) {
+        const pendingOrders = allOrders.filter(
+            (o) => o.status === 'pending' || o.status === 'processing' || o.status === 'confirmed'
+        );
+        const maxAllowed = data.maxAllowed || 3;
+
+        return `
+            <div class="flex flex-col gap-6 w-full animate-fade-in">
+                <!-- 1. Bannière d'Abonnement (uniquement sur le Dashboard) -->
+                ${renderSubscriptionBanner(subCalc)}
+
+                <!-- 2. Guide de Démarrage Rapide (Onboarding Hero) si nouveau vendeur -->
                 ${(allOrders.length === 0 || Number(data.totalProductsCount || 0) === 0) && !isSuspended ? `
-                    <!-- Guide de Démarrage Rapide (Onboarding Hero moderne style Stripe/Shopify) -->
                     <div class="bg-gradient-to-br from-blue-50/70 via-white to-amber-50/30 rounded-3xl border border-primary/20 shadow-card p-5 sm:p-7 relative overflow-hidden flex flex-col gap-5">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                             <div class="flex items-center gap-3.5">
@@ -951,7 +1163,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                     </div>
                 ` : ''}
 
-                <!-- Grille Bento KPI (2 colonnes mobile, 4 colonnes desktop) -->
+                <!-- 3. Grille Bento KPI (2 colonnes mobile, 4 colonnes desktop) -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
                     <!-- Revenus Cumulés -->
                     <div 
@@ -1002,7 +1214,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                         </div>
                     </div>
 
-                    <!-- Articles en ligne -->
+                    <!-- Articles en ligne (Quota Formule : X / maxAllowed) -->
                     <div 
                         data-seller-kpi="products" 
                         title="Cliquer pour gérer mes articles en ligne"
@@ -1015,10 +1227,10 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                             </div>
                         </div>
                         <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">
-                            ${data.activeProductsCount || 0} <span class="text-xs font-bold text-slate-400">/ ${data.totalProductsCount || 0}</span>
+                            ${data.totalProductsCount || 0} <span class="text-xs font-bold text-slate-400">/ ${maxAllowed}</span>
                         </span>
                         <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
-                            <span>Catalogue actif</span>
+                            <span>${data.activeProductsCount || 0} en stock</span>
                             <span class="text-[10px] font-bold text-slate-400 group-hover:text-amber-600 flex items-center gap-0.5 transition-colors">Gérer <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
                     </div>
@@ -1045,172 +1257,137 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                     </div>
                 </div>
 
-                <!-- Barre d'onglets de navigation Tablette (sm à lg uniquement, masquée sur desktop et mobile) -->
-                <div class="hidden sm:flex lg:hidden items-center gap-1.5 border-b border-slate-200/80 overflow-x-auto no-scrollbar pb-2">
+                <!-- 4. Raccourcis d'action rapide -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     <button 
                         type="button" 
-                        data-seller-tab="orders"
-                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
-                            activeSubTab === 'orders'
-                                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }"
+                        id="btn-dashboard-go-products" 
+                        class="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
                     >
-                        <i class="fa-solid fa-clipboard-list text-xs"></i>
-                        <span>Commandes</span>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            activeSubTab === 'orders' 
-                                ? 'bg-white/20 text-white' 
-                                : (pendingCount > 0 ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-slate-100 text-slate-600')
-                        }">
-                            ${allOrders.length}
-                        </span>
-                    </button>
-
-                    <button 
-                        type="button" 
-                        data-seller-tab="products"
-                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
-                            activeSubTab === 'products'
-                                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }"
-                    >
-                        <i class="fa-solid fa-tags text-xs"></i>
-                        <span>Mes Articles</span>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            activeSubTab === 'products' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                        }">
-                            ${data.totalProductsCount || 0}
-                        </span>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
+                                <i class="fa-solid fa-tags"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900">Mes Articles</h4>
+                                <p class="text-[11px] text-slate-500 mt-0.5">${data.totalProductsCount || 0} produit(s) au catalogue</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-primary transition-colors"></i>
                     </button>
 
                     ${!isSuspended ? `
                         <button 
                             type="button" 
-                            data-seller-tab="add-product"
-                            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
-                                activeSubTab === 'add-product'
-                                    ? 'bg-primary text-white shadow-xs'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                            }"
+                            id="btn-dashboard-go-add-product" 
+                            class="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
                         >
-                            <i class="fa-solid fa-plus text-xs"></i>
-                            <span>Ajouter un produit</span>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
+                                    <i class="fa-solid fa-plus"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900">Ajouter un produit</h4>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">${Math.max(0, maxAllowed - (data.totalProductsCount || 0))} place(s) restante(s)</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-emerald-600 transition-colors"></i>
                         </button>
                     ` : ''}
-                </div>
 
-                <!-- Zone de contenu dynamique -->
-                <div id="seller-tab-content" class="w-full">
-                    ${activeSubTab === 'orders' ? renderOrdersTab(allOrders) : ''}
-                </div>
-            </main>
-
-            <!-- 5. BARRE INFÉRIEURE FIXE MOBILE VENDEUR (lg:hidden, TOUJOURS visible, z-50) -->
-            <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation vendeur mobile">
-                <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around">
-                    <!-- Dashboard -->
                     <button 
                         type="button" 
-                        id="bnav-seller-dashboard" 
-                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] text-slate-500 hover:text-slate-800 font-medium cursor-pointer active:scale-95"
+                        id="btn-dashboard-go-orders" 
+                        class="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
                     >
-                        <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>
-                        <span class="text-[10px] leading-tight">Dashboard</span>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
+                                <i class="fa-solid fa-clipboard-list"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900">Gérer les commandes</h4>
+                                <p class="text-[11px] text-slate-500 mt-0.5">${allOrders.length} commande(s) reçue(s)</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-amber-600 transition-colors"></i>
                     </button>
+                </div>
 
-                    <!-- Commandes -->
-                    <button 
-                        type="button" 
-                        id="bnav-seller-orders" 
-                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
-                            activeSubTab === 'orders'
-                                ? 'text-primary font-bold'
-                                : 'text-slate-500 hover:text-slate-800 font-medium'
-                        }"
-                    >
-                        ${activeSubTab === 'orders' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
-                        <div class="relative">
-                            <i class="fa-solid fa-clipboard-list text-lg mb-0.5"></i>
-                            ${pendingCount > 0 ? `
-                                <span class="absolute -top-1.5 -right-2.5 bg-amber-400 text-slate-950 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full border-2 border-white shadow-sm min-w-[18px] text-center transform scale-100 animate-pulse">
-                                    ${pendingCount}
+                <!-- 5. Aperçu des dernières commandes -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-6 flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Commandes récentes</h3>
+                            ${pendingOrders.length > 0 ? `
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                                    ${pendingOrders.length} en attente
                                 </span>
                             ` : ''}
                         </div>
-                        <span class="text-[10px] leading-tight">Commandes</span>
-                    </button>
-
-                    <!-- Mes Articles -->
-                    <button 
-                        type="button" 
-                        id="bnav-seller-products" 
-                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
-                            activeSubTab === 'products'
-                                ? 'text-primary font-bold'
-                                : 'text-slate-500 hover:text-slate-800 font-medium'
-                        }"
-                    >
-                        ${activeSubTab === 'products' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
-                        <div class="relative">
-                            <i class="fa-solid fa-tags text-lg mb-0.5"></i>
-                            <span class="absolute -top-1.5 -right-2.5 bg-slate-100 text-slate-700 font-bold text-[9px] px-1 py-0.2 rounded-full border border-slate-200 min-w-[16px] text-center">
-                                ${data.totalProductsCount || 0}
-                            </span>
-                        </div>
-                        <span class="text-[10px] leading-tight">Articles</span>
-                    </button>
-
-                    <!-- Ajouter un produit (si non suspendu) -->
-                    ${!isSuspended ? `
                         <button 
                             type="button" 
-                            id="bnav-seller-add" 
-                            class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
-                                activeSubTab === 'add-product'
-                                    ? 'text-emerald-700 font-bold'
-                                    : 'text-emerald-600 hover:text-emerald-800 font-medium'
-                            }"
+                            id="btn-dashboard-view-all-orders" 
+                            class="text-xs font-bold text-primary hover:text-primary-hover inline-flex items-center gap-1 cursor-pointer"
                         >
-                            ${activeSubTab === 'add-product' ? '<span class="absolute top-0 w-8 h-1 bg-emerald-600 rounded-full"></span>' : ''}
-                            <i class="fa-solid fa-circle-plus text-lg mb-0.5"></i>
-                            <span class="text-[10px] leading-tight">Ajouter</span>
+                            <span>Voir tout (${allOrders.length})</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
                         </button>
-                    ` : ''}
+                    </div>
 
-                    <!-- Voir Boutique Publique -->
-                    <button 
-                        type="button" 
-                        id="bnav-seller-shop" 
-                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] text-slate-500 hover:text-primary font-medium cursor-pointer active:scale-95"
-                    >
-                        <i class="fa-solid fa-store text-lg mb-0.5"></i>
-                        <span class="text-[10px] leading-tight">Boutique</span>
-                    </button>
+                    ${allOrders.length === 0 ? `
+                        <div class="py-8 text-center flex flex-col items-center justify-center gap-2">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-inbox"></i>
+                            </div>
+                            <p class="text-xs text-slate-500 font-medium max-w-sm">
+                                Vous n'avez pas encore de commandes. Dès qu'un étudiant passe une commande sur votre vitrine, elle apparaîtra ici avec une alerte sonore !
+                            </p>
+                        </div>
+                    ` : `
+                        <div class="divide-y divide-slate-100">
+                            ${allOrders.slice(0, 5).map((order) => {
+                                const buyerName = escapeHTML(order.buyer_name || 'Étudiant');
+                                const total = Number(order.total_price || order.price || 0).toLocaleString('fr-FR');
+                                const statusLabels = {
+                                    pending: { label: 'En attente', color: 'bg-amber-100 text-amber-900 border-amber-300' },
+                                    processing: { label: 'En cours', color: 'bg-blue-100 text-blue-900 border-blue-300' },
+                                    confirmed: { label: 'Confirmée', color: 'bg-blue-100 text-blue-900 border-blue-300' },
+                                    shipped: { label: 'En livraison', color: 'bg-indigo-100 text-indigo-900 border-indigo-300' },
+                                    delivered: { label: 'Livrée', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
+                                    cancelled: { label: 'Annulée', color: 'bg-rose-100 text-rose-900 border-rose-300' },
+                                };
+                                const st = statusLabels[order.status] || { label: order.status, color: 'bg-slate-100 text-slate-700 border-slate-200' };
+
+                                return `
+                                    <div class="py-3 flex items-center justify-between gap-3 text-xs">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold shrink-0">
+                                                <i class="fa-solid fa-bag-shopping"></i>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-bold text-slate-900 truncate">${buyerName}</span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">#${(order.id || '').slice(0, 6)}</span>
+                                                </div>
+                                                <p class="text-[11px] text-slate-500 truncate">
+                                                    ${escapeHTML(order.product?.title || order.delivery_address || 'Commande')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-3 shrink-0">
+                                            <span class="font-extrabold text-slate-900 tabular-nums">${total} F</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${st.color}">
+                                                ${st.label}
+                                            </span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
                 </div>
-            </nav>
+            </div>
         `;
-
-        if (activeSubTab === 'products' || activeSubTab === 'add-product') {
-            const currentProfile = dashboardData?.profile || seller;
-            const productManagerEl = createProductManager({
-                sellerId,
-                sellerProfile: currentProfile,
-                isSuspended,
-                initialTab: activeSubTab === 'add-product' ? 'add' : 'list',
-                onTabChange: (tab) => {
-                    activeSubTab = tab;
-                },
-                onProductChanged: () => {
-                    activeSubTab = 'products';
-                    loadData(true);
-                },
-            });
-            containerEl.querySelector('#seller-tab-content')?.appendChild(productManagerEl);
-        }
-
-        bindEvents();
     }
 
     function renderOrdersTab(orders) {
@@ -1549,7 +1726,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
     }
 
     function bindEvents() {
-        // Gestion de l'Abonnement Marchand (Modal SasPay / Sandbox)
+        // Gestion de l'Abonnement Marchand (Modal SasPay)
         const openSubscriptionHandler = () => {
             if (!subscriptionModal) {
                 subscriptionModal = createSubscriptionModal({
@@ -1733,6 +1910,11 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         });
 
         // Sous-onglets de navigation Sidebar Desktop
+        containerEl.querySelector('#subtab-dashboard')?.addEventListener('click', () => {
+            activeSubTab = 'dashboard';
+            render();
+        });
+
         containerEl.querySelector('#subtab-orders')?.addEventListener('click', () => {
             activeSubTab = 'orders';
             render();
@@ -1751,14 +1933,14 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         // Sous-onglets de navigation Tablette
         containerEl.querySelectorAll('button[data-seller-tab]').forEach((btn) => {
             btn.addEventListener('click', () => {
-                activeSubTab = btn.getAttribute('data-seller-tab') || 'orders';
+                activeSubTab = btn.getAttribute('data-seller-tab') || 'dashboard';
                 render();
             });
         });
 
         // Navigation fixe mobile vendeur (Bottom Nav)
         containerEl.querySelector('#bnav-seller-dashboard')?.addEventListener('click', () => {
-            activeSubTab = 'orders';
+            activeSubTab = 'dashboard';
             render();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
@@ -1775,6 +1957,27 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
 
         containerEl.querySelector('#bnav-seller-add')?.addEventListener('click', () => {
             activeSubTab = 'add-product';
+            render();
+        });
+
+        // Raccourcis et boutons de l'onglet Dashboard
+        containerEl.querySelector('#btn-dashboard-go-products')?.addEventListener('click', () => {
+            activeSubTab = 'products';
+            render();
+        });
+
+        containerEl.querySelector('#btn-dashboard-go-add-product')?.addEventListener('click', () => {
+            activeSubTab = 'add-product';
+            render();
+        });
+
+        containerEl.querySelector('#btn-dashboard-go-orders')?.addEventListener('click', () => {
+            activeSubTab = 'orders';
+            render();
+        });
+
+        containerEl.querySelector('#btn-dashboard-view-all-orders')?.addEventListener('click', () => {
+            activeSubTab = 'orders';
             render();
         });
 

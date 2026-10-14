@@ -35,7 +35,7 @@ Vite va afficher deux URLs dans votre terminal :
 | :--- | :--- | :--- | :--- | :--- |
 | **Essai Gratuit** | **0 FCFA** | **3 articles** | **7 jours** | Aucun paiement requis |
 | **Pack Starter** | **1 500 FCFA / mois** | **5 articles** | **30 jours** | [https://link.saspay.me/hgc4jifsarq](https://link.saspay.me/hgc4jifsarq) |
-| **Pack Pro** | **2 500 FCFA / mois** | **10 articles** | **30 jours** | [https://link.saspay.me/hgc4jifsarq](https://link.saspay.me/hgc4jifsarq) *(temporaire)* |
+| **Pack Pro** | **2 500 FCFA / mois** | **10 articles** | **30 jours** | [https://link.saspay.me/gxky6adwejc](https://link.saspay.me/gxky6adwejc) |
 
 ---
 
@@ -54,13 +54,6 @@ flowchart TD
     G --> H[Bouton : J'ai validé mon paiement • Activer ma boutique]
     H --> I[Boutique active pour 30 jours avec quota débloqué 🎉]
 ```
-
-### Option Test Sans Débit Réel (Simulation Sandbox)
-Pour tester le flux sur votre téléphone sans dépenser 1 500 F à chaque test :
-1. Dans la modale d'abonnement, cliquez sur **"Payer via SasPay"**.
-2. Sur l'écran qui s'affiche, cliquez sur le bouton gris :
-   **`Simuler paiement réussi (Test sans débit)`**.
-3. Votre profil vendeur sera immédiatement activé pour 30 jours, avec le quota complet débloqué et l'accès à la publication.
 
 ---
 
