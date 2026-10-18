@@ -17,7 +17,7 @@ import { createHeroBanner } from './components/HeroBanner.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
 import { createForcePasswordChangeModal } from './components/seller/ForcePasswordChangeModal.js';
 import { createSellerShowcase } from './components/seller/SellerShowcase.js';
-import { getCurrentSeller } from './services/seller-service.js';
+import { getCurrentSeller, confirmSubscriptionPayment } from './services/seller-service.js';
 import { supabase } from './services/supabase.js';
 import { cartStore } from './services/cart-store.js';
 import {
@@ -798,14 +798,61 @@ async function initApp() {
         }
     }
 
+    // Détection du retour de paiement SasPay (?payment=success&session_id=... ou #seller?payment=success&session_id=...)
+    async function checkPaymentReturnFlow() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let payment = urlParams.get('payment');
+        let sessionId = urlParams.get('session_id');
+
+        const rawHash = window.location.hash || '';
+        const qIndex = rawHash.indexOf('?');
+        if (qIndex !== -1) {
+            const hashParams = new URLSearchParams(rawHash.slice(qIndex + 1));
+            if (!payment) payment = hashParams.get('payment');
+            if (!sessionId) sessionId = hashParams.get('session_id');
+        }
+
+        if (payment === 'success' && sessionId) {
+            showToast('⏳ Vérification du paiement de votre abonnement auprès de SasPay...', 'info');
+            try {
+                const res = await confirmSubscriptionPayment({ sessionId });
+                if (res?.success) {
+                    showToast('🎉 Félicitations ! Votre abonnement 30 jours est validé et actif !', 'success');
+                    if (res.profile) {
+                        appState.currentSeller = res.profile;
+                        headerComponent?.updateSellerState?.(res.profile);
+                        bottomNavComponent?.setSeller?.(res.profile);
+                        try {
+                            localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(res.profile));
+                        } catch {}
+                    }
+                }
+            } catch (err) {
+                console.warn('[PaymentReturn] Vérification automatique:', err);
+                showToast(`Paiement en attente de validation: ${err.message}`, 'warning');
+            } finally {
+                const cleanHash = rawHash.startsWith('#seller') ? '#seller' : (rawHash.split('?')[0] || '');
+                history.replaceState(null, '', cleanHash || window.location.pathname);
+            }
+        } else if (payment === 'cancelled') {
+            showToast('Paiement annulé. Vous pouvez réessayer quand vous le souhaitez.', 'info');
+            const cleanHash = rawHash.startsWith('#seller') ? '#seller' : (rawHash.split('?')[0] || '');
+            history.replaceState(null, '', cleanHash || window.location.pathname);
+        }
+    }
+
     // Écoute des changements de fragment d'URL pour navigation directe
     window.addEventListener('hashchange', () => {
         const rawHash = window.location.hash;
         const hash = rawHash.toLowerCase();
-        if (hash === '#admin') navigateToView('admin');
-        else if (hash === '#seller') navigateToView('seller');
-        else if (hash === '#orders') navigateToView('orders');
-        else if (hash.startsWith('#shop/')) {
+        if (hash.startsWith('#admin')) {
+            navigateToView('admin');
+        } else if (hash.startsWith('#seller')) {
+            checkPaymentReturnFlow();
+            navigateToView('seller');
+        } else if (hash.startsWith('#orders')) {
+            navigateToView('orders');
+        } else if (hash.startsWith('#shop/')) {
             const sellerId = rawHash.slice(6);
             navigateToView('shop', { sellerId });
         } else if (hash.startsWith('#product/')) {
@@ -819,11 +866,12 @@ async function initApp() {
     // Rendu immédiat selon le hash URL (ou affichage immédiat des squelettes de chargement)
     const rawInitialHash = window.location.hash;
     const initialHash = rawInitialHash.toLowerCase();
-    if (initialHash === '#admin') {
+    checkPaymentReturnFlow();
+    if (initialHash.startsWith('#admin')) {
         navigateToView('admin');
-    } else if (initialHash === '#seller') {
+    } else if (initialHash.startsWith('#seller')) {
         navigateToView('seller');
-    } else if (initialHash === '#orders') {
+    } else if (initialHash.startsWith('#orders')) {
         navigateToView('orders');
     } else if (initialHash.startsWith('#shop/')) {
         const sellerId = rawInitialHash.slice(6);

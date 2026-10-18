@@ -30,6 +30,9 @@ import {
     grantSellerTrialExtension,
     manuallyActivateSubscription,
     adminResetSellerPassword,
+    fetchPendingSubscriptionPayments,
+    approveSubscriptionPayment,
+    rejectSubscriptionPayment,
 } from '../../services/admin-service.js';
 import { computeSubscriptionStatus, getPlanDetails } from '../../config/subscription.js';
 import { supabase } from '../../services/supabase.js';
@@ -63,7 +66,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     let activeTab = 'overview'; // 'overview' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations'
     let productSearchQuery = '';
     let sellerSearchQuery = '';
-    let sellerFilterTab = 'all'; // 'all' | 'pending' | 'active' | 'suspended'
+    let sellerFilterTab = 'all'; // 'all' | 'pending' | 'active' | 'suspended' | 'payments'
+    let pendingSubscriptionPayments = [];
     let accountSearchQuery = '';
     let accountRoleFilter = 'all'; // 'all' | 'acheteur' | 'vendeur' | 'superadmin' | 'suspendu'
     let orderSearchQuery = '';
@@ -103,7 +107,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         render();
 
         try {
-            const [m, p, a, prods, ords, locs, profs] = await Promise.all([
+            const [m, p, a, prods, ords, locs, profs, subPays] = await Promise.all([
                 fetchGlobalMetrics(),
                 fetchPendingSellers(),
                 fetchActiveSellers(),
@@ -111,6 +115,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 fetchAllOrdersAdmin().catch(() => []),
                 fetchDeliveryLocations(true).catch(() => []),
                 fetchAllProfilesAdmin().catch(() => []),
+                fetchPendingSubscriptionPayments().catch(() => []),
             ]);
             metrics = m;
             pendingSellers = p || [];
@@ -119,6 +124,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             allOrders = ords || [];
             deliveryLocations = locs || [];
             allProfiles = (profs && profs.length > 0) ? profs : [...pendingSellers, ...activeSellers];
+            pendingSubscriptionPayments = subPays || [];
         } catch (err) {
             console.error('[SuperAdmin] Erreur chargement données:', err);
             if (typeof onShowToast === 'function') {
@@ -157,10 +163,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             sellerMonthlyFee: 2000,
         };
 
-        const pendingAlert = pendingSellers.length > 0;
+        const pendingAlert = pendingSellers.length > 0 || pendingSubscriptionPayments.length > 0;
         const navTabs = [
             { id: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie', badge: null },
-            { id: 'sellers', label: "Marchands", icon: 'fa-users-gear', badge: pendingSellers.length + activeSellers.length, badgeAlert: pendingAlert },
+            { id: 'sellers', label: "Marchands", icon: 'fa-users-gear', badge: pendingSellers.length + activeSellers.length + pendingSubscriptionPayments.length, badgeAlert: pendingAlert },
             { id: 'accounts', label: "Comptes", icon: 'fa-id-card-clip', badge: allProfiles.length || (pendingSellers.length + activeSellers.length + 1) },
             { id: 'products', label: "Produits", icon: 'fa-box', badge: allProducts.length },
             { id: 'orders', label: "Commandes", icon: 'fa-truck-ramp-box', badge: allOrders.length },
@@ -1044,11 +1050,23 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         };
 
         const totalPending = pendingSellers.length;
+        const totalPendingPayments = pendingSubscriptionPayments.length;
         const activeCount = activeSellers.filter((s) => !isSellerSuspended(s)).length;
         const suspendedCount = activeSellers.filter((s) => isSellerSuspended(s)).length;
         const totalAccounts = totalPending + activeSellers.length;
 
         const filteredPending = pendingSellers.filter(matchesQuery);
+        const filteredPendingPayments = pendingSubscriptionPayments.filter((p) => {
+            if (!query) return true;
+            const prof = p.profiles || {};
+            return (
+                (prof.prenom || '').toLowerCase().includes(query) ||
+                (prof.nom || '').toLowerCase().includes(query) ||
+                (prof.shop_name || '').toLowerCase().includes(query) ||
+                (p.transaction_reference || '').toLowerCase().includes(query) ||
+                (p.customer_phone || '').toLowerCase().includes(query)
+            );
+        });
         const filteredActive = activeSellers.filter((s) => {
             if (!matchesQuery(s)) return false;
             const suspended = isSellerSuspended(s);
@@ -1057,8 +1075,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             return true;
         });
 
-        const showPendingSection = (sellerFilterTab === 'all' || sellerFilterTab === 'pending') && (filteredPending.length > 0 || sellerFilterTab === 'pending');
-        const showActiveSection = sellerFilterTab === 'all' || sellerFilterTab === 'active' || sellerFilterTab === 'suspended';
+        const showPaymentsSection = (sellerFilterTab === 'all' || sellerFilterTab === 'payments') && (filteredPendingPayments.length > 0 || sellerFilterTab === 'payments');
+        const showPendingSection = sellerFilterTab !== 'payments' && (sellerFilterTab === 'all' || sellerFilterTab === 'pending') && (filteredPending.length > 0 || sellerFilterTab === 'pending');
+        const showActiveSection = sellerFilterTab !== 'payments' && (sellerFilterTab === 'all' || sellerFilterTab === 'active' || sellerFilterTab === 'suspended');
 
         return `
             <div class="flex flex-col gap-5">
@@ -1069,7 +1088,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         <input 
                             type="text" 
                             id="admin-seller-search" 
-                            placeholder="Rechercher nom, boutique, téléphone..." 
+                            placeholder="Rechercher nom, boutique, référence, téléphone..." 
                             value="${escapeHTML(sellerSearchQuery)}"
                             class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[40px]"
                         >
@@ -1085,6 +1104,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
                             <button type="button" data-seller-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${sellerFilterTab === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
                                 Tous (${totalAccounts})
+                            </button>
+                            <button type="button" data-seller-filter="payments" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'payments' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                <i class="fa-solid fa-receipt text-[11px] ${sellerFilterTab === 'payments' ? 'text-white' : 'text-emerald-600'}"></i>
+                                <span>Paiements</span>
+                                ${totalPendingPayments > 0 ? `
+                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'payments' ? 'bg-white/20 text-white' : 'bg-amber-400 text-slate-950 animate-pulse'}">${totalPendingPayments}</span>
+                                ` : ''}
                             </button>
                             <button type="button" data-seller-filter="pending" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'pending' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
                                 <span>En attente</span>
@@ -1108,6 +1134,54 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         </button>
                     </div>
                 </div>
+
+                ${totalPendingPayments > 0 && sellerFilterTab !== 'payments' ? `
+                    <!-- Bannière alerte paiements en attente -->
+                    <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                        <div class="flex items-start sm:items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-sm font-black shrink-0 animate-pulse">
+                                <i class="fa-solid fa-receipt"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-heading font-extrabold text-xs sm:text-sm text-slate-900">
+                                    ${totalPendingPayments} preuve${totalPendingPayments > 1 ? 's' : ''} de paiement SasPay en attente de vérification
+                                </h4>
+                                <p class="text-[11px] text-slate-600">
+                                    Des marchands ont soumis leur référence de transaction pour activer leur abonnement 30 jours.
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            data-seller-filter="payments" 
+                            class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-extrabold text-xs transition-all cursor-pointer shadow-xs whitespace-nowrap self-start sm:self-auto"
+                        >
+                            Vérifier (${totalPendingPayments})
+                        </button>
+                    </div>
+                ` : ''}
+
+                ${showPaymentsSection ? `
+                    <!-- Paiements SasPay en attente -->
+                    <div class="bg-white rounded-2xl border border-amber-200/90 shadow-xs p-4 sm:p-5 flex flex-col gap-3.5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-receipt"></i>
+                                </div>
+                                <div>
+                                    <h2 class="font-heading font-extrabold text-base text-slate-900">Paiements d'Abonnement en Attente</h2>
+                                    <p class="text-xs text-slate-500">Validation manuelle des preuves de règlement SasPay / Mobile Money</p>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${filteredPendingPayments.length > 0 ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 text-slate-600'}">
+                                ${filteredPendingPayments.length}
+                            </span>
+                        </div>
+
+                        ${renderPendingPaymentsList(filteredPendingPayments)}
+                    </div>
+                ` : ''}
 
                 ${showPendingSection ? `
                     <!-- Demandes en attente -->
@@ -1141,6 +1215,186 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         ${renderActiveSellersList(filteredActive)}
                     </div>
                 ` : ''}
+            </div>
+        `;
+    }
+
+    function renderPendingPaymentsList(list = pendingSubscriptionPayments) {
+        if (list.length === 0) {
+            return `
+                <div class="text-center py-8 text-slate-400">
+                    <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-1 block"></i>
+                    <p class="text-xs font-semibold">Aucun paiement d'abonnement en attente de validation.</p>
+                </div>
+            `;
+        }
+
+        return `
+            <!-- Version Desktop (Tableau) -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
+                        <tr>
+                            <th class="py-3 px-4">Marchand</th>
+                            <th class="py-3 px-4">Montant & Formule</th>
+                            <th class="py-3 px-4">Opérateur & Réf</th>
+                            <th class="py-3 px-4">Contact</th>
+                            <th class="py-3 px-4">Date soumission</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${list.map((pay) => {
+                            const prof = pay.profiles || {};
+                            const planLabel = pay.amount >= 2500 ? 'Pack Pro (10 arts)' : 'Pack Starter (5 arts)';
+                            const dateStr = pay.created_at ? new Date(pay.created_at).toLocaleDateString('fr-FR', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }) : 'Récemment';
+
+                            return `
+                                <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs shrink-0">
+                                                ${((prof.prenom?.[0] || '') + (prof.nom?.[0] || '')).toUpperCase() || 'V'}
+                                            </div>
+                                            <div class="min-w-0">
+                                                <span class="font-bold text-slate-900 block truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
+                                                <span class="text-[10px] text-slate-400 block">${escapeHTML(prof.shop_name || 'Boutique')}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex flex-col">
+                                            <span class="font-extrabold text-slate-900">${(pay.amount || 0).toLocaleString('fr-FR')} ${pay.currency || 'FCFA'}</span>
+                                            <span class="text-[10px] font-semibold text-primary">${planLabel}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex flex-col">
+                                            <span class="font-bold text-slate-800 uppercase text-[11px] flex items-center gap-1">
+                                                <i class="fa-solid fa-mobile-screen text-[10px] text-slate-400"></i>
+                                                ${escapeHTML(pay.operator || 'SasPay')}
+                                            </span>
+                                            <span class="font-mono text-[10px] text-slate-500 select-all">${escapeHTML(pay.transaction_reference || 'N/A')}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex flex-col text-[11px]">
+                                            <span class="text-slate-700">${escapeHTML(pay.customer_phone || prof.telephone || 'Non renseigné')}</span>
+                                            ${prof.email ? `<span class="text-slate-400 text-[10px] truncate">${escapeHTML(prof.email)}</span>` : ''}
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 text-slate-500 text-[11px]">
+                                        ${dateStr}
+                                    </td>
+                                    <td class="py-3 px-4 text-right">
+                                        <div class="flex items-center justify-end gap-1.5">
+                                            <button 
+                                                type="button" 
+                                                data-action="approve-sub-payment" 
+                                                data-id="${pay.id}" 
+                                                data-seller-id="${pay.seller_id}"
+                                                data-shop="${escapeHTML(prof.shop_name || `${prof.prenom || ''} ${prof.nom || ''}`)}"
+                                                class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs transition-all shadow-2xs flex items-center gap-1 min-h-[34px] cursor-pointer"
+                                                title="Valider et activer 30 jours"
+                                            >
+                                                <i class="fa-solid fa-check text-xs"></i>
+                                                <span>Valider (30j)</span>
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                data-action="reject-sub-payment" 
+                                                data-id="${pay.id}" 
+                                                data-shop="${escapeHTML(prof.shop_name || `${prof.prenom || ''} ${prof.nom || ''}`)}"
+                                                class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-xs border border-rose-200 transition-all min-h-[34px] cursor-pointer"
+                                                title="Rejeter"
+                                            >
+                                                <i class="fa-solid fa-xmark text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Version Mobile (Cartes) -->
+            <div class="md:hidden flex flex-col gap-3">
+                ${list.map((pay) => {
+                    const prof = pay.profiles || {};
+                    const planLabel = pay.amount >= 2500 ? 'Pack Pro (10 arts)' : 'Pack Starter (5 arts)';
+                    const dateStr = pay.created_at ? new Date(pay.created_at).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : 'Récemment';
+
+                    return `
+                        <div class="p-4 rounded-2xl border border-amber-200/90 bg-amber-50/40 flex flex-col gap-3 shadow-2xs">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <h3 class="font-heading font-extrabold text-slate-900 text-sm truncate">
+                                        ${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}
+                                    </h3>
+                                    <span class="text-xs text-slate-500">${escapeHTML(prof.shop_name || 'Boutique')}</span>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="font-extrabold text-slate-900 text-sm block">${(pay.amount || 0).toLocaleString('fr-FR')} ${pay.currency || 'FCFA'}</span>
+                                    <span class="text-[10px] font-bold text-primary block">${planLabel}</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-white/80 p-2.5 rounded-xl border border-amber-100 flex flex-col gap-1 text-xs">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-500">Opérateur :</span>
+                                    <span class="font-bold text-slate-800 uppercase">${escapeHTML(pay.operator || 'SasPay')}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-500">Réf / Trans ID :</span>
+                                    <span class="font-mono text-[11px] font-bold text-slate-900 select-all">${escapeHTML(pay.transaction_reference || 'N/A')}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-500">Téléphone :</span>
+                                    <span class="font-semibold text-slate-700">${escapeHTML(pay.customer_phone || prof.telephone || 'Non renseigné')}</span>
+                                </div>
+                                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                                    <span>Date :</span>
+                                    <span>${dateStr}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-1 border-t border-amber-200/60">
+                                <button 
+                                    type="button" 
+                                    data-action="approve-sub-payment" 
+                                    data-id="${pay.id}" 
+                                    data-seller-id="${pay.seller_id}"
+                                    data-shop="${escapeHTML(prof.shop_name || `${prof.prenom || ''} ${prof.nom || ''}`)}"
+                                    class="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                                >
+                                    <i class="fa-solid fa-check text-xs"></i>
+                                    <span>Valider (30 jours)</span>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    data-action="reject-sub-payment" 
+                                    data-id="${pay.id}" 
+                                    data-shop="${escapeHTML(prof.shop_name || `${prof.prenom || ''} ${prof.nom || ''}`)}"
+                                    class="py-2.5 px-4 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 transition-all min-h-[44px] cursor-pointer"
+                                >
+                                    Rejeter
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
     }
@@ -2785,6 +3039,85 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             containerEl.querySelector('#btn-export-sellers-csv')?.addEventListener('click', () => {
                 exportSellersToCSV([...pendingSellers, ...activeSellers]);
                 showToast('Export CSV des marchands généré avec succès !', 'success');
+            });
+
+            // Valider une preuve de paiement d'abonnement (SasPay / Mobile Money)
+            containerEl.querySelectorAll('button[data-action="approve-sub-payment"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const paymentId = btn.getAttribute('data-id');
+                    const sellerId = btn.getAttribute('data-seller-id');
+                    const shop = btn.getAttribute('data-shop') || 'ce marchand';
+                    const confirmed = await showConfirm({
+                        title: "Valider le paiement de l'abonnement",
+                        message: `Confirmez-vous la réception du paiement pour la boutique "${shop}" ?\n\nCette action activera l'abonnement pour 30 jours à compter d'aujourd'hui.`,
+                        confirmText: 'Valider (30 jours)',
+                        cancelText: 'Annuler',
+                        isDestructive: false,
+                        icon: 'fa-circle-check',
+                    });
+
+                    if (!confirmed) return;
+
+                    btn.disabled = true;
+                    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i>`;
+                    try {
+                        await approveSubscriptionPayment(paymentId);
+                        pendingSubscriptionPayments = pendingSubscriptionPayments.filter((p) => p.id !== paymentId);
+                        const targetSeller = activeSellers.find((s) => s.id === sellerId);
+                        if (targetSeller) {
+                            targetSeller.subscription_status = 'active';
+                            const now = new Date();
+                            now.setDate(now.getDate() + 30);
+                            targetSeller.subscription_expires_at = now.toISOString();
+                            targetSeller.is_open = true;
+                        }
+                        showToast(`Paiement validé ! Abonnement activé 30 jours pour "${shop}". 💳`, 'success');
+                        const contentEl = containerEl.querySelector('#admin-tab-content');
+                        if (contentEl && activeTab === 'sellers') {
+                            contentEl.innerHTML = renderSellersTab();
+                            bindSellersEvents();
+                        }
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = `<i class="fa-solid fa-check text-xs"></i> <span>Valider (30j)</span>`;
+                    }
+                });
+            });
+
+            // Rejeter une preuve de paiement
+            containerEl.querySelectorAll('button[data-action="reject-sub-payment"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const paymentId = btn.getAttribute('data-id');
+                    const shop = btn.getAttribute('data-shop') || 'ce marchand';
+                    const confirmed = await showConfirm({
+                        title: 'Rejeter le paiement',
+                        message: `Voulez-vous rejeter ce paiement pour "${shop}" ?\n\nLe vendeur devra réitérer son paiement ou soumettre une preuve valide.`,
+                        confirmText: 'Rejeter le paiement',
+                        cancelText: 'Annuler',
+                        isDestructive: true,
+                        icon: 'fa-circle-xmark',
+                    });
+
+                    if (!confirmed) return;
+
+                    btn.disabled = true;
+                    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i>`;
+                    try {
+                        await rejectSubscriptionPayment(paymentId);
+                        pendingSubscriptionPayments = pendingSubscriptionPayments.filter((p) => p.id !== paymentId);
+                        showToast(`Paiement rejeté pour "${shop}".`, 'info');
+                        const contentEl = containerEl.querySelector('#admin-tab-content');
+                        if (contentEl && activeTab === 'sellers') {
+                            contentEl.innerHTML = renderSellersTab();
+                            bindSellersEvents();
+                        }
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = `Rejeter`;
+                    }
+                });
             });
 
             // Approuver un vendeur

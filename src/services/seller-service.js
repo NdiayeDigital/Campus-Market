@@ -589,19 +589,29 @@ export async function initiateSubscriptionPayment({ sellerId, plan, operator, se
  * @returns {Promise<Object>} Profil mis à jour
  */
 export async function confirmSubscriptionPayment({ sessionId, sellerId, plan, operator }) {
-    if (!sessionId || !sellerId) throw new Error('Informations de confirmation incomplètes.');
+    if (!sessionId) throw new Error('Informations de confirmation incomplètes : session_id manquant.');
+
+    let targetSellerId = sellerId;
+    if (!targetSellerId) {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            targetSellerId = session?.user?.id;
+        } catch {}
+    }
+    if (!targetSellerId) {
+        throw new Error('Identifiant vendeur manquant pour la confirmation.');
+    }
 
     const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
     const validOperator = operator === 'om' ? 'om' : 'wave';
-    const maxProducts = getMaxProductsForPlan(validPlan);
 
-    // 1. Appel du point d'API de vérification
+    // 1. Appel du point d'API de vérification réelle
     const verifyRes = await fetch('/api/verify-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             sessionId,
-            sellerId,
+            sellerId: targetSellerId,
             plan: validPlan,
             operator: validOperator,
         }),
@@ -609,62 +619,28 @@ export async function confirmSubscriptionPayment({ sessionId, sellerId, plan, op
 
     if (!verifyRes.ok) {
         const errJson = await verifyRes.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Impossible de vérifier le paiement.');
+        throw new Error(errJson.error || 'Paiement non confirmé par la passerelle de règlement.');
     }
 
     const verification = await verifyRes.json();
-    const durationDays = verification.durationDays || 30;
-    const expiresAt = verification.expiresAt || new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-    const nowIso = new Date().toISOString();
 
-    // 2. Mise à jour de la table profiles dans Supabase
-    const updatePayload = {
-        subscription_status: 'active',
-        subscription_plan: validPlan,
-        max_products: maxProducts,
-        subscription_expires_at: expiresAt,
-        last_payment_date: nowIso,
-        last_payment_id: sessionId,
-        is_open: true,
-    };
-
+    // 2. Récupération du profil mis à jour depuis Supabase
     let updatedProfile = null;
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .update(updatePayload)
+            .select('*')
             .eq('id', sellerId)
-            .select()
             .single();
 
         if (!error && data) {
             updatedProfile = data;
-        } else {
-            console.warn('[SellerService] Avertissement update profil:', error?.message);
         }
     } catch (dbErr) {
-        console.warn('[SellerService] Exception mise à jour profil:', dbErr);
+        console.warn('[SellerService] Exception lecture profil mis à jour:', dbErr);
     }
 
-    // 3. Enregistrement dans la table seller_payments pour traçabilité
-    try {
-        const planObj = SUBSCRIPTION_PLANS[validPlan];
-        await supabase.from('seller_payments').insert({
-            seller_id: sellerId,
-            amount: planObj.price,
-            currency: 'XOF',
-            plan: validPlan,
-            operator: validOperator,
-            provider: 'saspay',
-            provider_session_id: sessionId,
-            status: 'success',
-            metadata: { confirmed_at: nowIso, mode: verification.mode || 'saspay' },
-        });
-    } catch (payErr) {
-        console.warn('[SellerService] Trace paiement optionnelle non bloquante:', payErr.message);
-    }
-
-    // 4. Mettre à jour le cache local du profil
+    // 3. Mettre à jour le cache local du profil
     if (typeof localStorage !== 'undefined' && updatedProfile) {
         try {
             localStorage.setItem('campus_market_cached_seller', JSON.stringify(updatedProfile));
@@ -673,9 +649,98 @@ export async function confirmSubscriptionPayment({ sessionId, sellerId, plan, op
 
     return {
         success: true,
-        profile: updatedProfile || { id: sellerId, ...updatePayload },
+        profile: updatedProfile || { id: sellerId, subscription_status: 'active', subscription_plan: validPlan },
         verification,
     };
+}
+
+/**
+ * Transmet une preuve ou référence de paiement Wave / Orange Money pour validation administrative.
+ * @param {Object} params
+ * @param {string} params.sellerId
+ * @param {string} params.plan
+ * @param {string} params.operator
+ * @param {string} params.transactionRef
+ * @param {string} [params.phone]
+ * @returns {Promise<Object>}
+ */
+export async function submitSubscriptionPaymentProof({ sellerId, plan, operator, transactionRef, phone }) {
+    if (!sellerId) throw new Error('ID vendeur manquant.');
+    if (!transactionRef || !transactionRef.trim()) {
+        throw new Error('Veuillez renseigner votre référence de paiement ou numéro payeur.');
+    }
+
+    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    const validOperator = operator === 'om' ? 'om' : 'wave';
+    const planObj = SUBSCRIPTION_PLANS[validPlan];
+
+    // 1. Tenter via la procédure stockée RPC sécurisée
+    let rpcDone = false;
+    let paymentId = null;
+    try {
+        const { data, error } = await supabase.rpc('submit_subscription_payment', {
+            p_plan: validPlan,
+            p_operator: validOperator,
+            p_transaction_ref: transactionRef.trim(),
+            p_phone: (phone || '').trim(),
+        });
+        if (!error && data) {
+            paymentId = data;
+            rpcDone = true;
+        }
+    } catch {}
+
+    // 2. Repli direct par insertion dans seller_payments
+    if (!rpcDone) {
+        const { data: inserted, error: insErr } = await supabase.from('seller_payments').insert({
+            seller_id: sellerId,
+            amount: planObj.price,
+            currency: 'XOF',
+            plan: validPlan,
+            operator: validOperator,
+            provider: 'saspay',
+            provider_session_id: transactionRef.trim(),
+            status: 'pending',
+            metadata: {
+                transaction_ref: transactionRef.trim(),
+                payer_phone: (phone || '').trim(),
+                submitted_at: new Date().toISOString(),
+            },
+        }).select('id').single();
+
+        if (insErr) {
+            throw new Error(`Échec de transmission de la preuve : ${insErr.message}`);
+        }
+        paymentId = inserted?.id;
+    }
+
+    return {
+        success: true,
+        paymentId,
+        status: 'pending',
+        message: 'Preuve de paiement transmise avec succès à l\'administration pour validation.',
+    };
+}
+
+/**
+ * Récupère les paiements en attente de vérification pour un vendeur donné.
+ * @param {string} sellerId
+ * @returns {Promise<Array>}
+ */
+export async function fetchSellerPendingPayments(sellerId) {
+    if (!sellerId) return [];
+    try {
+        const { data, error } = await supabase
+            .from('seller_payments')
+            .select('*')
+            .eq('seller_id', sellerId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+        if (error) return [];
+        return data || [];
+    } catch {
+        return [];
+    }
 }
 
 /**
@@ -766,5 +831,7 @@ export default {
     getSellerSubscription,
     initiateSubscriptionPayment,
     confirmSubscriptionPayment,
+    submitSubscriptionPaymentProof,
+    fetchSellerPendingPayments,
     changeSellerPassword,
 };

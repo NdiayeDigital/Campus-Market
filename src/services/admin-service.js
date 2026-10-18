@@ -937,6 +937,132 @@ export async function adminResetSellerPassword(sellerId) {
     };
 }
 
+/**
+ * Récupère l'ensemble des demandes de paiement d'abonnements en attente de vérification.
+ * @returns {Promise<Array>}
+ */
+export async function fetchPendingSubscriptionPayments() {
+    try {
+        const { data, error } = await supabase
+            .from('seller_payments')
+            .select('*, seller:seller_id(id, prenom, nom, email, telephone, subscription_plan, subscription_status, shop_name)')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.warn('[AdminService] Note fetchPendingSubscriptionPayments:', error.message);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.error('[AdminService] Erreur fetchPendingSubscriptionPayments:', err);
+        return [];
+    }
+}
+
+/**
+ * Approuve un paiement d'abonnement et active la boutique du vendeur pour 30 jours.
+ * @param {string} paymentId - UUID de la transaction dans seller_payments
+ * @returns {Promise<Object>}
+ */
+export async function approveSubscriptionPayment(paymentId) {
+    if (!paymentId) throw new Error('ID de paiement requis.');
+
+    // 1. Tenter via la RPC sécurisée admin_approve_subscription_payment
+    let rpcSuccess = false;
+    try {
+        const { data, error } = await supabase.rpc('admin_approve_subscription_payment', {
+            target_payment_id: paymentId,
+            duration_days: 30,
+        });
+        if (!error && data) {
+            rpcSuccess = true;
+        }
+    } catch {}
+
+    if (rpcSuccess) {
+        return { success: true };
+    }
+
+    // 2. Repli côté service avec session SuperAdmin active
+    const { data: payment, error: pErr } = await supabase
+        .from('seller_payments')
+        .select('*')
+        .eq('id', paymentId)
+        .single();
+
+    if (pErr || !payment) throw new Error('Paiement introuvable.');
+
+    // Activer l'abonnement du vendeur pour 30 jours
+    await manuallyActivateSubscription(payment.seller_id, payment.plan || 'starter', 30);
+
+    // Mettre à jour le statut du paiement
+    const { data: updatedPay, error: uErr } = await supabase
+        .from('seller_payments')
+        .update({
+            status: 'success',
+            metadata: {
+                ...(payment.metadata || {}),
+                approved_at: new Date().toISOString(),
+                approved_via: 'superadmin_dashboard',
+            },
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', paymentId)
+        .select()
+        .single();
+
+    if (uErr) {
+        console.warn('[AdminService] Note mise à jour statut paiement:', uErr.message);
+    }
+
+    return { success: true, payment: updatedPay };
+}
+
+/**
+ * Rejette une demande de paiement d'abonnement avec motif explicatif.
+ * @param {string} paymentId
+ * @param {string} [reason]
+ * @returns {Promise<Object>}
+ */
+export async function rejectSubscriptionPayment(paymentId, reason = '') {
+    if (!paymentId) throw new Error('ID de paiement requis.');
+
+    // 1. Tenter via la RPC sécurisée admin_reject_subscription_payment
+    let rpcSuccess = false;
+    try {
+        const { data, error } = await supabase.rpc('admin_reject_subscription_payment', {
+            target_payment_id: paymentId,
+            rejection_reason: reason || 'Paiement non constaté ou référence invalide.',
+        });
+        if (!error && data) {
+            rpcSuccess = true;
+        }
+    } catch {}
+
+    if (rpcSuccess) {
+        return { success: true };
+    }
+
+    // 2. Repli côté service
+    const { data: updatedPay, error } = await supabase
+        .from('seller_payments')
+        .update({
+            status: 'failed',
+            metadata: {
+                rejected_at: new Date().toISOString(),
+                rejection_reason: reason || 'Paiement non constaté ou référence invalide.',
+            },
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', paymentId)
+        .select()
+        .single();
+
+    if (error) throw new Error(`Échec du rejet : ${error.message}`);
+    return { success: true, payment: updatedPay };
+}
+
 export default {
     ensureAdminSellerProfile,
     verifyAdminRole,
@@ -962,6 +1088,9 @@ export default {
     grantSellerTrialExtension,
     manuallyActivateSubscription,
     adminResetSellerPassword,
+    fetchPendingSubscriptionPayments,
+    approveSubscriptionPayment,
+    rejectSubscriptionPayment,
     DEFAULT_DELIVERY_LOCATIONS,
 };
 

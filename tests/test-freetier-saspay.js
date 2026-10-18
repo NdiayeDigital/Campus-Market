@@ -205,10 +205,11 @@ assert(proResp.paymentLink === 'https://link.saspay.me/gxky6adwejc', 'Lien SasPa
 assert(proResp.durationDays === 30, 'Durée de 30 jours pour Pro');
 
 // -------------------------------------------------------------
-// 5. API Vérification de Paiement /api/verify-payment
+// 5. API Vérification de Paiement /api/verify-payment (Sécurité Anti-Contournement)
 // -------------------------------------------------------------
-console.log('\n🔍 5. Vérification de l\'API /api/verify-payment...');
+console.log('\n🔒 5. Vérification de la Sécurité /api/verify-payment (Blocage contournement)...');
 
+// Tentative de validation d'une session non certifiée par SasPay
 const verifyCtx = createMockReqRes({
     sessionId: proResp.sessionId,
     plan: 'pro',
@@ -216,13 +217,10 @@ const verifyCtx = createMockReqRes({
     sellerId: 'seller-uuid-2',
 });
 await verifyPaymentHandler(verifyCtx.req, verifyCtx.res);
-assert(verifyCtx.getStatusCode() === 200, 'Code 200 pour vérification de session');
+assert(verifyCtx.getStatusCode() === 400, 'Code 400 : Paiement non confirmé rejeté (contournement bloqué)');
 const verifyResp = verifyCtx.getResponse();
-assert(verifyResp.success === true, 'Vérification de session réussie');
-assert(verifyResp.subscriptionStatus === 'active', 'Statut vendeur mis à "active"');
-assert(verifyResp.maxProducts === 10, 'Quota de 10 produits débloqué pour Pack Pro');
-assert(verifyResp.durationDays === 30, 'Durée d\'activation de 30 jours pour Pack Pro');
-assert(Boolean(verifyResp.expiresAt), 'Date d\'expiration fournie');
+assert(verifyResp.success === false, 'Échec de vérification pour session non confirmée');
+assert(Boolean(verifyResp.error), 'Message d\'erreur explicite retourné');
 
 // -------------------------------------------------------------
 // 6. API Webhook SasPay /api/webhook-saspay
@@ -230,13 +228,13 @@ assert(Boolean(verifyResp.expiresAt), 'Date d\'expiration fournie');
 console.log('\n🔔 6. Vérification du Webhook IPN SasPay...');
 
 const webhookCtx = createMockReqRes({
-    event: 'charge.success',
+    event: 'transaction.success',
     data: {
         id: 'sas_tx_998877',
-        status: 'successful',
+        status: 'SUCCESS',
         amount: '1500.00',
         metadata: {
-            seller_id: 'seller-uuid-3',
+            seller_id: '11111111-2222-3333-4444-555555555555',
             plan: 'starter',
             operator: 'wave',
         },
@@ -246,5 +244,6 @@ await webhookHandler(webhookCtx.req, webhookCtx.res);
 assert(webhookCtx.getStatusCode() === 200, 'Code 200 pour accusé réception webhook');
 const webhookResp = webhookCtx.getResponse();
 assert(webhookResp.received === true, 'Accusé réception webhook renvoyé à SasPay');
+assert(webhookResp.success === true, 'Abonnement activé par webhook automatique');
 
 console.log(`\n🎉 TOUS LES TESTS SONT VALIDÉS AVEC SUCCÈS ! (${passedTests}/${totalTests} assertions réussies)\n`);

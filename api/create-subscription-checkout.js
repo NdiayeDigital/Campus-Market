@@ -67,7 +67,7 @@ export default async function handler(req, res) {
                         customer_email: sellerEmail || 'etudiant@univ-thies.sn',
                         customer_name: sellerName || 'Vendeur Campus',
                         payment_method: validOperator === 'wave' ? 'wave_sn' : 'orange_money_sn',
-                        return_url: `${effectiveOrigin}/#seller?payment=success&plan=${plan}&op=${validOperator}`,
+                        return_url: `${effectiveOrigin}/#seller?payment=success&plan=${plan}&op=${validOperator}&session_id={CHECKOUT_SESSION_ID}`,
                         cancel_url: `${effectiveOrigin}/#seller?payment=cancelled`,
                         metadata: {
                             seller_id: sellerId,
@@ -79,10 +79,34 @@ export default async function handler(req, res) {
 
                 if (saspayRes.ok) {
                     const saspayData = await saspayRes.json();
+                    const liveSessionId = saspayData.id || saspayData.session_id;
+
+                    // Trace d'intention de paiement en attente
+                    try {
+                        const { createClient } = await import('@supabase/supabase-js');
+                        const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://fqulqgdjusfzhcjpvyay.supabase.co';
+                        const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
+                        const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+                        await sb.from('seller_payments').insert({
+                            seller_id: sellerId,
+                            amount: Number(planConfig.amount),
+                            currency: 'XOF',
+                            plan,
+                            operator: validOperator,
+                            provider: 'saspay',
+                            provider_session_id: liveSessionId,
+                            status: 'pending',
+                            metadata: {
+                                initiated_at: new Date().toISOString(),
+                                mode: 'checkout_session',
+                            },
+                        });
+                    } catch {}
+
                     return res.status(200).json({
                         mode: 'live',
                         checkoutUrl: saspayData.checkout_url || saspayData.url,
-                        sessionId: saspayData.id || saspayData.session_id,
+                        sessionId: liveSessionId,
                         plan,
                         operator: validOperator,
                         amount: planConfig.amount,
@@ -96,7 +120,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 2. Mode Lien Direct SasPay (utilisé pour les liens marchands directs Wave / Orange Money)
+        // 2. Mode Lien Direct SasPay (fallback lorsque l'API directe n'est pas encore activée)
         const directSessionId = `saspay_link_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         return res.status(200).json({
             mode: 'direct_link',
