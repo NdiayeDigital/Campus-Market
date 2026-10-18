@@ -54,7 +54,7 @@ export function createHeroBanner({ onSelectTag, onExploreCatalog } = {}) {
             <div class="flex items-center gap-3 sm:gap-4 flex-wrap pt-1 text-[11px] sm:text-xs text-white/95 font-semibold">
                 <div class="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10">
                     <i class="fa-solid fa-motorcycle text-accent"></i>
-                    <span>Livraison Pavillon</span>
+                    <span>Livraison Pavillon Gratuite</span>
                 </div>
                 <div class="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10">
                     <i class="fa-solid fa-wallet text-emerald-400"></i>

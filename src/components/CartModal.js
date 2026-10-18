@@ -6,7 +6,7 @@
 import { cartStore, subscribeCart } from '../services/cart-store.js';
 import { escapeHTML } from '../utils/security.js';
 
-const DELIVERY_FEE = 500; // Frais de livraison forfaitaire campus
+const DELIVERY_FEE = 0; // Frais de livraison : Gratuit (0 FCFA) pavillon-à-pavillon
 
 /**
  * Crée et gère la modale du panier.
@@ -58,7 +58,7 @@ export function createCartModal({ onProceedToCheckout } = {}) {
                         <span class="flex items-center gap-1.5">
                             <i class="fa-solid fa-motorcycle text-primary text-xs"></i> Livraison pavillon
                         </span>
-                        <span class="font-semibold text-slate-900">${DELIVERY_FEE.toLocaleString('fr-FR')} FCFA</span>
+                        <span class="font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full text-xs">Gratuit</span>
                     </div>
                     <div class="pt-2 border-t border-slate-200 flex justify-between items-baseline">
                         <span class="font-heading font-bold text-sm sm:text-base text-slate-900">Total à régler</span>
