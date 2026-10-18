@@ -56,6 +56,30 @@ export async function loginAdmin({ email, password }) {
     }
 
     const user = authData.user;
+
+    // Auto-réparation du profil SuperAdmin si absent ou rôle non synchronisé
+    if (user.email === 'admin@univ-thies.sn') {
+        const { data: existingProf } = await supabase
+            .from('profiles')
+            .select('id, role')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (!existingProf) {
+            await supabase.from('profiles').insert({
+                id: user.id,
+                email: user.email,
+                prenom: 'Super',
+                nom: 'Admin',
+                telephone: '221770000000',
+                role: 'superadmin',
+                is_open: true,
+            });
+        } else if (existingProf.role !== 'superadmin') {
+            await supabase.from('profiles').update({ role: 'superadmin' }).eq('id', user.id);
+        }
+    }
+
     const isAdmin = await verifyAdminRole(user.id);
     if (!isAdmin) {
         await supabase.auth.signOut();
@@ -851,6 +875,8 @@ export async function adminResetSellerPassword(sellerId) {
 
     // 1. Tenter via la procédure stockée RPC Supabase (admin_reset_seller_password)
     let rpcSuccess = false;
+    let lastError = null;
+
     try {
         const { data, error } = await supabase.rpc('admin_reset_seller_password', {
             target_user_id: sellerId,
@@ -858,10 +884,12 @@ export async function adminResetSellerPassword(sellerId) {
         if (!error) {
             rpcSuccess = true;
         } else {
-            console.warn('[AdminService] Note RPC admin_reset_seller_password:', error.message);
+            console.error('[AdminService] Erreur RPC admin_reset_seller_password:', error);
+            lastError = error;
         }
     } catch (err) {
-        console.warn('[AdminService] Exception RPC admin_reset_seller_password:', err);
+        console.error('[AdminService] Exception RPC admin_reset_seller_password:', err);
+        lastError = err;
     }
 
     // 2. Si le RPC n'a pas répondu, tenter l'API serverless /api/admin-reset-password (en environnement navigateur)
@@ -878,10 +906,18 @@ export async function adminResetSellerPassword(sellerId) {
             });
             if (res.ok) {
                 rpcSuccess = true;
+            } else {
+                const body = await res.json().catch(() => ({}));
+                if (body.error) lastError = new Error(body.error);
             }
         } catch (fetchErr) {
             console.warn('[AdminService] Note API reset password:', fetchErr);
         }
+    }
+
+    if (!rpcSuccess) {
+        const errorMsg = lastError?.message || 'Échec de la réinitialisation du mot de passe. Vérifiez vos permissions Super Administrateur.';
+        throw new Error(errorMsg);
     }
 
     // 3. Mise à jour de sécurité de la colonne must_change_password dans profiles
@@ -891,7 +927,7 @@ export async function adminResetSellerPassword(sellerId) {
             .update({ must_change_password: true })
             .eq('id', sellerId);
     } catch (profErr) {
-        console.warn('[AdminService] Erreur mise à jour drapeau profil:', profErr);
+        console.warn('[AdminService] Note mise à jour drapeau profil:', profErr);
     }
 
     return {
