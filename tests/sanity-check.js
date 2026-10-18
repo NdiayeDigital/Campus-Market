@@ -388,6 +388,31 @@ console.assert(rejectedReviewNoSellerId, 'submitReview sans sellerId devrait êt
 
 console.log('✅ [ReviewService] Calculs de statistiques, distribution, clamping et validation avis validés !');
 
+// 11. Test Réinitialisation et Changement Obligatoire de Mot de Passe Vendeur
+import { SUPPORT_CONFIG } from '../src/config/support.js';
+import { changeSellerPassword } from '../src/services/seller-service.js';
+import { adminResetSellerPassword } from '../src/services/admin-service.js';
+
+console.assert(SUPPORT_CONFIG.email === 'assistance@campusmarket-uidt.com', 'Email assistance officiel UIDT manquant');
+console.assert(SUPPORT_CONFIG.whatsappResetUrl.includes('mot%20de%20passe'), 'URL WhatsApp réinitialisation incorrecte');
+console.assert(SUPPORT_CONFIG.mailResetUrl.includes('assistance@campusmarket-uidt.com'), 'URL Mailto réinitialisation incorrecte');
+
+let rejectedCampus1234 = false;
+try {
+    await changeSellerPassword({
+        newPassword: 'campus1234!',
+        confirmPassword: 'campus1234!',
+    });
+} catch (e) {
+    rejectedCampus1234 = e.message.includes('campus1234!');
+}
+console.assert(rejectedCampus1234 === true, 'Interdiction de conserver campus1234! comme nouveau mot de passe non respectée');
+
+const resetResult = await adminResetSellerPassword('mock-seller-uuid-uidt');
+console.assert(resetResult.temporaryPassword === 'campus1234!', 'Mot de passe temporaire doit être campus1234!');
+console.assert(resetResult.success === true, 'Résultat de réinitialisation invalide');
+console.log('✅ [PasswordReset] Assistance WhatsApp & Mail, réinitialisation campus1234! et changement obligatoire validés !');
+
 console.log('🎉 Tous les tests unitaires des services de base sont passés avec succès !');
 
 

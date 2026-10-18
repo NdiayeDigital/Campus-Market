@@ -276,16 +276,23 @@ export async function loginSeller({ email, password }) {
         throw new Error('Profil vendeur introuvable.');
     }
 
+    const isTempPassword = password === 'campus1234!';
+    const mustChangePassword = isTempPassword || profile.must_change_password === true;
+
+    if (mustChangePassword) {
+        profile.must_change_password = true;
+    }
+
     if (profile.role === 'vendeur_pending') {
-        return { status: 'pending', user, profile };
+        return { status: 'pending', user, profile, mustChangePassword };
     }
 
     if (profile.role === 'vendeur_desactive' || profile.role === 'suspendu' || profile.is_suspended === true) {
-        return { status: 'suspended', user, profile };
+        return { status: 'suspended', user, profile, mustChangePassword };
     }
 
     if (profile.role === 'vendeur' || profile.role === 'superadmin') {
-        return { status: 'approved', user, profile };
+        return { status: 'approved', user, profile, mustChangePassword };
     }
 
     throw new Error("Ce compte n'a pas encore demandé le statut de vendeur. Veuillez postuler.");
@@ -339,6 +346,7 @@ export async function getCurrentSeller() {
             profile.shop_name = profile.shop_name || session.user.user_metadata?.shop_name || `${profile.prenom || 'Boutique'} Shop`;
             profile.shop_category = profile.shop_category || session.user.user_metadata?.shop_category || 'autres';
             profile.email = profile.email || session.user.email;
+            profile.must_change_password = Boolean(profile.must_change_password);
 
             // Si le vendeur actif n'a pas encore scellé sa date d'essai ou si elle est nulle, lui accorder 7 jours pleins
             if (profile.role === 'vendeur' && (!profile.trial_ends_at || !profile.trial_started_at) && !profile.subscription_expires_at) {
@@ -670,6 +678,80 @@ export async function confirmSubscriptionPayment({ sessionId, sellerId, plan, op
     };
 }
 
+/**
+ * Modifie le mot de passe du vendeur connecté.
+ * Vérifie que le mot de passe fait au moins 6 caractères et est strictement différent de 'campus1234!'.
+ * Lève ensuite l'obligation de changement de mot de passe (must_change_password = false).
+ *
+ * @param {Object} params
+ * @param {string} params.newPassword - Nouveau mot de passe choisi par le vendeur
+ * @param {string} params.confirmPassword - Confirmation du nouveau mot de passe
+ * @returns {Promise<{ success: boolean }>}
+ */
+export async function changeSellerPassword({ newPassword, confirmPassword }) {
+    if (!newPassword || !confirmPassword) {
+        throw new Error('Veuillez renseigner et confirmer votre nouveau mot de passe.');
+    }
+
+    if (newPassword !== confirmPassword) {
+        throw new Error('Les deux mots de passe ne correspondent pas.');
+    }
+
+    if (newPassword.length < 6) {
+        throw new Error('Le nouveau mot de passe doit contenir au moins 6 caractères.');
+    }
+
+    if (newPassword === 'campus1234!') {
+        throw new Error('Le nouveau mot de passe doit être différent du mot de passe temporaire "campus1234!".');
+    }
+
+    // 1. Mise à jour dans Supabase Auth
+    const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+    });
+
+    if (updateError) {
+        throw new Error(`Échec de mise à jour du mot de passe: ${updateError.message}`);
+    }
+
+    const userId = updateData?.user?.id;
+
+    // 2. Lever l'obligation de changement de mot de passe via RPC sécurisée
+    let rpcDone = false;
+    try {
+        const { error: rpcErr } = await supabase.rpc('complete_password_change');
+        if (!rpcErr) {
+            rpcDone = true;
+        }
+    } catch {}
+
+    // 3. Fallback direct sur la table profiles
+    if (!rpcDone && userId) {
+        try {
+            await supabase
+                .from('profiles')
+                .update({ must_change_password: false })
+                .eq('id', userId);
+        } catch {}
+    }
+
+    // 4. Mettre à jour le cache local s'il existe
+    if (typeof localStorage !== 'undefined') {
+        try {
+            const raw = localStorage.getItem('campus_market_cached_seller');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed) {
+                    parsed.must_change_password = false;
+                    localStorage.setItem('campus_market_cached_seller', JSON.stringify(parsed));
+                }
+            }
+        } catch {}
+    }
+
+    return { success: true };
+}
+
 export default {
     registerSeller,
     loginSeller,
@@ -684,4 +766,5 @@ export default {
     getSellerSubscription,
     initiateSubscriptionPayment,
     confirmSubscriptionPayment,
+    changeSellerPassword,
 };

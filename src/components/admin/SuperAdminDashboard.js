@@ -29,6 +29,7 @@ import {
     ensureAdminSellerProfile,
     grantSellerTrialExtension,
     manuallyActivateSubscription,
+    adminResetSellerPassword,
 } from '../../services/admin-service.js';
 import { computeSubscriptionStatus, getPlanDetails } from '../../config/subscription.js';
 import { supabase } from '../../services/supabase.js';
@@ -1328,9 +1329,16 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         </span>
                                     </td>
                                     <td class="py-3 px-4">
-                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isSuspended ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
-                                            ${isSuspended ? 'Suspendu' : 'Actif'}
-                                        </span>
+                                        <div class="flex flex-col gap-1">
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-center ${isSuspended ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
+                                                ${isSuspended ? 'Suspendu' : 'Actif'}
+                                            </span>
+                                            ${s.must_change_password ? `
+                                                <span class="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 text-center" title="Le vendeur doit obligatoirement changer son mot de passe lors de sa reconnexion">
+                                                    <i class="fa-solid fa-key text-[8px]"></i> MDP à changer
+                                                </span>
+                                            ` : ''}
+                                        </div>
                                     </td>
                                     <td class="py-3 px-4 text-right">
                                         <div class="flex items-center justify-end gap-1.5 flex-wrap">
@@ -1352,6 +1360,17 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                 title="Activer manuellement 30 jours (règlement cash sur campus)"
                                             >
                                                 Activer 30j
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                data-action="reset-password" 
+                                                data-id="${s.id}" 
+                                                data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
+                                                class="px-2 py-1.5 rounded-lg border border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 text-[11px] font-semibold cursor-pointer flex items-center gap-1 shadow-2xs"
+                                                title="Réinitialiser le mot de passe à campus1234!"
+                                            >
+                                                <i class="fa-solid fa-key text-[10px]"></i>
+                                                <span>Reset MDP</span>
                                             </button>
                                             <button 
                                                 type="button" 
@@ -1420,6 +1439,11 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-medium ${s.is_open !== false ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-800'}">
                                             ${s.is_open !== false ? 'Ouverte' : 'En pause'}
                                         </span>
+                                        ${s.must_change_password ? `
+                                            <span class="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                                                <i class="fa-solid fa-key text-[8px]"></i> MDP à changer
+                                            </span>
+                                        ` : ''}
                                     </div>
                                     <div class="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
                                         <span>${escapeHTML(s.telephone || 'Non renseigné')}</span>
@@ -1466,7 +1490,19 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 </button>
 
                                 <button 
-                                    type="button"
+                                    type="button" 
+                                    data-action="reset-password" 
+                                    data-id="${s.id}" 
+                                    data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
+                                    class="py-2 px-2.5 rounded-xl border border-amber-300 text-amber-800 bg-amber-50 text-xs font-semibold min-h-[44px] cursor-pointer flex items-center gap-1 shadow-2xs"
+                                    title="Réinitialiser le mot de passe à campus1234!"
+                                >
+                                    <i class="fa-solid fa-key text-xs"></i>
+                                    <span>Reset MDP</span>
+                                </button>
+
+                                <button 
+                                    type="button" 
                                     data-action="toggle-suspend" 
                                     data-id="${s.id}" 
                                     data-suspended="${isSuspended ? 'true' : 'false'}"
@@ -2940,6 +2976,45 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         showToast(err.message, 'error');
                         btn.disabled = false;
                         btn.innerHTML = `<i class="fa-solid ${isSuspended ? 'fa-rotate-left' : 'fa-ban'} text-[11px]"></i> <span>${isSuspended ? 'Réactiver' : 'Suspendre'}</span>`;
+                    }
+                });
+            });
+
+            // Réinitialiser le mot de passe marchand à "campus1234!"
+            containerEl.querySelectorAll('button[data-action="reset-password"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const name = btn.getAttribute('data-name') || 'ce marchand';
+
+                    const confirmed = await showConfirm({
+                        title: 'Réinitialiser le mot de passe',
+                        message: `Voulez-vous réinitialiser le mot de passe de "${name}" ?\n\nLe mot de passe sera automatiquement défini à "campus1234!". Le vendeur sera obligatoirement contraint de le changer lors de sa prochaine connexion.`,
+                        confirmText: 'Réinitialiser à campus1234!',
+                        cancelText: 'Annuler',
+                        isDestructive: false,
+                        icon: 'fa-key',
+                    });
+
+                    if (confirmed) {
+                        btn.disabled = true;
+                        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>Reset...</span>`;
+                        try {
+                            await adminResetSellerPassword(id);
+                            const target = activeSellers.find((s) => s.id === id);
+                            if (target) {
+                                target.must_change_password = true;
+                            }
+                            showToast(`Mot de passe de "${name}" réinitialisé à campus1234! 🔑`, 'success');
+                            const contentEl = containerEl.querySelector('#admin-tab-content');
+                            if (contentEl && activeTab === 'sellers') {
+                                contentEl.innerHTML = renderSellersTab();
+                                bindSellersEvents();
+                            }
+                        } catch (err) {
+                            showToast(err.message || 'Erreur lors de la réinitialisation.', 'error');
+                            btn.disabled = false;
+                            btn.innerHTML = `<i class="fa-solid fa-key text-[10px]"></i> <span>Reset MDP</span>`;
+                        }
                     }
                 });
             });

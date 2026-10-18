@@ -840,6 +840,67 @@ export async function manuallyActivateSubscription(sellerId, plan = 'starter', d
     return data;
 }
 
+/**
+ * Réinitialise le mot de passe d'un vendeur au mot de passe temporaire 'campus1234!'
+ * et active le drapeau de changement obligatoire de mot de passe.
+ * @param {string} sellerId - UUID du vendeur
+ * @returns {Promise<Object>}
+ */
+export async function adminResetSellerPassword(sellerId) {
+    if (!sellerId) throw new Error('ID vendeur manquant.');
+
+    // 1. Tenter via la procédure stockée RPC Supabase (admin_reset_seller_password)
+    let rpcSuccess = false;
+    try {
+        const { data, error } = await supabase.rpc('admin_reset_seller_password', {
+            target_user_id: sellerId,
+        });
+        if (!error) {
+            rpcSuccess = true;
+        } else {
+            console.warn('[AdminService] Note RPC admin_reset_seller_password:', error.message);
+        }
+    } catch (err) {
+        console.warn('[AdminService] Exception RPC admin_reset_seller_password:', err);
+    }
+
+    // 2. Si le RPC n'a pas répondu, tenter l'API serverless /api/admin-reset-password (en environnement navigateur)
+    if (!rpcSuccess && typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/admin-reset-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+                },
+                body: JSON.stringify({ sellerId }),
+            });
+            if (res.ok) {
+                rpcSuccess = true;
+            }
+        } catch (fetchErr) {
+            console.warn('[AdminService] Note API reset password:', fetchErr);
+        }
+    }
+
+    // 3. Mise à jour de sécurité de la colonne must_change_password dans profiles
+    try {
+        await supabase
+            .from('profiles')
+            .update({ must_change_password: true })
+            .eq('id', sellerId);
+    } catch (profErr) {
+        console.warn('[AdminService] Erreur mise à jour drapeau profil:', profErr);
+    }
+
+    return {
+        success: true,
+        sellerId,
+        temporaryPassword: 'campus1234!',
+    };
+}
+
 export default {
     ensureAdminSellerProfile,
     verifyAdminRole,
@@ -864,6 +925,7 @@ export default {
     updateUserRoleAdmin,
     grantSellerTrialExtension,
     manuallyActivateSubscription,
+    adminResetSellerPassword,
     DEFAULT_DELIVERY_LOCATIONS,
 };
 

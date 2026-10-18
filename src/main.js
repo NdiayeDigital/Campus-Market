@@ -15,6 +15,7 @@ import { createProductDetailModal } from './components/ProductDetailModal.js';
 import { createBottomNav } from './components/BottomNav.js';
 import { createHeroBanner } from './components/HeroBanner.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
+import { createForcePasswordChangeModal } from './components/seller/ForcePasswordChangeModal.js';
 import { createSellerShowcase } from './components/seller/SellerShowcase.js';
 import { getCurrentSeller } from './services/seller-service.js';
 import { supabase } from './services/supabase.js';
@@ -126,14 +127,47 @@ async function initApp() {
         },
     });
 
+    const forcePasswordChangeModalController = createForcePasswordChangeModal({
+        onSuccess: ({ profile }) => {
+            if (profile) {
+                profile.must_change_password = false;
+                appState.currentSeller = profile;
+                headerComponent?.updateSellerState?.(profile);
+                bottomNavComponent?.setSeller?.(profile);
+                try {
+                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(profile));
+                } catch {}
+            }
+            showToast('Votre mot de passe a été mis à jour avec succès ! 🔒', 'success');
+            navigateToView('seller');
+        },
+        onLogout: () => {
+            appState.currentSeller = null;
+            headerComponent?.updateSellerState?.(null);
+            bottomNavComponent?.setSeller?.(null);
+            try {
+                localStorage.removeItem(LOCAL_SELLER_KEY);
+            } catch {}
+            if (appState.currentView === 'seller') {
+                navigateToView('catalog');
+            }
+        },
+    });
+
     const sellerAuthModalController = createSellerAuthModal({
-        onAuthenticated: ({ profile }) => {
+        onAuthenticated: ({ profile, mustChangePassword }) => {
             appState.currentSeller = profile;
             headerComponent?.updateSellerState?.(profile);
             bottomNavComponent?.setSeller?.(profile);
             try {
                 localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(profile));
             } catch {}
+
+            if (mustChangePassword || profile?.must_change_password === true) {
+                forcePasswordChangeModalController.open(profile);
+                return;
+            }
+
             showToast(`Bienvenue dans votre Espace Vendeur, ${profile.prenom} !`, 'success');
             navigateToView('seller');
         },
@@ -159,6 +193,7 @@ async function initApp() {
     document.body.appendChild(cartModalController.element);
     document.body.appendChild(checkoutModalController.element);
     document.body.appendChild(sellerAuthModalController.element);
+    document.body.appendChild(forcePasswordChangeModalController.element);
     document.body.appendChild(productDetailModalController.element);
 
     // 2. Header
@@ -321,6 +356,10 @@ async function initApp() {
 
     async function openSellerFlow() {
         if (appState.currentSeller) {
+            if (appState.currentSeller.must_change_password) {
+                forcePasswordChangeModalController.open(appState.currentSeller);
+                return;
+            }
             navigateToView('seller');
             return;
         }
@@ -330,6 +369,10 @@ async function initApp() {
             try {
                 localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
             } catch {}
+            if (sellerSession.profile.must_change_password) {
+                forcePasswordChangeModalController.open(sellerSession.profile);
+                return;
+            }
             navigateToView('seller');
         } else {
             sellerAuthModalController.open('login');
@@ -471,6 +514,14 @@ async function initApp() {
         if (!appState.currentSeller) {
             mainContentEl.innerHTML = '';
             sellerAuthModalController.open('login');
+            navigateToView('catalog');
+            return;
+        }
+
+        // Si le mot de passe doit obligatoirement être changé, bloquer l'accès au tableau de bord
+        if (appState.currentSeller.must_change_password) {
+            mainContentEl.innerHTML = '';
+            forcePasswordChangeModalController.open(appState.currentSeller);
             navigateToView('catalog');
             return;
         }

@@ -21,7 +21,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     modalEl.id = 'seller-auth-modal-overlay';
     modalEl.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
-    let activeTab = 'login'; // 'login' | 'terms' | 'register' | 'pending'
+    let activeTab = 'login'; // 'login' | 'terms' | 'register' | 'pending' | 'forgot-password'
     let selectedPlan = 'starter'; // 'starter' (1500 FCFA/mois - 5 produits) | 'pro' (2500 FCFA/mois - 10 produits)
 
     function render() {
@@ -41,7 +41,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     </button>
                 </div>
 
-                ${activeTab === 'pending' ? renderPendingScreen() : (activeTab === 'terms' ? renderTermsScreen() : renderTabsAndForm())}
+                ${activeTab === 'pending' ? renderPendingScreen() : (activeTab === 'terms' ? renderTermsScreen() : (activeTab === 'forgot-password' ? renderForgotPasswordScreen() : renderTabsAndForm()))}
             </div>
         `;
 
@@ -88,6 +88,57 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 </div>
 
                 <button id="btn-back-to-login" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl transition-colors min-h-[44px] cursor-pointer">
+                    Retour à la connexion
+                </button>
+            </div>
+        `;
+    }
+
+    function renderForgotPasswordScreen() {
+        return `
+            <div class="p-6 flex flex-col items-center text-center my-auto overflow-y-auto">
+                <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mb-3 shadow-xs animate-bounce-subtle">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <h3 class="font-heading font-extrabold text-lg text-slate-900 mb-1.5">Récupération de mot de passe</h3>
+                <p class="text-xs text-slate-600 mb-4 leading-relaxed max-w-sm">
+                    Pour garantir la sécurité et vérifier l'identité étudiante à l'UIDT, la réinitialisation de mot de passe est effectuée directement auprès de notre assistance.
+                </p>
+
+                <!-- Encadré explicatif de la procédure -->
+                <div class="w-full mb-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-700 flex flex-col gap-2">
+                    <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved text-primary"></i> Procédure sécurisée :
+                    </span>
+                    <ol class="list-decimal list-inside flex flex-col gap-1.5 text-[11px] text-slate-600">
+                        <li>Contactez l'assistance par <strong>WhatsApp</strong> ou par <strong>Email</strong>.</li>
+                        <li>L'administrateur réinitialisera votre compte avec le mot de passe temporaire <code class="px-1.5 py-0.5 bg-amber-100 text-amber-900 font-bold rounded">campus1234!</code>.</li>
+                        <li>Dès votre connexion avec ce code, vous serez <strong>obligé de définir votre mot de passe personnel</strong>.</li>
+                    </ol>
+                </div>
+
+                <!-- Boutons d'action : WhatsApp et Email -->
+                <div class="w-full flex flex-col gap-2.5 mb-4">
+                    <a 
+                        href="${SUPPORT_CONFIG.whatsappResetUrl}" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
+                    >
+                        <i class="fa-brands fa-whatsapp text-base"></i>
+                        <span>Assistance WhatsApp (${SUPPORT_CONFIG.phoneDisplay})</span>
+                    </a>
+
+                    <a 
+                        href="${SUPPORT_CONFIG.mailResetUrl}" 
+                        class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
+                    >
+                        <i class="fa-solid fa-envelope text-sm"></i>
+                        <span>Assistance Email (${SUPPORT_CONFIG.email})</span>
+                    </a>
+                </div>
+
+                <button id="btn-forgot-back-to-login" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors min-h-[40px] cursor-pointer">
                     Retour à la connexion
                 </button>
             </div>
@@ -301,7 +352,12 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     >
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1" for="seller-password">Mot de passe</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold text-slate-700" for="seller-login-password">Mot de passe</label>
+                        <button type="button" id="btn-to-forgot-password" class="text-[11px] text-primary hover:underline font-semibold cursor-pointer">
+                            Mot de passe oublié ?
+                        </button>
+                    </div>
                     <input 
                         type="password" 
                         id="seller-login-password" 
@@ -459,6 +515,16 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
             render();
         });
 
+        modalEl.querySelector('#btn-to-forgot-password')?.addEventListener('click', () => {
+            activeTab = 'forgot-password';
+            render();
+        });
+
+        modalEl.querySelector('#btn-forgot-back-to-login')?.addEventListener('click', () => {
+            activeTab = 'login';
+            render();
+        });
+
         const errorEl = modalEl.querySelector('#seller-auth-error');
 
         // 3. Soumission Connexion
@@ -485,7 +551,11 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 } else if (res.status === 'approved') {
                     close();
                     if (typeof onAuthenticated === 'function') {
-                        onAuthenticated({ user: res.user, profile: res.profile });
+                        onAuthenticated({
+                            user: res.user,
+                            profile: res.profile,
+                            mustChangePassword: res.mustChangePassword === true || res.profile?.must_change_password === true,
+                        });
                     }
                 } else if (res.status === 'unauthorized') {
                     if (errorEl) {
