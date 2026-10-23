@@ -7,6 +7,7 @@
 import { escapeHTML, formatSenegalPhone } from '../utils/security.js';
 import { shareProduct } from '../utils/share.js';
 import { showToast } from '../utils/notifications.js';
+import { setProductSEO, resetDefaultSEO } from '../utils/seo.js';
 
 /**
  * Crée le modal de détails d'un produit.
@@ -252,6 +253,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
     function open(product) {
         currentProduct = product;
         selectedQuantity = 1;
+        setProductSEO(product);
         render();
         modalEl.classList.remove('opacity-0', 'pointer-events-none');
         modalEl.classList.add('opacity-100');
@@ -263,6 +265,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
         modalEl.classList.add('opacity-0', 'pointer-events-none');
         document.body.style.overflow = '';
         currentProduct = null;
+        resetDefaultSEO();
         if (typeof onClose === 'function') {
             onClose();
         }

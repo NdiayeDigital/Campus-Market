@@ -52,7 +52,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
         imageContent = `
             <img 
                 src="${escapeHTML(safeImageUrl)}" 
-                alt="${escapeHTML(product.title)}" 
+                alt="${escapeHTML(product.title)} — Campus Market UIDT" 
                 loading="lazy"
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
                 onerror="this.onerror=null; this.src='/assets/placeholder.webp';"

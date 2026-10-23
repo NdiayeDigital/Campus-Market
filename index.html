@@ -4,32 +4,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campus Market — La Marketplace des Étudiants de l'UIDT</title>
 
-    <!-- PWA Settings -->
+    <!-- SEO Title Optimal pour Google (Marque, Thématique, Géolocalisation, Promesse) -->
+    <title>Campus Market — Marketplace Étudiante UIDT Thiès | Livraison en Chambre</title>
+
+    <!-- Meta SEO Principales -->
+    <meta name="description"
+        content="Campus Market : La 1ère marketplace des étudiants de l'UIDT Thiès. Commandez repas chauds, vêtements, fournitures et accessoires livrés directement dans votre chambre ou pavillon !" />
+    <meta name="keywords"
+        content="Campus Market, Campus Market UIDT, Marketplace UIDT, Université Iba Der Thiam, Thiès, livraison chambre campus Thiès, fast food UIDT, restaurant étudiant Thiès, vente pavillon UIDT, friperie campus Thiès, épicerie étudiante Sénégal, e-commerce étudiant UIDT" />
+    <meta name="author" content="Campus Market - Université Iba Der Thiam de Thiès" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Liens Canoniques & Internationalisation -->
+    <link rel="canonical" href="https://campusmarket-uidt.com/" />
+    <link rel="alternate" hreflang="fr" href="https://campusmarket-uidt.com/" />
+    <link rel="alternate" hreflang="fr-SN" href="https://campusmarket-uidt.com/" />
+    <link rel="alternate" hreflang="x-default" href="https://campusmarket-uidt.com/" />
+
+    <!-- Balises Géographiques & SEO Local (Thiès, Sénégal / UIDT) -->
+    <meta name="geo.region" content="SN-TH" />
+    <meta name="geo.placename" content="Thiès, Sénégal" />
+    <meta name="geo.position" content="14.7910;-16.9359" />
+    <meta name="ICBM" content="14.7910, -16.9359" />
+
+    <!-- PWA & Mobile Web App Settings -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1D4ED8">
+    <meta name="application-name" content="Campus Market">
+    <meta name="apple-mobile-web-app-title" content="Campus Market">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
     <link rel="icon" type="image/webp" href="/assets/logo.webp">
     <link rel="apple-touch-icon" href="/assets/logo-192x192.png">
 
-    <!-- Fonts & Icons -->
+    <!-- Open Graph / Réseaux Sociaux & Partage WhatsApp -->
+    <meta property="og:locale" content="fr_SN" />
+    <meta property="og:locale:alternate" content="fr_FR" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Campus Market UIDT" />
+    <meta property="og:title" content="Campus Market — Marketplace Étudiante UIDT Thiès | Livraison en Chambre" />
+    <meta property="og:description"
+        content="Commandez vos plats chauds, friperie, fournitures et accessoires livrés directement dans votre chambre à l'Université Iba Der Thiam de Thiès." />
+    <meta property="og:image" content="https://campusmarket-uidt.com/assets/logo-512x512.png" />
+    <meta property="og:image:secure_url" content="https://campusmarket-uidt.com/assets/logo-512x512.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="Logo officiel de Campus Market UIDT" />
+    <meta property="og:url" content="https://campusmarket-uidt.com/" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Campus Market — Marketplace Étudiante UIDT Thiès | Livraison en Chambre" />
+    <meta name="twitter:description"
+        content="Commandez repas chauds, friperie, fournitures et accessoires livrés directement dans votre chambre à l'UIDT Thiès." />
+    <meta name="twitter:image" content="https://campusmarket-uidt.com/assets/logo-512x512.png" />
+    <meta name="twitter:image:alt" content="Campus Market UIDT" />
+
+    <!-- Fonts & Icons Préconnectées -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-    <!-- Open Graph / Partage WhatsApp & Réseaux Sociaux -->
-    <meta property="og:title" content="Campus Market — La Marketplace de l'UIDT" />
-    <meta property="og:description"
-        content="Commandez vos plats, vêtements et fournitures directement livrés dans votre chambre sur le campus !" />
-    <meta property="og:image" content="https://campusmarket-uidt.com/assets/logo-512x512.png" />
-    <meta property="og:url" content="https://campusmarket-uidt.com/" />
-    <meta property="og:type" content="website" />
-    <link rel="canonical" href="https://campusmarket-uidt.com/" />
+    <!-- Données Structurées JSON-LD (Schema.org) pour Rich Snippets Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://campusmarket-uidt.com/#website",
+          "url": "https://campusmarket-uidt.com/",
+          "name": "Campus Market",
+          "alternateName": ["Campus Market UIDT", "CampusMarket"],
+          "description": "La marketplace exclusive des étudiants de l'Université Iba Der Thiam (UIDT) à Thiès.",
+          "inLanguage": "fr-SN",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://campusmarket-uidt.com/#catalog?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "ShoppingCenter",
+          "@id": "https://campusmarket-uidt.com/#organization",
+          "name": "Campus Market UIDT",
+          "url": "https://campusmarket-uidt.com/",
+          "logo": "https://campusmarket-uidt.com/assets/logo-512x512.png",
+          "image": "https://campusmarket-uidt.com/assets/logo-512x512.png",
+          "description": "Première plateforme d'e-commerce et marketplace de proximité pour la communauté universitaire de l'UIDT Thiès. Livraison directe en pavillon et chambre.",
+          "currenciesAccepted": "XOF",
+          "paymentAccepted": "Cash, Wave, Orange Money",
+          "priceRange": "100 - 50000 XOF",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Campus Universitaire UIDT",
+            "addressLocality": "Thiès",
+            "addressRegion": "Thiès",
+            "addressCountry": "SN"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 14.7910,
+            "longitude": -16.9359
+          },
+          "openingHoursSpecification": {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday"
+            ],
+            "opens": "07:00",
+            "closes": "23:59"
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://campusmarket-uidt.com/#breadcrumb",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Accueil",
+              "item": "https://campusmarket-uidt.com/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Catalogue UIDT",
+              "item": "https://campusmarket-uidt.com/#catalog"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "Espace Vendeur",
+              "item": "https://campusmarket-uidt.com/#seller"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://campusmarket-uidt.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Qu'est-ce que Campus Market UIDT ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Campus Market est la marketplace officielle dédiée aux étudiants de l'Université Iba Der Thiam de Thiès (UIDT). Elle permet de commander des plats, vêtements, fournitures et matériels informatiques livrés directement dans les chambres et pavillons du campus."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Comment se déroule la livraison dans les pavillons ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Lors de la validation de commande, l'acheteur renseigne son pavillon et son numéro de chambre. Les livreurs ou étudiants-vendeurs acheminent la commande directement à sa porte avec un suivi de statut en temps réel."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Quels modes de paiement sont acceptés sur Campus Market ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Les paiements peuvent être effectués en espèces à la livraison (Cash on Delivery) ou via mobile money sécurisé (Wave, Orange Money) pour un maximum de flexibilité et de sécurité."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Comment un étudiant peut-il vendre ses produits ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Tout étudiant de l'UIDT peut ouvrir gratuitement sa boutique en ligne en accédant à l'Espace Vendeur avec son adresse institutionnelle univ-thies.sn. Il peut ensuite ajouter ses articles avec photos et gérer ses commandes."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
 </head>
 
 <body class="min-h-full bg-background text-slate-900 font-sans antialiased">
-    <!-- Point de montage de l'application -->
-    <div id="app"></div>
+    <!-- Point de montage de l'application & Contenu Sémantique Pré-indexable SEO -->
+    <div id="app">
+        <!-- Structure sémantique d'accueil lue immédiatement par Googlebot, Bingbot et les crawlers avant l'exécution du JS -->
+        <div class="max-w-4xl mx-auto px-4 py-8 flex flex-col gap-8">
+            <header class="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div class="flex items-center gap-3">
+                    <img src="/assets/logo.webp" alt="Campus Market UIDT - Logo Officiel" width="160" height="40" class="h-10 w-auto" />
+                    <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">UIDT Thiès</span>
+                </div>
+                <nav class="flex items-center gap-4 text-sm font-semibold text-slate-700" aria-label="Navigation principale">
+                    <a href="#catalog" class="hover:text-blue-700">Catalogue des offres</a>
+                    <a href="#seller" class="hover:text-blue-700">Espace Vendeur</a>
+                    <a href="#orders" class="hover:text-blue-700">Mes Commandes</a>
+                </nav>
+            </header>
+
+            <main class="flex flex-col gap-6">
+                <!-- H1 Principal stratégique pour le référencement naturel Google -->
+                <section class="bg-gradient-to-br from-blue-700 to-indigo-900 text-white p-6 sm:p-8 rounded-2xl shadow-lg">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold leading-snug">
+                        Campus Market — La Marketplace des Étudiants de l'Université Iba Der Thiam (UIDT)
+                    </h1>
+                    <p class="mt-3 text-blue-100 text-sm sm:text-base leading-relaxed">
+                        Plateforme e-commerce de proximité à Thiès : commandez vos repas chauds (Thiéboudienne, sandwichs, café Touba), vos vêtements de friperie, vos fournitures universitaires et accessoires tech livrés directement dans votre chambre de pavillon.
+                    </p>
+                    <div class="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+                        <span class="bg-white/10 px-3 py-1 rounded-full border border-white/20">📍 Université Iba Der Thiam de Thiès</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full border border-white/20">⚡ Livraison en Chambre</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full border border-white/20">💳 Paiement Cash & Wave</span>
+                    </div>
+                </section>
+
+                <!-- Présentation des catégories de produits disponibles -->
+                <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                    <h2 class="text-xl font-bold text-slate-800">Catégories de Produits & Services sur le Campus</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <article class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <h3 class="font-bold text-blue-800">🍽️ Restauration & Fast-Food</h3>
+                            <p class="text-slate-600 text-xs mt-1">Plats chauds cuisinés par les étudiants, Thiéboudienne, fatayas, sandwichs, café Touba et petits déjeuners livrés au lit.</p>
+                        </article>
+                        <article class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <h3 class="font-bold text-blue-800">👕 Mode, Friperie & Vêtements</h3>
+                            <p class="text-slate-600 text-xs mt-1">Sneakers, t-shirts, robes, pantalons et collections tendance au meilleur prix pour les étudiants de l'UIDT.</p>
+                        </article>
+                        <article class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <h3 class="font-bold text-blue-800">📚 Fournitures & Polycopies</h3>
+                            <p class="text-slate-600 text-xs mt-1">Cahiers, calculatrices, livres universitaires, fascicules et polycopies de cours spécifiques à l'UIDT.</p>
+                        </article>
+                        <article class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <h3 class="font-bold text-blue-800">💻 High-Tech & Clés USB</h3>
+                            <p class="text-slate-600 text-xs mt-1">Clés USB, écouteurs, câbles chargeurs, souris et accessoires informatiques pour vos études.</p>
+                        </article>
+                        <article class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <h3 class="font-bold text-blue-800">✨ Beauté & Soins Personnels</h3>
+                            <p class="text-slate-600 text-xs mt-1">Parfums, crèmes, soins corporels et accessoires indispensables pour votre quotidien en cité.</p>
+                        </article>
+                        <article class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <h3 class="font-bold text-blue-800">🚀 Espace Vendeur Étudiant</h3>
+                            <p class="text-slate-600 text-xs mt-1">Créez votre propre boutique en ligne et vendez facilement vos produits à des milliers d'étudiants de Thiès.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- Référencement Local : Lieux et Pavillons Desservis à Thiès -->
+                <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
+                    <h2 class="text-lg font-bold text-slate-800">Zones de Livraison Couvertes à l'Université de Thiès</h2>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Campus Market opère un réseau de livraison ultra-rapide reliant les pavillons universitaires de l'UIDT :
+                        <strong>Pavillons A, B, C, D</strong>, <strong>Campus VDN</strong>, <strong>Cité Universitaire</strong>, et les résidences étudiantes avoisinantes dans la ville de Thiès.
+                    </p>
+                </section>
+
+                <!-- Questions Fréquentes (FAQ Sémantique) -->
+                <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                    <h2 class="text-lg font-bold text-slate-800">Foire Aux Questions — Campus Market UIDT</h2>
+                    <div class="flex flex-col gap-3 text-sm">
+                        <div>
+                            <h3 class="font-semibold text-slate-800">Comment passer une commande ?</h3>
+                            <p class="text-slate-600 text-xs mt-0.5">Parcourez les offres, ajoutez vos articles au panier, précisez votre pavillon et votre chambre, puis validez en un clic.</p>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-800">Combien de temps prend la livraison ?</h3>
+                            <p class="text-slate-600 text-xs mt-0.5">La livraison est assurée de pavillon à pavillon, généralement en 15 à 30 minutes après acceptation de la commande par le marchand.</p>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-800">Comment devenir marchand sur Campus Market ?</h3>
+                            <p class="text-slate-600 text-xs mt-0.5">Cliquez sur « Espace Vendeur », créez votre compte marchand avec votre email universitaire UIDT et commencez à publier vos articles immédiatement.</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <footer class="border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
+                <p>© 2026 Campus Market UIDT. La plateforme e-commerce de référence des étudiants de Thiès, Sénégal.</p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Fallback Noscript complet pour robots et navigateurs sans script -->
+    <noscript>
+        <div style="max-width: 800px; margin: 2rem auto; padding: 1.5rem; font-family: system-ui, -apple-system, sans-serif; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h1 style="color: #1d4ed8; font-size: 1.5rem;">Campus Market — Marketplace de l'UIDT Thiès</h1>
+            <p>Bienvenue sur la marketplace des étudiants de l'Université Iba Der Thiam de Thiès. Pour profiter de l'expérience interactive complète et commander en ligne vos repas et produits livrés en chambre, veuillez activer JavaScript dans votre navigateur.</p>
+            <p>Contact support & commandes : support@campusmarket-uidt.com | Thiès, Sénégal.</p>
+        </div>
+    </noscript>
 
     <!-- Point d'entrée applicatif Vite -->
     <script type="module" src="/src/main.js"></script>

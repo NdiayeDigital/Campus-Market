@@ -1,0 +1,17 @@
+# ==========================================
+# Campus Market - Robots.txt
+# Plateforme e-commerce des étudiants de l'UIDT Thiès
+# ==========================================
+
+User-agent: *
+Allow: /
+Allow: /assets/
+Allow: /manifest.json
+Allow: /sw.js
+
+# Exclure les zones de gestion interne et APIs privées
+Disallow: /admin
+Disallow: /api/
+
+# Sitemap officiel
+Sitemap: https://campusmarket-uidt.com/sitemap.xml

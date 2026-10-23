@@ -10,6 +10,7 @@ import { createProductCard } from '../ProductCard.js';
 import { createReviewModal } from '../ReviewModal.js';
 import { escapeHTML, formatSenegalPhone } from '../../utils/security.js';
 import { shareSellerShop } from '../../utils/share.js';
+import { setShopSEO } from '../../utils/seo.js';
 
 /**
  * Crée la vue Vitrine Marchande pour un vendeur spécifique.
@@ -65,6 +66,9 @@ export function createSellerShowcase({
             products = productsData || [];
             reviews = reviewsData || [];
             stats = getSellerRatingStats(reviews);
+            if (seller) {
+                setShopSEO(seller);
+            }
         } catch (err) {
             console.error('[SellerShowcase] Erreur chargement:', err);
             if (typeof onShowToast === 'function') {

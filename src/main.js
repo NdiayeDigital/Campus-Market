@@ -29,6 +29,7 @@ import {
 import { escapeHTML } from './utils/security.js';
 import { showToast } from './utils/notifications.js';
 import { SUPPORT_CONFIG } from './config/support.js';
+import { updateSEO, setCatalogSEO, setOrdersSEO, setSellerSEO, resetDefaultSEO } from './utils/seo.js';
 import logoUrl from './assets/logo.webp';
 
 export { showToast };
@@ -317,7 +318,7 @@ async function initApp() {
         <div class="w-full flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-slate-500">
             <!-- Marque & Identité UIDT -->
             <div class="flex flex-col sm:flex-row items-center gap-3">
-                <img src="${logoUrl}" alt="Campus Market" class="h-10 sm:h-12 w-auto max-w-[200px] object-contain" onerror="this.src='/assets/logo.webp'">
+                <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-10 sm:h-12 w-auto max-w-[200px] object-contain" onerror="this.src='/assets/logo.webp'">
                 <div class="text-left hidden sm:block">
                     <span class="text-[11px] text-slate-400 block font-medium">Université Iba Der Thiam de Thiès</span>
                 </div>
@@ -418,6 +419,7 @@ async function initApp() {
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.remove('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(false);
+            setOrdersSEO();
             renderOrdersView();
         } else if (viewName === 'seller') {
             mainContentEl.className = 'flex-1 w-full p-0 m-0 pb-0 flex flex-col';
@@ -425,6 +427,7 @@ async function initApp() {
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.add('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(true);
+            setSellerSEO();
             renderSellerView();
         } else if (viewName === 'admin') {
             mainContentEl.className = 'flex-1 w-full p-0 m-0 pb-0 flex flex-col';
@@ -432,6 +435,7 @@ async function initApp() {
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.add('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(true);
+            updateSEO({ title: 'Administration — Campus Market UIDT' });
             renderAdminView();
         } else if (viewName === 'shop') {
             mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
@@ -446,6 +450,7 @@ async function initApp() {
             categoryChipsComponent.classList.remove('hidden');
             footerEl.classList.remove('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(false);
+            setCatalogSEO(appState.currentCategory, appState.searchQuery);
             renderCatalogView();
         }
     }
@@ -781,6 +786,9 @@ async function initApp() {
             hideLoading();
             renderCatalogView();
             updateCategoryCounters(appState.products);
+            if (appState.currentView === 'catalog') {
+                setCatalogSEO(appState.currentCategory, appState.searchQuery);
+            }
         }
     }
 
