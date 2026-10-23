@@ -49,7 +49,29 @@ export default async function handler(req, res) {
         const validOperator = operator === 'om' ? 'om' : 'wave';
         const saspaySecretKey = process.env.SASPAY_SECRET_KEY;
 
-        const effectiveOrigin = origin || req.headers?.origin || 'http://localhost:5173';
+        function getSafeOrigin(reqOrigin, bodyOrigin) {
+            const candidate = bodyOrigin || reqOrigin;
+            if (candidate) {
+                try {
+                    const parsed = new URL(candidate);
+                    const host = parsed.hostname;
+                    if (
+                        host === 'campusmarket-uidt.com' ||
+                        host.endsWith('.campusmarket-uidt.com') ||
+                        host.endsWith('.vercel.app') ||
+                        host === 'localhost' ||
+                        host === '127.0.0.1'
+                    ) {
+                        return parsed.origin;
+                    }
+                } catch {
+                    // Ignorer les formats d'URL invalides
+                }
+            }
+            return 'https://campusmarket-uidt.com';
+        }
+
+        const effectiveOrigin = getSafeOrigin(req.headers?.origin, origin);
 
         // 1. Mode API SasPay (si clé secrète configurée dans l'environnement)
         if (saspaySecretKey && saspaySecretKey.startsWith('sk_')) {

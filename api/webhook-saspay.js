@@ -35,26 +35,44 @@ export default async function handler(req, res) {
             }
         }
 
-        // 1. Vérification de la signature HMAC SasPay si configurée
+        // 1. Vérification cryptographique stricte de la signature HMAC SasPay
+        const webhookSecret = process.env.SASPAY_WEBHOOK_SECRET || process.env.SASPAY_SECRET_KEY || '';
         const signature = req.headers['x-webhook-signature'] || req.headers['x-saspay-signature'];
         const timestamp = req.headers['x-webhook-timestamp'] || '';
+        const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
 
-        if (SASPAY_WEBHOOK_SECRET && signature) {
+        if (isProduction && !webhookSecret) {
+            console.error('[SasPay Webhook] Erreur critique : SASPAY_WEBHOOK_SECRET non configuré en production.');
+            return res.status(500).json({ error: 'Configuration serveur incomplète : secret webhook manquant.' });
+        }
+
+        if (webhookSecret) {
+            if (!signature) {
+                console.warn('[SasPay Webhook] Rejet : signature manquante.');
+                return res.status(401).json({ error: 'Signature de webhook requise (x-webhook-signature).' });
+            }
+
             try {
                 const bodyStr = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
                 const toSign = timestamp ? `${timestamp}.${bodyStr}` : bodyStr;
                 const expectedSignature = crypto
-                    .createHmac('sha256', SASPAY_WEBHOOK_SECRET)
+                    .createHmac('sha256', webhookSecret)
                     .update(toSign)
                     .digest('hex');
 
-                if (signature !== expectedSignature) {
+                const sigBuf = Buffer.from(signature, 'utf8');
+                const expBuf = Buffer.from(expectedSignature, 'utf8');
+
+                if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
                     console.warn('[SasPay Webhook] Signature invalide détectée.');
                     return res.status(401).json({ error: 'Signature de webhook invalide.' });
                 }
             } catch (sigErr) {
                 console.error('[SasPay Webhook] Erreur vérification signature:', sigErr);
+                return res.status(401).json({ error: 'Échec de validation de la signature.' });
             }
+        } else if (isProduction) {
+            return res.status(401).json({ error: 'Signature non vérifiable en production.' });
         }
 
         console.log('[SasPay Webhook] Notification reçue :', payload);

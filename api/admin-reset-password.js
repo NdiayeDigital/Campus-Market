@@ -2,6 +2,10 @@
  * API Serverless Endpoint : /api/admin-reset-password
  * Réinitialise le mot de passe d'un vendeur au mot de passe temporaire 'campus1234!'
  * et active le drapeau de changement obligatoire de mot de passe.
+ *
+ * SÉCURITÉ :
+ * Requiert formellement un jeton d'authentification valide (Bearer Token)
+ * appartenant à un utilisateur avec le rôle 'superadmin'.
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -32,7 +36,36 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Identifiant du vendeur manquant.' });
         }
 
-        // 1. Si la clé de service (service_role) est disponible côté serveur
+        // 1. Validation obligatoire de l'authentification SuperAdmin
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentification requise. Jeton Bearer manquant.' });
+        }
+
+        const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+        const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: false },
+        });
+
+        const { data: userData, error: userError } = await authClient.auth.getUser(token);
+        if (userError || !userData?.user) {
+            return res.status(401).json({ error: 'Jeton de session invalide ou expiré.' });
+        }
+
+        const callerId = userData.user.id;
+
+        // 2. Vérification stricte du rôle SuperAdmin dans la table profiles
+        const { data: callerProfile, error: profileError } = await authClient
+            .from('profiles')
+            .select('role')
+            .eq('id', callerId)
+            .maybeSingle();
+
+        if (profileError || !callerProfile || callerProfile.role !== 'superadmin') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Administrateur requis.' });
+        }
+
+        // 3. Exécution de la réinitialisation (sécurisée)
         if (SUPABASE_SERVICE_ROLE_KEY) {
             const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
                 auth: { persistSession: false },
@@ -64,16 +97,15 @@ export default async function handler(req, res) {
             });
         }
 
-        // 2. Sinon, tenter d'exécuter via la fonction RPC
-        const authHeader = req.headers.authorization;
-        const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        // 4. Si pas de service role key, exécution via la fonction RPC protégée
+        const rpcClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: { persistSession: false },
             global: {
-                headers: authHeader ? { Authorization: authHeader } : {},
+                headers: { Authorization: `Bearer ${token}` },
             },
         });
 
-        const { data, error: rpcError } = await client.rpc('admin_reset_seller_password', {
+        const { data, error: rpcError } = await rpcClient.rpc('admin_reset_seller_password', {
             target_user_id: sellerId,
         });
 
