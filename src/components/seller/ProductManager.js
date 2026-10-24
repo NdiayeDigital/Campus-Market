@@ -78,9 +78,11 @@ export function createProductManager({
         const subStatus = computeSubscriptionStatus(profile);
         const plan = profile?.subscription_plan || 'starter';
         const planObj = SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.starter;
-        const maxAllowed = subStatus?.isTrial
-            ? FREE_TRIAL_CONFIG.maxProducts
-            : (Number(profile?.max_products) || getMaxProductsForPlan(plan));
+        const maxAllowed = subStatus?.isSuperAdmin
+            ? (subStatus.maxProducts || 10)
+            : (subStatus?.isTrial
+                ? FREE_TRIAL_CONFIG.maxProducts
+                : (Number(profile?.max_products) || getMaxProductsForPlan(plan)));
         const count = products.length;
         const isLimitReached = count >= maxAllowed;
         const percent = Math.min(100, Math.round((count / Math.max(1, maxAllowed)) * 100));

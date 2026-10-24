@@ -148,7 +148,7 @@ export function computeSubscriptionStatus(profile) {
             isSuperAdmin: true,
             canPublish: true,
             canSell: true,
-            maxProducts: 999,
+            maxProducts: 10,
             plan: SUBSCRIPTION_PLANS.pro,
             expiresAt: null,
         };

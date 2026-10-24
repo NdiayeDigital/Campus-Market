@@ -1516,7 +1516,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         const getSubscriptionBadgeHTML = (seller) => {
             const subCalc = computeSubscriptionStatus(seller);
             if (subCalc.status === 'superadmin') {
-                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">Illimité</span>';
+                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">Pack Pro Admin</span>';
             }
             if (subCalc.status === 'trial_active') {
                 return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Fin essai : ${seller.trial_ends_at ? new Date(seller.trial_ends_at).toLocaleDateString('fr-FR') : ''}">Essai (${subCalc.daysRemaining}j)</span>`;
@@ -1550,7 +1550,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             const isSuspended = isSellerSuspended(s);
                             const isSuperAdmin = s.role === 'superadmin';
                             const subCalc = computeSubscriptionStatus(s);
-                            const maxQuota = isSuperAdmin ? '∞' : (subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)));
+                            const maxQuota = isSuperAdmin ? 10 : (subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)));
                             const prodCount = allProducts.filter((p) => p.seller_id === s.id).length;
                             const cleanPhone = (s.telephone || '').replace(/\D/g, '');
                             const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
@@ -1690,7 +1690,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     const isSuspended = isSellerSuspended(s);
                     const isSuperAdmin = s.role === 'superadmin';
                     const subCalc = computeSubscriptionStatus(s);
-                    const maxQuota = isSuperAdmin ? '∞' : (subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)));
+                    const maxQuota = isSuperAdmin ? 10 : (subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)));
                     const prodCount = allProducts.filter((p) => p.seller_id === s.id).length;
                     const cleanPhone = (s.telephone || '').replace(/\D/g, '');
                     const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
