@@ -417,6 +417,43 @@ try {
 }
 console.log('✅ [PasswordReset] Assistance WhatsApp & Mail, réinitialisation campus1234! et changement obligatoire validés !');
 
+// 12. Test Validation OTP Vendeur (Brevo / Supabase)
+import { verifySellerOtp, resendSellerOtp } from '../src/services/seller-service.js';
+
+let rejectedEmptyOtp = false;
+try {
+    await verifySellerOtp({});
+} catch (e) {
+    rejectedEmptyOtp = e.message.includes('requis');
+}
+console.assert(rejectedEmptyOtp === true, 'Validation OTP sans paramètres doit échouer');
+
+let rejectedShortOtp = false;
+try {
+    await verifySellerOtp({ email: 'etudiant@univ-thies.sn', token: '123' });
+} catch (e) {
+    rejectedShortOtp = e.message.includes('6 chiffres');
+}
+console.assert(rejectedShortOtp === true, 'Validation OTP court doit exiger 6 chiffres');
+
+let rejectedAlphaOtp = false;
+try {
+    await verifySellerOtp({ email: 'etudiant@univ-thies.sn', token: 'abcdef' });
+} catch (e) {
+    rejectedAlphaOtp = e.message.includes('6 chiffres');
+}
+console.assert(rejectedAlphaOtp === true, 'Validation OTP non numérique doit échouer');
+
+let rejectedEmptyResend = false;
+try {
+    await resendSellerOtp('');
+} catch (e) {
+    rejectedEmptyResend = e.message.includes('requise');
+}
+console.assert(rejectedEmptyResend === true, 'Renvoi OTP sans email doit échouer');
+
+console.log('✅ [SellerOTP] Validation du format 6 chiffres, contrôle email et renvoi OTP validés !');
+
 console.log('🎉 Tous les tests unitaires des services de base sont passés avec succès !');
 
 
