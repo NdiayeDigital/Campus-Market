@@ -24,6 +24,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     let activeTab = 'login'; // 'login' | 'terms' | 'register' | 'otp' | 'pending' | 'forgot-password'
     let selectedPlan = 'starter'; // 'starter' (1500 FCFA/mois - 5 produits) | 'pro' (2500 FCFA/mois - 10 produits)
     let pendingOtpEmail = '';
+    let pendingRegistration = null;
     let otpCooldown = 0;
     let otpTimer = null;
 
@@ -689,6 +690,8 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     const res = await verifySellerOtp({
                         email: pendingOtpEmail,
                         token,
+                        password: pendingRegistration?.password || null,
+                        registrationData: pendingRegistration || null,
                     });
 
                     if (otpTimer) {
@@ -819,7 +822,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
             if (errorEl) errorEl.classList.add('hidden');
 
             try {
-                const regRes = await registerSeller({
+                pendingRegistration = {
                     prenom,
                     nom,
                     email,
@@ -828,7 +831,8 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     category,
                     password,
                     plan: selectedPlan,
-                });
+                };
+                const regRes = await registerSeller(pendingRegistration);
                 if (regRes?.status === 'approved') {
                     close();
                     if (typeof onAuthenticated === 'function') {

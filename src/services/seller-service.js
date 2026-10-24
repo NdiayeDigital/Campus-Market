@@ -109,11 +109,11 @@ export async function registerSeller({
     const nowIso = new Date().toISOString();
     const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
 
-    // 1. Inscription dans Supabase Auth avec métadonnées complètes
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // 1. Envoi du code OTP via signInWithOtp (Supabase Auth déclenche l'envoi du code à 6 chiffres via Brevo SMTP)
+    const { data: otpData, error: otpError } = await supabase.auth.signInWithOtp({
         email: cleanEmail,
-        password,
         options: {
+            shouldCreateUser: true,
             data: {
                 prenom,
                 nom,
@@ -130,116 +130,18 @@ export async function registerSeller({
         },
     });
 
-    let user = authData?.user;
-
-    if (authError) {
-        if (authError.message.includes('already registered')) {
-            // Tentative de connexion avec le mot de passe fourni pour un étudiant ayant déjà un compte
-            const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
-                email: cleanEmail,
-                password,
-            });
-
-            if (loginErr || !loginData?.user) {
-                throw new Error(
-                    `Un compte étudiant existe déjà avec cette adresse email. Veuillez vérifier votre mot de passe pour soumettre votre candidature vendeur, ou contacter l'assistance au ${SUPPORT_CONFIG.phoneDisplay}.`
-                );
-            }
-            user = loginData.user;
-        } else if (authError.message.includes('rate limit') || authError.code === 'over_email_send_rate_limit') {
+    if (otpError) {
+        if (otpError.message && (otpError.message.includes('rate limit') || otpError.code === 'over_email_send_rate_limit')) {
             throw new Error(
-                `Le quota d'emails d'inscription est temporairement atteint. Veuillez réessayer dans quelques minutes ou contacter l'assistance au ${SUPPORT_CONFIG.phoneDisplay}.`
+                `Trop de demandes récentes. Veuillez patienter 60 secondes avant de redemander un code, ou contacter l'assistance au ${SUPPORT_CONFIG.phoneDisplay}.`
             );
-        } else {
-            throw new Error(authError.message);
         }
-    }
-
-    if (!user) {
-        throw new Error("Échec de création de l'utilisateur.");
-    }
-
-    // 2. Si aucune session n'a été retournée immédiatement, tenter une connexion directe pour activer RLS
-    try {
-        const { data: sessionCheck } = await supabase.auth.getSession();
-        if (!sessionCheck?.session) {
-            await supabase.auth.signInWithPassword({
-                email: cleanEmail,
-                password,
-            });
-        }
-    } catch {
-        // Ignorer si la confirmation d'email Supabase empêche la connexion immédiate
-    }
-
-    // 3. Création ou mise à jour du profil avec le rôle 'vendeur_pending' et les détails de la formule
-    const profilePayload = {
-        id: user.id,
-        prenom,
-        nom,
-        telephone,
-        email: cleanEmail,
-        shop_name: finalShopName,
-        shop_category: finalCategory,
-        subscription_plan: validPlan,
-        max_products: FREE_TRIAL_CONFIG.maxProducts,
-        subscription_status: 'trial',
-        trial_started_at: nowIso,
-        trial_ends_at: trialEndIso,
-        role: 'vendeur_pending',
-        is_open: true,
-        created_at: nowIso,
-    };
-
-    // Sauvegarde immédiate dans le cache de résilience pour garantir que l'administrateur
-    // recevra toujours la candidature dans son tableau de bord
-    savePendingSellerCache(profilePayload);
-
-    // Tentative 1 : avec toutes les nouvelles colonnes
-    let profileSaved = false;
-    try {
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert(profilePayload, { onConflict: 'id' });
-
-        if (!profileError) {
-            profileSaved = true;
-        } else {
-            console.warn('[SellerService] Tentative 1 profil:', profileError.message);
-        }
-    } catch (err) {
-        console.warn('[SellerService] Exception insertion profil 1:', err);
-    }
-
-    // Tentative 2 : Repli sur les colonnes de base si les nouvelles colonnes ne sont pas encore migrées
-    if (!profileSaved) {
-        try {
-            const basePayload = {
-                id: user.id,
-                prenom,
-                nom,
-                telephone,
-                role: 'vendeur_pending',
-                is_open: true,
-            };
-            const { error: baseErr } = await supabase
-                .from('profiles')
-                .upsert(basePayload, { onConflict: 'id' });
-
-            if (baseErr) {
-                console.warn('[SellerService] Tentative 2 profil:', baseErr.message);
-            } else {
-                profileSaved = true;
-            }
-        } catch (err2) {
-            console.warn('[SellerService] Exception insertion profil 2:', err2);
-        }
+        throw new Error(otpError.message || "Erreur lors de l'envoi du code de confirmation.");
     }
 
     return {
-        user,
-        profile: profilePayload,
-        status: 'pending',
+        email: cleanEmail,
+        status: 'otp_sent',
     };
 }
 
@@ -248,9 +150,11 @@ export async function registerSeller({
  * @param {Object} params
  * @param {string} params.email - Adresse email universitaire
  * @param {string} params.token - Code OTP à 6 chiffres
+ * @param {string} [params.password] - Mot de passe choisi par l'utilisateur
+ * @param {Object} [params.registrationData] - Données de profil saisies lors de l'inscription
  * @returns {Promise<{ user: Object, profile: Object, status: 'approved' }>}
  */
-export async function verifySellerOtp({ email, token }) {
+export async function verifySellerOtp({ email, token, password = null, registrationData = null }) {
     if (!email || !token) {
         throw new Error('Email et code de confirmation requis.');
     }
@@ -262,32 +166,32 @@ export async function verifySellerOtp({ email, token }) {
     }
 
     // 1. Validation de l'OTP auprès de Supabase Auth
+    // signInWithOtp utilise le type 'email' pour la vérification du code à 6 chiffres
     let authUser = null;
     let authSession = null;
 
-    // Tentative 1 : type 'signup' (reçu lors de la première inscription)
     const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         email: cleanEmail,
         token: cleanToken,
-        type: 'signup',
+        type: 'email',
     });
 
     if (!verifyError && verifyData?.user) {
         authUser = verifyData.user;
         authSession = verifyData.session;
     } else {
-        // Tentative 2 : type 'email' (si renvoi d'OTP ultérieur)
+        // Repli sur type 'signup' si configuré ainsi
         const { data: retryData, error: retryError } = await supabase.auth.verifyOtp({
             email: cleanEmail,
             token: cleanToken,
-            type: 'email',
+            type: 'signup',
         });
 
         if (!retryError && retryData?.user) {
             authUser = retryData.user;
             authSession = retryData.session;
         } else {
-            const errMsg = (retryError && retryError.message) || (verifyError && verifyError.message) || '';
+            const errMsg = (verifyError && verifyError.message) || (retryError && retryError.message) || '';
             if (errMsg.toLowerCase().includes('expired')) {
                 throw new Error("Ce code de confirmation a expiré. Veuillez cliquer sur 'Renvoyer un nouveau code'.");
             }
@@ -299,45 +203,71 @@ export async function verifySellerOtp({ email, token }) {
         throw new Error("Échec de confirmation de l'adresse email.");
     }
 
-    // 2. Auto-approbation immédiate : Passage au rôle 'vendeur' avec essai 7 jours activé
+    // 2. Définition du mot de passe pour permettre les futures connexions par mot de passe
+    if (password && password.length >= 6) {
+        try {
+            await supabase.auth.updateUser({ password });
+        } catch (pwdErr) {
+            console.warn('[SellerService] Définition du mot de passe:', pwdErr?.message || pwdErr);
+        }
+    }
+
+    // 3. Auto-approbation immédiate : Passage au rôle 'vendeur' avec essai 7 jours activé
     const nowIso = new Date().toISOString();
     const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
+    const userMeta = authUser.user_metadata || {};
+    const finalShopName = registrationData?.shopName || userMeta.shop_name || `${registrationData?.prenom || userMeta.prenom || ''} Shop`;
+    const finalCategory = registrationData?.category || userMeta.shop_category || 'autres';
+    const validPlan = registrationData?.plan || userMeta.subscription_plan || 'starter';
+
+    const profilePayload = {
+        id: authUser.id,
+        prenom: registrationData?.prenom || userMeta.prenom || '',
+        nom: registrationData?.nom || userMeta.nom || '',
+        telephone: registrationData?.telephone || userMeta.telephone || '',
+        email: cleanEmail,
+        shop_name: finalShopName,
+        shop_category: finalCategory,
+        subscription_plan: validPlan,
+        max_products: FREE_TRIAL_CONFIG.maxProducts,
+        subscription_status: 'trial',
+        trial_started_at: nowIso,
+        trial_ends_at: trialEndIso,
+        role: 'vendeur',
+        is_open: true,
+        updated_at: nowIso,
+    };
 
     let updatedProfile = null;
     try {
         const { data: profData, error: profErr } = await supabase
             .from('profiles')
-            .update({
-                role: 'vendeur',
-                subscription_status: 'trial',
-                trial_started_at: nowIso,
-                trial_ends_at: trialEndIso,
-                is_open: true,
-            })
-            .eq('id', authUser.id)
+            .upsert(profilePayload, { onConflict: 'id' })
             .select()
             .single();
 
         if (!profErr && profData) {
             updatedProfile = profData;
+        } else {
+            // Repli sur colonnes de base si les nouvelles colonnes ne sont pas encore migrées
+            const basePayload = {
+                id: authUser.id,
+                prenom: profilePayload.prenom,
+                nom: profilePayload.nom,
+                telephone: profilePayload.telephone,
+                role: 'vendeur',
+                is_open: true,
+            };
+            const { data: fallbackData } = await supabase
+                .from('profiles')
+                .upsert(basePayload, { onConflict: 'id' })
+                .select()
+                .single();
+            updatedProfile = fallbackData || { ...profilePayload, role: 'vendeur' };
         }
     } catch (dbErr) {
         console.warn('[SellerService] Avertissement update profil OTP:', dbErr);
-    }
-
-    // Si la DB n'a pas retourné le profil mis à jour, le récupérer
-    if (!updatedProfile) {
-        try {
-            const { data: existingProf } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', authUser.id)
-                .maybeSingle();
-
-            updatedProfile = existingProf ? { ...existingProf, role: 'vendeur' } : { id: authUser.id, role: 'vendeur' };
-        } catch {
-            updatedProfile = { id: authUser.id, role: 'vendeur' };
-        }
+        updatedProfile = { ...profilePayload, role: 'vendeur' };
     }
 
     // Nettoyer la candidature du cache en attente
@@ -406,6 +336,9 @@ export async function loginSeller({ email, password }) {
 
     if (authError) {
         if (authError.message && authError.message.toLowerCase().includes('email not confirmed')) {
+            try {
+                await resendSellerOtp(cleanEmail);
+            } catch {}
             return {
                 status: 'needs_confirmation',
                 email: cleanEmail,
