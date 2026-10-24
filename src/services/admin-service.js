@@ -472,6 +472,17 @@ export async function rejectSeller(sellerId) {
 export async function suspendSeller(sellerId, suspend = true) {
     if (!sellerId) throw new Error('ID vendeur manquant.');
 
+    // 🔒 Règle de protection mutuelle : Impossible de suspendre un SuperAdmin
+    const { data: targetProf } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', sellerId)
+        .maybeSingle();
+
+    if (targetProf?.role === 'superadmin') {
+        throw new Error('Action non autorisée : Les comptes SuperAdmin sont protégés et ne peuvent pas être suspendus.');
+    }
+
     const targetRole = suspend ? 'vendeur_desactive' : 'vendeur';
     const isOpen = !suspend;
 
@@ -533,6 +544,17 @@ export async function suspendSeller(sellerId, suspend = true) {
 export async function revokeSeller(sellerId) {
     if (!sellerId) throw new Error('ID vendeur manquant.');
 
+    // 🔒 Règle de protection mutuelle : Impossible de rétrograder un SuperAdmin
+    const { data: targetProf } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', sellerId)
+        .maybeSingle();
+
+    if (targetProf?.role === 'superadmin') {
+        throw new Error('Action non autorisée : Les comptes SuperAdmin sont protégés et ne peuvent pas être rétrogradés.');
+    }
+
     setSuspendedSellerInCache(sellerId, false);
 
     try {
@@ -567,6 +589,17 @@ export async function revokeSeller(sellerId) {
  */
 export async function deleteSellerAccount(sellerId) {
     if (!sellerId) throw new Error('ID vendeur manquant.');
+
+    // 🔒 Règle de protection mutuelle : Impossible de supprimer un SuperAdmin depuis l'application
+    const { data: targetProf } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', sellerId)
+        .maybeSingle();
+
+    if (targetProf?.role === 'superadmin') {
+        throw new Error("Action non autorisée : Les comptes SuperAdmin sont protégés et ne peuvent pas être supprimés depuis l'application.");
+    }
 
     setSuspendedSellerInCache(sellerId, false);
 
@@ -789,6 +822,22 @@ export async function fetchAllProfilesAdmin() {
  */
 export async function updateUserRoleAdmin(userId, newRole) {
     if (!userId || !newRole) throw new Error('ID et rôle requis.');
+
+    // 🔒 Règle de protection mutuelle : Impossible de modifier un SuperAdmin ou de nommer un SuperAdmin depuis le front
+    const { data: targetProf } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (targetProf?.role === 'superadmin') {
+        throw new Error("Action non autorisée : Les droits d'un SuperAdmin ne peuvent être modifiés que directement depuis le SQL Editor de Supabase.");
+    }
+
+    if (newRole === 'superadmin') {
+        throw new Error("Action non autorisée : La nomination au rôle SuperAdmin s'effectue exclusivement depuis le SQL Editor de Supabase.");
+    }
+
     const { data, error } = await supabase
         .from('profiles')
         .update({ role: newRole })

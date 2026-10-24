@@ -913,7 +913,11 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     ${prof.created_at ? new Date(prof.created_at).toLocaleDateString('fr-FR') : '-'}
                                                 </td>
                                                 <td class="py-3 px-4 text-right">
-                                                    ${!isSelf ? `
+                                                    ${prof.role === 'superadmin' ? `
+                                                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs select-none">
+                                                            <i class="fa-solid fa-shield-halved text-primary"></i> SuperAdmin Protégé
+                                                        </span>
+                                                    ` : (!isSelf ? `
                                                         <div class="flex items-center justify-end gap-1.5">
                                                             <button 
                                                                 type="button" 
@@ -947,7 +951,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                                 <i class="fa-solid fa-trash-can text-xs"></i>
                                                             </button>
                                                         </div>
-                                                    ` : ''}
+                                                    ` : '')}
                                                 </td>
                                             </tr>
                                         `;
@@ -990,7 +994,11 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                             </div>
                                         </div>
 
-                                        ${!isSelf ? `
+                                        ${prof.role === 'superadmin' ? `
+                                            <div class="pt-1 flex items-center justify-center py-2 px-3 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs select-none">
+                                                <i class="fa-solid fa-shield-halved text-primary mr-1.5"></i> Compte SuperAdmin Protégé
+                                            </div>
+                                        ` : (!isSelf ? `
                                             <div class="flex items-center gap-2 pt-1">
                                                 <button 
                                                     type="button" 
@@ -1025,7 +1033,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                                 </button>
                                             </div>
-                                        ` : ''}
+                                        ` : '')}
                                     </div>
                                 `;
                             }).join('')}
@@ -1626,37 +1634,43 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                 <i class="fa-solid fa-key text-[10px]"></i>
                                                 <span>Reset MDP</span>
                                             </button>
-                                            <button 
-                                                type="button" 
-                                                data-action="toggle-suspend" 
-                                                data-id="${s.id}" 
-                                                data-suspended="${isSuspended ? 'true' : 'false'}"
-                                                class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-                                                    isSuspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 text-rose-600 hover:bg-rose-50'
-                                                }"
-                                            >
-                                                ${isSuspended ? 'Réactiver' : 'Suspendre'}
-                                            </button>
-                                            <button 
-                                                type="button" 
-                                                data-action="revoke-seller" 
-                                                data-id="${s.id}" 
-                                                data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                                class="px-2 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 text-xs font-semibold cursor-pointer"
-                                                title="Rétrograder en simple acheteur"
-                                            >
-                                                Rétrograder
-                                            </button>
-                                            <button 
-                                                type="button" 
-                                                data-action="delete-seller" 
-                                                data-id="${s.id}" 
-                                                data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                                class="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors flex items-center justify-center cursor-pointer"
-                                                title="Supprimer"
-                                            >
-                                                <i class="fa-solid fa-trash-can text-xs"></i>
-                                            </button>
+                                            ${s.role === 'superadmin' ? `
+                                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs select-none">
+                                                    <i class="fa-solid fa-shield-halved text-primary"></i> SuperAdmin Protégé
+                                                </span>
+                                            ` : `
+                                                <button 
+                                                    type="button" 
+                                                    data-action="toggle-suspend" 
+                                                    data-id="${s.id}" 
+                                                    data-suspended="${isSuspended ? 'true' : 'false'}"
+                                                    class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+                                                        isSuspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 text-rose-600 hover:bg-rose-50'
+                                                    }"
+                                                >
+                                                    ${isSuspended ? 'Réactiver' : 'Suspendre'}
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    data-action="revoke-seller" 
+                                                    data-id="${s.id}" 
+                                                    data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
+                                                    class="px-2 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 text-xs font-semibold cursor-pointer"
+                                                    title="Rétrograder en simple acheteur"
+                                                >
+                                                    Rétrograder
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    data-action="delete-seller" 
+                                                    data-id="${s.id}" 
+                                                    data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
+                                                    class="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors flex items-center justify-center cursor-pointer"
+                                                    title="Supprimer"
+                                                >
+                                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                                </button>
+                                            `}
                                         </div>
                                     </td>
                                 </tr>
@@ -1755,39 +1769,46 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <span>Reset MDP</span>
                                 </button>
 
-                                <button 
-                                    type="button" 
-                                    data-action="toggle-suspend" 
-                                    data-id="${s.id}" 
-                                    data-suspended="${isSuspended ? 'true' : 'false'}"
-                                    class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all min-h-[44px] active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 ${
-                                        isSuspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 text-rose-600 bg-rose-50/50'
-                                    }"
-                                >
-                                    <i class="fa-solid ${isSuspended ? 'fa-rotate-left' : 'fa-ban'} text-[11px]"></i>
-                                    <span>${isSuspended ? 'Réactiver' : 'Suspendre'}</span>
-                                </button>
+                                ${s.role === 'superadmin' ? `
+                                    <div class="flex-1 py-2 px-3 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs flex items-center justify-center gap-1.5 select-none">
+                                        <i class="fa-solid fa-shield-halved text-primary text-[11px]"></i>
+                                        <span>SuperAdmin Protégé</span>
+                                    </div>
+                                ` : `
+                                    <button 
+                                        type="button" 
+                                        data-action="toggle-suspend" 
+                                        data-id="${s.id}" 
+                                        data-suspended="${isSuspended ? 'true' : 'false'}"
+                                        class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all min-h-[44px] active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 ${
+                                            isSuspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 text-rose-600 bg-rose-50/50'
+                                        }"
+                                    >
+                                        <i class="fa-solid ${isSuspended ? 'fa-rotate-left' : 'fa-ban'} text-[11px]"></i>
+                                        <span>${isSuspended ? 'Réactiver' : 'Suspendre'}</span>
+                                    </button>
 
-                                <button 
-                                    type="button" 
-                                    data-action="revoke-seller" 
-                                    data-id="${s.id}" 
-                                    data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                    class="py-2 px-3 rounded-xl border border-amber-200 text-amber-700 text-xs font-semibold min-h-[44px] cursor-pointer"
-                                >
-                                    Rétrograder
-                                </button>
+                                    <button 
+                                        type="button" 
+                                        data-action="revoke-seller" 
+                                        data-id="${s.id}" 
+                                        data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
+                                        class="py-2 px-3 rounded-xl border border-amber-200 text-amber-700 text-xs font-semibold min-h-[44px] cursor-pointer"
+                                    >
+                                        Rétrograder
+                                    </button>
 
-                                <button 
-                                    type="button" 
-                                    data-action="delete-seller" 
-                                    data-id="${s.id}" 
-                                    data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                    class="w-11 h-11 rounded-xl border border-slate-200 text-slate-400 hover:text-rose-600 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
-                                    title="Supprimer"
-                                >
-                                    <i class="fa-solid fa-trash-can text-xs"></i>
-                                </button>
+                                    <button 
+                                        type="button" 
+                                        data-action="delete-seller" 
+                                        data-id="${s.id}" 
+                                        data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
+                                        class="w-11 h-11 rounded-xl border border-slate-200 text-slate-400 hover:text-rose-600 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+                                        title="Supprimer"
+                                    >
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>
+                                `}
                             </div>
                         </div>
                     `;
@@ -2616,6 +2637,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
         // Modale d'attribution/modification de rôle
         function openRoleModal(userId, currentRole, userName) {
+            // 🔒 Règle de protection : Les comptes SuperAdmin ne peuvent pas être altérés depuis le front
+            if (currentRole === 'superadmin') {
+                showToast("Action interdite : Les comptes SuperAdmin sont protégés et ne peuvent être modifiés que directement dans le SQL Editor de Supabase.", "warning");
+                return;
+            }
+
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in';
             modal.innerHTML = `
@@ -2634,8 +2661,11 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         <select id="modal-select-role" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary font-medium">
                             <option value="acheteur" ${currentRole === 'acheteur' ? 'selected' : ''}>Acheteur (Étudiant acheteur standard)</option>
                             <option value="vendeur" ${currentRole === 'vendeur' ? 'selected' : ''}>Vendeur (Peut créer et gérer une boutique)</option>
-                            <option value="superadmin" ${currentRole === 'superadmin' ? 'selected' : ''}>SuperAdmin (Droits complets de modération)</option>
                         </select>
+                        <p class="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200 leading-snug mt-1">
+                            <i class="fa-solid fa-shield-halved text-primary mr-1"></i>
+                            La nomination au rôle <strong>SuperAdmin</strong> est strictement réservée au gestionnaire de la base dans le SQL Editor de Supabase.
+                        </p>
                     </div>
                     <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                         <button type="button" id="btn-cancel-role-modal" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">Annuler</button>
