@@ -1503,7 +1503,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             `;
         }
 
-        const getPlanBadgeHTML = (plan) => {
+        const getPlanBadgeHTML = (plan, isSuperAdmin = false) => {
+            if (isSuperAdmin) {
+                return '<span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-2xs">Admin Pro (∞)</span>';
+            }
             if (plan === 'pro') {
                 return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Pro</span>';
             }
@@ -1545,8 +1548,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <tbody class="divide-y divide-slate-100">
                         ${list.map((s) => {
                             const isSuspended = isSellerSuspended(s);
+                            const isSuperAdmin = s.role === 'superadmin';
                             const subCalc = computeSubscriptionStatus(s);
-                            const maxQuota = subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5));
+                            const maxQuota = isSuperAdmin ? '∞' : (subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)));
                             const prodCount = allProducts.filter((p) => p.seller_id === s.id).length;
                             const cleanPhone = (s.telephone || '').replace(/\D/g, '');
                             const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
@@ -1556,7 +1560,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-3">
                                             <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                                isSuspended ? 'bg-slate-200 text-slate-500' : 'bg-primary/10 text-primary'
+                                                isSuspended ? 'bg-slate-200 text-slate-500' : (isSuperAdmin ? 'bg-primary text-white shadow-2xs' : 'bg-primary/10 text-primary')
                                             }">
                                                 ${((s.prenom?.[0] || '') + (s.nom?.[0] || '')).toUpperCase() || 'V'}
                                             </div>
@@ -1569,7 +1573,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
                                             <span class="font-bold text-slate-800">${prodCount} / ${maxQuota}</span>
-                                            ${getPlanBadgeHTML(s.subscription_plan)}
+                                            ${getPlanBadgeHTML(s.subscription_plan, isSuperAdmin)}
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
@@ -1604,41 +1608,41 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     </td>
                                     <td class="py-3 px-4 text-right">
                                         <div class="flex items-center justify-end gap-1.5 flex-wrap">
-                                            <button 
-                                                type="button" 
-                                                data-action="extend-trial" 
-                                                data-id="${s.id}" 
-                                                class="px-2 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-[11px] font-semibold cursor-pointer"
-                                                title="Prolonger l'essai gratuit de 7 jours"
-                                            >
-                                                +7j Essai
-                                            </button>
-                                            <button 
-                                                type="button" 
-                                                data-action="activate-sub" 
-                                                data-id="${s.id}" 
-                                                data-plan="${s.subscription_plan || 'starter'}"
-                                                class="px-2 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-[11px] font-semibold cursor-pointer"
-                                                title="Activer manuellement 30 jours (règlement cash sur campus)"
-                                            >
-                                                Activer 30j
-                                            </button>
-                                            <button 
-                                                type="button" 
-                                                data-action="reset-password" 
-                                                data-id="${s.id}" 
-                                                data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                                class="px-2 py-1.5 rounded-lg border border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 text-[11px] font-semibold cursor-pointer flex items-center gap-1 shadow-2xs"
-                                                title="Réinitialiser le mot de passe à campus1234!"
-                                            >
-                                                <i class="fa-solid fa-key text-[10px]"></i>
-                                                <span>Reset MDP</span>
-                                            </button>
-                                            ${s.role === 'superadmin' ? `
+                                            ${isSuperAdmin ? `
                                                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs select-none">
-                                                    <i class="fa-solid fa-shield-halved text-primary"></i> SuperAdmin Protégé
+                                                    <i class="fa-solid fa-shield-halved text-primary"></i> SuperAdmin Protégé (Illimité)
                                                 </span>
                                             ` : `
+                                                <button 
+                                                    type="button" 
+                                                    data-action="extend-trial" 
+                                                    data-id="${s.id}" 
+                                                    class="px-2 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-[11px] font-semibold cursor-pointer"
+                                                    title="Prolonger l'essai gratuit de 7 jours"
+                                                >
+                                                    +7j Essai
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    data-action="activate-sub" 
+                                                    data-id="${s.id}" 
+                                                    data-plan="${s.subscription_plan || 'starter'}"
+                                                    class="px-2 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-[11px] font-semibold cursor-pointer"
+                                                    title="Activer manuellement 30 jours (règlement cash sur campus)"
+                                                >
+                                                    Activer 30j
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    data-action="reset-password" 
+                                                    data-id="${s.id}" 
+                                                    data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
+                                                    class="px-2 py-1.5 rounded-lg border border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 text-[11px] font-semibold cursor-pointer flex items-center gap-1 shadow-2xs"
+                                                    title="Réinitialiser le mot de passe à campus1234!"
+                                                >
+                                                    <i class="fa-solid fa-key text-[10px]"></i>
+                                                    <span>Reset MDP</span>
+                                                </button>
                                                 <button 
                                                     type="button" 
                                                     data-action="toggle-suspend" 
@@ -1684,8 +1688,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             <div class="md:hidden flex flex-col divide-y divide-slate-100 p-3">
                 ${list.map((s) => {
                     const isSuspended = isSellerSuspended(s);
+                    const isSuperAdmin = s.role === 'superadmin';
                     const subCalc = computeSubscriptionStatus(s);
-                    const maxQuota = subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5));
+                    const maxQuota = isSuperAdmin ? '∞' : (subCalc.isTrial ? 3 : (s.max_products || (s.subscription_plan === 'pro' ? 10 : 5)));
                     const prodCount = allProducts.filter((p) => p.seller_id === s.id).length;
                     const cleanPhone = (s.telephone || '').replace(/\D/g, '');
                     const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
@@ -1694,7 +1699,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         <div class="py-3 flex flex-col gap-2.5">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                    isSuspended ? 'bg-slate-200 text-slate-500' : 'bg-primary/10 text-primary'
+                                    isSuspended ? 'bg-slate-200 text-slate-500' : (isSuperAdmin ? 'bg-primary text-white shadow-2xs' : 'bg-primary/10 text-primary')
                                 }">
                                     ${((s.prenom?.[0] || '') + (s.nom?.[0] || '')).toUpperCase() || 'V'}
                                 </div>
@@ -1717,7 +1722,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         <span>${escapeHTML(s.telephone || 'Non renseigné')}</span>
                                         <span>•</span>
                                         <span class="font-bold text-slate-800">${prodCount} / ${maxQuota} prod.</span>
-                                        ${getPlanBadgeHTML(s.subscription_plan)}
+                                        ${getPlanBadgeHTML(s.subscription_plan, isSuperAdmin)}
                                         ${getSubscriptionBadgeHTML(s)}
                                     </div>
                                 </div>
@@ -1736,45 +1741,45 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     </a>
                                 ` : ''}
 
-                                <button 
-                                    type="button" 
-                                    data-action="extend-trial" 
-                                    data-id="${s.id}" 
-                                    class="py-2 px-2.5 rounded-xl border border-indigo-200 text-indigo-700 bg-indigo-50/50 text-xs font-semibold min-h-[44px] cursor-pointer"
-                                    title="Prolonger l'essai gratuit de 7 jours"
-                                >
-                                    +7j Essai
-                                </button>
-
-                                <button 
-                                    type="button" 
-                                    data-action="activate-sub" 
-                                    data-id="${s.id}" 
-                                    data-plan="${s.subscription_plan || 'starter'}"
-                                    class="py-2 px-2.5 rounded-xl border border-emerald-200 text-emerald-700 bg-emerald-50/50 text-xs font-semibold min-h-[44px] cursor-pointer"
-                                    title="Activer manuellement 30 jours"
-                                >
-                                    Activer 30j
-                                </button>
-
-                                <button 
-                                    type="button" 
-                                    data-action="reset-password" 
-                                    data-id="${s.id}" 
-                                    data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                    class="py-2 px-2.5 rounded-xl border border-amber-300 text-amber-800 bg-amber-50 text-xs font-semibold min-h-[44px] cursor-pointer flex items-center gap-1 shadow-2xs"
-                                    title="Réinitialiser le mot de passe à campus1234!"
-                                >
-                                    <i class="fa-solid fa-key text-xs"></i>
-                                    <span>Reset MDP</span>
-                                </button>
-
-                                ${s.role === 'superadmin' ? `
+                                ${isSuperAdmin ? `
                                     <div class="flex-1 py-2 px-3 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs flex items-center justify-center gap-1.5 select-none">
                                         <i class="fa-solid fa-shield-halved text-primary text-[11px]"></i>
-                                        <span>SuperAdmin Protégé</span>
+                                        <span>SuperAdmin Protégé (Illimité)</span>
                                     </div>
                                 ` : `
+                                    <button 
+                                        type="button" 
+                                        data-action="extend-trial" 
+                                        data-id="${s.id}" 
+                                        class="py-2 px-2.5 rounded-xl border border-indigo-200 text-indigo-700 bg-indigo-50/50 text-xs font-semibold min-h-[44px] cursor-pointer"
+                                        title="Prolonger l'essai gratuit de 7 jours"
+                                    >
+                                        +7j Essai
+                                    </button>
+
+                                    <button 
+                                        type="button" 
+                                        data-action="activate-sub" 
+                                        data-id="${s.id}" 
+                                        data-plan="${s.subscription_plan || 'starter'}"
+                                        class="py-2 px-2.5 rounded-xl border border-emerald-200 text-emerald-700 bg-emerald-50/50 text-xs font-semibold min-h-[44px] cursor-pointer"
+                                        title="Activer manuellement 30 jours"
+                                    >
+                                        Activer 30j
+                                    </button>
+
+                                    <button 
+                                        type="button" 
+                                        data-action="reset-password" 
+                                        data-id="${s.id}" 
+                                        data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
+                                        class="py-2 px-2.5 rounded-xl border border-amber-300 text-amber-800 bg-amber-50 text-xs font-semibold min-h-[44px] cursor-pointer flex items-center gap-1 shadow-2xs"
+                                        title="Réinitialiser le mot de passe à campus1234!"
+                                    >
+                                        <i class="fa-solid fa-key text-xs"></i>
+                                        <span>Reset MDP</span>
+                                    </button>
+
                                     <button 
                                         type="button" 
                                         data-action="toggle-suspend" 

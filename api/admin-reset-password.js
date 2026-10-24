@@ -65,6 +65,17 @@ export default async function handler(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Administrateur requis.' });
         }
 
+        // 2.b. 🔒 Règle d'immunité mutuelle : Interdiction absolue de réinitialiser le mot de passe d'un autre SuperAdmin
+        const { data: targetProfile } = await authClient
+            .from('profiles')
+            .select('role')
+            .eq('id', sellerId)
+            .maybeSingle();
+
+        if (targetProfile?.role === 'superadmin') {
+            return res.status(403).json({ error: "Action non autorisée : Le mot de passe d'un compte SuperAdmin ne peut pas être réinitialisé via cette interface." });
+        }
+
         // 3. Exécution de la réinitialisation (sécurisée)
         if (SUPABASE_SERVICE_ROLE_KEY) {
             const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

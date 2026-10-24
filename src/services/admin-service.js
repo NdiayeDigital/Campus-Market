@@ -860,6 +860,12 @@ export async function updateUserRoleAdmin(userId, newRole) {
 export async function grantSellerTrialExtension(sellerId, extraDays = 7) {
     if (!sellerId) throw new Error('ID vendeur requis.');
 
+    // 🔒 Les SuperAdmins ont déjà un accès illimité permanent
+    const { data: targetProf } = await supabase.from('profiles').select('role').eq('id', sellerId).maybeSingle();
+    if (targetProf?.role === 'superadmin') {
+        throw new Error("Action sans objet : Les comptes SuperAdmin disposent déjà d'un accès illimité permanent.");
+    }
+
     const newTrialEnd = new Date(Date.now() + extraDays * 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
         .from('profiles')
@@ -887,6 +893,13 @@ export async function grantSellerTrialExtension(sellerId, extraDays = 7) {
  */
 export async function manuallyActivateSubscription(sellerId, plan = 'starter', durationDays = null) {
     if (!sellerId) throw new Error('ID vendeur requis.');
+
+    // 🔒 Les SuperAdmins ont déjà un accès illimité permanent
+    const { data: targetProf } = await supabase.from('profiles').select('role').eq('id', sellerId).maybeSingle();
+    if (targetProf?.role === 'superadmin') {
+        throw new Error("Action sans objet : Les comptes SuperAdmin disposent déjà d'un accès illimité permanent.");
+    }
+
     const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
     const maxProducts = getMaxProductsForPlan(validPlan);
     const finalDurationDays = durationDays || 30;
@@ -921,6 +934,12 @@ export async function manuallyActivateSubscription(sellerId, plan = 'starter', d
  */
 export async function adminResetSellerPassword(sellerId) {
     if (!sellerId) throw new Error('ID vendeur manquant.');
+
+    // 🔒 Règle de protection mutuelle : Impossible de réinitialiser le mot de passe d'un SuperAdmin
+    const { data: targetProf } = await supabase.from('profiles').select('role').eq('id', sellerId).maybeSingle();
+    if (targetProf?.role === 'superadmin') {
+        throw new Error("Action non autorisée : Le mot de passe d'un compte SuperAdmin ne peut pas être réinitialisé via cette interface.");
+    }
 
     // 1. Tenter via la procédure stockée RPC Supabase (admin_reset_seller_password)
     let rpcSuccess = false;
