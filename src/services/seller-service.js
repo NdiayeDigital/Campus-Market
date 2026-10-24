@@ -244,24 +244,173 @@ export async function registerSeller({
 }
 
 /**
+ * Vérifie le code OTP à 6 chiffres envoyé par Brevo/Supabase et active automatiquement le compte vendeur.
+ * @param {Object} params
+ * @param {string} params.email - Adresse email universitaire
+ * @param {string} params.token - Code OTP à 6 chiffres
+ * @returns {Promise<{ user: Object, profile: Object, status: 'approved' }>}
+ */
+export async function verifySellerOtp({ email, token }) {
+    if (!email || !token) {
+        throw new Error('Email et code de confirmation requis.');
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanToken = token.trim().replace(/\s+/g, '');
+
+    if (cleanToken.length !== 6 || !/^\d{6}$/.test(cleanToken)) {
+        throw new Error('Le code de confirmation doit comporter exactement 6 chiffres.');
+    }
+
+    // 1. Validation de l'OTP auprès de Supabase Auth
+    let authUser = null;
+    let authSession = null;
+
+    // Tentative 1 : type 'signup' (reçu lors de la première inscription)
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: 'signup',
+    });
+
+    if (!verifyError && verifyData?.user) {
+        authUser = verifyData.user;
+        authSession = verifyData.session;
+    } else {
+        // Tentative 2 : type 'email' (si renvoi d'OTP ultérieur)
+        const { data: retryData, error: retryError } = await supabase.auth.verifyOtp({
+            email: cleanEmail,
+            token: cleanToken,
+            type: 'email',
+        });
+
+        if (!retryError && retryData?.user) {
+            authUser = retryData.user;
+            authSession = retryData.session;
+        } else {
+            const errMsg = (retryError && retryError.message) || (verifyError && verifyError.message) || '';
+            if (errMsg.toLowerCase().includes('expired')) {
+                throw new Error("Ce code de confirmation a expiré. Veuillez cliquer sur 'Renvoyer un nouveau code'.");
+            }
+            throw new Error("Code de confirmation incorrect. Veuillez vérifier les 6 chiffres reçus par email.");
+        }
+    }
+
+    if (!authUser) {
+        throw new Error("Échec de confirmation de l'adresse email.");
+    }
+
+    // 2. Auto-approbation immédiate : Passage au rôle 'vendeur' avec essai 7 jours activé
+    const nowIso = new Date().toISOString();
+    const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+    let updatedProfile = null;
+    try {
+        const { data: profData, error: profErr } = await supabase
+            .from('profiles')
+            .update({
+                role: 'vendeur',
+                subscription_status: 'trial',
+                trial_started_at: nowIso,
+                trial_ends_at: trialEndIso,
+                is_open: true,
+            })
+            .eq('id', authUser.id)
+            .select()
+            .single();
+
+        if (!profErr && profData) {
+            updatedProfile = profData;
+        }
+    } catch (dbErr) {
+        console.warn('[SellerService] Avertissement update profil OTP:', dbErr);
+    }
+
+    // Si la DB n'a pas retourné le profil mis à jour, le récupérer
+    if (!updatedProfile) {
+        try {
+            const { data: existingProf } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', authUser.id)
+                .maybeSingle();
+
+            updatedProfile = existingProf ? { ...existingProf, role: 'vendeur' } : { id: authUser.id, role: 'vendeur' };
+        } catch {
+            updatedProfile = { id: authUser.id, role: 'vendeur' };
+        }
+    }
+
+    // Nettoyer la candidature du cache en attente
+    removePendingSellerCache(authUser.id);
+
+    return {
+        user: authUser,
+        profile: updatedProfile,
+        session: authSession,
+        status: 'approved',
+    };
+}
+
+/**
+ * Renvoie un nouveau code OTP de confirmation par email.
+ * @param {string} email - Email étudiant
+ * @returns {Promise<boolean>}
+ */
+export async function resendSellerOtp(email) {
+    if (!email) throw new Error('Adresse email requise.');
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Tenter via resend signup
+    const { error: resendErr } = await supabase.auth.resend({
+        type: 'signup',
+        email: cleanEmail,
+    });
+
+    if (resendErr) {
+        // 2. Repli sur type 'signup' avec signInWithOtp si besoin
+        const { error: otpErr } = await supabase.auth.signInWithOtp({
+            email: cleanEmail,
+            options: { shouldCreateUser: false },
+        });
+
+        if (otpErr) {
+            if (otpErr.message.includes('rate limit') || resendErr.message.includes('rate limit')) {
+                throw new Error("Veuillez patienter 60 secondes avant de demander un nouveau code.");
+            }
+            throw new Error(otpErr.message || resendErr.message || "Impossible de renvoyer le code pour le moment.");
+        }
+    }
+
+    return true;
+}
+
+/**
  * Connecte un vendeur et contrôle son statut d'approbation.
  *
  * @param {Object} credentials
  * @param {string} credentials.email
  * @param {string} credentials.password
- * @returns {Promise<{ status: 'approved'|'pending'|'unauthorized', user: Object, profile: Object }>}
+ * @returns {Promise<{ status: 'approved'|'pending'|'needs_confirmation'|'unauthorized', user: Object, profile: Object }>}
  */
 export async function loginSeller({ email, password }) {
     if (!email || !password) {
         throw new Error('Veuillez saisir votre email et mot de passe.');
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
     });
 
     if (authError) {
+        if (authError.message && authError.message.toLowerCase().includes('email not confirmed')) {
+            return {
+                status: 'needs_confirmation',
+                email: cleanEmail,
+            };
+        }
         throw new Error('Identifiants incorrects ou compte inexistant.');
     }
 
@@ -819,6 +968,8 @@ export async function changeSellerPassword({ newPassword, confirmPassword }) {
 
 export default {
     registerSeller,
+    verifySellerOtp,
+    resendSellerOtp,
     loginSeller,
     getCurrentSeller,
     logoutSeller,

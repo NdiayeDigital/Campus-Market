@@ -4,7 +4,7 @@
  * Affiche un écran de révision si le compte est au statut 'vendeur_pending'.
  */
 
-import { loginSeller, registerSeller } from '../../services/seller-service.js';
+import { loginSeller, registerSeller, verifySellerOtp, resendSellerOtp } from '../../services/seller-service.js';
 import { CATEGORIES } from '../../services/catalog-service.js';
 import { SUPPORT_CONFIG } from '../../config/support.js';
 import { SUBSCRIPTION_PLANS } from '../../config/subscription.js';
@@ -21,8 +21,42 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     modalEl.id = 'seller-auth-modal-overlay';
     modalEl.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
-    let activeTab = 'login'; // 'login' | 'terms' | 'register' | 'pending' | 'forgot-password'
+    let activeTab = 'login'; // 'login' | 'terms' | 'register' | 'otp' | 'pending' | 'forgot-password'
     let selectedPlan = 'starter'; // 'starter' (1500 FCFA/mois - 5 produits) | 'pro' (2500 FCFA/mois - 10 produits)
+    let pendingOtpEmail = '';
+    let otpCooldown = 0;
+    let otpTimer = null;
+
+    function startOtpCooldown(seconds = 60) {
+        if (otpTimer) clearInterval(otpTimer);
+        otpCooldown = seconds;
+        updateOtpResendButton();
+        otpTimer = setInterval(() => {
+            otpCooldown--;
+            if (otpCooldown <= 0) {
+                clearInterval(otpTimer);
+                otpTimer = null;
+            }
+            updateOtpResendButton();
+        }, 1000);
+    }
+
+    function updateOtpResendButton() {
+        const resendBtn = modalEl.querySelector('#btn-seller-otp-resend');
+        if (!resendBtn) return;
+        if (otpCooldown > 0) {
+            resendBtn.disabled = true;
+            resendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            resendBtn.classList.remove('hover:underline', 'text-primary');
+            resendBtn.classList.add('text-slate-400');
+            resendBtn.innerHTML = `<i class="fa-regular fa-clock mr-1"></i>Renvoyer (${otpCooldown}s)`;
+        } else {
+            resendBtn.disabled = false;
+            resendBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'text-slate-400');
+            resendBtn.classList.add('hover:underline', 'text-primary');
+            resendBtn.innerHTML = `<i class="fa-solid fa-rotate-right mr-1"></i>Renvoyer un nouveau code`;
+        }
+    }
 
     function render() {
         modalEl.innerHTML = `
@@ -41,7 +75,15 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     </button>
                 </div>
 
-                ${activeTab === 'pending' ? renderPendingScreen() : (activeTab === 'terms' ? renderTermsScreen() : (activeTab === 'forgot-password' ? renderForgotPasswordScreen() : renderTabsAndForm()))}
+                ${activeTab === 'pending' 
+                    ? renderPendingScreen() 
+                    : (activeTab === 'otp' 
+                        ? renderOtpScreen() 
+                        : (activeTab === 'terms' 
+                            ? renderTermsScreen() 
+                            : (activeTab === 'forgot-password' 
+                                ? renderForgotPasswordScreen() 
+                                : renderTabsAndForm())))}
             </div>
         `;
 
@@ -90,6 +132,86 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 <button id="btn-back-to-login" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl transition-colors min-h-[44px] cursor-pointer">
                     Retour à la connexion
                 </button>
+            </div>
+        `;
+    }
+
+    function renderOtpScreen() {
+        return `
+            <div class="p-6 flex flex-col items-center text-center my-auto overflow-y-auto">
+                <div class="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-3xl mb-3 shadow-xs">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                </div>
+                <h3 class="font-heading font-extrabold text-xl text-slate-900 mb-1">Vérification de votre compte</h3>
+                <p class="text-xs text-slate-600 mb-2 leading-relaxed">
+                    Un code de confirmation à <strong>6 chiffres</strong> vous a été envoyé par email à l'adresse :
+                </p>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-800 mb-4 max-w-full truncate">
+                    <i class="fa-solid fa-at text-primary text-xs"></i>
+                    <span class="truncate">${pendingOtpEmail || 'votre email institutionnel'}</span>
+                </div>
+
+                <div id="seller-otp-error" class="hidden w-full mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium text-left"></div>
+                <div id="seller-otp-success" class="hidden w-full mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 font-medium text-left"></div>
+
+                <form id="seller-otp-form" class="w-full flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider" for="seller-otp-input">
+                            Code de confirmation (6 chiffres)
+                        </label>
+                        <input 
+                            type="text" 
+                            id="seller-otp-input" 
+                            name="token"
+                            required 
+                            maxlength="6"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            autocomplete="one-time-code"
+                            placeholder="••••••" 
+                            class="w-full text-center text-2xl font-mono font-extrabold tracking-[0.5em] px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none transition-all placeholder:text-slate-300"
+                            autofocus
+                        >
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        id="btn-seller-otp-submit"
+                        class="w-full py-3.5 bg-primary hover:bg-primary-dark active:scale-[0.99] text-white font-heading font-bold text-sm rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 min-h-[48px] cursor-pointer"
+                    >
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Confirmer et ouvrir ma boutique</span>
+                    </button>
+                </form>
+
+                <div class="w-full mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-500">Vous n'avez rien reçu ?</span>
+                        <button 
+                            type="button" 
+                            id="btn-seller-otp-resend" 
+                            class="font-bold text-primary hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            ${otpCooldown > 0 ? 'disabled' : ''}
+                        >
+                            ${otpCooldown > 0 
+                                ? `<i class="fa-regular fa-clock mr-1"></i>Renvoyer (${otpCooldown}s)` 
+                                : `<i class="fa-solid fa-rotate-right mr-1"></i>Renvoyer un nouveau code`}
+                        </button>
+                    </div>
+
+                    <p class="text-[11px] text-slate-400 text-left leading-relaxed">
+                        <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>
+                        Pensez à vérifier vos courriers indésirables (Spam) si le code tarde à arriver.
+                    </p>
+
+                    <button 
+                        type="button" 
+                        id="btn-seller-otp-back" 
+                        class="mt-1 py-2 text-xs text-slate-500 hover:text-slate-800 font-semibold cursor-pointer text-center hover:underline"
+                    >
+                        ← Modifier mon adresse email ou retourner
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -525,9 +647,110 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
             render();
         });
 
+        // 3. Événements de l'écran OTP (Vérification email Brevo)
+        if (activeTab === 'otp') {
+            const otpForm = modalEl.querySelector('#seller-otp-form');
+            const otpInput = modalEl.querySelector('#seller-otp-input');
+            const otpSubmitBtn = modalEl.querySelector('#btn-seller-otp-submit');
+            const otpResendBtn = modalEl.querySelector('#btn-seller-otp-resend');
+            const otpBackBtn = modalEl.querySelector('#btn-seller-otp-back');
+            const otpErrorEl = modalEl.querySelector('#seller-otp-error');
+            const otpSuccessEl = modalEl.querySelector('#seller-otp-success');
+
+            // Focus automatique sur le champ OTP
+            setTimeout(() => {
+                otpInput?.focus();
+            }, 100);
+
+            // Filtrer les entrées pour n'accepter que les chiffres
+            otpInput?.addEventListener('input', (e) => {
+                const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+                e.target.value = clean;
+            });
+
+            // Soumission OTP
+            otpForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const token = otpInput?.value.trim();
+                if (!token || token.length !== 6) {
+                    if (otpErrorEl) {
+                        otpErrorEl.textContent = 'Veuillez saisir le code complet à 6 chiffres.';
+                        otpErrorEl.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                otpSubmitBtn.disabled = true;
+                otpSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Validation du code...`;
+                if (otpErrorEl) otpErrorEl.classList.add('hidden');
+                if (otpSuccessEl) otpSuccessEl.classList.add('hidden');
+
+                try {
+                    const res = await verifySellerOtp({
+                        email: pendingOtpEmail,
+                        token,
+                    });
+
+                    if (otpTimer) {
+                        clearInterval(otpTimer);
+                        otpTimer = null;
+                    }
+
+                    close();
+                    if (typeof onAuthenticated === 'function') {
+                        onAuthenticated({
+                            user: res.user,
+                            profile: res.profile,
+                            mustChangePassword: false,
+                        });
+                    }
+                } catch (err) {
+                    if (otpErrorEl) {
+                        otpErrorEl.textContent = err.message || 'Code de confirmation incorrect.';
+                        otpErrorEl.classList.remove('hidden');
+                    }
+                } finally {
+                    otpSubmitBtn.disabled = false;
+                    otpSubmitBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i><span>Confirmer et ouvrir ma boutique</span>`;
+                }
+            });
+
+            // Renvoi du code OTP
+            otpResendBtn?.addEventListener('click', async () => {
+                if (otpCooldown > 0) return;
+                otpResendBtn.disabled = true;
+                if (otpErrorEl) otpErrorEl.classList.add('hidden');
+
+                try {
+                    await resendSellerOtp(pendingOtpEmail);
+                    if (otpSuccessEl) {
+                        otpSuccessEl.textContent = 'Un nouveau code de confirmation a été envoyé sur votre email.';
+                        otpSuccessEl.classList.remove('hidden');
+                    }
+                    startOtpCooldown(60);
+                } catch (err) {
+                    if (otpErrorEl) {
+                        otpErrorEl.textContent = err.message || 'Erreur lors du renvoi du code.';
+                        otpErrorEl.classList.remove('hidden');
+                    }
+                    otpResendBtn.disabled = false;
+                }
+            });
+
+            // Retour à l'inscription
+            otpBackBtn?.addEventListener('click', () => {
+                if (otpTimer) {
+                    clearInterval(otpTimer);
+                    otpTimer = null;
+                }
+                activeTab = 'register';
+                render();
+            });
+        }
+
         const errorEl = modalEl.querySelector('#seller-auth-error');
 
-        // 3. Soumission Connexion
+        // 4. Soumission Connexion
         modalEl.querySelector('#seller-login-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = modalEl.querySelector('#seller-login-email').value;
@@ -543,6 +766,11 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 if (res.status === 'pending') {
                     activeTab = 'pending';
                     render();
+                } else if (res.status === 'needs_confirmation') {
+                    pendingOtpEmail = res.email || email;
+                    activeTab = 'otp';
+                    render();
+                    startOtpCooldown(60);
                 } else if (res.status === 'suspended') {
                     close();
                     if (typeof onAuthenticated === 'function') {
@@ -574,7 +802,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
             }
         });
 
-        // 4. Soumission Inscription
+        // 5. Soumission Inscription
         modalEl.querySelector('#seller-register-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const prenom = modalEl.querySelector('#reg-prenom').value;
@@ -591,7 +819,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
             if (errorEl) errorEl.classList.add('hidden');
 
             try {
-                await registerSeller({
+                const regRes = await registerSeller({
                     prenom,
                     nom,
                     email,
@@ -601,8 +829,17 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     password,
                     plan: selectedPlan,
                 });
-                activeTab = 'pending';
-                render();
+                if (regRes?.status === 'approved') {
+                    close();
+                    if (typeof onAuthenticated === 'function') {
+                        onAuthenticated({ user: regRes.user, profile: regRes.profile });
+                    }
+                } else {
+                    pendingOtpEmail = email;
+                    activeTab = 'otp';
+                    render();
+                    startOtpCooldown(60);
+                }
             } catch (err) {
                 if (errorEl) {
                     errorEl.textContent = err.message || "Erreur lors de l'enregistrement.";
@@ -624,6 +861,10 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     }
 
     function close() {
+        if (otpTimer) {
+            clearInterval(otpTimer);
+            otpTimer = null;
+        }
         modalEl.classList.remove('opacity-100');
         modalEl.classList.add('opacity-0', 'pointer-events-none');
         document.body.style.overflow = '';
