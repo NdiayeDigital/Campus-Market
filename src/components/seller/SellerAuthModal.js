@@ -50,7 +50,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
             resendBtn.classList.add('opacity-50', 'cursor-not-allowed');
             resendBtn.classList.remove('hover:underline', 'text-primary');
             resendBtn.classList.add('text-slate-400');
-            resendBtn.innerHTML = `<i class="fa-regular fa-clock mr-1"></i>Renvoyer (${otpCooldown}s)`;
+            resendBtn.innerHTML = `<i class="fa-regular fa-clock mr-1"></i>Nouveau code possible dans ${otpCooldown}s`;
         } else {
             resendBtn.disabled = false;
             resendBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'text-slate-400');
@@ -147,9 +147,13 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 <p class="text-xs text-slate-600 mb-2 leading-relaxed">
                     Un code de confirmation à <strong>6 chiffres</strong> vous a été envoyé par email à l'adresse :
                 </p>
-                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-800 mb-4 max-w-full truncate">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-800 mb-2 max-w-full truncate">
                     <i class="fa-solid fa-at text-primary text-xs"></i>
                     <span class="truncate">${pendingOtpEmail || 'votre email institutionnel'}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px] text-slate-500 mb-4 font-medium">
+                    <i class="fa-regular fa-clock text-emerald-600"></i>
+                    <span>Code valable pendant <strong>15 minutes</strong></span>
                 </div>
 
                 <div id="seller-otp-error" class="hidden w-full mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium text-left"></div>
@@ -723,11 +727,16 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 if (otpCooldown > 0) return;
                 otpResendBtn.disabled = true;
                 if (otpErrorEl) otpErrorEl.classList.add('hidden');
+                if (otpSuccessEl) otpSuccessEl.classList.add('hidden');
 
                 try {
                     await resendSellerOtp(pendingOtpEmail);
+                    if (otpInput) {
+                        otpInput.value = '';
+                        otpInput.focus();
+                    }
                     if (otpSuccessEl) {
-                        otpSuccessEl.textContent = 'Un nouveau code de confirmation a été envoyé sur votre email.';
+                        otpSuccessEl.textContent = 'Un nouveau code à 6 chiffres a été envoyé par email. (L\'ancien code est maintenant annulé).';
                         otpSuccessEl.classList.remove('hidden');
                     }
                     startOtpCooldown(60);

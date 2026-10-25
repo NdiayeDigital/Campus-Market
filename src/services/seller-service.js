@@ -290,25 +290,19 @@ export async function resendSellerOtp(email) {
     if (!email) throw new Error('Adresse email requise.');
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Tenter via resend signup
-    const { error: resendErr } = await supabase.auth.resend({
-        type: 'signup',
+    // L'inscription vendeur repose sur le flux OTP signInWithOtp (modèle Magic Link / OTP Brevo)
+    const { data: otpData, error: otpError } = await supabase.auth.signInWithOtp({
         email: cleanEmail,
+        options: {
+            shouldCreateUser: true,
+        },
     });
 
-    if (resendErr) {
-        // 2. Repli sur type 'signup' avec signInWithOtp si besoin
-        const { error: otpErr } = await supabase.auth.signInWithOtp({
-            email: cleanEmail,
-            options: { shouldCreateUser: false },
-        });
-
-        if (otpErr) {
-            if (otpErr.message.includes('rate limit') || resendErr.message.includes('rate limit')) {
-                throw new Error("Veuillez patienter 60 secondes avant de demander un nouveau code.");
-            }
-            throw new Error(otpErr.message || resendErr.message || "Impossible de renvoyer le code pour le moment.");
+    if (otpError) {
+        if (otpError.message && (otpError.message.includes('rate limit') || otpError.code === 'over_email_send_rate_limit')) {
+            throw new Error("Trop de demandes récentes. Veuillez patienter 60 secondes avant de demander un nouveau code.");
         }
+        throw new Error(otpError.message || "Impossible de renvoyer le code pour le moment.");
     }
 
     return true;
