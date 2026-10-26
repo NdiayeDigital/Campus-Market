@@ -5,6 +5,7 @@
  */
 
 import './index.css';
+import { inject } from '@vercel/analytics';
 import { createHeader } from './components/Header.js';
 import { createCategoryChips } from './components/CategoryChips.js';
 import { createProductCard } from './components/ProductCard.js';
@@ -912,6 +913,9 @@ async function initApp() {
         }
     }
 }
+
+// Initialisation Vercel Web Analytics
+inject();
 
 // Lancement au chargement du DOM
 if (document.readyState === 'loading') {
