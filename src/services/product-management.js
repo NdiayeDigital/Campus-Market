@@ -180,14 +180,24 @@ export async function createProduct({
     // 2. Compression et Téléversement de l'image si fournie
     if (imageFile) {
         try {
-            // Compression Canvas (max 800x800, qualité 0.75)
-            const compressedDataUrl = await compressImage(imageFile, {
-                maxWidth: 800,
-                maxHeight: 800,
-                quality: 0.75,
-            });
+            let blob = null;
 
-            const blob = dataURLtoBlob(compressedDataUrl);
+            if (imageFile instanceof Blob && (imageFile._isCompressed || imageFile.type === 'image/jpeg')) {
+                blob = imageFile;
+            } else if (imageFile?.compressedBlob instanceof Blob) {
+                blob = imageFile.compressedBlob;
+            } else if (typeof imageFile === 'string' && imageFile.startsWith('data:image/')) {
+                blob = dataURLtoBlob(imageFile);
+            } else {
+                // Compression Canvas multi-stratégies (max 800x800, qualité 0.75)
+                const compressedDataUrl = await compressImage(imageFile, {
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    quality: 0.75,
+                });
+                blob = dataURLtoBlob(compressedDataUrl);
+            }
+
             const fileName = `${activeSellerId}/${Date.now()}_prod.jpg`;
 
             let { data: uploadData, error: uploadErr } = await supabase.storage
@@ -312,21 +322,46 @@ export async function updateProduct({
 
     if (imageFile) {
         try {
-            const compressedDataUrl = await compressImage(imageFile, {
-                maxWidth: 800,
-                maxHeight: 800,
-                quality: 0.75,
-            });
+            let blob = null;
 
-            const blob = dataURLtoBlob(compressedDataUrl);
+            if (imageFile instanceof Blob && (imageFile._isCompressed || imageFile.type === 'image/jpeg')) {
+                blob = imageFile;
+            } else if (imageFile?.compressedBlob instanceof Blob) {
+                blob = imageFile.compressedBlob;
+            } else if (typeof imageFile === 'string' && imageFile.startsWith('data:image/')) {
+                blob = dataURLtoBlob(imageFile);
+            } else {
+                const compressedDataUrl = await compressImage(imageFile, {
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    quality: 0.75,
+                });
+                blob = dataURLtoBlob(compressedDataUrl);
+            }
+
             const fileName = `${sellerId || 'seller'}/${Date.now()}_prod.jpg`;
 
-            const { data: uploadData, error: uploadErr } = await supabase.storage
+            let { data: uploadData, error: uploadErr } = await supabase.storage
                 .from(STORAGE_BUCKET)
                 .upload(fileName, blob, {
                     contentType: 'image/jpeg',
                     upsert: true,
                 });
+
+            if (uploadErr) {
+                console.warn('[ProductManagement] Erreur upload image modif 1, tentative rafraîchissement auth...', uploadErr);
+                try {
+                    await supabase.auth.refreshSession();
+                    const retry = await supabase.storage
+                        .from(STORAGE_BUCKET)
+                        .upload(fileName, blob, {
+                            contentType: 'image/jpeg',
+                            upsert: true,
+                        });
+                    uploadData = retry.data;
+                    uploadErr = retry.error;
+                } catch {}
+            }
 
             if (!uploadErr && uploadData) {
                 const { data: publicUrlData } = supabase.storage

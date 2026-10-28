@@ -16,6 +16,7 @@ import {
     toggleProductStock,
     deleteProduct,
 } from '../../services/product-management.js';
+import { compressImage, dataURLtoBlob } from '../../utils/image-compressor.js';
 import { CATEGORIES } from '../../services/catalog-service.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
@@ -70,6 +71,8 @@ export function createProductManager({
         description: '',
         imageFile: null,
         imagePreviewUrl: null,
+        compressedBlob: null,
+        compressedDataUrl: null,
     };
 
     // Calcul dynamique du quota d'articles autorisés selon l'abonnement
@@ -300,19 +303,21 @@ export function createProductManager({
                             >
                                 <input type="file" id="new-prod-image-file" accept="image/*" class="sr-only">
                                 
+                                <div id="photo-dropzone-content" class="w-full flex flex-col items-center justify-center">
                                 ${addFormData.imagePreviewUrl ? `
                                     <div class="flex items-center gap-4 w-full">
                                         <div class="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                                             <img src="${addFormData.imagePreviewUrl}" alt="Aperçu sélection" class="w-full h-full object-cover">
                                         </div>
                                         <div class="flex-1 text-left min-w-0">
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                <i class="fa-solid fa-check text-[9px]"></i> Photo prête
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${addFormData.compressedBlob ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'} border">
+                                                <i class="fa-solid ${addFormData.compressedBlob ? 'fa-check text-[9px]' : 'fa-spinner fa-spin text-[9px]'}"></i> 
+                                                ${addFormData.compressedBlob ? 'Photo prête' : 'Optimisation...'}
                                             </span>
                                             <p class="text-xs font-bold text-slate-800 truncate mt-1">${addFormData.imageFile ? escapeHTML(addFormData.imageFile.name) : 'Image sélectionnée'}</p>
                                             <p class="text-[11px] text-slate-400">Cliquez ou glissez pour remplacer</p>
                                         </div>
-                                        <button type="button" id="btn-remove-selected-photo" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0" title="Retirer la photo">
+                                        <button type="button" id="btn-remove-selected-photo" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0 cursor-pointer" title="Retirer la photo">
                                             <i class="fa-solid fa-trash-can text-xs"></i>
                                         </button>
                                     </div>
@@ -326,6 +331,7 @@ export function createProductManager({
                                         JPEG, PNG, WebP • Compression automatique
                                     </span>
                                 `}
+                                </div>
                             </div>
                         </div>
 
@@ -908,20 +914,22 @@ export function createProductManager({
                 if (descInput) addFormData.description = descInput.value;
             };
 
-            // Gestion in-place de la sélection / suppression d'image (sans render() destructif)
-            const updateDropzoneUI = (file, previewUrl) => {
-                if (!dropzone) return;
-                dropzone.innerHTML = `
-                    <input type="file" id="new-prod-image-file" accept="image/*" class="sr-only">
+            const dropzoneContent = containerEl.querySelector('#photo-dropzone-content');
+
+            // Gestion in-place de la sélection / suppression d'image (sans détruire l'input file)
+            const updateDropzoneUI = (file, previewUrl, isCompressing = false) => {
+                if (!dropzoneContent) return;
+                dropzoneContent.innerHTML = `
                     <div class="flex items-center gap-4 w-full">
                         <div class="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                             <img src="${previewUrl}" alt="Aperçu sélection" class="w-full h-full object-cover">
                         </div>
                         <div class="flex-1 text-left min-w-0">
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <i class="fa-solid fa-check text-[9px]"></i> Photo prête
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${isCompressing ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'} border">
+                                <i class="fa-solid ${isCompressing ? 'fa-spinner fa-spin text-[9px]' : 'fa-check text-[9px]'}"></i> 
+                                ${isCompressing ? 'Optimisation de la photo...' : 'Photo prête'}
                             </span>
-                            <p class="text-xs font-bold text-slate-800 truncate mt-1">${escapeHTML(file.name)}</p>
+                            <p class="text-xs font-bold text-slate-800 truncate mt-1">${file?.name ? escapeHTML(file.name) : 'Image sélectionnée'}</p>
                             <p class="text-[11px] text-slate-400">Cliquez ou glissez pour remplacer</p>
                         </div>
                         <button type="button" id="btn-remove-selected-photo" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0 cursor-pointer" title="Retirer la photo">
@@ -929,14 +937,13 @@ export function createProductManager({
                         </button>
                     </div>
                 `;
-                bindDropzoneInnerEvents();
+                dropzoneContent.querySelector('#btn-remove-selected-photo')?.addEventListener('click', onRemovePhoto);
                 if (liveImg) liveImg.src = previewUrl;
             };
 
             const resetDropzoneUI = () => {
-                if (!dropzone) return;
-                dropzone.innerHTML = `
-                    <input type="file" id="new-prod-image-file" accept="image/*" class="sr-only">
+                if (!dropzoneContent) return;
+                dropzoneContent.innerHTML = `
                     <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
                         <i class="fa-solid fa-camera"></i>
                     </div>
@@ -946,52 +953,86 @@ export function createProductManager({
                         JPEG, PNG, WebP • Compression automatique
                     </span>
                 `;
-                bindDropzoneInnerEvents();
                 if (liveImg) liveImg.src = '/assets/placeholder.webp';
             };
 
-            const bindDropzoneInnerEvents = () => {
-                const currentFileInput = dropzone?.querySelector('#new-prod-image-file');
-                currentFileInput?.addEventListener('change', (e) => {
-                    const f = e.target.files?.[0];
-                    if (f) processFile(f);
-                });
-
-                dropzone?.querySelector('#btn-remove-selected-photo')?.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
-                        URL.revokeObjectURL(addFormData.imagePreviewUrl);
-                    }
-                    addFormData.imageFile = null;
-                    addFormData.imagePreviewUrl = null;
-                    resetDropzoneUI();
-                });
+            const onRemovePhoto = (e) => {
+                e?.stopPropagation();
+                if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(addFormData.imagePreviewUrl);
+                }
+                addFormData.imageFile = null;
+                addFormData.imagePreviewUrl = null;
+                addFormData.compressedBlob = null;
+                addFormData.compressedDataUrl = null;
+                if (fileInput) fileInput.value = '';
+                resetDropzoneUI();
             };
 
-            const processFile = (file) => {
-                if (!file || !file.type.startsWith('image/')) {
+            const processFile = async (file) => {
+                if (!file) return;
+
+                // Tolérance souple pour les mobiles Android : vérifie le MIME ou l'extension du fichier
+                const isImageMime = file.type && file.type.startsWith('image/');
+                const isImageExt = /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '');
+                if (!isImageMime && !isImageExt) {
                     showToast('Veuillez sélectionner un fichier image valide (JPEG, PNG, WebP).', 'warning');
                     return;
                 }
+
                 if (file.size > 20 * 1024 * 1024) {
                     showToast("L'image sélectionnée est trop volumineuse (max 20 Mo).", 'warning');
                     return;
                 }
+
                 if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
                     URL.revokeObjectURL(addFormData.imagePreviewUrl);
                 }
+
+                let instantPreviewUrl = null;
+                try {
+                    instantPreviewUrl = URL.createObjectURL(file);
+                } catch {
+                    instantPreviewUrl = '/assets/placeholder.webp';
+                }
+
                 addFormData.imageFile = file;
-                addFormData.imagePreviewUrl = URL.createObjectURL(file);
-                updateDropzoneUI(file, addFormData.imagePreviewUrl);
+                addFormData.imagePreviewUrl = instantPreviewUrl;
+                updateDropzoneUI(file, instantPreviewUrl, true);
+
+                // COMPRESSION IMMÉDIATE : dès la sélection, on fige le Blob en mémoire vive
+                // pour parer à toute révocation de permission ou fermeture de flux par l'OS mobile
+                try {
+                    const compressedDataUrl = await compressImage(file, {
+                        maxWidth: 800,
+                        maxHeight: 800,
+                        quality: 0.75,
+                    });
+                    const blob = dataURLtoBlob(compressedDataUrl);
+                    blob._isCompressed = true;
+                    addFormData.compressedBlob = blob;
+                    addFormData.compressedDataUrl = compressedDataUrl;
+                    updateDropzoneUI(file, compressedDataUrl, false);
+                } catch (compressErr) {
+                    console.warn('[ProductManager] Erreur compression immédiate:', compressErr);
+                    showToast(compressErr.message || "Impossible de lire cette photo. Essayez une autre photo.", 'warning');
+                    onRemovePhoto();
+                }
             };
+
+            // Écouteur unique sur le champ input de sélection de fichier (permanent dans le DOM)
+            fileInput?.addEventListener('change', (e) => {
+                const f = e.target.files?.[0];
+                if (f) processFile(f);
+            });
+
+            // Écouteur bouton suppression initial si une image était déjà sélectionnée
+            dropzoneContent?.querySelector('#btn-remove-selected-photo')?.addEventListener('click', onRemovePhoto);
 
             dropzone?.addEventListener('click', (e) => {
                 if (e.target.tagName === 'INPUT' || e.target.closest('#btn-remove-selected-photo')) return;
-                const fi = dropzone?.querySelector('#new-prod-image-file');
-                fi?.click();
+                fileInput?.click();
             });
-
-            bindDropzoneInnerEvents();
 
             // Événements Drag & Drop
             if (dropzone) {
@@ -1047,7 +1088,7 @@ export function createProductManager({
                 const stock = stockInput?.value;
                 const category = catSelect?.value;
                 const description = descInput?.value.trim();
-                const imageFile = addFormData.imageFile || dropzone?.querySelector('#new-prod-image-file')?.files?.[0];
+                const imageFile = addFormData.compressedBlob || addFormData.imageFile || fileInput?.files?.[0] || null;
 
                 if (!title || !price) {
                     if (errorEl) {
@@ -1084,8 +1125,11 @@ export function createProductManager({
                         description: '',
                         imageFile: null,
                         imagePreviewUrl: null,
+                        compressedBlob: null,
+                        compressedDataUrl: null,
                     };
                     if (form) form.reset();
+                    if (fileInput) fileInput.value = '';
                     resetDropzoneUI();
 
                     showToast('Produit publié au catalogue avec succès ! 🎉', 'success');
@@ -1131,12 +1175,16 @@ export function createProductManager({
             requestAnimationFrame(() => editModal.classList.remove('opacity-0'));
         }
 
+        let editCompressedBlob = null;
+
         function closeEditModal() {
             if (editModal) {
                 editModal.classList.add('opacity-0');
                 setTimeout(() => editModal.classList.add('hidden'), 300);
             }
             editingProduct = null;
+            editCompressedBlob = null;
+            if (editFileInput) editFileInput.value = '';
         }
 
         closeEditBtn?.addEventListener('click', closeEditModal);
@@ -1144,14 +1192,34 @@ export function createProductManager({
             if (e.target === editModal) closeEditModal();
         });
 
-        editFileInput?.addEventListener('change', (e) => {
+        editFileInput?.addEventListener('change', async (e) => {
             const file = e.target.files?.[0];
-            if (file && editPreviewImg) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    editPreviewImg.src = ev.target.result;
-                };
-                reader.readAsDataURL(file);
+            if (!file) return;
+
+            const isImageMime = file.type && file.type.startsWith('image/');
+            const isImageExt = /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '');
+            if (!isImageMime && !isImageExt) {
+                showToast('Veuillez sélectionner un fichier image valide (JPEG, PNG, WebP).', 'warning');
+                return;
+            }
+
+            try {
+                if (editPreviewImg) editPreviewImg.src = URL.createObjectURL(file);
+            } catch {}
+
+            try {
+                const compressedDataUrl = await compressImage(file, {
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    quality: 0.75,
+                });
+                const blob = dataURLtoBlob(compressedDataUrl);
+                blob._isCompressed = true;
+                editCompressedBlob = blob;
+                if (editPreviewImg) editPreviewImg.src = compressedDataUrl;
+            } catch (err) {
+                console.warn('[ProductManager] Erreur compression modif:', err);
+                showToast(err.message || 'Impossible de lire cette photo.', 'warning');
             }
         });
 
@@ -1164,7 +1232,7 @@ export function createProductManager({
             const stock = containerEl.querySelector('#edit-prod-stock').value;
             const category = containerEl.querySelector('#edit-prod-category').value;
             const description = containerEl.querySelector('#edit-prod-desc').value.trim();
-            const imageFile = editFileInput?.files?.[0] || null;
+            const imageFile = editCompressedBlob || editFileInput?.files?.[0] || null;
 
             editSubmitBtn.disabled = true;
             editSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> Enregistrement...`;
