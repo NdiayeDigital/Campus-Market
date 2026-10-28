@@ -2245,26 +2245,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     </div>
                     <form id="form-add-location" class="flex flex-col sm:flex-row gap-3 items-end">
                         <div class="flex-1 w-full">
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="new-location-name">Nom du site ou pavillon *</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1" for="new-location-name">Nom du lieu ou pavillon *</label>
                             <input 
                                 type="text" 
                                 id="new-location-name" 
-                                placeholder="Ex: Site ENSA, Pavillon D, Amphi B..." 
+                                placeholder="Ex: Pavillon D, Site ENSA, Amphi B, Restaurant Universitaire..." 
                                 required
                                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
                             >
-                        </div>
-                        <div class="w-full sm:w-56">
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="new-location-category">Catégorie</label>
-                            <select 
-                                id="new-location-category" 
-                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
-                            >
-                                <option value="pavillon">Pavillon Résidence</option>
-                                <option value="site">Site Pédagogique</option>
-                                <option value="bu">Bibliothèque (BU)</option>
-                                <option value="autre">Autre Espace</option>
-                            </select>
                         </div>
                         <button 
                             type="submit" 
@@ -2272,7 +2260,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             class="w-full sm:w-auto px-5 py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
                         >
                             <i class="fa-solid fa-plus"></i>
-                            <span>Ajouter</span>
+                            <span>Ajouter ce lieu</span>
                         </button>
                     </form>
                 </div>
@@ -2296,7 +2284,6 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
                                     <tr>
                                         <th class="py-3 px-4">Nom du lieu</th>
-                                        <th class="py-3 px-4">Catégorie</th>
                                         <th class="py-3 px-4">Statut</th>
                                         <th class="py-3 px-4 text-right">Actions</th>
                                     </tr>
@@ -2307,11 +2294,6 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                             <td class="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
                                                 <i class="fa-solid fa-location-dot text-primary text-xs"></i>
                                                 <span>${escapeHTML(loc.name)}</span>
-                                            </td>
-                                            <td class="py-3 px-4">
-                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                                                    ${escapeHTML(loc.category || 'pavillon')}
-                                                </span>
                                             </td>
                                             <td class="py-3 px-4">
                                                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -2363,9 +2345,6 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                             <span class="font-bold text-slate-900 text-xs sm:text-sm truncate">${escapeHTML(loc.name)}</span>
                                         </div>
                                         <div class="flex items-center gap-1.5 mt-1">
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white border border-slate-200 text-slate-600">
-                                                ${escapeHTML(loc.category || 'pavillon')}
-                                            </span>
                                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${loc.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-500'}">
                                                 ${loc.is_active ? 'Actif' : 'Désactivé'}
                                             </span>
@@ -2967,23 +2946,21 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             formAddLoc?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const nameInput = formAddLoc.querySelector('#new-location-name');
-                const catSelect = formAddLoc.querySelector('#new-location-category');
                 const submitBtn = formAddLoc.querySelector('#btn-submit-location');
                 const name = nameInput?.value?.trim();
-                const category = catSelect?.value;
                 if (!name) return;
 
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Ajout...`;
                 try {
-                    const newLoc = await addDeliveryLocation({ name, category });
+                    const newLoc = await addDeliveryLocation({ name });
                     deliveryLocations.push(newLoc);
                     showToast(`Lieu "${name}" ajouté aux zones de livraison ! 📍`, 'success');
                     render();
                 } catch (err) {
                     showToast(err.message, 'error');
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Ajouter le lieu`;
+                    submitBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Ajouter ce lieu`;
                 }
             });
 

@@ -675,16 +675,16 @@ export async function fetchAllOrdersAdmin() {
 }
 
 export const DEFAULT_DELIVERY_LOCATIONS = [
-    { id: 'def-1', name: 'Pavillon A1', category: 'pavillon', is_active: true },
-    { id: 'def-2', name: 'Pavillon A2', category: 'pavillon', is_active: true },
-    { id: 'def-3', name: 'Pavillon A3', category: 'pavillon', is_active: true },
-    { id: 'def-4', name: 'Pavillon A4', category: 'pavillon', is_active: true },
-    { id: 'def-5', name: 'Pavillon B1', category: 'pavillon', is_active: true },
-    { id: 'def-6', name: 'Pavillon B2', category: 'pavillon', is_active: true },
-    { id: 'def-7', name: 'Pavillon C', category: 'pavillon', is_active: true },
-    { id: 'def-8', name: 'Jardin Social', category: 'site', is_active: true },
-    { id: 'def-9', name: 'Bibliothèque Universitaire (BU)', category: 'bu', is_active: true },
-    { id: 'def-10', name: 'Salles de cours / Espaces communs', category: 'site', is_active: true },
+    { id: 'def-1', name: 'Pavillon A1', is_active: true },
+    { id: 'def-2', name: 'Pavillon A2', is_active: true },
+    { id: 'def-3', name: 'Pavillon A3', is_active: true },
+    { id: 'def-4', name: 'Pavillon A4', is_active: true },
+    { id: 'def-5', name: 'Pavillon B1', is_active: true },
+    { id: 'def-6', name: 'Pavillon B2', is_active: true },
+    { id: 'def-7', name: 'Pavillon C', is_active: true },
+    { id: 'def-8', name: 'Jardin Social', is_active: true },
+    { id: 'def-9', name: 'Bibliothèque Universitaire (BU)', is_active: true },
+    { id: 'def-10', name: 'Salles de cours / Espaces communs', is_active: true },
 ];
 
 /**
