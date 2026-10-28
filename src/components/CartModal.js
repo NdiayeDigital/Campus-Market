@@ -156,19 +156,19 @@ export function createCartModal({ onProceedToCheckout } = {}) {
                     <span class="text-xs font-extrabold text-primary mt-0.5 block">${Number(item.price).toLocaleString('fr-FR')} FCFA</span>
                 </div>
 
-                <!-- Sélecteur quantité tactile (min 40x40) -->
+                <!-- Sélecteur quantité tactile ergonomique (min 44x44px conforme WCAG) -->
                 <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                    <button data-action="decrement" data-id="${item.id}" aria-label="Diminuer la quantité" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 text-slate-700 active:scale-90 transition-all min-h-[40px] min-w-[40px]">
+                    <button data-action="decrement" data-id="${item.id}" aria-label="Diminuer la quantité" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 text-slate-700 active:scale-90 transition-all min-h-[44px] min-w-[44px]">
                         <i class="fa-solid fa-minus text-xs"></i>
                     </button>
                     <span class="w-6 text-center text-xs font-extrabold text-slate-900">${item.quantity}</span>
-                    <button data-action="increment" data-id="${item.id}" aria-label="Augmenter la quantité" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 text-slate-700 active:scale-90 transition-all min-h-[40px] min-w-[40px]">
+                    <button data-action="increment" data-id="${item.id}" aria-label="Augmenter la quantité" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 text-slate-700 active:scale-90 transition-all min-h-[44px] min-w-[44px]">
                         <i class="fa-solid fa-plus text-xs"></i>
                     </button>
                 </div>
 
-                <!-- Bouton supprimer -->
-                <button data-action="remove" data-id="${item.id}" title="Retirer" aria-label="Supprimer du panier" class="text-slate-400 hover:text-red-500 p-2 active:scale-90 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
+                <!-- Bouton supprimer tactile ergonomique (min 44x44px) -->
+                <button data-action="remove" data-id="${item.id}" title="Retirer" aria-label="Supprimer du panier" class="text-slate-400 hover:text-red-500 p-2 active:scale-90 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center">
                     <i class="fa-solid fa-trash-can text-sm"></i>
                 </button>
             </div>

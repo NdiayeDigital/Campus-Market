@@ -168,13 +168,13 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                     <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
                         <!-- Sélecteur quantité -->
                         <div class="flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto justify-between sm:justify-start">
-                            <button id="btn-detail-qty-minus" aria-label="Diminuer" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[40px] min-w-[40px]">
+                            <button id="btn-detail-qty-minus" aria-label="Diminuer" class="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px]">
                                 <i class="fa-solid fa-minus text-xs"></i>
                             </button>
                             <span id="detail-qty-display" class="font-heading font-extrabold text-sm text-slate-900 w-8 text-center">
                                 ${selectedQuantity}
                             </span>
-                            <button id="btn-detail-qty-plus" aria-label="Augmenter" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[40px] min-w-[40px]">
+                            <button id="btn-detail-qty-plus" aria-label="Augmenter" class="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px]">
                                 <i class="fa-solid fa-plus text-xs"></i>
                             </button>
                         </div>

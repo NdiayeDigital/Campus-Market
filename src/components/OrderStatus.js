@@ -183,7 +183,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                     <span class="font-heading font-extrabold text-primary text-base">
                                         ${escapeHTML(order.reference || `#CMD-${idx + 1}`)}
                                     </span>
-                                    <span class="text-[11px] text-slate-400 block">${formattedDate} • ${escapeHTML(order.pavillon || 'Campus UIDT')}</span>
+                                    <span class="text-[11px] text-slate-500 font-medium block">${formattedDate} • ${escapeHTML(order.pavillon || 'Campus UIDT')}</span>
                                 </div>
                                 <span class="px-3 py-1 rounded-full text-[11px] font-bold ${
                                     isCancelled
@@ -291,7 +291,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                         <span>WhatsApp</span>
                                     </a>
                                 ` : `
-                                    <span class="text-xs text-slate-400 italic">Vendeur : ${escapeHTML(sellerName)}</span>
+                                    <span class="text-xs text-slate-500 font-medium italic">Vendeur : ${escapeHTML(sellerName)}</span>
                                 `}
 
                                 ${isDelivered && !order.hasReviewed ? `

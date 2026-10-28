@@ -30,6 +30,7 @@ import { escapeHTML } from './utils/security.js';
 import { showToast } from './utils/notifications.js';
 import { SUPPORT_CONFIG } from './config/support.js';
 import { updateSEO, setCatalogSEO, setOrdersSEO, setSellerSEO, resetDefaultSEO } from './utils/seo.js';
+import { initPwaInstallPrompt } from './utils/pwa-install.js';
 import logoUrl from './assets/logo.webp';
 
 export { showToast };
@@ -920,7 +921,7 @@ if (document.readyState === 'loading') {
     initApp();
 }
 
-// Enregistrement PWA Service Worker avec garde de sécurité stricte
+// Enregistrement PWA Service Worker et invite d'installation
 if (
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
@@ -932,5 +933,7 @@ if (
         navigator.serviceWorker
             .register('/sw.js')
             .catch((err) => console.warn('[SW] Ignoré:', err.message));
+        
+        initPwaInstallPrompt();
     });
 }

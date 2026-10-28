@@ -78,13 +78,13 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
         <div class="relative w-full aspect-square bg-slate-100/80 overflow-hidden">
             ${statusBadge}
             ${imageContent}
-            <!-- Bouton Partager Rapide -->
+            <!-- Bouton Partager Rapide (Cible tactile ergonomique min 44x44px) -->
             <button 
                 type="button" 
                 id="btn-card-share" 
                 title="Partager cet article (Lien & WhatsApp)" 
                 aria-label="Partager cet article" 
-                class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-600 hover:text-emerald-700 shadow-xs flex items-center justify-center transition-all opacity-85 hover:opacity-100 active:scale-90 z-10 cursor-pointer"
+                class="absolute top-2 right-2 w-9 h-9 min-h-[44px] min-w-[44px] rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-emerald-700 shadow-xs flex items-center justify-center transition-all opacity-90 hover:opacity-100 active:scale-90 z-10 cursor-pointer"
             >
                 <i class="fa-solid fa-share-nodes text-xs"></i>
             </button>
@@ -117,7 +117,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                     <span class="font-heading font-extrabold text-slate-900 text-base leading-none">
                         ${Number(product.price).toLocaleString('fr-FR')} <span class="text-xs font-semibold text-slate-500">FCFA</span>
                     </span>
-                    ${product.old_price ? `<span class="text-[11px] text-slate-400 line-through mt-0.5">${Number(product.old_price).toLocaleString('fr-FR')} F</span>` : ''}
+                    ${product.old_price ? `<span class="text-[11px] text-slate-500 line-through mt-0.5">${Number(product.old_price).toLocaleString('fr-FR')} F</span>` : ''}
                 </div>
 
                 <!-- Bouton tactile min 44x44px avec feedback haptique visuel -->
