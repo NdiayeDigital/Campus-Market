@@ -6,7 +6,7 @@
 import { createOrder } from '../services/order-service.js';
 import { cartStore } from '../services/cart-store.js';
 import { fetchDeliveryLocations, DEFAULT_DELIVERY_LOCATIONS } from '../services/admin-service.js';
-import { escapeHTML } from '../utils/security.js';
+import { escapeHTML, isValidSenegalPhone } from '../utils/security.js';
 
 const LOCAL_BUYER_KEY = 'campus_market_last_buyer';
 
@@ -94,6 +94,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                             placeholder="Ex: 77 123 45 67" 
                             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                         >
+                        <p class="text-[11px] text-slate-400 mt-1">Numéro sénégalais à 9 chiffres (77, 78, 76, 70 ou 75)</p>
                     </div>
                 </div>
 
@@ -311,6 +312,15 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
         const pavillon = modalEl.querySelector('#delivery-pavillon').value;
         const chambre = modalEl.querySelector('#delivery-chambre').value.trim();
         const paymentMethod = modalEl.querySelector('input[name="payment-method"]:checked')?.value || 'cash';
+
+        if (!isValidSenegalPhone(telephone)) {
+            if (errorEl) {
+                errorEl.textContent = 'Veuillez saisir un numéro de téléphone sénégalais valide à 9 chiffres (ex: 77 123 45 67).';
+                errorEl.classList.remove('hidden');
+            }
+            modalEl.querySelector('#buyer-phone')?.focus();
+            return;
+        }
 
         // Sauvegarde locale pour pré-remplir les prochaines commandes
         try {

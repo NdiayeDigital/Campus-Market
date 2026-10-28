@@ -2,7 +2,7 @@
  * Script de validation des modules de base pour Campus Market
  */
 import { levenshteinDistance, isFuzzyMatch } from '../src/utils/levenshtein.js';
-import { escapeHTML, isUniversityEmail, formatSenegalPhone } from '../src/utils/security.js';
+import { escapeHTML, isUniversityEmail, formatSenegalPhone, isValidSenegalPhone } from '../src/utils/security.js';
 import { cartStore } from '../src/services/cart-store.js';
 
 console.log('🧪 Exécution des vérifications unitaires des modules purs...');
@@ -21,6 +21,11 @@ console.assert(!safe.includes('<script>'), 'Échappement XSS échoué');
 console.assert(isUniversityEmail('etudiant@univ-thies.sn') === true, 'Email univ-thies.sn refusé');
 console.assert(isUniversityEmail('etudiant@gmail.com') === false, 'Email externe accepté par erreur');
 console.assert(formatSenegalPhone('771234567') === '221771234567', 'Formatage téléphone échoué');
+console.assert(isValidSenegalPhone('771234567') === true, 'Validation 771234567 échouée');
+console.assert(isValidSenegalPhone('78 123 45 67') === true, 'Validation 78 123 45 67 échouée');
+console.assert(isValidSenegalPhone('+221 76 123 45 67') === true, 'Validation +221 76... échouée');
+console.assert(isValidSenegalPhone('552288') === false, 'Numéro invalide 552288 accepté par erreur');
+console.assert(isValidSenegalPhone('123456789') === false, 'Numéro non sénégalais accepté par erreur');
 console.log('✅ [Security] Test validé !');
 
 // 3. Test Cart Store
@@ -228,7 +233,24 @@ console.assert(firstOrder.quantity === 2, 'Quantité incorrecte');
 console.assert(firstOrder.status === 'pending', 'Statut par défaut incorrect');
 console.assert(firstOrder.buyer_id === null, 'buyer_id anonyme non respecté');
 
-console.log('✅ [OrderService] Insertion strictement conforme aux 10 colonnes réelles validée !');
+// Rejet strict des faux numéros de téléphone (ex: 552288)
+import { createOrder } from '../src/services/order-service.js';
+let rejectedFakePhone = false;
+try {
+    await createOrder({
+        clientNom: 'Diallo',
+        clientPrenom: 'Moussa',
+        clientTelephone: '552288',
+        pavillon: 'Pavillon A1',
+        chambre: '12',
+        items: [{ id: 'p-1', seller_id: 's-1', price: 1000, quantity: 1 }],
+    });
+} catch (e) {
+    rejectedFakePhone = e.message.includes('invalide');
+}
+console.assert(rejectedFakePhone, 'createOrder avec numéro 552288 aurait dû être rejeté');
+
+console.log('✅ [OrderService] Insertion strictement conforme aux 10 colonnes réelles et validation téléphone validées !');
 
 // 7. Test Nouveaux Modules & Fonctionnalités Production
 import fs from 'fs';

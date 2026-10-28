@@ -11,6 +11,7 @@
 import { supabase } from './supabase.js';
 import { clearCart } from './cart-store.js';
 import { submitReview } from './review-service.js';
+import { isValidSenegalPhone } from '../utils/security.js';
 
 const OFFLINE_QUEUE_KEY = 'pending_sync_orders';
 
@@ -187,6 +188,10 @@ export async function createOrder({
 
     if (!clientPrenom || !clientNom || !clientTelephone) {
         throw new Error('Veuillez renseigner vos coordonnées (Prénom, Nom, Téléphone).');
+    }
+
+    if (!isValidSenegalPhone(clientTelephone)) {
+        throw new Error('Numéro de téléphone invalide. Veuillez renseigner un numéro sénégalais valide à 9 chiffres (ex: 77 123 45 67).');
     }
 
     if (!pavillon || !chambre) {
