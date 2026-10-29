@@ -172,10 +172,11 @@ export async function fetchGlobalMetrics() {
             console.warn('[AdminService] seller_payments non bloquant:', e);
         }
 
-        // Le revenu réel : transactions encaissées ou montant des abonnements payants en cours d'activité
-        const totalSubscriptionRevenue = totalPaymentsCollected > 0
-            ? totalPaymentsCollected
-            : activePaidSubscriptionRevenue;
+        // Le revenu réel des abonnements actifs : somme des forfaits réels des boutiques actuellement payantes (Starter 1 500 F / Pro 2 500 F)
+        // Ne doit pas être écrasé par seller_payments qui ne contient que les paiements automatisés en ligne
+        const totalSubscriptionRevenue = activePaidSubscriptionRevenue > 0
+            ? activePaidSubscriptionRevenue
+            : totalPaymentsCollected;
 
         return {
             activeSellersCount,
