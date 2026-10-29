@@ -36,7 +36,7 @@ export function createBottomNav({
             <nav 
                 id="mobile-bottom-nav" 
                 aria-label="Navigation mobile"
-                class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none"
+                class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none transition-transform duration-200 ease-out"
             >
                 <div class="w-full px-2 py-1.5 flex items-center justify-around max-w-md mx-auto">
                     <!-- Onglet 1 : Offres / Accueil -->
@@ -317,43 +317,28 @@ export function createBottomNav({
     render();
 
     // Gestion ergonomique du clavier virtuel sur mobile (Safari iOS & Android Chrome)
-    // Masque temporairement la barre inférieure lors de la saisie pour éviter qu'elle ne flotte au milieu de l'écran
+    // Gestion pérenne et fluide du viewport mobile (iOS Safari / WebKit) sans saut de layout ni décollement
     if (typeof window !== 'undefined') {
         const setKeyboardNavState = (isKeyboardOpen) => {
             const bottomNavEl = navContainer.querySelector('#mobile-bottom-nav');
             if (!bottomNavEl) return;
+            // Translation GPU fluide sans destruction de layout (évite le layout shift et préserve le positionnement)
             if (isKeyboardOpen) {
-                bottomNavEl.classList.add('hidden');
+                bottomNavEl.classList.add('translate-y-full', 'pointer-events-none', 'opacity-0');
             } else {
-                bottomNavEl.classList.remove('hidden');
+                bottomNavEl.classList.remove('translate-y-full', 'pointer-events-none', 'opacity-0');
             }
         };
 
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
                 if (window.innerWidth < 1024) {
-                    const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 150;
+                    // Seuil à 160px : le clavier virtuel fait > 250px, tandis que les invites Face ID / Autofill font < 80px
+                    const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 160;
                     setKeyboardNavState(isKeyboardOpen);
                 }
             });
         }
-
-        document.addEventListener('focusin', (e) => {
-            if (window.innerWidth < 1024 && ['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) {
-                setKeyboardNavState(true);
-            }
-        });
-
-        document.addEventListener('focusout', (e) => {
-            if (window.innerWidth < 1024 && ['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) {
-                setTimeout(() => {
-                    const activeTag = document.activeElement?.tagName;
-                    if (!['INPUT', 'TEXTAREA'].includes(activeTag)) {
-                        setKeyboardNavState(false);
-                    }
-                }, 100);
-            }
-        });
     }
 
     navContainer.setActiveTab = (tabName) => {

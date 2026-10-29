@@ -13,7 +13,7 @@ function getToastContainer() {
     if (!toastContainer || !document.body || !document.body.contains(toastContainer)) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-root';
-        toastContainer.className = 'fixed top-16 inset-x-4 sm:top-5 sm:right-5 sm:inset-x-auto z-[9999] pointer-events-none flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full';
+        toastContainer.className = 'fixed top-16 inset-x-4 sm:top-5 sm:right-5 sm:inset-x-auto z-[9999] pointer-events-none flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full pt-safe';
         document.body.appendChild(toastContainer);
     }
     return toastContainer;

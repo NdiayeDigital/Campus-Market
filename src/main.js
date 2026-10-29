@@ -278,7 +278,7 @@ async function initApp() {
     // 5. Conteneur principal (Vues dynamiques - Plein écran fluide)
     const mainContentEl = document.createElement('main');
     mainContentEl.id = 'main-content';
-    mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
+    mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
     rootWrapper.appendChild(mainContentEl);
 
     // 6. Barre de navigation mobile inférieure (BottomNav) & Sidebar Desktop
@@ -315,7 +315,7 @@ async function initApp() {
 
     // 7. Footer (Plein écran fluide aligné avec la sidebar)
     const footerEl = document.createElement('footer');
-    footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 sm:px-6 lg:px-8 xl:px-10 text-center mt-auto pb-28 sm:pb-8 lg:ml-64 lg:w-[calc(100%-16rem)] w-full';
+    footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 sm:px-6 lg:px-8 xl:px-10 text-center mt-auto pb-safe-content sm:pb-8 lg:ml-64 lg:w-[calc(100%-16rem)] w-full';
     footerEl.innerHTML = `
         <div class="w-full flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-slate-500">
             <!-- Marque & Identité UIDT -->
@@ -416,7 +416,7 @@ async function initApp() {
         }
 
         if (viewName === 'orders') {
-            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('orders');
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.remove('hidden');
@@ -440,14 +440,14 @@ async function initApp() {
             updateSEO({ title: 'Administration — Campus Market UIDT' });
             renderAdminView();
         } else if (viewName === 'shop') {
-            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
             categoryChipsComponent.classList.add('hidden');
             footerEl.classList.remove('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(false);
             renderShopView(params.sellerId);
         } else {
-            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-24 sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
             categoryChipsComponent.classList.remove('hidden');
             footerEl.classList.remove('hidden');

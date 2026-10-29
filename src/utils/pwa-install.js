@@ -45,7 +45,7 @@ function showInstallBanner() {
     bannerEl = document.createElement('aside');
     bannerEl.id = 'pwa-install-banner';
     bannerEl.setAttribute('aria-label', 'Installation de l\'application Campus Market');
-    bannerEl.className = 'fixed bottom-20 lg:bottom-6 right-3 left-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl p-3.5 flex items-center justify-between gap-3 transform translate-y-8 opacity-0 transition-all duration-300 animate-in';
+    bannerEl.className = 'fixed bottom-20 lg:bottom-6 right-3 left-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl p-3.5 flex items-center justify-between gap-3 transform translate-y-8 opacity-0 transition-all duration-300 animate-in mb-safe';
 
     bannerEl.innerHTML = `
         <div class="flex items-center gap-3 min-w-0">

@@ -24,13 +24,51 @@
 }
 
 @layer utilities {
-  /* Support de l'encoche et de la barre de geste mobile (iOS / Android) */
+  /* Support de l'encoche, Dynamic Island et barre de gestes (iOS WebKit / Safari / Android) */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .mt-safe {
+    margin-top: env(safe-area-inset-top, 0px);
+  }
+
   .pb-safe {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   }
 
   .mb-safe {
-    margin-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Dégagement du contenu principal pour ne jamais être masqué par la navigation inférieure */
+  .pb-safe-content {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Verrouillage strict au bas de l'écran avec accélération matérielle GPU (iOS WebKit / Safari) */
+  .fixed-gpu-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+
+  /* Stabilisation du header en haut de l'écran avec accélération matérielle GPU */
+  .sticky-gpu-top {
+    position: sticky;
+    top: 0;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
   }
 
   /* Panneau en verre dépoli (Glassmorphism) */
