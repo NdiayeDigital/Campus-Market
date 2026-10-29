@@ -17,7 +17,7 @@ import {
 import { createProductManager } from './ProductManager.js';
 import { isSellerSuspended } from '../../services/admin-service.js';
 import { audioAlert, playNotificationSound } from '../../utils/audio-alert.js';
-import { showOrderNotification, requestNotificationPermission } from '../../utils/background-notifications.js';
+import { showOrderNotification, requestNotificationPermission, subscribeSellerToPush } from '../../utils/background-notifications.js';
 import { SUPPORT_CONFIG } from '../../config/support.js';
 import { escapeHTML, formatSenegalPhone } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
@@ -2074,8 +2074,12 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         }
     }
 
-    // Démarrage
-    requestNotificationPermission();
+    // Démarrage : enregistrement du terminal pour les alertes push en veille
+    if (sellerId) {
+        subscribeSellerToPush(sellerId).catch(() => {});
+    } else {
+        requestNotificationPermission();
+    }
     loadData();
     initRealtime();
     startPolling();

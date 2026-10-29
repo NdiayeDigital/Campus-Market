@@ -140,15 +140,18 @@ self.addEventListener('push', (event) => {
         try {
             const data = event.data.json();
             const options = {
-                body: data.body,
-                icon: '/assets/logo-192x192.png',
-                badge: '/assets/logo-192x192.png',
-                vibrate: [200, 100, 200],
+                body: data.body || 'Une nouvelle commande vient d\'arriver !',
+                icon: data.icon || '/assets/logo-192x192.png',
+                badge: data.badge || '/assets/logo-192x192.png',
+                vibrate: [200, 100, 200, 100, 200],
+                tag: data.reference ? `order-${data.reference}` : `order-${Date.now()}`,
+                renotify: true,
+                requireInteraction: true,
                 data: {
-                    url: data.url || '/',
+                    url: data.url || '/#seller',
                 },
             };
-            event.waitUntil(self.registration.showNotification(data.title, options));
+            event.waitUntil(self.registration.showNotification(data.title || '🛍️ Nouvelle commande - Campus Market', options));
         } catch {
             // Ignorer
         }

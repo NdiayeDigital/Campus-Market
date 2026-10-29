@@ -312,6 +312,31 @@ export async function createOrder({
         // Succès : vidage automatique du panier
         clearCart();
 
+        // Déclenchement asynchrone non-bloquant de la notification Web Push vers le téléphone du marchand (en veille)
+        try {
+            const sellerIds = [...new Set(ordersToInsert.map((o) => o.seller_id).filter(Boolean))];
+            const totalPrice = ordersToInsert.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+            const deliveryLocation = `${pavillon || ''} - ${chambre || ''}`.trim();
+
+            sellerIds.forEach((sId) => {
+                fetch('/api/send-order-push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sellerId: sId,
+                        buyerName: `${clientPrenom} ${clientNom}`.trim(),
+                        totalPrice,
+                        deliveryLocation,
+                        orderReference: reference,
+                    }),
+                }).catch((pushErr) => {
+                    console.warn('[OrderService] Push non-bloquant:', pushErr);
+                });
+            });
+        } catch {
+            // Envoi push non bloquant
+        }
+
         const firstItem = items[0] || {};
         const sellerName = firstItem.seller_name || (firstItem.seller ? `${firstItem.seller.prenom} ${firstItem.seller.nom}`.trim() : 'Vendeur UIDT');
         const sellerPhone = firstItem.seller_phone || firstItem.seller?.telephone || '';
