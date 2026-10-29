@@ -112,11 +112,11 @@ export const CATEGORIES = [
  * @param {number} [options.offset=0] - Offset pour pagination
  * @returns {Promise<Array>}
  */
-export async function fetchActiveProducts({ category = 'all', limit = 50, offset = 0 } = {}) {
+export async function fetchActiveProducts({ category = 'all', limit = 50, offset = 0, retry = 1 } = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-    }, 10000); // 10 secondes max pour réseau mobile
+    }, 18000); // 18 secondes pour absorber la latence mobile 3G/4G et le réveil Supabase
 
     try {
         let query = supabase
@@ -167,9 +167,16 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
         clearTimeout(timeoutId);
         const isAbort = err.name === 'AbortError' || err.message?.includes('aborted');
         console.warn(
-            `[CatalogService] ${isAbort ? 'Timeout (10s) réseau mobile atteint' : 'Erreur requête Supabase'}:`,
+            `[CatalogService] ${isAbort ? 'Timeout (18s) réseau mobile atteint' : 'Erreur requête Supabase'}:`,
             err.message || err
         );
+
+        // Tentative de rattrapage automatique si échec réseau temporaire
+        if (retry > 0) {
+            console.info('[CatalogService] Nouvelle tentative de chargement des offres...');
+            await new Promise((r) => setTimeout(r, 800));
+            return fetchActiveProducts({ category, limit, offset, retry: retry - 1 });
+        }
 
         // Fallback immédiat sur les données en cache (LocalStorage / Mémoire)
         const cached = getLocalCachedProducts();
@@ -242,17 +249,18 @@ export async function searchProducts(query = '', category = 'all') {
 /**
  * Récupère les meilleurs vendeurs ("Top Shops") certifiés avec leur note moyenne,
  * leur nom commercial et leur volume de commandes livrées.
- * Utilise un AbortController avec timeout de 10s et repli sur le cache local.
+ * Utilise un AbortController avec timeout de 15s et repli sur le cache local.
+ * @param {Array} [preloadedProducts=[]] - Produits déjà chargés en mémoire pour éviter une requête redondante
  * @returns {Promise<Array>}
  */
-export async function fetchTopShops() {
+export async function fetchTopShops(preloadedProducts = []) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-    }, 10000);
+    }, 15000);
 
     try {
-        const [sellersRes, reviewsRes, prodsRes, statsRpcRes] = await Promise.allSettled([
+        const queries = [
             supabase
                 .from('profiles')
                 .select('id, prenom, nom, telephone, is_open, shop_name, shop_category')
@@ -263,22 +271,40 @@ export async function fetchTopShops() {
                 .select('seller_id, rating')
                 .abortSignal(controller.signal),
             supabase
-                .from('products')
-                .select('seller_id')
-                .abortSignal(controller.signal),
-            supabase
                 .rpc('get_seller_stats')
                 .abortSignal(controller.signal),
-        ]);
+        ];
 
+        // Évite une requête redondante vers 'products' si le catalogue est déjà en mémoire
+        const hasPreloaded = Array.isArray(preloadedProducts) && preloadedProducts.length > 0;
+        if (!hasPreloaded) {
+            queries.push(
+                supabase
+                    .from('products')
+                    .select('seller_id')
+                    .abortSignal(controller.signal)
+            );
+        }
+
+        const results = await Promise.allSettled(queries);
         clearTimeout(timeoutId);
 
-        const sellers = sellersRes.status === 'fulfilled' && !sellersRes.value.error ? (sellersRes.value.data || []) : [];
-        if (!sellers || sellers.length === 0) return [];
+        const sellersRes = results[0];
+        const reviewsRes = results[1];
+        const statsRpcRes = results[2];
+        const prodsRes = !hasPreloaded ? results[3] : null;
 
-        const reviewsList = reviewsRes.status === 'fulfilled' && !reviewsRes.value.error ? (reviewsRes.value.data || []) : [];
-        const prodsList = prodsRes.status === 'fulfilled' && !prodsRes.value.error ? (prodsRes.value.data || []) : [];
-        const statsRpcList = statsRpcRes.status === 'fulfilled' && !statsRpcRes.value.error ? (statsRpcRes.value.data || []) : [];
+        const sellers = sellersRes && sellersRes.status === 'fulfilled' && !sellersRes.value?.error 
+            ? (sellersRes.value?.data || []) 
+            : [];
+        if (!sellers || sellers.length === 0) return getLocalCachedTopShops();
+
+        const reviewsList = reviewsRes && reviewsRes.status === 'fulfilled' && !reviewsRes.value?.error 
+            ? (reviewsRes.value?.data || []) 
+            : [];
+        const statsRpcList = statsRpcRes && statsRpcRes.status === 'fulfilled' && !statsRpcRes.value?.error 
+            ? (statsRpcRes.value?.data || []) 
+            : [];
 
         // Dictionnaire des statistiques de commandes livrées (via RPC ou repli)
         const statsMap = new Map();
@@ -294,11 +320,23 @@ export async function fetchTopShops() {
 
         // Dictionnaire du nombre de produits actifs par vendeur
         const productCounts = new Map();
-        prodsList.forEach((p) => {
-            if (p && p.seller_id) {
-                productCounts.set(p.seller_id, (productCounts.get(p.seller_id) || 0) + 1);
-            }
-        });
+        if (hasPreloaded) {
+            preloadedProducts.forEach((p) => {
+                const sId = p.seller_id || p.seller?.id;
+                if (sId) {
+                    productCounts.set(sId, (productCounts.get(sId) || 0) + 1);
+                }
+            });
+        } else {
+            const prodsList = prodsRes && prodsRes.status === 'fulfilled' && !prodsRes.value?.error 
+                ? (prodsRes.value?.data || []) 
+                : [];
+            prodsList.forEach((p) => {
+                if (p && p.seller_id) {
+                    productCounts.set(p.seller_id, (productCounts.get(p.seller_id) || 0) + 1);
+                }
+            });
+        }
 
         // Filtrer d'éventuels marchands suspendus
         const suspendedIds = getSuspendedSellersCache();

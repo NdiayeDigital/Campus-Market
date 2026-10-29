@@ -804,13 +804,17 @@ async function initApp() {
                     appState.currentCategory
                 );
             } else {
-                appState.products = await fetchActiveProducts({
+                const fetched = await fetchActiveProducts({
                     category: appState.currentCategory,
                 });
+                if (fetched && fetched.length > 0) {
+                    appState.products = fetched;
+                } else if (!appState.products || appState.products.length === 0) {
+                    appState.products = [];
+                }
             }
         } catch (err) {
             console.error('[Main] Erreur chargement produits:', err);
-            appState.products = [];
         } finally {
             hideLoading();
             renderCatalogView();
@@ -903,23 +907,35 @@ async function initApp() {
     checkPaymentReturnFlow();
     handleCurrentRoute();
 
-    // Chargement asynchrone des offres & boutiques
+    // Chargement asynchrone progressif des offres & boutiques (découplé pour résilience mobile)
     try {
-        const [products, topShops] = await Promise.all([
-            fetchActiveProducts({ category: 'all' }),
-            fetchTopShops(),
-        ]);
-        appState.products = products || [];
-        appState.topShops = topShops || [];
-        updateCategoryCounters(appState.products);
+        const products = await fetchActiveProducts({ category: 'all' });
+        if (products && products.length > 0) {
+            appState.products = products;
+            updateCategoryCounters(appState.products);
+            hideLoading();
+            if (appState.currentView === 'catalog') {
+                renderCatalogView();
+            }
+        }
     } catch (err) {
-        console.error('[Main] Erreur chargement initial:', err);
-        appState.products = [];
-        appState.topShops = [];
+        console.warn('[Main] Erreur chargement initial produits:', err);
+    }
+
+    try {
+        const topShops = await fetchTopShops(appState.products);
+        if (topShops && topShops.length > 0) {
+            appState.topShops = topShops;
+            if (appState.currentView === 'catalog') {
+                renderCatalogView();
+            }
+        }
+    } catch (err) {
+        console.warn('[Main] Erreur chargement Top Shops:', err);
     } finally {
         hideLoading();
         if (appState.currentView === 'catalog') {
-            renderCatalogView(); // Remplace les squelettes par les données réelles ou l'empty state
+            renderCatalogView();
         }
     }
 }
