@@ -2018,8 +2018,9 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
 
         // Onboarding CTA: Partager sur WhatsApp
         const shareWaHandler = () => {
-            const shopUrl = `${window.location.origin}/#seller/${sellerId}`;
-            const shareText = `Bonjour ! Retrouvez tous mes plats et articles sur ma boutique Campus Market UIDT : ${shopUrl}`;
+            const shopUrl = `${window.location.origin}/#shop/${sellerId}`;
+            const shopName = seller?.shop_name || (seller?.prenom ? `${seller.prenom} ${seller.nom || ''}`.trim() : 'ma boutique');
+            const shareText = `Bonjour ! Retrouvez tous mes plats et articles sur ma boutique "${shopName}" sur Campus Market UIDT : ${shopUrl}`;
             const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
             window.open(waUrl, '_blank', 'noopener,noreferrer');
             if (navigator.clipboard?.writeText) {

@@ -311,19 +311,23 @@ export async function fetchSellerProfile(sellerId) {
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, prenom, nom, telephone, is_open, role, created_at')
+            .select('id, prenom, nom, telephone, is_open, role, created_at, shop_name, shop_category')
             .eq('id', sellerId)
             .single();
 
         if (error) {
             console.warn('[CatalogService] Erreur fetchSellerProfile:', error);
-            return null;
+            const cached = getLocalCachedProducts();
+            const found = cached.find((p) => p.seller_id === sellerId || p.seller?.id === sellerId);
+            return found?.seller || null;
         }
 
         return data;
     } catch (err) {
         console.error('[CatalogService] Exception fetchSellerProfile:', err);
-        return null;
+        const cached = getLocalCachedProducts();
+        const found = cached.find((p) => p.seller_id === sellerId || p.seller?.id === sellerId);
+        return found?.seller || null;
     }
 }
 
@@ -338,19 +342,21 @@ export async function fetchSellerProducts(sellerId) {
     try {
         const { data, error } = await supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, shop_name, shop_category)')
             .eq('seller_id', sellerId)
             .order('created_at', { ascending: false });
 
         if (error) {
             console.warn('[CatalogService] Erreur fetchSellerProducts:', error);
-            return [];
+            const cached = getLocalCachedProducts();
+            return cached.filter((p) => p.seller_id === sellerId || p.seller?.id === sellerId);
         }
 
         return data || [];
     } catch (err) {
         console.error('[CatalogService] Exception fetchSellerProducts:', err);
-        return [];
+        const cached = getLocalCachedProducts();
+        return cached.filter((p) => p.seller_id === sellerId || p.seller?.id === sellerId);
     }
 }
 

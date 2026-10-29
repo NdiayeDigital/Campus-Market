@@ -62,7 +62,7 @@ export function createSellerShowcase({
                 fetchSellerReviews(sellerId),
             ]);
 
-            seller = sellerData;
+            seller = sellerData || (productsData && productsData[0]?.seller ? productsData[0].seller : null);
             products = productsData || [];
             reviews = reviewsData || [];
             stats = getSellerRatingStats(reviews);
@@ -131,7 +131,8 @@ export function createSellerShowcase({
         const isSuspended = seller.role === 'suspendu' || seller.role === 'vendeur_desactive';
         const isOpen = !isSuspended && (seller.is_open !== false);
         const sellerName = `${seller.prenom || ''} ${seller.nom || ''}`.trim() || 'Vendeur UIDT';
-        const initials = ((seller.prenom?.[0] || 'V') + (seller.nom?.[0] || '')).toUpperCase();
+        const shopTitle = seller.shop_name || (seller.prenom ? `Boutique ${seller.prenom}` : 'Boutique UIDT');
+        const initials = ((seller.shop_name?.[0] || seller.prenom?.[0] || 'V') + (seller.nom?.[0] || '')).toUpperCase();
         const cleanPhone = formatSenegalPhone(seller.telephone || '');
 
         // Catégories présentes dans les produits du vendeur
@@ -187,7 +188,7 @@ export function createSellerShowcase({
                         <div class="flex flex-col min-w-0">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <h1 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 leading-tight">
-                                    Boutique ${escapeHTML(seller.prenom)}
+                                    ${escapeHTML(shopTitle)}
                                 </h1>
                                 ${!isSuspended ? `
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
@@ -596,8 +597,12 @@ export function createSellerShowcase({
         grid.innerHTML = '';
 
         items.forEach((product) => {
+            const productWithSeller = {
+                ...product,
+                seller: product.seller || seller,
+            };
             const card = createProductCard({
-                product,
+                product: productWithSeller,
                 onAddToCart: (item, quantity) => {
                     if (typeof onAddToCart === 'function') onAddToCart(item, quantity);
                 },

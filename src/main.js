@@ -30,6 +30,7 @@ import { escapeHTML } from './utils/security.js';
 import { showToast } from './utils/notifications.js';
 import { SUPPORT_CONFIG } from './config/support.js';
 import { updateSEO, setCatalogSEO, setOrdersSEO, setSellerSEO, resetDefaultSEO } from './utils/seo.js';
+import { resolveRoute } from './utils/router.js';
 import { initPwaInstallPrompt } from './utils/pwa-install.js';
 import logoUrl from './assets/logo.webp';
 
@@ -850,48 +851,30 @@ async function initApp() {
         }
     }
 
-    // Écoute des changements de fragment d'URL pour navigation directe
-    window.addEventListener('hashchange', () => {
-        const rawHash = window.location.hash;
-        const hash = rawHash.toLowerCase();
-        if (hash.startsWith('#admin')) {
-            navigateToView('admin');
-        } else if (hash.startsWith('#seller')) {
+    // Gestion unifiée de la navigation selon l'URL (hash & paramètres de requête)
+    function handleCurrentRoute() {
+        const route = resolveRoute(window.location.hash, window.location.search);
+        if (route.view === 'seller') {
             checkPaymentReturnFlow();
             navigateToView('seller');
-        } else if (hash.startsWith('#orders')) {
-            navigateToView('orders');
-        } else if (hash.startsWith('#shop/')) {
-            const sellerId = rawHash.slice(6);
-            navigateToView('shop', { sellerId });
-        } else if (hash.startsWith('#product/')) {
-            const productId = rawHash.slice(9);
-            handleProductDeepLink(productId);
-        } else if (hash === '' || hash === '#') {
-            navigateToView('catalog');
+        } else if (route.view === 'product') {
+            if (appState.currentView !== 'catalog') {
+                navigateToView('catalog');
+            }
+            handleProductDeepLink(route.params.productId);
+        } else {
+            navigateToView(route.view, route.params);
         }
+    }
+
+    // Écoute des changements de fragment d'URL pour navigation directe
+    window.addEventListener('hashchange', () => {
+        handleCurrentRoute();
     });
 
-    // Rendu immédiat selon le hash URL (ou affichage immédiat des squelettes de chargement)
-    const rawInitialHash = window.location.hash;
-    const initialHash = rawInitialHash.toLowerCase();
+    // Rendu immédiat selon l'URL courante
     checkPaymentReturnFlow();
-    if (initialHash.startsWith('#admin')) {
-        navigateToView('admin');
-    } else if (initialHash.startsWith('#seller')) {
-        navigateToView('seller');
-    } else if (initialHash.startsWith('#orders')) {
-        navigateToView('orders');
-    } else if (initialHash.startsWith('#shop/')) {
-        const sellerId = rawInitialHash.slice(6);
-        navigateToView('shop', { sellerId });
-    } else if (initialHash.startsWith('#product/')) {
-        const productId = rawInitialHash.slice(9);
-        navigateToView('catalog');
-        handleProductDeepLink(productId);
-    } else {
-        navigateToView('catalog');
-    }
+    handleCurrentRoute();
 
     // Chargement asynchrone des offres & boutiques
     try {

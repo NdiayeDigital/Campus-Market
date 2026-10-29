@@ -93,11 +93,11 @@ export async function shareSellerShop(seller, onShowToast = showToast) {
     if (!seller || !seller.id) return;
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const shopUrl = `${origin}/#shop/${seller.id}`;
-    const sellerName = seller.prenom ? `${seller.prenom} ${seller.nom || ''}`.trim() : 'notre boutique';
+    const displayName = seller.shop_name || (seller.prenom ? `${seller.prenom} ${seller.nom || ''}`.trim() : 'notre boutique');
 
     return shareLink({
-        title: `Boutique de ${sellerName} - Campus Market`,
-        text: `Découvrez la boutique de ${sellerName} sur Campus Market UIDT ! Articles, plats et services disponibles :`,
+        title: `${displayName} - Campus Market`,
+        text: `Découvrez la boutique "${displayName}" sur Campus Market UIDT ! Articles, plats et services disponibles :`,
         url: shopUrl,
         onShowToast,
     });
