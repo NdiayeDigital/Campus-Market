@@ -36,7 +36,7 @@ export function createBottomNav({
             <nav 
                 id="mobile-bottom-nav" 
                 aria-label="Navigation mobile"
-                class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none mobile-nav-fixed transition-transform duration-200"
+                class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none"
             >
                 <div class="w-full px-2 py-1.5 flex items-center justify-around max-w-md mx-auto">
                     <!-- Onglet 1 : Offres / Accueil -->
@@ -323,9 +323,9 @@ export function createBottomNav({
             const bottomNavEl = navContainer.querySelector('#mobile-bottom-nav');
             if (!bottomNavEl) return;
             if (isKeyboardOpen) {
-                bottomNavEl.classList.add('translate-y-full', 'pointer-events-none');
+                bottomNavEl.classList.add('hidden');
             } else {
-                bottomNavEl.classList.remove('translate-y-full', 'pointer-events-none');
+                bottomNavEl.classList.remove('hidden');
             }
         };
 

@@ -567,7 +567,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
             </aside>
 
             <!-- 2. HEADER MOBILE VENDEUR : Épuré avec Titre + Badge statut + Menu ⋮ unique (lg:hidden) -->
-            <header class="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs w-full transition-[color,background-color,border-color,box-shadow] duration-200 mobile-nav-fixed">
+            <header class="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs w-full">
                 <div class="w-full px-4 py-2.5 flex items-center justify-between gap-3">
                     <!-- Logo & Titre Vendeur -->
                     <div class="flex items-center gap-2.5 min-w-0">
@@ -941,7 +941,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
             </main>
 
             <!-- 5. BARRE INFÉRIEURE FIXE MOBILE VENDEUR (lg:hidden, TOUJOURS visible, z-50) -->
-            <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none mobile-nav-fixed transition-transform duration-200" aria-label="Navigation vendeur mobile">
+            <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation vendeur mobile">
                 <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around">
                     <!-- Dashboard -->
                     <button 
