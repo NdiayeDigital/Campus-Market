@@ -272,7 +272,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             </aside>
 
             <!-- 2. HEADER MOBILE SUPERADMIN : Épuré blanc avec Logo + Titre + Menu ⋮ unique (lg:hidden) -->
-            <header class="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 text-slate-900 shadow-xs w-full">
+            <header class="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 text-slate-900 shadow-xs w-full transition-[color,background-color,border-color,box-shadow] duration-200 mobile-nav-fixed">
                 <div class="w-full px-4 py-2.5 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2.5 min-w-0">
                         <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
@@ -479,7 +479,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             </main>
 
             <!-- 6. BARRE INFÉRIEURE FIXE MOBILE SUPERADMIN (lg:hidden, TOUJOURS visible, z-50) -->
-            <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 text-slate-900 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation admin mobile">
+            <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 text-slate-900 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none mobile-nav-fixed transition-transform duration-200" aria-label="Navigation admin mobile">
                 <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around">
                     ${navTabs.map(tab => `
                         <button 
