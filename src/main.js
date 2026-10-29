@@ -66,7 +66,7 @@ async function initApp() {
     appEl.innerHTML = ''; // Nettoyage initial
 
     const rootWrapper = document.createElement('div');
-    rootWrapper.className = 'min-h-screen bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white';
+    rootWrapper.className = 'min-h-[100dvh] min-h-screen bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white';
 
     let headerComponent = null;
     let categoryChipsComponent = null;

@@ -46,29 +46,23 @@
     padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Verrouillage strict au bas de l'écran avec accélération matérielle GPU (iOS WebKit / Safari) */
+  /* Verrouillage strict au bas de l'écran (iOS WebKit / Safari / Android) */
   .fixed-gpu-bottom {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     width: 100%;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-    will-change: transform;
   }
 
-  /* Stabilisation du header en haut de l'écran avec accélération matérielle GPU */
+  /* Stabilisation du header en haut de l'écran (Safari WebKit & Chrome) */
   .sticky-gpu-top {
     position: sticky;
     top: 0;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-    will-change: transform;
   }
 
   /* Panneau en verre dépoli (Glassmorphism) */

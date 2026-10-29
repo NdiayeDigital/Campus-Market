@@ -36,7 +36,7 @@ export function createBottomNav({
             <nav 
                 id="mobile-bottom-nav" 
                 aria-label="Navigation mobile"
-                class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none transition-transform duration-200 ease-out"
+                class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none"
             >
                 <div class="w-full px-2 py-1.5 flex items-center justify-around max-w-md mx-auto">
                     <!-- Onglet 1 : Offres / Accueil -->
@@ -316,30 +316,7 @@ export function createBottomNav({
 
     render();
 
-    // Gestion ergonomique du clavier virtuel sur mobile (Safari iOS & Android Chrome)
-    // Gestion pérenne et fluide du viewport mobile (iOS Safari / WebKit) sans saut de layout ni décollement
-    if (typeof window !== 'undefined') {
-        const setKeyboardNavState = (isKeyboardOpen) => {
-            const bottomNavEl = navContainer.querySelector('#mobile-bottom-nav');
-            if (!bottomNavEl) return;
-            // Translation GPU fluide sans destruction de layout (évite le layout shift et préserve le positionnement)
-            if (isKeyboardOpen) {
-                bottomNavEl.classList.add('translate-y-full', 'pointer-events-none', 'opacity-0');
-            } else {
-                bottomNavEl.classList.remove('translate-y-full', 'pointer-events-none', 'opacity-0');
-            }
-        };
 
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                if (window.innerWidth < 1024) {
-                    // Seuil à 160px : le clavier virtuel fait > 250px, tandis que les invites Face ID / Autofill font < 80px
-                    const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 160;
-                    setKeyboardNavState(isKeyboardOpen);
-                }
-            });
-        }
-    }
 
     navContainer.setActiveTab = (tabName) => {
         if (currentTab !== tabName) {

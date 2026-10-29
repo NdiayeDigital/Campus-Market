@@ -18,7 +18,7 @@ import logoUrl from '../assets/logo.webp';
  */
 export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller, onLogoClick, onOpenCatalog } = {}) {
     const headerEl = document.createElement('header');
-    headerEl.className = 'sticky-gpu-top z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/70 shadow-xs lg:ml-64 lg:w-[calc(100%-16rem)] w-full pt-safe';
+    headerEl.className = 'sticky-gpu-top z-30 bg-white border-b border-slate-200/70 shadow-xs lg:ml-64 lg:w-[calc(100%-16rem)] w-full pt-safe';
 
     headerEl.innerHTML = `
         <div class="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-2.5 sm:py-3 flex flex-col gap-2.5">
