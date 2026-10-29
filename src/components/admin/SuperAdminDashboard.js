@@ -160,7 +160,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             totalOrdersCount: 0,
             totalDeliveredRevenue: 0,
             totalSubscriptionRevenue: 0,
-            sellerMonthlyFee: 2000,
+            activePaidSellersCount: 0,
+            trialSellersCount: 0,
+            sellerMonthlyFee: 1500,
         };
 
         const pendingAlert = pendingSellers.length > 0 || pendingSubscriptionPayments.length > 0;
@@ -517,7 +519,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             totalOrdersCount: 0,
             totalDeliveredRevenue: 0,
             totalSubscriptionRevenue: 0,
-            sellerMonthlyFee: 2000,
+            activePaidSellersCount: 0,
+            trialSellersCount: 0,
+            sellerMonthlyFee: 1500,
         };
 
         const deliveredOrdersCount = allOrders.filter((o) => o.status === 'delivered').length;
@@ -635,7 +639,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 </div>
                                 <div>
                                     <h3 class="font-heading font-bold text-sm text-slate-900 group-hover:text-indigo-700 transition-colors">Abonnements Plateforme</h3>
-                                    <p class="text-xs text-slate-500">${m.activeSellersCount} marchands certifiés actifs</p>
+                                    <p class="text-xs text-slate-500">${m.activePaidSellersCount || 0} payant(s) • ${m.trialSellersCount || 0} en essai gratuit</p>
                                 </div>
                             </div>
                             <span class="font-heading font-extrabold text-lg text-indigo-600 tabular-nums">
@@ -643,7 +647,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             </span>
                         </div>
                         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                            <span class="text-[11px] text-slate-400">Recettes récurrentes (2 000 F / boutique)</span>
+                            <span class="text-[11px] text-slate-400">Recettes réelles (${m.activePaidSellersCount || 0} abonnement${(m.activePaidSellersCount || 0) > 1 ? 's' : ''} actif${(m.activePaidSellersCount || 0) > 1 ? 's' : ''})</span>
                             <span class="text-xs font-bold text-primary group-hover:text-primary-hover flex items-center gap-1">
                                 <span>Gérer</span>
                                 <i class="fa-solid fa-arrow-right text-[10px]"></i>

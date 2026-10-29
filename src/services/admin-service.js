@@ -104,7 +104,7 @@ export async function fetchGlobalMetrics() {
         // 1. Profils (vendeurs actifs et en attente)
         const { data: profiles, error: errProf } = await supabase
             .from('profiles')
-            .select('id, role');
+            .select('id, role, subscription_status, subscription_plan, subscription_expires_at, trial_ends_at');
 
         if (errProf) throw errProf;
 
@@ -131,9 +131,51 @@ export async function fetchGlobalMetrics() {
             0
         );
 
-        // 3. Revenus Récurrents Réels : Cotisations récurrentes des abonnements vendeurs (2 000 FCFA/mois par boutique active)
-        const SELLER_MONTHLY_SUBSCRIPTION_FEE = 2000;
-        const totalSubscriptionRevenue = activeSellersCount * SELLER_MONTHLY_SUBSCRIPTION_FEE;
+        // 3. Revenus Récurrents RÉELS des abonnements vendeurs (aucun montant arbitraire ou fictif)
+        const now = new Date();
+        let activePaidSubscriptionRevenue = 0;
+        let activePaidSellersCount = 0;
+        let trialSellersCount = 0;
+        let expiredSellersCount = 0;
+
+        allProfiles.forEach((p) => {
+            if (p.role === 'vendeur' && !suspendedIds.includes(p.id)) {
+                const isPaidActive = p.subscription_status === 'active' &&
+                    p.subscription_expires_at &&
+                    new Date(p.subscription_expires_at) > now;
+
+                if (isPaidActive) {
+                    activePaidSellersCount++;
+                    const planKey = (p.subscription_plan || 'starter').toLowerCase();
+                    const planFee = SUBSCRIPTION_PLANS[planKey]?.price || SUBSCRIPTION_PLANS.starter.price;
+                    activePaidSubscriptionRevenue += planFee;
+                } else if (p.subscription_status === 'trial' || (p.trial_ends_at && new Date(p.trial_ends_at) > now)) {
+                    trialSellersCount++;
+                } else {
+                    expiredSellersCount++;
+                }
+            }
+        });
+
+        // Contrôle des transactions réellement enregistrées dans seller_payments
+        let totalPaymentsCollected = 0;
+        try {
+            const { data: paymentsData } = await supabase
+                .from('seller_payments')
+                .select('amount, status')
+                .in('status', ['success', 'approved', 'completed']);
+
+            if (paymentsData && paymentsData.length > 0) {
+                totalPaymentsCollected = paymentsData.reduce((sum, pay) => sum + (Number(pay.amount) || 0), 0);
+            }
+        } catch (e) {
+            console.warn('[AdminService] seller_payments non bloquant:', e);
+        }
+
+        // Le revenu réel : transactions encaissées ou montant des abonnements payants en cours d'activité
+        const totalSubscriptionRevenue = totalPaymentsCollected > 0
+            ? totalPaymentsCollected
+            : activePaidSubscriptionRevenue;
 
         return {
             activeSellersCount,
@@ -142,7 +184,11 @@ export async function fetchGlobalMetrics() {
             totalOrdersCount,
             totalDeliveredRevenue,
             totalSubscriptionRevenue,
-            sellerMonthlyFee: SELLER_MONTHLY_SUBSCRIPTION_FEE,
+            activePaidSellersCount,
+            trialSellersCount,
+            expiredSellersCount,
+            totalPaymentsCollected,
+            sellerMonthlyFee: 1500,
         };
     } catch (err) {
         console.error('[AdminService] Erreur fetchGlobalMetrics:', err);
