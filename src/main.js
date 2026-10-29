@@ -624,25 +624,52 @@ async function initApp() {
                     <span class="text-xs text-slate-400 font-medium">Vendeurs certifiés</span>
                 </div>
                 <div class="flex items-center gap-3 overflow-x-auto no-scrollbar py-1" style="scrollbar-width: none;">
-                    ${appState.topShops.map((shop) => `
+                    ${appState.topShops.map((shop) => {
+                        const displayName = shop.shop_name || `${shop.prenom || ''} ${shop.nom || ''}`.trim() || 'Boutique UIDT';
+                        const sellerFullName = `${shop.prenom || ''} ${shop.nom || ''}`.trim();
+                        const initial = ((shop.shop_name?.[0] || shop.prenom?.[0] || 'V') + (shop.nom?.[0] || '')).toUpperCase();
+                        const ratingDisplay = shop.avgRating > 0 ? shop.avgRating.toFixed(1) : '5.0';
+                        const reviewsDisplay = shop.reviewCount > 0 ? `${shop.reviewCount} avis` : 'Nouveau';
+
+                        return `
                         <div 
                             data-shop-id="${shop.id}" 
-                            title="Visiter la boutique de ${escapeHTML(shop.prenom)}"
-                            class="flex-shrink-0 bg-white border border-slate-200/80 hover:border-primary/50 rounded-2xl p-3 flex items-center gap-3 shadow-card hover:shadow-card-hover transition-all min-w-[200px] cursor-pointer active:scale-95 group"
+                            title="Visiter ${escapeHTML(displayName)}"
+                            class="flex-shrink-0 bg-white border border-slate-200/80 hover:border-primary/50 rounded-2xl p-3 flex items-center gap-3 shadow-card hover:shadow-card-hover transition-all min-w-[210px] cursor-pointer active:scale-95 group"
                         >
-                            <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white font-heading font-extrabold flex items-center justify-center text-sm shadow-sm transition-colors">
-                                ${((shop.prenom?.[0] || 'V') + (shop.nom?.[0] || '')).toUpperCase()}
+                            <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white font-heading font-extrabold flex items-center justify-center text-sm shadow-sm transition-colors shrink-0">
+                                ${initial}
                             </div>
-                            <div class="flex flex-col min-w-0">
-                                <span class="font-heading font-bold text-slate-900 group-hover:text-primary transition-colors text-xs truncate leading-tight">${escapeHTML(shop.prenom)} ${escapeHTML(shop.nom)}</span>
-                                <div class="flex items-center gap-1 mt-1 text-[11px] text-amber-500 font-bold">
-                                    <i class="fa-solid fa-star text-[10px]"></i>
-                                    <span>${shop.avgRating || '5.0'}</span>
-                                    <span class="text-slate-400 font-normal">(${shop.reviewCount || 1})</span>
+                            <div class="flex flex-col min-w-0 flex-1">
+                                <span class="font-heading font-bold text-slate-900 group-hover:text-primary transition-colors text-xs truncate leading-tight">
+                                    ${escapeHTML(displayName)}
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                                    ${escapeHTML(sellerFullName || 'Vendeur certifié')}
+                                </span>
+                                <div class="flex items-center gap-1.5 mt-1 text-[11px] text-amber-500 font-bold">
+                                    <div class="flex items-center gap-1">
+                                        <i class="fa-solid fa-star text-[10px]"></i>
+                                        <span>${ratingDisplay}</span>
+                                    </div>
+                                    <span class="text-slate-400 font-normal text-[10px]">(${reviewsDisplay})</span>
+                                    ${shop.deliveredOrders > 0 ? `
+                                        <span class="text-slate-300">•</span>
+                                        <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5" title="${shop.deliveredOrders} commande(s) livrée(s)">
+                                            <i class="fa-solid fa-truck-fast text-[9px]"></i>
+                                            ${shop.deliveredOrders}
+                                        </span>
+                                    ` : (shop.activeProducts > 0 ? `
+                                        <span class="text-slate-300">•</span>
+                                        <span class="text-[10px] text-slate-500 font-medium" title="${shop.activeProducts} article(s) disponible(s)">
+                                            ${shop.activeProducts} art.
+                                        </span>
+                                    ` : '')}
                                 </div>
                             </div>
                         </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             `;
 

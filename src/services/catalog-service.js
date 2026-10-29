@@ -240,7 +240,8 @@ export async function searchProducts(query = '', category = 'all') {
 }
 
 /**
- * Récupère les meilleurs vendeurs ("Top Shops") certifiés avec leur note moyenne.
+ * Récupère les meilleurs vendeurs ("Top Shops") certifiés avec leur note moyenne,
+ * leur nom commercial et leur volume de commandes livrées.
  * Utilise un AbortController avec timeout de 10s et repli sur le cache local.
  * @returns {Promise<Array>}
  */
@@ -251,44 +252,105 @@ export async function fetchTopShops() {
     }, 10000);
 
     try {
-        const sellersQuery = supabase
-            .from('profiles')
-            .select('id, prenom, nom, telephone, is_open')
-            .eq('role', 'vendeur')
-            .abortSignal(controller.signal);
+        const [sellersRes, reviewsRes, prodsRes, statsRpcRes] = await Promise.allSettled([
+            supabase
+                .from('profiles')
+                .select('id, prenom, nom, telephone, is_open, shop_name, shop_category')
+                .eq('role', 'vendeur')
+                .abortSignal(controller.signal),
+            supabase
+                .from('reviews')
+                .select('seller_id, rating')
+                .abortSignal(controller.signal),
+            supabase
+                .from('products')
+                .select('seller_id')
+                .abortSignal(controller.signal),
+            supabase
+                .rpc('get_seller_stats')
+                .abortSignal(controller.signal),
+        ]);
 
-        const { data: sellers, error: errSellers } = await sellersQuery;
-        if (errSellers) throw errSellers;
-        if (!sellers || sellers.length === 0) return [];
-
-        const reviewsQuery = supabase
-            .from('reviews')
-            .select('seller_id, rating')
-            .abortSignal(controller.signal);
-
-        const { data: reviews } = await reviewsQuery;
         clearTimeout(timeoutId);
 
-        const reviewsList = reviews || [];
+        const sellers = sellersRes.status === 'fulfilled' && !sellersRes.value.error ? (sellersRes.value.data || []) : [];
+        if (!sellers || sellers.length === 0) return [];
 
-        // Calcul des moyennes
-        const computedSellers = sellers.map((seller) => {
-            const sellerReviews = reviewsList.filter((r) => r.seller_id === seller.id);
-            const reviewCount = sellerReviews.length;
-            const avgRating =
-                reviewCount > 0
-                    ? sellerReviews.reduce((acc, curr) => acc + (curr.rating || 0), 0) / reviewCount
-                    : 0;
+        const reviewsList = reviewsRes.status === 'fulfilled' && !reviewsRes.value.error ? (reviewsRes.value.data || []) : [];
+        const prodsList = prodsRes.status === 'fulfilled' && !prodsRes.value.error ? (prodsRes.value.data || []) : [];
+        const statsRpcList = statsRpcRes.status === 'fulfilled' && !statsRpcRes.value.error ? (statsRpcRes.value.data || []) : [];
 
-            return {
-                ...seller,
-                reviewCount,
-                avgRating: Number(avgRating.toFixed(1)),
-            };
+        // Dictionnaire des statistiques de commandes livrées (via RPC ou repli)
+        const statsMap = new Map();
+        if (Array.isArray(statsRpcList)) {
+            statsRpcList.forEach((st) => {
+                if (st && st.seller_id) {
+                    statsMap.set(st.seller_id, {
+                        deliveredOrders: Number(st.delivered_orders_count) || 0,
+                    });
+                }
+            });
+        }
+
+        // Dictionnaire du nombre de produits actifs par vendeur
+        const productCounts = new Map();
+        prodsList.forEach((p) => {
+            if (p && p.seller_id) {
+                productCounts.set(p.seller_id, (productCounts.get(p.seller_id) || 0) + 1);
+            }
         });
 
-        // Tri par note décroissante puis nombre d'avis
-        computedSellers.sort((a, b) => b.avgRating - a.avgRating || b.reviewCount - a.reviewCount);
+        // Filtrer d'éventuels marchands suspendus
+        const suspendedIds = getSuspendedSellersCache();
+
+        // Calcul et enrichissement des marchands
+        const computedSellers = sellers
+            .filter((seller) => !suspendedIds.includes(seller.id))
+            .map((seller) => {
+                const sellerReviews = reviewsList.filter((r) => r.seller_id === seller.id);
+                const reviewCount = sellerReviews.length;
+                const avgRating =
+                    reviewCount > 0
+                        ? sellerReviews.reduce((acc, curr) => acc + (curr.rating || 0), 0) / reviewCount
+                        : 0;
+
+                const rpcStats = statsMap.get(seller.id);
+                const deliveredOrders = rpcStats ? rpcStats.deliveredOrders : 0;
+                const activeProducts = productCounts.get(seller.id) || 0;
+                const shopName = seller.shop_name || (seller.prenom ? `Boutique ${seller.prenom}` : 'Boutique UIDT');
+
+                return {
+                    ...seller,
+                    shop_name: shopName,
+                    reviewCount,
+                    avgRating: Number(avgRating.toFixed(1)),
+                    deliveredOrders,
+                    activeProducts,
+                };
+            });
+
+        // Tri multi-critères :
+        // 1. Boutiques ouvertes en priorité
+        // 2. Boutiques ayant au moins 1 article en vente en priorité
+        // 3. Note moyenne décroissante
+        // 4. Volume d'avis clients
+        // 5. Volume de commandes livrées avec succès (Piste 2)
+        // 6. Nombre total de produits disponibles
+        computedSellers.sort((a, b) => {
+            const aOpen = a.is_open !== false ? 1 : 0;
+            const bOpen = b.is_open !== false ? 1 : 0;
+            if (bOpen !== aOpen) return bOpen - aOpen;
+
+            const aHasProds = a.activeProducts > 0 ? 1 : 0;
+            const bHasProds = b.activeProducts > 0 ? 1 : 0;
+            if (bHasProds !== aHasProds) return bHasProds - aHasProds;
+
+            if (b.avgRating !== a.avgRating) return b.avgRating - a.avgRating;
+            if (b.reviewCount !== a.reviewCount) return b.reviewCount - a.reviewCount;
+            if (b.deliveredOrders !== a.deliveredOrders) return b.deliveredOrders - a.deliveredOrders;
+            return b.activeProducts - a.activeProducts;
+        });
+
         const topShops = computedSellers.slice(0, 6);
         saveLocalCachedTopShops(topShops);
 
