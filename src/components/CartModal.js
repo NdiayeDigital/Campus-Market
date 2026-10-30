@@ -61,7 +61,7 @@ export function createCartModal({ onProceedToCheckout } = {}) {
                         <span class="font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full text-xs">Gratuit</span>
                     </div>
                     <div class="pt-2 border-t border-slate-200 flex justify-between items-baseline">
-                        <span class="font-heading font-bold text-sm sm:text-base text-slate-900">Total à régler</span>
+                        <span class="font-heading font-bold text-sm sm:text-base text-slate-900">Total à payer</span>
                         <span id="cart-total-price" class="font-heading font-extrabold text-xl text-primary leading-none">0 FCFA</span>
                     </div>
                 </div>
