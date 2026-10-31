@@ -133,7 +133,60 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         } finally {
             isLoading = false;
             render();
+            initSuperAdminRealtime();
         }
+    }
+
+    let realtimeOrdersChannel = null;
+
+    function initSuperAdminRealtime() {
+        if (!isAuthenticated || realtimeOrdersChannel) return;
+
+        realtimeOrdersChannel = supabase
+            .channel('superadmin-orders-stream')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'orders',
+                },
+                async (payload) => {
+                    console.log('[SuperAdmin Realtime] Événement commande:', payload);
+
+                    if (payload.eventType === 'UPDATE' && payload.new?.status === 'cancelled') {
+                        const ref = payload.new.reference || `#CMD-${(payload.new.id || '').slice(0, 6).toUpperCase()}`;
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`⚠️ Commande ${ref} annulée par le client`, 'warning');
+                        }
+                    } else if (payload.eventType === 'INSERT') {
+                        const ref = payload.new.reference || `#CMD-${(payload.new.id || '').slice(0, 6).toUpperCase()}`;
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`🛍️ Nouvelle commande ${ref} reçue`, 'info');
+                        }
+                    }
+
+                    // Rafraîchissement silencieux des commandes et métriques
+                    try {
+                        const [freshOrds, freshMetrics] = await Promise.all([
+                            fetchAllOrdersAdmin().catch(() => allOrders),
+                            fetchGlobalMetrics().catch(() => metrics),
+                        ]);
+                        allOrders = freshOrds;
+                        metrics = freshMetrics;
+
+                        if (activeTab === 'orders' || activeTab === 'overview') {
+                            const isSearching = document.activeElement && document.activeElement.id === 'admin-order-search';
+                            if (!isSearching) {
+                                render();
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('[SuperAdmin] Erreur mise à jour temps réel:', err);
+                    }
+                }
+            )
+            .subscribe();
     }
 
     function render() {
@@ -3445,6 +3498,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         if (activeTab === 'orders') bindOrdersEvents();
         if (activeTab === 'locations') bindLocationsEvents();
     }
+
+    containerEl.cleanup = () => {
+        if (realtimeOrdersChannel) {
+            supabase.removeChannel(realtimeOrdersChannel);
+            realtimeOrdersChannel = null;
+        }
+    };
 
     if (admin && admin.role === 'superadmin') {
         currentAdmin = admin;

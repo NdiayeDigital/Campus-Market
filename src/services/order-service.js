@@ -406,23 +406,65 @@ export async function fetchLiveOrderStatus({ orderId, reference, phone } = {}) {
 
 /**
  * Permet à un étudiant d'annuler sa commande si elle est toujours en attente (pending).
- * @param {string} orderId
+ * Utilise la RPC sécurisée `cancel_order_by_buyer` (compatible acheteurs invités sans compte).
+ * Supporte un UUID, une référence (#CMD-...) ou un objet { orderId, reference, phone }.
+ * @param {Object|string} params
  * @returns {Promise<Object>}
  */
-export async function cancelOrderByBuyer(orderId) {
-    if (!orderId) throw new Error('Identifiant commande requis.');
+export async function cancelOrderByBuyer(params) {
+    const orderIdOrRef = typeof params === 'object' && params !== null
+        ? (params.orderId || params.id || params.reference)
+        : params;
+    const phone = typeof params === 'object' && params !== null
+        ? (params.phone || params.buyer_phone || params.telephone || '')
+        : '';
 
-    const { data, error } = await supabase
-        .from('orders')
-        .update({ status: 'cancelled' })
-        .eq('id', orderId)
-        .select()
-        .single();
+    if (!orderIdOrRef) throw new Error('Identifiant ou référence de commande requis.');
+
+    const cleanTarget = String(orderIdOrRef).trim();
+
+    // 1. Tentative d'annulation via la fonction RPC sécurisée (gère acheteurs anonymes & validation 'pending')
+    try {
+        const { data: rpcData, error: rpcErr } = await supabase.rpc('cancel_order_by_buyer', {
+            p_reference_or_id: cleanTarget,
+            p_phone: phone ? String(phone).trim() : '',
+        });
+
+        if (!rpcErr && rpcData) {
+            if (!rpcData.success) {
+                throw new Error(rpcData.message || 'Impossible d’annuler cette commande.');
+            }
+            return rpcData;
+        }
+
+        // Si la RPC a retourné une erreur métier explicite (autre que fonction inexistante)
+        if (rpcErr && !rpcErr.message?.includes('function') && !rpcErr.message?.includes('does not exist')) {
+            console.warn('[OrderService] Erreur RPC cancel_order_by_buyer:', rpcErr);
+            throw new Error(rpcErr.message);
+        }
+    } catch (rpcEx) {
+        if (!rpcEx.message?.includes('function') && !rpcEx.message?.includes('does not exist')) {
+            throw rpcEx;
+        }
+    }
+
+    // 2. Repli direct si utilisateur authentifié ou si RLS le permet
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanTarget);
+    let query = supabase.from('orders').update({ status: 'cancelled' });
+
+    if (isUUID) {
+        query = query.eq('id', cleanTarget);
+    } else {
+        query = query.eq('reference', cleanTarget);
+    }
+
+    const { data, error } = await query.select();
 
     if (error) {
         throw new Error(`Échec d'annulation de la commande: ${error.message}`);
     }
-    return data;
+
+    return data?.[0] || { success: true, message: 'Commande annulée avec succès.' };
 }
 
 /**

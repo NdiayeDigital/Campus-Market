@@ -387,8 +387,8 @@ async function initApp() {
 
     // Navigation de vue
     function navigateToView(viewName, params = {}) {
-        // Nettoyage du canal Realtime si on quitte l'espace vendeur
-        if (appState.currentView === 'seller' && viewName !== 'seller' && activeDashboardEl?.cleanup) {
+        // Nettoyage du canal Realtime si on quitte l'espace vendeur ou admin
+        if ((appState.currentView === 'seller' || appState.currentView === 'admin') && viewName !== appState.currentView && activeDashboardEl?.cleanup) {
             activeDashboardEl.cleanup();
             activeDashboardEl = null;
         }
@@ -602,6 +602,7 @@ async function initApp() {
             },
             onShowToast: showToast,
         });
+        activeDashboardEl = adminDashboard;
         mainContentEl.appendChild(adminDashboard);
     }
 

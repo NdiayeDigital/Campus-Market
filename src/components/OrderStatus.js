@@ -392,9 +392,13 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                 if (confirmed) {
                     btn.disabled = true;
                     try {
-                        if (target.orderId || target.id) {
-                            await cancelOrderByBuyer(target.orderId || target.id);
-                        }
+                        const targetRef = target.reference || target.orderId || target.id;
+                        const targetPhone = target.buyer_phone || target.telephone || '';
+                        await cancelOrderByBuyer({
+                            orderId: target.id || target.orderId,
+                            reference: targetRef,
+                            phone: targetPhone,
+                        });
                         recentOrders[idx].status = 'cancelled';
                         localStorage.setItem(RECENT_ORDERS_KEY, JSON.stringify(recentOrders));
                         showToast('Commande annulée avec succès.', 'info');

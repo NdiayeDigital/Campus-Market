@@ -111,9 +111,16 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         } finally {
             isLoading = false;
             // Si le rechargement est silencieux (polling régulier ou notification temps réel),
-            // NE JAMAIS ré-exécuter render() pour ne pas détruire la saisie de l'utilisateur ni écraser les formulaires
+            // NE JAMAIS ré-exécuter render() si l'utilisateur saisit un produit ou modifie un formulaire
             if (silent) {
                 updateBadgesOnly();
+                // Si le marchand consulte ses commandes ou son tableau de bord, rafraîchir l'affichage en direct
+                if (activeSubTab === 'orders' || activeSubTab === 'dashboard') {
+                    const isSearching = document.activeElement && document.activeElement.id === 'input-seller-search-orders';
+                    if (!isSearching) {
+                        render();
+                    }
+                }
                 return;
             }
             render();
@@ -194,8 +201,19 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                             onShowToast(`🔔 Nouvelle commande de ${buyer} !`, 'info');
                         }
                     } else if (payload.eventType === 'UPDATE') {
-                        if (typeof onShowToast === 'function') {
-                            onShowToast(`Mise à jour commande #${payload.new.id.slice(0, 6)}`, 'info');
+                        const orderRef = payload.new.reference || `#CMD-${(payload.new.id || '').slice(0, 6).toUpperCase()}`;
+                        if (payload.new.status === 'cancelled') {
+                            showOrderNotification({
+                                title: '⚠️ Commande annulée - Campus Market',
+                                body: `La commande ${orderRef} a été annulée par le client.`,
+                                url: '/#seller',
+                                order: payload.new,
+                            });
+                            if (typeof onShowToast === 'function') {
+                                onShowToast(`⚠️ La commande ${orderRef} a été annulée par le client.`, 'warning');
+                            }
+                        } else if (typeof onShowToast === 'function') {
+                            onShowToast(`Mise à jour commande ${orderRef} (${payload.new.status})`, 'info');
                         }
                     }
 
