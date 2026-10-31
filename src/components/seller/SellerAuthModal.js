@@ -19,7 +19,7 @@ import logoUrl from '../../assets/logo.webp';
 export function createSellerAuthModal({ onAuthenticated } = {}) {
     const modalEl = document.createElement('div');
     modalEl.id = 'seller-auth-modal-overlay';
-    modalEl.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
+    modalEl.className = 'fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
     let activeTab = 'login'; // 'login' | 'terms' | 'register' | 'otp' | 'pending' | 'forgot-password'
     let selectedPlan = 'starter'; // 'starter' (1500 FCFA/mois - 5 produits) | 'pro' (2500 FCFA/mois - 10 produits)

@@ -20,7 +20,7 @@ import { setProductSEO, resetDefaultSEO } from '../utils/seo.js';
 export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } = {}) {
     const modalEl = document.createElement('div');
     modalEl.id = 'product-detail-modal-overlay';
-    modalEl.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
+    modalEl.className = 'fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
     let currentProduct = null;
     let selectedQuantity = 1;
@@ -59,9 +59,14 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
             : p.image_url;
 
         modalEl.innerHTML = `
-            <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+            <div class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+                <!-- Poignée tactile mobile (Grab handle) -->
+                <div class="sm:hidden pt-3 pb-1 flex justify-center cursor-pointer" id="detail-grab-handle">
+                    <div class="w-12 h-1.5 bg-slate-300 rounded-full"></div>
+                </div>
+
                 <!-- En-tête / Image -->
-                <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-100 overflow-hidden">
+                <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-100 overflow-hidden shrink-0">
                     ${safeImageUrl 
                         ? `<img src="${escapeHTML(safeImageUrl)}" alt="${escapeHTML(p.title)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
                         : `<div class="w-full h-full flex items-center justify-center bg-primary/5 text-primary text-5xl">
@@ -96,8 +101,8 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                     </div>
                 </div>
 
-                <!-- Corps défilable -->
-                <div class="p-5 sm:p-6 overflow-y-auto flex flex-col gap-4">
+                <!-- Corps défilable fluide -->
+                <div class="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 min-h-0 flex flex-col gap-4" style="-webkit-overflow-scrolling: touch;">
                     <!-- Catégorie & Titre -->
                     <div>
                         <span class="text-xs font-bold uppercase tracking-wider text-primary">
@@ -163,36 +168,36 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                             ` : ''}
                         </div>
                     </div>
+                </div>
 
-                    <!-- Sélecteur quantité et Bouton d'ajout -->
-                    <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
-                        <!-- Sélecteur quantité -->
-                        <div class="flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto justify-between sm:justify-start">
-                            <button id="btn-detail-qty-minus" aria-label="Diminuer" class="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px]">
-                                <i class="fa-solid fa-minus text-xs"></i>
-                            </button>
-                            <span id="detail-qty-display" class="font-heading font-extrabold text-sm text-slate-900 w-8 text-center">
-                                ${selectedQuantity}
-                            </span>
-                            <button id="btn-detail-qty-plus" aria-label="Augmenter" class="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px]">
-                                <i class="fa-solid fa-plus text-xs"></i>
-                            </button>
-                        </div>
-
-                        <!-- Bouton d'ajout au panier -->
-                        <button 
-                            id="btn-detail-add-cart"
-                            ${isUnavailable ? 'disabled' : ''}
-                            class="flex-1 w-full py-3.5 px-5 rounded-2xl font-heading font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all min-h-[48px] ${
-                                isUnavailable 
-                                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
-                                    : 'bg-gradient-to-r from-primary to-blue-600 hover:from-primary-dark hover:to-primary active:scale-[0.98] text-white shadow-primary/30'
-                            }"
-                        >
-                            <i class="fa-solid fa-bag-shopping text-sm"></i>
-                            <span>${isUnavailable ? 'Non disponible à la commande' : 'Ajouter au panier'}</span>
+                <!-- Barre d'action basse FIXE (Pinned Action Footer avec pb-safe) -->
+                <div class="shrink-0 bg-white border-t border-slate-200/80 p-3.5 sm:p-4 pb-safe flex flex-col sm:flex-row items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
+                    <!-- Sélecteur quantité -->
+                    <div class="flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto justify-between sm:justify-start">
+                        <button id="btn-detail-qty-minus" aria-label="Diminuer" class="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px] cursor-pointer">
+                            <i class="fa-solid fa-minus text-xs"></i>
+                        </button>
+                        <span id="detail-qty-display" class="font-heading font-extrabold text-sm text-slate-900 w-8 text-center select-none">
+                            ${selectedQuantity}
+                        </span>
+                        <button id="btn-detail-qty-plus" aria-label="Augmenter" class="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px] cursor-pointer">
+                            <i class="fa-solid fa-plus text-xs"></i>
                         </button>
                     </div>
+
+                    <!-- Bouton d'ajout au panier -->
+                    <button 
+                        id="btn-detail-add-cart"
+                        ${isUnavailable ? 'disabled' : ''}
+                        class="flex-1 w-full py-3.5 px-5 rounded-2xl font-heading font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all min-h-[48px] cursor-pointer ${
+                            isUnavailable 
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
+                                : 'bg-gradient-to-r from-primary to-blue-600 hover:from-primary-dark hover:to-primary active:scale-[0.98] text-white shadow-primary/30'
+                        }"
+                    >
+                        <i class="fa-solid fa-bag-shopping text-sm"></i>
+                        <span>${isUnavailable ? 'Non disponible à la commande' : 'Ajouter au panier'}</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -202,6 +207,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
 
     function bindEvents() {
         modalEl.querySelector('#btn-close-detail')?.addEventListener('click', close);
+        modalEl.querySelector('#detail-grab-handle')?.addEventListener('click', close);
         modalEl.addEventListener('click', (e) => {
             if (e.target === modalEl) close();
         });

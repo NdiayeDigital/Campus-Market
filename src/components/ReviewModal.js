@@ -31,7 +31,7 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
 
     const modalEl = document.createElement('div');
     modalEl.id = 'seller-review-modal';
-    modalEl.className = 'fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300 select-none';
+    modalEl.className = 'fixed inset-0 z-[70] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300 select-none';
 
     function renderContent() {
         const sellerName = currentSeller

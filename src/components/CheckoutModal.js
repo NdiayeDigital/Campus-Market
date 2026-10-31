@@ -19,7 +19,7 @@ const LOCAL_BUYER_KEY = 'campus_market_last_buyer';
 export function createCheckoutModal({ onOrderSuccess } = {}) {
     const modalEl = document.createElement('div');
     modalEl.id = 'checkout-modal-overlay';
-    modalEl.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
+    modalEl.className = 'fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
     // Récupération des dernières coordonnées enregistrées pour commodité
     let savedBuyer = {};

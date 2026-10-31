@@ -321,7 +321,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
             </div>
 
             <!-- Modal de dépôt d'avis marchand -->
-            <div id="review-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+            <div id="review-modal" class="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
                 <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 flex flex-col gap-4">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                         <h3 class="font-heading font-extrabold text-slate-900 text-base">Noter votre expérience</h3>

@@ -17,7 +17,7 @@ const DELIVERY_FEE = 0; // Frais de livraison : Gratuit (0 FCFA) pavillon-à-pav
 export function createCartModal({ onProceedToCheckout } = {}) {
     const modalOverlay = document.createElement('div');
     modalOverlay.id = 'cart-modal-overlay';
-    modalOverlay.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-stretch justify-center sm:justify-end opacity-0 pointer-events-none transition-opacity duration-300';
+    modalOverlay.className = 'fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-stretch justify-center sm:justify-end opacity-0 pointer-events-none transition-opacity duration-300';
 
     modalOverlay.innerHTML = `
         <div id="cart-drawer" class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-none sm:rounded-l-3xl h-[90vh] sm:h-full flex flex-col shadow-2xl transform translate-y-full sm:translate-y-0 sm:translate-x-full transition-transform duration-300 overflow-hidden">

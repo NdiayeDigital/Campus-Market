@@ -24,7 +24,7 @@ import logoUrl from '../../assets/logo.webp';
 export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = {}) {
     const modalEl = document.createElement('div');
     modalEl.id = 'seller-subscription-modal-overlay';
-    modalEl.className = 'fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
+    modalEl.className = 'fixed inset-0 z-[70] bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
     let selectedPlanId = seller?.subscription_plan && SUBSCRIPTION_PLANS[seller.subscription_plan] ? seller.subscription_plan : 'starter';
     let isProcessing = false;
