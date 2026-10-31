@@ -4,8 +4,10 @@
  */
 
 export const VAPID_CONFIG = {
-    // Clé publique VAPID (sans danger pour le code frontend client)
-    publicKey: 'BHqBPmVryy2hCYhoRicHjMK-mKP7d211SBwUOVaVxnXBU52ljxIAPCNGuw9fMJjqqC9O_iaBvhNgpoyALrci3w4',
+    // Clé publique VAPID (publique et sans danger côté client - surchargeable par VITE_VAPID_PUBLIC_KEY)
+    publicKey: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_VAPID_PUBLIC_KEY)
+        ? import.meta.env.VITE_VAPID_PUBLIC_KEY
+        : 'BHqBPmVryy2hCYhoRicHjMK-mKP7d211SBwUOVaVxnXBU52ljxIAPCNGuw9fMJjqqC9O_iaBvhNgpoyALrci3w4',
     subject: 'mailto:contact@campusmarket-uidt.com',
 };
 

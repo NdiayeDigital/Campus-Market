@@ -12,15 +12,25 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL |
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
 
-// Clés VAPID officielles Campus Market
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BHqBPmVryy2hCYhoRicHjMK-mKP7d211SBwUOVaVxnXBU52ljxIAPCNGuw9fMJjqqC9O_iaBvhNgpoyALrci3w4';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'AGZx2a4R2M0wFxEeCebhFeBPO4iI9Q6_y2UOpzywzm8';
+// Configuration Web Push VAPID (Strictement via variables d'environnement)
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:contact@campusmarket-uidt.com';
 
-try {
-    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-} catch (e) {
-    console.warn('[PushAPI] Erreur configuration VAPID:', e);
+let vapidConfigured = false;
+function ensureVapidConfigured() {
+    if (vapidConfigured) return true;
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+        return false;
+    }
+    try {
+        webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+        vapidConfigured = true;
+        return true;
+    } catch (e) {
+        console.error('[PushAPI] Erreur configuration VAPID:', e);
+        return false;
+    }
 }
 
 export default async function handler(req, res) {
@@ -43,6 +53,13 @@ export default async function handler(req, res) {
 
         if (!sellerId) {
             return res.status(400).json({ error: 'sellerId requis pour notifier le marchand.' });
+        }
+
+        if (!ensureVapidConfigured()) {
+            console.error('[PushAPI] Variables d’environnement VAPID_PUBLIC_KEY ou VAPID_PRIVATE_KEY manquantes.');
+            return res.status(500).json({
+                error: 'Configuration Push serveur incomplète : VAPID_PUBLIC_KEY ou VAPID_PRIVATE_KEY non configuré.',
+            });
         }
 
         const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
