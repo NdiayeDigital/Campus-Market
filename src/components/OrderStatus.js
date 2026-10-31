@@ -173,7 +173,10 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
 
                     const isCancelled = currentStatus === 'cancelled';
                     const isDelivered = currentStatus === 'delivered';
+                    const isShipped = currentStatus === 'shipped';
                     const isPending = currentStatus === 'pending';
+                    // Règle métier : l'annulation par le client n'est plus faisable dès que la commande est en livraison ('shipped') ou livrée ('delivered')
+                    const canCancel = ['pending', 'confirmed', 'processing'].includes(currentStatus);
 
                     return `
                         <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4 transition-all">
@@ -305,7 +308,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                     </button>
                                 ` : ''}
 
-                                ${isPending ? `
+                                ${canCancel ? `
                                     <button 
                                         data-action="cancel-order" 
                                         data-idx="${idx}"

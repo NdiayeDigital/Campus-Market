@@ -68,11 +68,21 @@ BEGIN
         );
     END IF;
 
-    -- Règle métier : Seule une commande 'pending' peut être annulée unilatéralement par le client
-    IF v_order.status != 'pending' THEN
+    -- Règle métier : L'annulation par le client n'est plus faisable dès que la commande est en livraison ('shipped') ou livrée ('delivered').
+    -- Elle reste faisable tant que la commande est en attente ('pending'), confirmée ('confirmed') ou en préparation ('processing').
+    IF v_order.status IN ('shipped', 'delivered') THEN
         RETURN jsonb_build_object(
             'success', false, 
-            'message', 'Cette commande ne peut plus être annulée car elle a déjà été prise en charge par le marchand (statut : ' || v_order.status || '). Veuillez contacter directement le vendeur au ' || COALESCE(v_order.seller_phone, 'numéro du vendeur') || '.'
+            'message', 'Cette commande ne peut plus être annulée car elle est déjà ' || 
+                       CASE WHEN v_order.status = 'shipped' THEN 'en cours de livraison' ELSE 'livrée' END || 
+                       '. Veuillez contacter directement le vendeur au ' || COALESCE(v_order.seller_phone, 'numéro du vendeur') || '.'
+        );
+    END IF;
+
+    IF v_order.status NOT IN ('pending', 'confirmed', 'processing') THEN
+        RETURN jsonb_build_object(
+            'success', false, 
+            'message', 'Cette commande ne peut pas être annulée dans son état actuel (' || v_order.status || ').'
         );
     END IF;
 

@@ -450,7 +450,28 @@ export async function cancelOrderByBuyer(params) {
 
     // 2. Repli direct si utilisateur authentifié ou si RLS le permet
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanTarget);
-    let query = supabase.from('orders').update({ status: 'cancelled' });
+
+    // Contrôle d'état préalable : l'annulation par le client n'est plus faisable si la commande est en livraison ou livrée
+    try {
+        let check = supabase.from('orders').select('id, status, seller_phone');
+        if (isUUID) check = check.eq('id', cleanTarget);
+        else check = check.eq('reference', cleanTarget);
+        const { data: existingOrd } = await check.maybeSingle();
+        if (existingOrd) {
+            if (existingOrd.status === 'shipped') {
+                throw new Error("Cette commande est déjà en cours de livraison et ne peut plus être annulée. Veuillez contacter directement le vendeur.");
+            }
+            if (existingOrd.status === 'delivered') {
+                throw new Error("Cette commande a déjà été livrée et ne peut plus être annulée.");
+            }
+        }
+    } catch (checkErr) {
+        if (checkErr.message?.includes('livraison') || checkErr.message?.includes('livrée')) {
+            throw checkErr;
+        }
+    }
+
+    let query = supabase.from('orders').update({ status: 'cancelled' }).in('status', ['pending', 'confirmed', 'processing']);
 
     if (isUUID) {
         query = query.eq('id', cleanTarget);
@@ -464,7 +485,11 @@ export async function cancelOrderByBuyer(params) {
         throw new Error(`Échec d'annulation de la commande: ${error.message}`);
     }
 
-    return data?.[0] || { success: true, message: 'Commande annulée avec succès.' };
+    if (!data || data.length === 0) {
+        throw new Error("Cette commande ne peut plus être annulée (déjà en livraison, livrée ou annulée).");
+    }
+
+    return data[0];
 }
 
 /**
