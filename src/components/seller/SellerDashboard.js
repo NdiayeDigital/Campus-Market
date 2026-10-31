@@ -2092,9 +2092,21 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         }
     }
 
-    // Démarrage : enregistrement du terminal pour les alertes push en veille
+    // Démarrage : activation automatique des alertes sonores et push en veille par défaut
+    if (audioAlert.isEnabled) {
+        audioAlert.enable().catch(() => {});
+    }
+
     if (sellerId) {
         subscribeSellerToPush(sellerId).catch(() => {});
+        // Déclencher également la demande sur la 1ère interaction si le navigateur exige un geste utilisateur
+        if (typeof window !== 'undefined' && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+            const onFirstUserAction = () => {
+                subscribeSellerToPush(sellerId).catch(() => {});
+            };
+            window.addEventListener('click', onFirstUserAction, { once: true, passive: true });
+            window.addEventListener('touchstart', onFirstUserAction, { once: true, passive: true });
+        }
     } else {
         requestNotificationPermission();
     }

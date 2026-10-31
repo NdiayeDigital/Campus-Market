@@ -7,7 +7,26 @@
 class AudioAlertManager {
     constructor() {
         this.audioCtx = null;
-        this.isEnabled = false;
+        // Activé par défaut (sauf si explicitement désactivé par l'utilisateur)
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('campus_audio_alert_enabled') : null;
+        this.isEnabled = stored !== null ? stored === 'true' : true;
+        this._bindUserInteraction();
+    }
+
+    /**
+     * Attache un écouteur sur la première interaction de l'utilisateur
+     * pour déverrouiller l'AudioContext selon les politiques d'autoplay des navigateurs.
+     */
+    _bindUserInteraction() {
+        if (typeof window === 'undefined') return;
+        const unlock = () => {
+            if (this.isEnabled && (!this.audioCtx || this.audioCtx.state === 'suspended')) {
+                this.enable().catch(() => {});
+            }
+        };
+        window.addEventListener('click', unlock, { once: true, passive: true });
+        window.addEventListener('touchstart', unlock, { once: true, passive: true });
+        window.addEventListener('keydown', unlock, { once: true, passive: true });
     }
 
     /**
@@ -18,7 +37,7 @@ class AudioAlertManager {
     async enable() {
         try {
             if (!this.audioCtx) {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
                 if (!AudioContextClass) {
                     console.warn("Web Audio API non supportée sur ce navigateur.");
                     return false;
@@ -31,10 +50,12 @@ class AudioAlertManager {
             }
 
             this.isEnabled = true;
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('campus_audio_alert_enabled', 'true');
+            }
             return true;
         } catch (error) {
             console.error("Échec d'activation de l'AudioContext:", error);
-            this.isEnabled = false;
             return false;
         }
     }
@@ -44,6 +65,9 @@ class AudioAlertManager {
      */
     disable() {
         this.isEnabled = false;
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('campus_audio_alert_enabled', 'false');
+        }
     }
 
     /**
@@ -62,14 +86,23 @@ class AudioAlertManager {
      * Joue le carillon bitonal de notification (A5 880Hz suivi de C6 1046.5Hz).
      */
     playSound() {
-        if (!this.isEnabled || !this.audioCtx) {
+        if (!this.isEnabled) {
             return;
         }
 
         try {
+            if (!this.audioCtx) {
+                const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+                if (AudioContextClass) {
+                    this.audioCtx = new AudioContextClass();
+                }
+            }
+
+            if (!this.audioCtx) return;
+
             const ctx = this.audioCtx;
             if (ctx.state === 'suspended') {
-                ctx.resume();
+                ctx.resume().catch(() => {});
             }
 
             const now = ctx.currentTime;
