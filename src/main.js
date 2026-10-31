@@ -66,7 +66,7 @@ async function initApp() {
     appEl.innerHTML = ''; // Nettoyage initial
 
     const rootWrapper = document.createElement('div');
-    rootWrapper.className = 'min-h-[100dvh] min-h-screen bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white';
+    rootWrapper.className = 'min-h-[100dvh] bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white';
 
     let headerComponent = null;
     let categoryChipsComponent = null;
@@ -311,7 +311,10 @@ async function initApp() {
             headerComponent.focusSearch?.();
         },
     });
-    rootWrapper.appendChild(bottomNavComponent);
+    // Ancrage direct au body (évite le piège du containing block sur Safari iOS et garantit un bottom: 0 universel)
+    const existingNav = document.getElementById('app-navigation-container');
+    if (existingNav) existingNav.remove();
+    document.body.appendChild(bottomNavComponent);
 
     // 7. Footer (Plein écran fluide aligné avec la sidebar)
     const footerEl = document.createElement('footer');

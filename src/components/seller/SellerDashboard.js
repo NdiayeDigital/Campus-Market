@@ -39,7 +39,7 @@ import logoUrl from '../../assets/logo.webp';
  */
 export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDashboard, onLogout, onShowToast } = {}) {
     const containerEl = document.createElement('div');
-    containerEl.className = 'w-full flex flex-col bg-slate-50 min-h-screen text-slate-900';
+    containerEl.className = 'w-full flex flex-col bg-slate-50 min-h-[100dvh] text-slate-900';
 
     const sellerId = seller.id;
     let dashboardData = null;
@@ -702,7 +702,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
             </div>
 
             <!-- 4. CONTENU PRINCIPAL PLEIN ÉCRAN (w-full lg:ml-64 lg:w-[calc(100%-16rem)]) -->
-            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-screen bg-[#F8FAFC] flex flex-col flex-1 pb-safe-content sm:pb-8">
+            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-[100dvh] bg-[#F8FAFC] flex flex-col flex-1 pb-safe-content sm:pb-8">
                 <!-- TOP HEADER VENDEUR DESKTOP (hidden lg:flex, sticky top-0, z-30) -->
                 <header class="hidden lg:flex sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 w-full px-8 py-3.5 items-center justify-between select-none shadow-xs">
                     <!-- Gauche : Fil d'Ariane & Titre de section -->

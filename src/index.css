@@ -53,6 +53,7 @@
     left: 0;
     right: 0;
     width: 100%;
+    margin: 0;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
@@ -89,20 +90,18 @@
     animation: shimmer 1.8s infinite linear;
   }
 
-  /* Animation de transition d'écran douce */
+  /* Animation de transition d'écran douce sans altération spatiale (stabilise l'ancrage fixe sur Safari iOS & Android) */
   .view-transition-enter {
-    animation: viewEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: viewEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 }
 
 @keyframes viewEnter {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
