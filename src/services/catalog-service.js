@@ -102,6 +102,71 @@ export const CATEGORIES = [
 ];
 
 /**
+ * Répartit équitablement les produits entre les différentes boutiques (Approche B - Round-Robin).
+ * Évite qu'une boutique prolifique monopolisant les publications récentes n'éclipse les autres vendeurs.
+ * Mélange aléatoirement l'ordre des boutiques à chaque appel pour assurer une rotation équitable,
+ * tout en conservant l'ordre chronologique des produits au sein de chaque boutique.
+ *
+ * @param {Array<Object>} products - Liste brute des produits actifs
+ * @param {Object} [options]
+ * @param {boolean} [options.shuffle=true] - Mélanger aléatoirement l'ordre des boutiques pour le tour de rôle
+ * @returns {Array<Object>}
+ */
+export function interleaveProductsBySeller(products, { shuffle = true } = {}) {
+    if (!Array.isArray(products) || products.length <= 1) {
+        return products || [];
+    }
+
+    // 1. Regroupement des produits par boutique (sellerKey) en préservant l'ordre chronologique individuel
+    const sellerQueues = new Map();
+    for (const prod of products) {
+        const sellerKey = prod.seller_id || prod.seller?.id || 'default';
+        if (!sellerQueues.has(sellerKey)) {
+            sellerQueues.set(sellerKey, []);
+        }
+        sellerQueues.get(sellerKey).push(prod);
+    }
+
+    const sellerKeys = Array.from(sellerQueues.keys());
+
+    // S'il n'y a qu'une seule boutique, aucun entrelacement nécessaire
+    if (sellerKeys.length <= 1) {
+        return products;
+    }
+
+    // 2. Mélange aléatoire (Fisher-Yates) de l'ordre d'apparition des boutiques
+    // pour garantir qu'aucune boutique n'ait le monopole de la toute première place
+    if (shuffle) {
+        for (let i = sellerKeys.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const temp = sellerKeys[i];
+            sellerKeys[i] = sellerKeys[j];
+            sellerKeys[j] = temp;
+        }
+    }
+
+    // 3. Distribution équitable au tour de rôle (Round-Robin) :
+    // Tour 1 : 1 produit de chaque boutique
+    // Tour 2 : 2e produit de chaque boutique restante, etc.
+    const result = [];
+    let hasMore = true;
+    while (hasMore) {
+        hasMore = false;
+        for (const sellerKey of sellerKeys) {
+            const queue = sellerQueues.get(sellerKey);
+            if (queue && queue.length > 0) {
+                result.push(queue.shift());
+                if (queue.length > 0) {
+                    hasMore = true;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
  * Récupère les produits actifs depuis Supabase avec pagination et jointure vendeur.
  * Utilise un AbortController avec timeout strict de 10 secondes (optimisé réseau mobile)
  * et repli automatique sur le cache LocalStorage / mémoire.
@@ -158,11 +223,14 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
             return true;
         });
 
-        if (category === 'all' && offset === 0 && products.length > 0) {
-            saveLocalCachedProducts(products);
+        // Répartition équitable par boutique (Approche B : Round-Robin avec permutation aléatoire)
+        const distributedProducts = interleaveProductsBySeller(products);
+
+        if (category === 'all' && offset === 0 && distributedProducts.length > 0) {
+            saveLocalCachedProducts(distributedProducts);
         }
 
-        return products;
+        return distributedProducts;
     } catch (err) {
         clearTimeout(timeoutId);
         const isAbort = err.name === 'AbortError' || err.message?.includes('aborted');
@@ -182,11 +250,12 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
         const cached = getLocalCachedProducts();
         if (cached && cached.length > 0) {
             console.info('[CatalogService] Affichage des données de secours depuis le cache local.');
-            if (category === 'all') return cached;
+            if (category === 'all') return interleaveProductsBySeller(cached);
             const catObj = CATEGORIES.find((c) => c.id === category || c.label === category);
-            return cached.filter(
+            const filteredCached = cached.filter(
                 (p) => p.category === category || (catObj && (p.category === catObj.id || p.category === catObj.label))
             );
+            return interleaveProductsBySeller(filteredCached);
         }
 
         // Si aucune donnée n'est disponible, renvoie un tableau vide
@@ -497,6 +566,7 @@ export async function fetchProductById(productId) {
 export default {
     CATEGORIES,
     fetchActiveProducts,
+    interleaveProductsBySeller,
     fetchProductById,
     searchProducts,
     fetchTopShops,
