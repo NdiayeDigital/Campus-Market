@@ -7,7 +7,7 @@
  * 3. NETWORK-FIRST (avec fallback offline) : HTML et bundles JS/CSS Vite pour réception immédiate des mises à jour.
  */
 
-const CACHE_NAME = 'campus-market-v22';
+const CACHE_NAME = 'campus-market-v23';
 
 const STATIC_PRECACHE = [
     '/',
@@ -76,12 +76,13 @@ self.addEventListener('fetch', (event) => {
         url.hostname.includes('cdnjs.cloudflare.com');
 
     const isStaticAsset =
-        url.pathname.startsWith('/assets/') ||
-        url.pathname.startsWith('/images/') ||
         url.pathname.endsWith('.png') ||
         url.pathname.endsWith('.jpg') ||
+        url.pathname.endsWith('.jpeg') ||
         url.pathname.endsWith('.webp') ||
-        url.pathname.endsWith('.svg');
+        url.pathname.endsWith('.svg') ||
+        url.pathname.endsWith('.ico') ||
+        url.pathname.startsWith('/images/');
 
     if (isFontOrIcon || isStaticAsset) {
         event.respondWith(

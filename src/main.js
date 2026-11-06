@@ -962,6 +962,20 @@ if (
     window.addEventListener('load', () => {
         navigator.serviceWorker
             .register('/sw.js')
+            .then((reg) => {
+                // Auto-actualisation automatique dès qu'une mise à jour est détectée
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('[SW] Nouvelle version déployée, rechargement...');
+                                window.location.reload();
+                            }
+                        });
+                    }
+                });
+            })
             .catch((err) => console.warn('[SW] Ignoré:', err.message));
         
         initPwaInstallPrompt();
