@@ -124,7 +124,7 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                     <div class="flex flex-col gap-1.5">
                         <span class="text-[11px] text-slate-500 font-medium">Accès rapide aux résidences :</span>
                         <div class="flex items-center gap-1.5 flex-wrap" id="quick-pavillon-chips">
-                            ${['Pavillon A1', 'Pavillon A2', 'Pavillon B', 'Pavillon C', 'Pavillon D', 'Jardin Social'].map((pavName) => `
+                            ${['Pavillon A', 'Pavillon B', '1000 lits', 'Jardin Social'].map((pavName) => `
                                 <button 
                                     type="button" 
                                     data-pav="${pavName}" 
@@ -306,6 +306,13 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
             const pav = chip.getAttribute('data-pav');
             const selectEl = modalEl.querySelector('#delivery-pavillon');
             if (selectEl && pav) {
+                const exists = Array.from(selectEl.options).some((o) => o.value === pav);
+                if (!exists) {
+                    const opt = document.createElement('option');
+                    opt.value = pav;
+                    opt.textContent = pav;
+                    selectEl.appendChild(opt);
+                }
                 selectEl.value = pav;
             }
             modalEl.querySelectorAll('.quick-pav-chip').forEach((c) => {

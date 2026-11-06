@@ -722,6 +722,9 @@ export async function fetchAllOrdersAdmin() {
 }
 
 export const DEFAULT_DELIVERY_LOCATIONS = [
+    { id: 'def-0a', name: 'Pavillon A', is_active: true },
+    { id: 'def-0b', name: 'Pavillon B', is_active: true },
+    { id: 'def-0c', name: '1000 lits', is_active: true },
     { id: 'def-1', name: 'Pavillon A1', is_active: true },
     { id: 'def-2', name: 'Pavillon A2', is_active: true },
     { id: 'def-3', name: 'Pavillon A3', is_active: true },

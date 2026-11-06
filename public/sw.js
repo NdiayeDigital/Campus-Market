@@ -7,7 +7,7 @@
  * 3. NETWORK-FIRST (avec fallback offline) : HTML et bundles JS/CSS Vite pour réception immédiate des mises à jour.
  */
 
-const CACHE_NAME = 'campus-market-v21';
+const CACHE_NAME = 'campus-market-v22';
 
 const STATIC_PRECACHE = [
     '/',
