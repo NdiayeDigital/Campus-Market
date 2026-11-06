@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="waveBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2CD5FF"/>
+      <stop offset="100%" stop-color="#00AEEF"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <!-- Background Circle Wave Cyan -->
+  <circle cx="32" cy="32" r="30" fill="url(#waveBg)"/>
+  
+  <!-- Wave Penguin Mascot -->
+  <g filter="url(#shadow)">
+    <!-- Main Body & Head -->
+    <path d="M32 10 C22 10 17 17 17 26 C17 31 19 35 17 41 C15 47 16 49 19 49 C21 49 22 47 24 47 C26 47 28 50 32 50 C36 50 38 47 40 47 C42 47 43 49 45 49 C48 49 49 47 47 41 C45 35 47 31 47 26 C47 17 42 10 32 10 Z" fill="#0A192F"/>
+    
+    <!-- Left Flipper / Wing -->
+    <path d="M17 28 C12 32 11 39 15 42 C16 40 17 35 18 30 Z" fill="#0A192F"/>
+    
+    <!-- Right Flipper / Wing -->
+    <path d="M47 28 C52 32 53 39 49 42 C48 40 47 35 46 30 Z" fill="#0A192F"/>
+    
+    <!-- White Belly -->
+    <path d="M32 23 C25 23 23 29 23 37 C23 44 26 47 32 47 C38 47 41 44 41 37 C41 29 39 23 32 23 Z" fill="#FFFFFF"/>
+    
+    <!-- Eyes Area (White) -->
+    <ellipse cx="28" cy="20" rx="3.5" ry="4.5" fill="#FFFFFF"/>
+    <ellipse cx="36" cy="20" rx="3.5" ry="4.5" fill="#FFFFFF"/>
+    
+    <!-- Pupils -->
+    <circle cx="29" cy="20" r="1.8" fill="#0A192F"/>
+    <circle cx="35" cy="20" r="1.8" fill="#0A192F"/>
+    <!-- Eye Glint -->
+    <circle cx="29.5" cy="19.2" r="0.6" fill="#FFFFFF"/>
+    <circle cx="35.5" cy="19.2" r="0.6" fill="#FFFFFF"/>
+    
+    <!-- Orange Beak -->
+    <path d="M28 23 Q32 22 36 23 Q32 29 28 23 Z" fill="#FF9900"/>
+    
+    <!-- Cute Feet -->
+    <path d="M25 49 C23 49 22 51 24 53 C26 54 28 53 28 50 Z" fill="#FF9900"/>
+    <path d="M39 49 C41 49 42 51 40 53 C38 54 36 53 36 50 Z" fill="#FF9900"/>
+  </g>
+</svg>
+

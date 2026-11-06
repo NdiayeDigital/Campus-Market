@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="omBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A00"/>
+      <stop offset="100%" stop-color="#FF6600"/>
+    </linearGradient>
+    <filter id="omShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  
+  <!-- Orange Squircle Background -->
+  <rect width="64" height="64" rx="14" fill="url(#omBg)"/>
+  
+  <!-- Subtle internal border -->
+  <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="1"/>
+
+  <!-- Content: OM Monogram with Orange brand badge -->
+  <g filter="url(#omShadow)">
+    <!-- Mini Orange brand square badge -->
+    <rect x="12" y="12" width="10" height="10" rx="2" fill="#FFFFFF"/>
+    
+    <!-- Bold 'O' -->
+    <path d="M22 38 C22 30.5 25.5 25 31 25 C36.5 25 40 30.5 40 38 C40 45.5 36.5 51 31 51 C25.5 51 22 45.5 22 38 Z M27 38 C27 43 28.5 47 31 47 C33.5 47 35 43 35 38 C35 33 33.5 29 31 29 C28.5 29 27 33 27 38 Z" fill="#FFFFFF"/>
+    
+    <!-- Bold 'M' interlaced -->
+    <path d="M37 26 L42 26 L46 36 L50 26 L55 26 L55 50 L51 50 L51 33 L47.5 42 L44.5 42 L41 33 L41 50 L37 50 Z" fill="#FFFFFF"/>
+  </g>
+</svg>
+

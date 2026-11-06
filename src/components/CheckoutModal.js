@@ -7,6 +7,8 @@ import { createOrder } from '../services/order-service.js';
 import { cartStore } from '../services/cart-store.js';
 import { fetchDeliveryLocations, DEFAULT_DELIVERY_LOCATIONS } from '../services/admin-service.js';
 import { escapeHTML, isValidSenegalPhone } from '../utils/security.js';
+import waveLogo from '../assets/wave.jpg';
+import omLogo from '../assets/orange-money.jpg';
 
 const LOCAL_BUYER_KEY = 'campus_market_last_buyer';
 
@@ -85,15 +87,28 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1" for="buyer-phone">Numéro de téléphone (Wave / OM / Appel) *</label>
-                        <input 
-                            type="tel" 
-                            id="buyer-phone" 
-                            required 
-                            value="${escapeHTML(savedBuyer.telephone || '')}"
-                            placeholder="Ex: 77 123 45 67" 
-                            class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                        >
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-semibold text-slate-600" for="buyer-phone">Numéro de téléphone *</label>
+                            <span class="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200/60 px-2 py-0.5 rounded-full text-[10px] text-slate-600 font-medium">
+                                <img src="${waveLogo}" alt="Wave" class="w-3.5 h-3.5 rounded-full object-cover" onerror="this.onerror=null; this.src='/assets/wave.jpg';">
+                                <img src="${omLogo}" alt="OM" class="w-3.5 h-3.5 rounded-[3px] object-contain bg-white" onerror="this.onerror=null; this.src='/assets/orange-money.jpg';">
+                                <span>Wave / OM / Appel</span>
+                            </span>
+                        </div>
+                        <div class="relative">
+                            <input 
+                                type="tel" 
+                                id="buyer-phone" 
+                                required 
+                                value="${escapeHTML(savedBuyer.telephone || '')}"
+                                placeholder="Ex: 77 123 45 67" 
+                                class="w-full pl-3 pr-16 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                            >
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                                <img src="${waveLogo}" alt="Wave" class="w-5 h-5 rounded-full object-cover shadow-xs border border-sky-200">
+                                <img src="${omLogo}" alt="OM" class="w-5 h-5 rounded object-contain bg-white shadow-xs border border-slate-200">
+                            </div>
+                        </div>
                         <p class="text-[11px] text-slate-400 mt-1">Numéro sénégalais à 9 chiffres (77, 78, 76, 70 ou 75)</p>
                     </div>
                 </div>
@@ -156,30 +171,38 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                         Mode de règlement
                     </h3>
 
-                    <div class="grid grid-cols-3 gap-2.5">
+                    <div class="grid grid-cols-3 gap-2.5 sm:gap-3">
                         <!-- Wave -->
-                        <label class="cursor-pointer">
+                        <label class="cursor-pointer group">
                             <input type="radio" name="payment-method" value="wave" checked class="peer sr-only">
-                            <div class="p-3 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-[#1DA1F2] peer-checked:bg-sky-50 peer-checked:shadow-sm min-h-[48px]">
-                                <i class="fa-solid fa-water text-[#1DA1F2] text-xl"></i>
+                            <div class="p-3 sm:p-4 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-[#1DA1F2] peer-checked:bg-sky-50/80 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-[#1DA1F2]/20 hover:border-slate-300 min-h-[96px]">
+                                <div class="h-12 sm:h-14 w-full flex items-center justify-center">
+                                    <img src="${waveLogo}" alt="Wave" class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover shadow-sm transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='/assets/wave.jpg';">
+                                </div>
                                 <span class="text-xs font-bold text-slate-800">Wave</span>
                             </div>
                         </label>
 
                         <!-- Orange Money -->
-                        <label class="cursor-pointer">
+                        <label class="cursor-pointer group">
                             <input type="radio" name="payment-method" value="om" class="peer sr-only">
-                            <div class="p-3 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-[#FF7900] peer-checked:bg-orange-50 peer-checked:shadow-sm min-h-[48px]">
-                                <i class="fa-solid fa-mobile-screen-button text-[#FF7900] text-xl"></i>
-                                <span class="text-xs font-bold text-slate-800">OM</span>
+                            <div class="p-3 sm:p-4 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-[#FF7900] peer-checked:bg-orange-50/80 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-[#FF7900]/20 hover:border-slate-300 min-h-[96px]">
+                                <div class="h-12 sm:h-14 w-full flex items-center justify-center">
+                                    <img src="${omLogo}" alt="Orange Money" class="h-11 sm:h-12 w-auto max-w-[95%] rounded-xl object-contain bg-white border border-slate-200/90 shadow-sm p-1 transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='/assets/orange-money.jpg';">
+                                </div>
+                                <span class="text-xs font-bold text-slate-800">Orange Money</span>
                             </div>
                         </label>
 
                         <!-- Espèces -->
-                        <label class="cursor-pointer">
+                        <label class="cursor-pointer group">
                             <input type="radio" name="payment-method" value="cash" class="peer sr-only">
-                            <div class="p-3 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center gap-1.5 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:shadow-sm min-h-[48px]">
-                                <i class="fa-solid fa-money-bill-wave text-emerald-600 text-xl"></i>
+                            <div class="p-3 sm:p-4 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50/80 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-emerald-500/20 hover:border-slate-300 min-h-[96px]">
+                                <div class="h-12 sm:h-14 w-full flex items-center justify-center">
+                                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl shadow-sm transition-transform group-hover:scale-105">
+                                        <i class="fa-solid fa-money-bill-wave"></i>
+                                    </div>
+                                </div>
                                 <span class="text-xs font-bold text-slate-800">Espèces</span>
                             </div>
                         </label>

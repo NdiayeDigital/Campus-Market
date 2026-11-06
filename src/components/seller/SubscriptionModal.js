@@ -203,8 +203,8 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                     Paiement direct sécurisé par <strong>SasPay</strong>. Vous choisirez <strong>Wave</strong> ou <strong>Orange Money</strong> sur la page de règlement.
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
-                    <span class="w-6 h-6 rounded-full bg-sky-500 text-white text-[10px] flex items-center justify-center font-bold" title="Wave">W</span>
-                    <span class="w-6 h-6 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-bold" title="Orange Money">OM</span>
+                    <img src="/assets/wave.jpg" alt="Wave" class="w-5 h-5 rounded-full object-cover" title="Wave">
+                    <img src="/assets/orange-money.jpg" alt="Orange Money" class="w-5 h-5 rounded object-contain bg-white border border-slate-100" title="Orange Money">
                 </div>
             </div>
 
