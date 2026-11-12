@@ -133,12 +133,6 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
     let currentSellerState = null;
 
     const handleSellerClick = () => {
-        if (currentSellerState && (currentSellerState.role === 'vendeur' || currentSellerState.role === 'superadmin')) {
-            if (typeof onOpenProfile === 'function') {
-                onOpenProfile();
-                return;
-            }
-        }
         if (typeof onOpenSeller === 'function') onOpenSeller();
     };
     headerEl.querySelector('#header-seller-btn')?.addEventListener('click', handleSellerClick);
@@ -229,7 +223,7 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
 
     /**
      * Met à jour l'affichage de l'état vendeur (nom/bouton & pastille connectée sur desktop)
-     * Si connecté : affiche "Profil" et icône utilisateur
+     * Si connecté : affiche "Vendeur (Prénom)" ou "Espace Vendeur" avec pastille verte et icône boutique
      * Si déconnecté : affiche "Espace Vendeur" et icône boutique
      * @param {Object|null} seller
      */
@@ -241,13 +235,14 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
         const sellerBtn = headerEl.querySelector('#header-seller-btn');
 
         if (seller && (seller.role === 'vendeur' || seller.role === 'superadmin')) {
-            if (desktopText) desktopText.textContent = 'Profil';
+            const prenom = (seller.prenom || seller.nom || '').trim().split(' ')[0];
+            if (desktopText) desktopText.textContent = prenom ? `Vendeur (${prenom})` : 'Espace Vendeur';
             if (desktopDot) desktopDot.classList.remove('hidden');
             if (desktopIcon) {
-                desktopIcon.className = 'fa-solid fa-circle-user text-amber-800 text-sm';
+                desktopIcon.className = 'fa-solid fa-shop text-amber-800 text-sm';
             }
             if (sellerBtn) {
-                sellerBtn.title = 'Accéder à mon profil vendeur';
+                sellerBtn.title = "Accéder à mon espace vendeur";
             }
         } else {
             if (desktopText) desktopText.textContent = 'Espace Vendeur';

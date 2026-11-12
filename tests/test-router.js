@@ -40,12 +40,26 @@ console.log('✅ [?shop=UUID] Résolution par paramètre URL de recherche valid�
 
 // Test 6: Espace Vendeur Privé (#seller sans identifiant UUID)
 const r6 = resolveRoute('#seller');
-assert.equal(r6.view, 'seller', '#seller sans UUID doit ouvrir l\'espace de gestion privé');
-assert.deepEqual(r6.params, {});
+assert.equal(r6.view, 'seller');
+assert.equal(r6.params.subTab, 'dashboard');
 
 const r6b = resolveRoute('#seller?payment=success&session_id=123');
 assert.equal(r6b.view, 'seller', '#seller avec query de retour paiement doit rester sur seller');
-console.log('✅ [#seller] Préservation stricte du Backoffice Vendeur validée !');
+assert.equal(r6b.params.subTab, 'dashboard');
+
+const r6_orders = resolveRoute('#seller/orders');
+assert.equal(r6_orders.view, 'seller');
+assert.equal(r6_orders.params.subTab, 'orders');
+
+const r6_products = resolveRoute('#seller/products');
+assert.equal(r6_products.view, 'seller');
+assert.equal(r6_products.params.subTab, 'products');
+
+const r6_add = resolveRoute('#seller/add');
+assert.equal(r6_add.view, 'seller');
+assert.equal(r6_add.params.subTab, 'add-product');
+
+console.log('✅ [#seller & sous-onglets] Préservation et navigation Espace Vendeur validées !');
 
 // Test 7: SuperAdmin (#admin)
 const r7 = resolveRoute('#admin');
@@ -65,9 +79,9 @@ console.log('✅ [#product/UUID] Fiche produit deep-link validée !');
 
 // Test 10: Profil Vendeur (#profile)
 const r10_profile = resolveRoute('#profile');
-assert.equal(r10_profile.view, 'profile', '#profile doit ouvrir la page profil vendeur');
-assert.deepEqual(r10_profile.params, {});
-console.log('✅ [#profile] Accès Page Profil Vendeur validé !');
+assert.equal(r10_profile.view, 'seller', '#profile doit diriger vers le sous-onglet profil de l\'espace vendeur');
+assert.equal(r10_profile.params.subTab, 'profile');
+console.log('✅ [#profile] Accès au 5e sous-onglet Profil de l\'Espace Vendeur validé !');
 
 // Test 11: Catalogue par défaut
 const r10 = resolveRoute('');

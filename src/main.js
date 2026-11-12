@@ -441,7 +441,7 @@ async function initApp() {
             footerEl.classList.add('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(true);
             setSellerSEO();
-            renderSellerView();
+            renderSellerView(params?.subTab || 'dashboard');
         } else if (viewName === 'admin') {
             mainContentEl.className = 'flex-1 w-full p-0 m-0 pb-0 flex flex-col';
             if (headerComponent.setMode) headerComponent.setMode('hidden');
@@ -458,22 +458,16 @@ async function initApp() {
             if (bottomNavComponent) bottomNavComponent.setHidden(false);
             renderShopView(params.sellerId);
         } else if (viewName === 'profile') {
-            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
-            if (headerComponent.setMode) {
-                headerComponent.setMode('catalog');
-                headerComponent.setActiveTab?.('profile');
-            }
+            mainContentEl.className = 'flex-1 w-full p-0 m-0 pb-0 flex flex-col';
+            if (headerComponent.setMode) headerComponent.setMode('hidden');
             categoryChipsComponent.classList.add('hidden');
-            footerEl.classList.remove('hidden');
-            if (bottomNavComponent) {
-                bottomNavComponent.setHidden(false);
-                bottomNavComponent.setActiveTab?.('profile');
-            }
+            footerEl.classList.add('hidden');
+            if (bottomNavComponent) bottomNavComponent.setHidden(true);
             updateSEO({
                 title: 'Mon Profil Vendeur — Campus Market UIDT',
                 description: 'Gérez vos coordonnées, pavillon, chambre, statut de boutique et abonnement Campus Market.'
             });
-            renderProfileView();
+            renderSellerView('profile');
         } else {
             mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
@@ -513,86 +507,22 @@ async function initApp() {
         mainContentEl.appendChild(orderView);
     }
 
-    // Rendu du Profil Vendeur
+    // Rendu du Profil Vendeur (redirigé vers l'espace vendeur unifié avec le sous-onglet profil)
     async function renderProfileView() {
-        if (!appState.currentSeller) {
-            mainContentEl.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-24 gap-3 text-slate-500 animate-pulse">
-                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
-                    <p class="text-xs font-semibold">Chargement de votre profil vendeur...</p>
-                </div>
-            `;
-            try {
-                const sellerSession = await getCurrentSeller();
-                if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
-                    appState.currentSeller = sellerSession.profile;
-                    headerComponent?.updateSellerState?.(sellerSession.profile);
-                    bottomNavComponent?.setSeller?.(sellerSession.profile);
-                    try {
-                        localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
-                    } catch {}
-                }
-            } catch (err) {
-                console.warn('[Main] Erreur chargement profil vendeur:', err);
-            }
-        }
-
-        // Si aucune session n'est active, inviter à la connexion et retourner au catalogue
-        if (!appState.currentSeller) {
-            mainContentEl.innerHTML = '';
-            sellerAuthModalController.open('login');
-            navigateToView('catalog');
-            return;
-        }
-
-        // Si le mot de passe doit obligatoirement être changé
-        if (appState.currentSeller.must_change_password) {
-            mainContentEl.innerHTML = '';
-            forcePasswordChangeModalController.open(appState.currentSeller);
-            navigateToView('catalog');
-            return;
-        }
-
-        mainContentEl.innerHTML = '';
-        const profileEl = createSellerProfileView({
-            seller: appState.currentSeller,
-            onBackToCatalog: () => navigateToView('catalog'),
-            onProfileUpdated: (updatedProfile) => {
-                appState.currentSeller = updatedProfile;
-                headerComponent?.updateSellerState?.(updatedProfile);
-                bottomNavComponent?.setSeller?.(updatedProfile);
-                try {
-                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(updatedProfile));
-                } catch {}
-            },
-            onOpenDashboard: () => {
-                navigateToView('seller');
-            },
-            onOpenShop: (sellerId) => {
-                navigateToView('shop', { sellerId });
-            },
-            onOpenSubscription: () => {
-                navigateToView('seller');
-            },
-            onLogout: () => {
-                appState.currentSeller = null;
-                headerComponent?.updateSellerState?.(null);
-                bottomNavComponent?.setSeller?.(null);
-                try {
-                    localStorage.removeItem(LOCAL_SELLER_KEY);
-                } catch {}
-                navigateToView('catalog');
-                showToast('Déconnecté de votre compte vendeur.', 'info');
-            },
-            onShowToast: showToast,
-        });
-
-        mainContentEl.appendChild(profileEl);
+        return renderSellerView('profile');
     }
 
     // Rendu de l'Espace Vendeur
-    async function renderSellerView() {
-        // 1. Si le profil n'est pas encore en mémoire, afficher un écran d'attente
+    async function renderSellerView(subTab = 'dashboard') {
+        const targetTab = subTab || 'dashboard';
+
+        // 1. Si le tableau de bord est déjà actif dans le DOM, basculer simplement d'onglet
+        if (activeDashboardEl && mainContentEl.contains(activeDashboardEl) && typeof activeDashboardEl.setTab === 'function') {
+            activeDashboardEl.setTab(targetTab);
+            return;
+        }
+
+        // 2. Si le profil n'est pas encore en mémoire, afficher un écran d'attente
         if (!appState.currentSeller) {
             mainContentEl.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-24 gap-3 text-slate-500 animate-pulse">
@@ -624,7 +554,7 @@ async function initApp() {
             console.warn('[Main] Erreur getCurrentSeller lors du rendu vendeur:', err);
         }
 
-        // 2. Si aucune session n'est active, inviter à la connexion et retourner au catalogue
+        // 3. Si aucune session n'est active, inviter à la connexion et retourner au catalogue
         if (!appState.currentSeller) {
             mainContentEl.innerHTML = '';
             sellerAuthModalController.open('login');
@@ -640,7 +570,7 @@ async function initApp() {
             return;
         }
 
-        // 3. Montage du tableau de bord vendeur
+        // 4. Montage du tableau de bord vendeur
         mainContentEl.innerHTML = `
             <div class="flex flex-col items-center justify-center py-24 gap-3 text-slate-500 animate-pulse">
                 <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
@@ -651,8 +581,21 @@ async function initApp() {
         mainContentEl.innerHTML = '';
         activeDashboardEl = createSellerDashboard({
             seller: appState.currentSeller,
+            initialTab: targetTab,
             onBackToCatalog: () => navigateToView('catalog'),
-            onOpenProfile: () => navigateToView('profile'),
+            onOpenProfile: () => {
+                if (window.location.hash !== '#seller/profile' && window.location.hash !== '#profile') {
+                    window.location.hash = '#seller/profile';
+                }
+            },
+            onProfileUpdated: (updatedProfile) => {
+                appState.currentSeller = updatedProfile;
+                headerComponent?.updateSellerState?.(updatedProfile);
+                bottomNavComponent?.setSeller?.(updatedProfile);
+                try {
+                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(updatedProfile));
+                } catch {}
+            },
             onOpenAdminDashboard: () => {
                 navigateToView('admin');
             },
@@ -663,9 +606,7 @@ async function initApp() {
                 try {
                     localStorage.removeItem(LOCAL_SELLER_KEY);
                 } catch {}
-                if (appState.currentView === 'seller') {
-                    navigateToView('catalog');
-                }
+                navigateToView('catalog');
             },
             onShowToast: showToast,
         });

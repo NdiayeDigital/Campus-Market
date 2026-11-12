@@ -89,15 +89,15 @@ const { createBottomNav } = await import('../src/components/BottomNav.js');
         },
     });
 
-    assert.ok(nav.innerHTML.includes('Profil'), 'Le libellé mobile doit afficher Profil quand le vendeur est connecté');
-    assert.ok(nav.innerHTML.includes('Profil Fatou'), 'La sidebar desktop doit afficher Profil Fatou');
+    assert.ok(nav.innerHTML.includes('Vendeur'), 'Le libellé mobile doit afficher Vendeur quand le vendeur est connecté dans la boutique');
+    assert.ok(nav.innerHTML.includes('Espace Vendeur (Fatou)'), 'La sidebar desktop doit afficher Espace Vendeur (Fatou)');
 
     // Clic sur l'onglet mobile vendeur
     const mobileBtn = nav.querySelector('#bnav-tab-seller');
     assert.doesNotThrow(() => {
         mobileBtn.click();
     }, 'Le clic sur #bnav-tab-seller ne doit pas lever de ReferenceError');
-    assert.strictEqual(targetView, 'profile', 'Le clic mobile doit naviguer vers la vue "profile"');
+    assert.strictEqual(targetView, 'seller', 'Le clic mobile dans la boutique doit naviguer vers la vue "seller"');
 
     // Clic sur le bouton de la sidebar desktop
     targetView = null;
@@ -105,9 +105,9 @@ const { createBottomNav } = await import('../src/components/BottomNav.js');
     assert.doesNotThrow(() => {
         desktopBtn.click();
     }, 'Le clic sur #sidebar-tab-seller ne doit pas lever de ReferenceError');
-    assert.strictEqual(targetView, 'profile', 'Le clic desktop doit naviguer vers la vue "profile"');
+    assert.strictEqual(targetView, 'seller', 'Le clic desktop doit naviguer vers la vue "seller"');
 
-    console.log('✅ [BottomNav] Navigation vers "profile" pour un vendeur connecté validée !');
+    console.log('✅ [BottomNav] Navigation vers "seller" pour un vendeur connecté validée !');
 }
 
 // Test 2 : Vendeur initialement déconnecté (Visiteur)
@@ -149,16 +149,16 @@ const { createBottomNav } = await import('../src/components/BottomNav.js');
 
     // Connexion après coup (SuperAdmin)
     nav.setSeller({ role: 'superadmin', prenom: 'Moussa' });
-    assert.ok(nav.innerHTML.includes('Profil Moussa'), 'Doit basculer vers Profil Moussa après setSeller');
+    assert.ok(nav.innerHTML.includes('Espace Vendeur (Moussa)'), 'Doit basculer vers Espace Vendeur (Moussa) après setSeller');
 
     const mobileBtn = nav.querySelector('#bnav-tab-seller');
     mobileBtn.click();
-    assert.strictEqual(targetView, 'profile', 'Après setSeller, le clic mobile doit naviguer vers "profile"');
+    assert.strictEqual(targetView, 'seller', 'Après setSeller, le clic mobile doit naviguer vers "seller"');
 
     targetView = null;
     const desktopBtn = nav.querySelector('#sidebar-tab-seller');
     desktopBtn.click();
-    assert.strictEqual(targetView, 'profile', 'Après setSeller, le clic desktop doit naviguer vers "profile"');
+    assert.strictEqual(targetView, 'seller', 'Après setSeller, le clic desktop doit naviguer vers "seller"');
 
     // Déconnexion via setSeller(null)
     targetView = null;

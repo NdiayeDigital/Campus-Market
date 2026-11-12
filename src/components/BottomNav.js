@@ -38,11 +38,11 @@ export function createBottomNav({
 
     function render() {
         const loggedIn = isSellerLoggedIn();
-        const isSellerTabActive = currentTab === 'seller' || currentTab === 'profile';
-        const sellerMobileLabel = loggedIn ? 'Profil' : 'Vendeur';
-        const sellerMobileIcon = loggedIn ? 'fa-solid fa-circle-user' : 'fa-solid fa-shop';
-        const sellerDesktopLabel = loggedIn ? (cachedSeller?.prenom ? `Profil ${cachedSeller.prenom}` : 'Mon Profil') : 'Espace Vendeur';
-        const sellerDesktopIcon = loggedIn ? 'fa-solid fa-circle-user' : 'fa-solid fa-shop';
+        const isSellerTabActive = currentTab === 'seller';
+        const sellerMobileLabel = 'Vendeur';
+        const sellerMobileIcon = 'fa-solid fa-shop';
+        const sellerDesktopLabel = loggedIn && cachedSeller?.prenom ? `Espace Vendeur (${cachedSeller.prenom})` : 'Espace Vendeur';
+        const sellerDesktopIcon = 'fa-solid fa-shop';
 
         navContainer.innerHTML = `
             <!-- 1. NAVIGATION MOBILE : Barre inférieure FIXE en bas et TOUJOURS visible (lg:hidden) -->
@@ -107,7 +107,7 @@ export function createBottomNav({
                         <span class="text-[10px] leading-tight">Commandes</span>
                     </button>
 
-                    <!-- Onglet 5 : Espace Vendeur / Profil -->
+                    <!-- Onglet 5 : Espace Vendeur -->
                     <button 
                         type="button" 
                         id="bnav-tab-seller" 
@@ -118,7 +118,10 @@ export function createBottomNav({
                         }"
                     >
                         ${isSellerTabActive ? '<span class="absolute top-0 w-8 h-1 bg-amber-600 rounded-full"></span>' : ''}
-                        <i class="${sellerMobileIcon} text-lg mb-0.5"></i>
+                        <div class="relative">
+                            <i class="${sellerMobileIcon} text-lg mb-0.5"></i>
+                            ${loggedIn ? '<span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>' : ''}
+                        </div>
                         <span class="text-[10px] leading-tight">${sellerMobileLabel}</span>
                     </button>
                 </div>
@@ -272,7 +275,7 @@ export function createBottomNav({
 
         navContainer.querySelector('#bnav-tab-seller')?.addEventListener('click', () => {
             if (typeof onNavigate === 'function') {
-                onNavigate(isSellerLoggedIn() ? 'profile' : 'seller');
+                onNavigate('seller');
             }
         });
 
@@ -305,7 +308,7 @@ export function createBottomNav({
 
         navContainer.querySelector('#sidebar-tab-seller')?.addEventListener('click', () => {
             if (typeof onNavigate === 'function') {
-                onNavigate(isSellerLoggedIn() ? 'profile' : 'seller');
+                onNavigate('seller');
             }
         });
     }

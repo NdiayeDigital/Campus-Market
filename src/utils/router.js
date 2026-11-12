@@ -13,7 +13,15 @@ export function resolveRoute(rawHash = '', search = '') {
     const raw = (rawHash || '').trim();
     const hash = raw.toLowerCase();
 
-    // 1. Vitrine marchande publique : #shop/UUID ou tolérance rétroactive #seller/UUID ou #vendeur/UUID
+    // 1. Sous-onglets réservés de l'Espace Vendeur (#seller/orders, #seller/products, #seller/add, #seller/profile, #seller/dashboard)
+    const sellerSubTabMatch = raw.match(/^#seller\/(orders|products|add|dashboard|profile)(?:[/?#]|$)/i);
+    if (sellerSubTabMatch) {
+        const sub = sellerSubTabMatch[1].toLowerCase();
+        const subTab = sub === 'add' ? 'add-product' : sub;
+        return { view: 'seller', params: { subTab } };
+    }
+
+    // 2. Vitrine marchande publique : #shop/UUID ou tolérance rétroactive #seller/UUID ou #vendeur/UUID
     const shopMatch = raw.match(/^#(?:shop|seller|vendeur)\/([^?#]+)/i);
     if (shopMatch && shopMatch[1]) {
         const sellerId = shopMatch[1].replace(/\/+$/, '').trim();
@@ -22,7 +30,7 @@ export function resolveRoute(rawHash = '', search = '') {
         }
     }
 
-    // 2. Fiche produit en deep-link (#product/UUID)
+    // 3. Fiche produit en deep-link (#product/UUID)
     if (hash.startsWith('#product/')) {
         const rawId = raw.slice(9);
         const productId = rawId.split('?')[0].replace(/\/+$/, '').trim();
@@ -31,19 +39,19 @@ export function resolveRoute(rawHash = '', search = '') {
         }
     }
 
-    // 3. Espace SuperAdmin (#admin)
+    // 4. Espace SuperAdmin (#admin)
     if (hash === '#admin' || hash.startsWith('#admin?')) {
         return { view: 'admin', params: {} };
     }
 
-    // 4. Espace Vendeur Privé (Backoffice - strictement sans identifiant UUID après #seller/)
+    // 5. Espace Vendeur Privé (Backoffice - onglet dashboard par défaut)
     if (hash === '#seller' || hash.startsWith('#seller?')) {
-        return { view: 'seller', params: {} };
+        return { view: 'seller', params: { subTab: 'dashboard' } };
     }
 
-    // 5. Page Profil Vendeur Privé (#profile)
-    if (hash === '#profile' || hash.startsWith('#profile?')) {
-        return { view: 'profile', params: {} };
+    // 6. Page Profil Vendeur Privé (#profile) -> active le 5e onglet profile de l'Espace Vendeur
+    if (hash === '#profile' || hash.startsWith('#profile?') || hash.startsWith('#profile/')) {
+        return { view: 'seller', params: { subTab: 'profile' } };
     }
 
     // 5. Suivi des commandes (#orders)

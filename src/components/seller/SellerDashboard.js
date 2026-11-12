@@ -24,6 +24,7 @@ import { showToast, showConfirm } from '../../utils/notifications.js';
 import { exportOrdersToCSV } from '../../utils/export-csv.js';
 import { shareSellerShop } from '../../utils/share.js';
 import { createSubscriptionModal } from './SubscriptionModal.js';
+import { createSellerProfileView } from './SellerProfileView.js';
 import { computeSubscriptionStatus, SUBSCRIPTION_PLANS } from '../../config/subscription.js';
 import logoUrl from '../../assets/logo.webp';
 
@@ -31,21 +32,32 @@ import logoUrl from '../../assets/logo.webp';
  * Crée le tableau de bord marchand moderne et fluide.
  * @param {Object} props
  * @param {Object} props.seller - Données du vendeur ({ id, prenom, nom, ... })
+ * @param {string} [props.initialTab='dashboard'] - Sous-onglet initial
  * @param {Function} [props.onBackToCatalog] - Callback pour retourner à la boutique
  * @param {Function} [props.onOpenAdminDashboard] - Callback pour retourner au portail SuperAdmin
  * @param {Function} [props.onOpenProfile] - Callback pour accéder au profil vendeur
+ * @param {Function} [props.onProfileUpdated] - Callback lors de la modification du profil
  * @param {Function} props.onLogout - Callback lors de la déconnexion
  * @param {Function} props.onShowToast - Callback pour afficher un toast
  * @returns {HTMLElement}
  */
-export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDashboard, onOpenProfile, onLogout, onShowToast } = {}) {
+export function createSellerDashboard({
+    seller,
+    initialTab = 'dashboard',
+    onBackToCatalog,
+    onOpenAdminDashboard,
+    onOpenProfile,
+    onProfileUpdated,
+    onLogout,
+    onShowToast,
+} = {}) {
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full flex flex-col bg-slate-50 min-h-[100dvh] text-slate-900';
 
     const sellerId = seller.id;
     let dashboardData = null;
     let isLoading = true;
-    let activeSubTab = 'dashboard'; // 'dashboard' | 'orders' | 'products' | 'add-product'
+    let activeSubTab = (initialTab === 'add' ? 'add-product' : initialTab) || 'dashboard'; // 'dashboard' | 'orders' | 'products' | 'add-product' | 'profile'
     let orderFilter = 'all'; // 'all' | 'pending' | 'in_progress' | 'delivered'
     let orderSearchQuery = '';
     let orderPavillonFilter = 'all';
@@ -227,6 +239,59 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
     }
 
     let subscriptionModal = null;
+
+    function openSubscriptionHandler() {
+        if (!subscriptionModal) {
+            subscriptionModal = createSubscriptionModal({
+                seller: dashboardData?.profile || seller,
+                onSubscribed: ({ profile, plan }) => {
+                    if (dashboardData) {
+                        dashboardData.profile = profile;
+                    }
+                    loadData();
+                },
+                onShowToast,
+            });
+            document.body.appendChild(subscriptionModal.element);
+        }
+        subscriptionModal.open();
+    }
+
+    function backShopHandler() {
+        if (typeof onBackToCatalog === 'function') {
+            onBackToCatalog();
+        }
+    }
+
+    function shareShopHandler() {
+        shareSellerShop(dashboardData?.profile || seller, onShowToast);
+    }
+
+    async function logoutHandler() {
+        const confirmed = await showConfirm({
+            title: 'Déconnexion Marchand',
+            message: 'Voulez-vous vraiment vous déconnecter de votre espace vendeur ?',
+            confirmText: 'Se déconnecter',
+            cancelText: 'Annuler',
+            isDestructive: false,
+            icon: 'fa-arrow-right-from-bracket',
+        });
+
+        if (confirmed) {
+            cleanup();
+            await logoutSeller();
+            if (typeof onLogout === 'function') onLogout();
+        }
+    }
+
+    function handleOpenProfile() {
+        activeSubTab = 'profile';
+        render();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof onOpenProfile === 'function') {
+            onOpenProfile();
+        }
+    }
 
     function renderSubscriptionBanner(subCalc) {
         if (!subCalc || subCalc.status === 'superadmin') return '';
@@ -500,6 +565,20 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                                 <span>Ajouter un produit</span>
                             </button>
                         ` : ''}
+
+                        <!-- Mon Profil Vendeur -->
+                        <button 
+                            type="button" 
+                            id="subtab-profile" 
+                            class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
+                                activeSubTab === 'profile'
+                                    ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                            }"
+                        >
+                            <i class="fa-solid fa-circle-user text-xs w-4 text-center ${activeSubTab === 'profile' ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
+                            <span>Mon Profil</span>
+                        </button>
                     </div>
                 </div>
 
@@ -747,7 +826,7 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                             <span class="hover:text-slate-600 transition-colors">Espace Marchand</span>
                             <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
                             <span class="text-primary font-bold">
-                                ${activeSubTab === 'dashboard' ? 'Tableau de bord' : activeSubTab === 'orders' ? 'Commandes en direct' : activeSubTab === 'products' ? 'Mes Articles' : 'Ajouter un produit'}
+                                ${activeSubTab === 'dashboard' ? 'Tableau de bord' : activeSubTab === 'orders' ? 'Commandes en direct' : activeSubTab === 'products' ? 'Mes Articles' : activeSubTab === 'profile' ? 'Mon Profil' : 'Ajouter un produit'}
                             </span>
                         </div>
                     </div>
@@ -973,6 +1052,19 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                             <span>Ajouter un produit</span>
                         </button>
                     ` : ''}
+
+                    <button 
+                        type="button" 
+                        data-seller-tab="profile"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'profile'
+                                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }"
+                    >
+                        <i class="fa-solid fa-circle-user text-xs"></i>
+                        <span>Mon Profil</span>
+                    </button>
                 </div>
 
                 <!-- Zone de contenu dynamique -->
@@ -1059,14 +1151,19 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                         </button>
                     ` : ''}
 
-                    <!-- Voir Boutique Publique -->
+                    <!-- Mon Profil Vendeur -->
                     <button 
                         type="button" 
-                        id="bnav-seller-shop" 
-                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] text-slate-500 hover:text-primary font-medium cursor-pointer active:scale-95"
+                        id="bnav-seller-profile" 
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'profile'
+                                ? 'text-primary font-bold'
+                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                        }"
                     >
-                        <i class="fa-solid fa-store text-lg mb-0.5"></i>
-                        <span class="text-[10px] leading-tight">Boutique</span>
+                        ${activeSubTab === 'profile' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
+                        <i class="fa-solid fa-circle-user text-lg mb-0.5"></i>
+                        <span class="text-[10px] leading-tight">Profil</span>
                     </button>
                 </div>
             </nav>
@@ -1088,6 +1185,34 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                 },
             });
             containerEl.querySelector('#seller-tab-content')?.appendChild(productManagerEl);
+        } else if (activeSubTab === 'profile') {
+            const currentProfile = dashboardData?.profile || seller;
+            const profileViewEl = createSellerProfileView({
+                seller: currentProfile,
+                onBackToCatalog: backShopHandler,
+                onProfileUpdated: (updatedProfile) => {
+                    if (dashboardData) {
+                        dashboardData.profile = updatedProfile;
+                    }
+                    if (typeof onProfileUpdated === 'function') {
+                        onProfileUpdated(updatedProfile);
+                    }
+                    render();
+                },
+                onOpenDashboard: () => {
+                    activeSubTab = 'dashboard';
+                    render();
+                },
+                onOpenShop: (sId) => {
+                    window.location.hash = `#shop/${sId || sellerId}`;
+                },
+                onOpenSubscription: openSubscriptionHandler,
+                onLogout: logoutHandler,
+                onShowToast: (msg, type) => {
+                    if (typeof onShowToast === 'function') onShowToast(msg, type);
+                },
+            });
+            containerEl.querySelector('#seller-tab-content')?.appendChild(profileViewEl);
         }
 
         bindEvents();
@@ -1769,23 +1894,6 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
 
     function bindEvents() {
         // Gestion de l'Abonnement Marchand (Modal SasPay)
-        const openSubscriptionHandler = () => {
-            if (!subscriptionModal) {
-                subscriptionModal = createSubscriptionModal({
-                    seller: dashboardData?.profile || seller,
-                    onSubscribed: ({ profile, plan }) => {
-                        if (dashboardData) {
-                            dashboardData.profile = profile;
-                        }
-                        loadData();
-                    },
-                    onShowToast,
-                });
-                document.body.appendChild(subscriptionModal.element);
-            }
-            subscriptionModal.open();
-        };
-
         containerEl.querySelectorAll('.btn-trigger-subscription').forEach((btn) => {
             btn.addEventListener('click', openSubscriptionHandler);
         });
@@ -1833,23 +1941,14 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         containerEl.querySelector('#hdr-btn-toggle-shop-mobile')?.addEventListener('click', toggleShopHandler);
 
         // Retour à la boutique publique
-        const backShopHandler = () => {
-            if (typeof onBackToCatalog === 'function') {
-                onBackToCatalog();
-            }
-        };
         containerEl.querySelector('#hdr-btn-seller-back-shop')?.addEventListener('click', backShopHandler);
         containerEl.querySelector('#top-hdr-btn-seller-back-shop')?.addEventListener('click', backShopHandler);
         containerEl.querySelector('#drawer-btn-back-shop')?.addEventListener('click', () => {
             closeDrawer();
             backShopHandler();
         });
-        containerEl.querySelector('#bnav-seller-shop')?.addEventListener('click', backShopHandler);
 
         // Partage de la vitrine marchand (Sidebar, Top Header, Mobile Header, Mobile Drawer)
-        const shareShopHandler = () => {
-            shareSellerShop(seller, onShowToast);
-        };
         containerEl.querySelector('#sidebar-btn-seller-share-shop')?.addEventListener('click', shareShopHandler);
         containerEl.querySelector('#top-hdr-btn-seller-share-shop')?.addEventListener('click', shareShopHandler);
         containerEl.querySelector('#hdr-btn-seller-share-mobile')?.addEventListener('click', shareShopHandler);
@@ -1859,22 +1958,6 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         });
 
         // Déconnexion
-        const logoutHandler = async () => {
-            const confirmed = await showConfirm({
-                title: 'Déconnexion Marchand',
-                message: 'Voulez-vous vraiment vous déconnecter de votre espace vendeur ?',
-                confirmText: 'Se déconnecter',
-                cancelText: 'Annuler',
-                isDestructive: false,
-                icon: 'fa-arrow-right-from-bracket',
-            });
-
-            if (confirmed) {
-                cleanup();
-                await logoutSeller();
-                if (typeof onLogout === 'function') onLogout();
-            }
-        };
         containerEl.querySelector('#hdr-btn-seller-logout')?.addEventListener('click', logoutHandler);
         containerEl.querySelector('#top-hdr-btn-seller-logout')?.addEventListener('click', logoutHandler);
         containerEl.querySelector('#hdr-btn-seller-logout-mobile')?.addEventListener('click', logoutHandler);
@@ -1927,19 +2010,14 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         });
 
         // Navigation vers le Profil Vendeur (#profile)
-        const handleOpenProfile = () => {
-            if (typeof onOpenProfile === 'function') {
-                onOpenProfile();
-            } else {
-                window.location.hash = '#profile';
-            }
-        };
         containerEl.querySelector('#sidebar-btn-seller-profile')?.addEventListener('click', handleOpenProfile);
         containerEl.querySelector('#top-hdr-btn-seller-profile')?.addEventListener('click', handleOpenProfile);
         containerEl.querySelector('#drawer-btn-profile')?.addEventListener('click', () => {
             closeDrawer();
             handleOpenProfile();
         });
+        containerEl.querySelector('#subtab-profile')?.addEventListener('click', handleOpenProfile);
+        containerEl.querySelector('#bnav-seller-profile')?.addEventListener('click', handleOpenProfile);
 
         // Cartes Bento KPI interactives [data-seller-kpi]
         containerEl.querySelectorAll('[data-seller-kpi]').forEach((kpiCard) => {
@@ -2152,6 +2230,16 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
     loadData();
     initRealtime();
     startPolling();
+
+    containerEl.setTab = (tabName) => {
+        if (!tabName) return;
+        const normalized = tabName === 'add' ? 'add-product' : tabName;
+        if (activeSubTab !== normalized) {
+            activeSubTab = normalized;
+            render();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 
     containerEl.cleanup = cleanup;
     return containerEl;

@@ -70,16 +70,17 @@ export function createSellerProfileView({
         );
 
         containerEl.innerHTML = `
-            <!-- Navigation de retour & Raccourci Dashboard -->
-            <div class="flex items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+            <!-- Navigation de retour & Raccourcis -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
                 <div class="flex items-center gap-3">
                     <button 
                         type="button" 
                         id="btn-back-to-catalog" 
-                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition-colors cursor-pointer"
-                        title="Retour au catalogue"
+                        class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-200 text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                        title="Retour à la boutique publique"
                     >
-                        <i class="fa-solid fa-arrow-left text-sm"></i>
+                        <i class="fa-solid fa-store text-amber-700 text-sm"></i>
+                        <span>Retour à la boutique</span>
                     </button>
                     <div>
                         <h1 class="text-base sm:text-lg font-extrabold text-slate-900 leading-tight">Mon Profil Marchand</h1>
@@ -90,10 +91,10 @@ export function createSellerProfileView({
                 <button 
                     type="button" 
                     id="btn-goto-dashboard" 
-                    class="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
+                    class="hidden sm:flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
                 >
-                    <i class="fa-solid fa-chart-line text-xs"></i>
-                    <span>Tableau de Bord</span>
+                    <i class="fa-solid fa-chart-pie text-xs"></i>
+                    <span>Dashboard</span>
                 </button>
             </div>
 
@@ -417,14 +418,25 @@ export function createSellerProfileView({
 
                     <!-- Zone Déconnexion & Raccourcis -->
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                        <button 
-                            type="button" 
-                            id="btn-profile-logout" 
-                            class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                        >
-                            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
-                            <span>Se déconnecter</span>
-                        </button>
+                        <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                            <button 
+                                type="button" 
+                                id="btn-bottom-back-to-catalog" 
+                                class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-100/80 hover:bg-amber-200/90 text-amber-950 border border-amber-300 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                            >
+                                <i class="fa-solid fa-store text-xs text-amber-700"></i>
+                                <span>Retour à la boutique</span>
+                            </button>
+
+                            <button 
+                                type="button" 
+                                id="btn-profile-logout" 
+                                class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                            >
+                                <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                                <span>Se déconnecter</span>
+                            </button>
+                        </div>
 
                         <div class="flex items-center gap-3">
                             <a 
@@ -454,13 +466,15 @@ export function createSellerProfileView({
 
     function setupEvents() {
         // Retour au catalogue
-        containerEl.querySelector('#btn-back-to-catalog')?.addEventListener('click', () => {
+        const handleBack = () => {
             if (typeof onBackToCatalog === 'function') {
                 onBackToCatalog();
             } else {
                 window.location.hash = '';
             }
-        });
+        };
+        containerEl.querySelector('#btn-back-to-catalog')?.addEventListener('click', handleBack);
+        containerEl.querySelector('#btn-bottom-back-to-catalog')?.addEventListener('click', handleBack);
 
         // Aller au Dashboard
         containerEl.querySelector('#btn-goto-dashboard')?.addEventListener('click', () => {
