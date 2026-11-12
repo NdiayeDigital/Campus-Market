@@ -20,6 +20,7 @@ import logoUrl from '../assets/logo.webp';
  */
 export function createBottomNav({
     activeTab = 'catalog',
+    seller = null,
     onNavigate,
     onOpenCart,
     onFocusSearch,
@@ -29,15 +30,19 @@ export function createBottomNav({
 
     let currentTab = activeTab;
     let latestCartCount = 0;
-    let cachedSeller = null;
+    let cachedSeller = seller;
+
+    function isSellerLoggedIn() {
+        return Boolean(cachedSeller && (cachedSeller.role === 'vendeur' || cachedSeller.role === 'superadmin'));
+    }
 
     function render() {
-        const isSellerLoggedIn = Boolean(cachedSeller && (cachedSeller.role === 'vendeur' || cachedSeller.role === 'superadmin'));
+        const loggedIn = isSellerLoggedIn();
         const isSellerTabActive = currentTab === 'seller' || currentTab === 'profile';
-        const sellerMobileLabel = isSellerLoggedIn ? 'Profil' : 'Vendeur';
-        const sellerMobileIcon = isSellerLoggedIn ? 'fa-solid fa-circle-user' : 'fa-solid fa-shop';
-        const sellerDesktopLabel = isSellerLoggedIn ? (cachedSeller?.prenom ? `Profil ${cachedSeller.prenom}` : 'Mon Profil') : 'Espace Vendeur';
-        const sellerDesktopIcon = isSellerLoggedIn ? 'fa-solid fa-circle-user' : 'fa-solid fa-shop';
+        const sellerMobileLabel = loggedIn ? 'Profil' : 'Vendeur';
+        const sellerMobileIcon = loggedIn ? 'fa-solid fa-circle-user' : 'fa-solid fa-shop';
+        const sellerDesktopLabel = loggedIn ? (cachedSeller?.prenom ? `Profil ${cachedSeller.prenom}` : 'Mon Profil') : 'Espace Vendeur';
+        const sellerDesktopIcon = loggedIn ? 'fa-solid fa-circle-user' : 'fa-solid fa-shop';
 
         navContainer.innerHTML = `
             <!-- 1. NAVIGATION MOBILE : Barre inférieure FIXE en bas et TOUJOURS visible (lg:hidden) -->
@@ -267,7 +272,7 @@ export function createBottomNav({
 
         navContainer.querySelector('#bnav-tab-seller')?.addEventListener('click', () => {
             if (typeof onNavigate === 'function') {
-                onNavigate(isSellerLoggedIn ? 'profile' : 'seller');
+                onNavigate(isSellerLoggedIn() ? 'profile' : 'seller');
             }
         });
 
@@ -300,7 +305,7 @@ export function createBottomNav({
 
         navContainer.querySelector('#sidebar-tab-seller')?.addEventListener('click', () => {
             if (typeof onNavigate === 'function') {
-                onNavigate(isSellerLoggedIn ? 'profile' : 'seller');
+                onNavigate(isSellerLoggedIn() ? 'profile' : 'seller');
             }
         });
     }

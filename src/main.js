@@ -288,6 +288,7 @@ async function initApp() {
     // 6. Barre de navigation mobile inférieure (BottomNav) & Sidebar Desktop
     bottomNavComponent = createBottomNav({
         activeTab: appState.currentView,
+        seller: appState.currentSeller,
         onNavigate: (viewName) => {
             if (viewName === 'catalog') {
                 appState.searchQuery = '';
@@ -321,6 +322,7 @@ async function initApp() {
     const existingNav = document.getElementById('app-navigation-container');
     if (existingNav) existingNav.remove();
     document.body.appendChild(bottomNavComponent);
+    bottomNavComponent.setSeller?.(appState.currentSeller);
 
     // 7. Footer (Plein écran fluide aligné avec la sidebar)
     const footerEl = document.createElement('footer');
@@ -605,6 +607,7 @@ async function initApp() {
             if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
                 appState.currentSeller = sellerSession.profile;
                 headerComponent?.updateSellerState?.(sellerSession.profile);
+                bottomNavComponent?.setSeller?.(sellerSession.profile);
                 try {
                     localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
                 } catch {}
@@ -612,6 +615,7 @@ async function initApp() {
                 // Session Supabase absente ou révoquée
                 appState.currentSeller = null;
                 headerComponent?.updateSellerState?.(null);
+                bottomNavComponent?.setSeller?.(null);
                 try {
                     localStorage.removeItem(LOCAL_SELLER_KEY);
                 } catch {}
