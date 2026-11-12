@@ -63,7 +63,13 @@ assert.equal(r9.view, 'product');
 assert.equal(r9.params.productId, '449ec51b-8bd5-4311-afb6-fdada19dbc0e');
 console.log('✅ [#product/UUID] Fiche produit deep-link validée !');
 
-// Test 10: Catalogue par défaut
+// Test 10: Profil Vendeur (#profile)
+const r10_profile = resolveRoute('#profile');
+assert.equal(r10_profile.view, 'profile', '#profile doit ouvrir la page profil vendeur');
+assert.deepEqual(r10_profile.params, {});
+console.log('✅ [#profile] Accès Page Profil Vendeur validé !');
+
+// Test 11: Catalogue par défaut
 const r10 = resolveRoute('');
 assert.equal(r10.view, 'catalog');
 const r10b = resolveRoute('#');

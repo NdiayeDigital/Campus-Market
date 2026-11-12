@@ -33,11 +33,12 @@ import logoUrl from '../../assets/logo.webp';
  * @param {Object} props.seller - Données du vendeur ({ id, prenom, nom, ... })
  * @param {Function} [props.onBackToCatalog] - Callback pour retourner à la boutique
  * @param {Function} [props.onOpenAdminDashboard] - Callback pour retourner au portail SuperAdmin
+ * @param {Function} [props.onOpenProfile] - Callback pour accéder au profil vendeur
  * @param {Function} props.onLogout - Callback lors de la déconnexion
  * @param {Function} props.onShowToast - Callback pour afficher un toast
  * @returns {HTMLElement}
  */
-export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDashboard, onLogout, onShowToast } = {}) {
+export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDashboard, onOpenProfile, onLogout, onShowToast } = {}) {
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full flex flex-col bg-slate-50 min-h-[100dvh] text-slate-900';
 
@@ -542,6 +543,16 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
 
                     <button 
                         type="button"
+                        id="sidebar-btn-seller-profile" 
+                        title="Gérer mes coordonnées, pavillon, chambre et mot de passe"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors cursor-pointer"
+                    >
+                        <i class="fa-solid fa-circle-user text-xs text-amber-700"></i>
+                        <span>Mon Profil</span>
+                    </button>
+
+                    <button 
+                        type="button"
                         id="sidebar-btn-subscription" 
                         title="Gérer mon abonnement et mes formules"
                         class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors cursor-pointer"
@@ -669,6 +680,12 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
                     </div>
 
                     <div class="flex flex-col gap-2">
+                        <!-- Mon Profil Vendeur -->
+                        <button type="button" id="drawer-btn-profile" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer border border-amber-200">
+                            <i class="fa-solid fa-circle-user text-sm text-amber-700 w-5 text-center"></i>
+                            <span>Mon Profil (Coordonnées, Pavillon, Chambre)</span>
+                        </button>
+
                         <!-- Partager ma boutique -->
                         <button type="button" id="drawer-btn-share-shop" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors cursor-pointer border border-emerald-200">
                             <i class="fa-solid fa-share-nodes text-sm text-emerald-600 w-5 text-center"></i>
@@ -826,13 +843,20 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
 
                         <!-- Profil Marchand & Déconnexion -->
                         <div class="flex items-center gap-2.5 pl-1">
-                            <div class="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
-                                ${((seller?.prenom?.[0] || '') + (seller?.nom?.[0] || 'V')).toUpperCase()}
-                            </div>
-                            <div class="flex flex-col text-left">
-                                <span class="text-xs font-extrabold text-slate-900 leading-tight truncate max-w-[120px]">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
-                                <span class="text-[10px] text-slate-400 font-bold uppercase leading-none">Marchand</span>
-                            </div>
+                            <button 
+                                type="button" 
+                                id="top-hdr-btn-seller-profile" 
+                                title="Accéder à mon profil vendeur"
+                                class="flex items-center gap-2.5 text-left cursor-pointer group hover:opacity-85 transition-opacity"
+                            >
+                                <div class="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-xs shadow-xs group-hover:scale-105 transition-transform">
+                                    ${((seller?.prenom?.[0] || '') + (seller?.nom?.[0] || 'V')).toUpperCase()}
+                                </div>
+                                <div class="flex flex-col text-left">
+                                    <span class="text-xs font-extrabold text-slate-900 leading-tight truncate max-w-[120px] group-hover:text-primary transition-colors">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase leading-none">Profil &gt;</span>
+                                </div>
+                            </button>
                             <button 
                                 type="button" 
                                 id="top-hdr-btn-seller-logout" 
@@ -1900,6 +1924,21 @@ export function createSellerDashboard({ seller, onBackToCatalog, onOpenAdminDash
         containerEl.querySelector('#drawer-btn-seller-back-admin')?.addEventListener('click', () => {
             closeDrawer();
             handleBackAdmin();
+        });
+
+        // Navigation vers le Profil Vendeur (#profile)
+        const handleOpenProfile = () => {
+            if (typeof onOpenProfile === 'function') {
+                onOpenProfile();
+            } else {
+                window.location.hash = '#profile';
+            }
+        };
+        containerEl.querySelector('#sidebar-btn-seller-profile')?.addEventListener('click', handleOpenProfile);
+        containerEl.querySelector('#top-hdr-btn-seller-profile')?.addEventListener('click', handleOpenProfile);
+        containerEl.querySelector('#drawer-btn-profile')?.addEventListener('click', () => {
+            closeDrawer();
+            handleOpenProfile();
         });
 
         // Cartes Bento KPI interactives [data-seller-kpi]

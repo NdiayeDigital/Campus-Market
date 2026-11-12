@@ -7,7 +7,7 @@
  * Résout la vue et les paramètres cibles à partir d'un hash et/ou d'une chaîne de recherche.
  * @param {string} [rawHash=''] - Fragment d'URL (ex: '#shop/UUID', '#seller/UUID', '#seller')
  * @param {string|URLSearchParams} [search=''] - Chaîne de requête éventuelle (ex: '?shop=UUID')
- * @returns {{ view: 'catalog' | 'shop' | 'seller' | 'admin' | 'orders' | 'product', params: Object }}
+ * @returns {{ view: 'catalog' | 'shop' | 'seller' | 'admin' | 'orders' | 'product' | 'profile', params: Object }}
  */
 export function resolveRoute(rawHash = '', search = '') {
     const raw = (rawHash || '').trim();
@@ -39,6 +39,11 @@ export function resolveRoute(rawHash = '', search = '') {
     // 4. Espace Vendeur Privé (Backoffice - strictement sans identifiant UUID après #seller/)
     if (hash === '#seller' || hash.startsWith('#seller?')) {
         return { view: 'seller', params: {} };
+    }
+
+    // 5. Page Profil Vendeur Privé (#profile)
+    if (hash === '#profile' || hash.startsWith('#profile?')) {
+        return { view: 'profile', params: {} };
     }
 
     // 5. Suivi des commandes (#orders)

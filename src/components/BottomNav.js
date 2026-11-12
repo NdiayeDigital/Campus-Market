@@ -6,6 +6,7 @@
 
 import { subscribeCart } from '../services/cart-store.js';
 import { SUPPORT_CONFIG } from '../config/support.js';
+import { escapeHTML } from '../utils/security.js';
 import logoUrl from '../assets/logo.webp';
 
 /**
@@ -31,6 +32,13 @@ export function createBottomNav({
     let cachedSeller = null;
 
     function render() {
+        const isSellerLoggedIn = Boolean(cachedSeller && (cachedSeller.role === 'vendeur' || cachedSeller.role === 'superadmin'));
+        const isSellerTabActive = currentTab === 'seller' || currentTab === 'profile';
+        const sellerMobileLabel = isSellerLoggedIn ? 'Profil' : 'Vendeur';
+        const sellerMobileIcon = isSellerLoggedIn ? 'fa-solid fa-circle-user' : 'fa-solid fa-shop';
+        const sellerDesktopLabel = isSellerLoggedIn ? (cachedSeller?.prenom ? `Profil ${cachedSeller.prenom}` : 'Mon Profil') : 'Espace Vendeur';
+        const sellerDesktopIcon = isSellerLoggedIn ? 'fa-solid fa-circle-user' : 'fa-solid fa-shop';
+
         navContainer.innerHTML = `
             <!-- 1. NAVIGATION MOBILE : Barre inférieure FIXE en bas et TOUJOURS visible (lg:hidden) -->
             <nav 
@@ -94,19 +102,19 @@ export function createBottomNav({
                         <span class="text-[10px] leading-tight">Commandes</span>
                     </button>
 
-                    <!-- Onglet 5 : Espace Vendeur -->
+                    <!-- Onglet 5 : Espace Vendeur / Profil -->
                     <button 
                         type="button" 
                         id="bnav-tab-seller" 
                         class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] active:scale-95 cursor-pointer ${
-                            currentTab === 'seller' 
+                            isSellerTabActive 
                                 ? 'text-amber-800 font-bold' 
                                 : 'text-amber-700 hover:text-amber-900 font-medium'
                         }"
                     >
-                        ${currentTab === 'seller' ? '<span class="absolute top-0 w-8 h-1 bg-amber-600 rounded-full"></span>' : ''}
-                        <i class="fa-solid fa-shop text-lg mb-0.5"></i>
-                        <span class="text-[10px] leading-tight">Vendeur</span>
+                        ${isSellerTabActive ? '<span class="absolute top-0 w-8 h-1 bg-amber-600 rounded-full"></span>' : ''}
+                        <i class="${sellerMobileIcon} text-lg mb-0.5"></i>
+                        <span class="text-[10px] leading-tight">${sellerMobileLabel}</span>
                     </button>
                 </div>
             </nav>
@@ -187,19 +195,19 @@ export function createBottomNav({
 
                 <!-- Bas de Sidebar : Espace Vendeur & Support WhatsApp -->
                 <div class="flex flex-col gap-3 pt-4 border-t border-slate-100">
-                    <!-- Bouton Accès Vendeur Desktop -->
+                    <!-- Bouton Accès Vendeur / Profil Desktop -->
                     <button 
                         type="button" 
                         id="sidebar-tab-seller" 
                         class="flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all min-h-[46px] cursor-pointer active:scale-95 ${
-                            currentTab === 'seller'
+                            isSellerTabActive
                                 ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
                                 : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80'
                         }"
                     >
                         <div class="flex items-center gap-2.5">
-                            <i class="fa-solid fa-shop text-sm ${currentTab === 'seller' ? 'text-white' : 'text-amber-700'}"></i>
-                            <span id="sidebar-seller-label">${cachedSeller?.prenom ? `Boutique ${cachedSeller.prenom}` : 'Espace Vendeur'}</span>
+                            <i class="${sellerDesktopIcon} text-sm ${isSellerTabActive ? 'text-white' : 'text-amber-700'}"></i>
+                            <span id="sidebar-seller-label">${escapeHTML(sellerDesktopLabel)}</span>
                         </div>
                         <span id="sidebar-seller-dot" class="${cachedSeller ? '' : 'hidden'} w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     </button>
@@ -258,7 +266,9 @@ export function createBottomNav({
         });
 
         navContainer.querySelector('#bnav-tab-seller')?.addEventListener('click', () => {
-            if (typeof onNavigate === 'function') onNavigate('seller');
+            if (typeof onNavigate === 'function') {
+                onNavigate(isSellerLoggedIn ? 'profile' : 'seller');
+            }
         });
 
         // Clics Desktop Sidebar
@@ -289,7 +299,9 @@ export function createBottomNav({
         });
 
         navContainer.querySelector('#sidebar-tab-seller')?.addEventListener('click', () => {
-            if (typeof onNavigate === 'function') onNavigate('seller');
+            if (typeof onNavigate === 'function') {
+                onNavigate(isSellerLoggedIn ? 'profile' : 'seller');
+            }
         });
     }
 

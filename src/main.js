@@ -17,6 +17,7 @@ import { createHeroBanner } from './components/HeroBanner.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
 import { createForcePasswordChangeModal } from './components/seller/ForcePasswordChangeModal.js';
 import { createSellerShowcase } from './components/seller/SellerShowcase.js';
+import { createSellerProfileView } from './components/seller/SellerProfileView.js';
 import { getCurrentSeller, confirmSubscriptionPayment } from './services/seller-service.js';
 import { supabase } from './services/supabase.js';
 import { cartStore } from './services/cart-store.js';
@@ -97,7 +98,7 @@ async function initApp() {
             try {
                 localStorage.removeItem(LOCAL_SELLER_KEY);
             } catch {}
-            if (appState.currentView === 'seller') {
+            if (appState.currentView === 'seller' || appState.currentView === 'profile') {
                 navigateToView('catalog');
                 showToast('Déconnecté de votre espace marchand.', 'info');
             }
@@ -151,7 +152,7 @@ async function initApp() {
             try {
                 localStorage.removeItem(LOCAL_SELLER_KEY);
             } catch {}
-            if (appState.currentView === 'seller') {
+            if (appState.currentView === 'seller' || appState.currentView === 'profile') {
                 navigateToView('catalog');
             }
         },
@@ -243,6 +244,9 @@ async function initApp() {
         onOpenSeller: () => {
             openSellerFlow();
         },
+        onOpenProfile: () => {
+            navigateToView('profile');
+        },
     });
 
     rootWrapper.appendChild(headerComponent);
@@ -297,6 +301,8 @@ async function initApp() {
                 reloadProducts();
             } else if (viewName === 'seller') {
                 openSellerFlow();
+            } else if (viewName === 'profile') {
+                navigateToView('profile');
             } else {
                 navigateToView(viewName);
             }
@@ -449,6 +455,23 @@ async function initApp() {
             footerEl.classList.remove('hidden');
             if (bottomNavComponent) bottomNavComponent.setHidden(false);
             renderShopView(params.sellerId);
+        } else if (viewName === 'profile') {
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            if (headerComponent.setMode) {
+                headerComponent.setMode('catalog');
+                headerComponent.setActiveTab?.('profile');
+            }
+            categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.remove('hidden');
+            if (bottomNavComponent) {
+                bottomNavComponent.setHidden(false);
+                bottomNavComponent.setActiveTab?.('profile');
+            }
+            updateSEO({
+                title: 'Mon Profil Vendeur — Campus Market UIDT',
+                description: 'Gérez vos coordonnées, pavillon, chambre, statut de boutique et abonnement Campus Market.'
+            });
+            renderProfileView();
         } else {
             mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
@@ -486,6 +509,83 @@ async function initApp() {
             onShowToast: showToast,
         });
         mainContentEl.appendChild(orderView);
+    }
+
+    // Rendu du Profil Vendeur
+    async function renderProfileView() {
+        if (!appState.currentSeller) {
+            mainContentEl.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-24 gap-3 text-slate-500 animate-pulse">
+                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
+                    <p class="text-xs font-semibold">Chargement de votre profil vendeur...</p>
+                </div>
+            `;
+            try {
+                const sellerSession = await getCurrentSeller();
+                if (sellerSession && sellerSession.profile && (sellerSession.profile.role === 'vendeur' || sellerSession.profile.role === 'superadmin')) {
+                    appState.currentSeller = sellerSession.profile;
+                    headerComponent?.updateSellerState?.(sellerSession.profile);
+                    bottomNavComponent?.setSeller?.(sellerSession.profile);
+                    try {
+                        localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(sellerSession.profile));
+                    } catch {}
+                }
+            } catch (err) {
+                console.warn('[Main] Erreur chargement profil vendeur:', err);
+            }
+        }
+
+        // Si aucune session n'est active, inviter à la connexion et retourner au catalogue
+        if (!appState.currentSeller) {
+            mainContentEl.innerHTML = '';
+            sellerAuthModalController.open('login');
+            navigateToView('catalog');
+            return;
+        }
+
+        // Si le mot de passe doit obligatoirement être changé
+        if (appState.currentSeller.must_change_password) {
+            mainContentEl.innerHTML = '';
+            forcePasswordChangeModalController.open(appState.currentSeller);
+            navigateToView('catalog');
+            return;
+        }
+
+        mainContentEl.innerHTML = '';
+        const profileEl = createSellerProfileView({
+            seller: appState.currentSeller,
+            onBackToCatalog: () => navigateToView('catalog'),
+            onProfileUpdated: (updatedProfile) => {
+                appState.currentSeller = updatedProfile;
+                headerComponent?.updateSellerState?.(updatedProfile);
+                bottomNavComponent?.setSeller?.(updatedProfile);
+                try {
+                    localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(updatedProfile));
+                } catch {}
+            },
+            onOpenDashboard: () => {
+                navigateToView('seller');
+            },
+            onOpenShop: (sellerId) => {
+                navigateToView('shop', { sellerId });
+            },
+            onOpenSubscription: () => {
+                navigateToView('seller');
+            },
+            onLogout: () => {
+                appState.currentSeller = null;
+                headerComponent?.updateSellerState?.(null);
+                bottomNavComponent?.setSeller?.(null);
+                try {
+                    localStorage.removeItem(LOCAL_SELLER_KEY);
+                } catch {}
+                navigateToView('catalog');
+                showToast('Déconnecté de votre compte vendeur.', 'info');
+            },
+            onShowToast: showToast,
+        });
+
+        mainContentEl.appendChild(profileEl);
     }
 
     // Rendu de l'Espace Vendeur
@@ -548,6 +648,7 @@ async function initApp() {
         activeDashboardEl = createSellerDashboard({
             seller: appState.currentSeller,
             onBackToCatalog: () => navigateToView('catalog'),
+            onOpenProfile: () => navigateToView('profile'),
             onOpenAdminDashboard: () => {
                 navigateToView('admin');
             },

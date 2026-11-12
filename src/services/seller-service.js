@@ -893,6 +893,92 @@ export async function changeSellerPassword({ newPassword, confirmPassword }) {
     return { success: true };
 }
 
+/**
+ * Met à jour les coordonnées du profil vendeur (prénom, nom, boutique, catégorie, pavillon, chambre, statut ouvert/fermé).
+ * L'email universitaire et le numéro de téléphone ne sont pas modifiables (règle de sécurité FR-01).
+ *
+ * @param {Object} params
+ * @param {string} params.sellerId - UUID du vendeur
+ * @param {string} [params.prenom]
+ * @param {string} [params.nom]
+ * @param {string} [params.shopName]
+ * @param {string} [params.shopCategory]
+ * @param {string} [params.pavillon]
+ * @param {string} [params.chambre]
+ * @param {boolean} [params.isOpen]
+ * @returns {Promise<Object>} Profil mis à jour
+ */
+export async function updateSellerProfile({
+    sellerId,
+    prenom,
+    nom,
+    shopName,
+    shopCategory,
+    pavillon,
+    chambre,
+    isOpen,
+}) {
+    if (!sellerId) {
+        throw new Error('Identifiant vendeur requis pour mettre à jour le profil.');
+    }
+
+    const payload = {};
+    if (prenom !== undefined && String(prenom).trim()) payload.prenom = String(prenom).trim();
+    if (nom !== undefined && String(nom).trim()) payload.nom = String(nom).trim();
+    if (shopName !== undefined && String(shopName).trim()) payload.shop_name = String(shopName).trim();
+    if (shopCategory !== undefined && String(shopCategory).trim()) payload.shop_category = String(shopCategory).trim();
+    if (isOpen !== undefined) payload.is_open = !!isOpen;
+    if (pavillon !== undefined) payload.pavillon = String(pavillon).trim();
+    if (chambre !== undefined) payload.chambre = String(chambre).trim();
+    payload.updated_at = new Date().toISOString();
+
+    // 1. Tentative de mise à jour complète en base
+    let { data, error } = await supabase
+        .from('profiles')
+        .update(payload)
+        .eq('id', sellerId)
+        .select()
+        .single();
+
+    // Repli gracieux si les colonnes pavillon ou chambre ne sont pas encore créées en base
+    if (error && (error.message.includes('pavillon') || error.message.includes('chambre') || error.message.includes('column'))) {
+        console.warn('[SellerService] Colonnes pavillon/chambre non encore ajoutées en base, repli sans ces colonnes:', error.message);
+        const fallbackPayload = { ...payload };
+        delete fallbackPayload.pavillon;
+        delete fallbackPayload.chambre;
+
+        const { data: fbData, error: fbError } = await supabase
+            .from('profiles')
+            .update(fallbackPayload)
+            .eq('id', sellerId)
+            .select()
+            .single();
+
+        if (fbError) throw new Error(fbError.message);
+        data = {
+            ...fbData,
+            pavillon: pavillon || '',
+            chambre: chambre || '',
+        };
+    } else if (error) {
+        throw new Error(error.message);
+    }
+
+    // 2. Mettre à jour le cache local
+    if (typeof localStorage !== 'undefined') {
+        try {
+            const cached = localStorage.getItem('campus_market_cached_seller');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                const updated = { ...parsed, ...data };
+                localStorage.setItem('campus_market_cached_seller', JSON.stringify(updated));
+            }
+        } catch {}
+    }
+
+    return data;
+}
+
 export default {
     registerSeller,
     verifySellerOtp,
@@ -912,4 +998,5 @@ export default {
     submitSubscriptionPaymentProof,
     fetchSellerPendingPayments,
     changeSellerPassword,
+    updateSellerProfile,
 };

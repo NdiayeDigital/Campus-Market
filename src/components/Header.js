@@ -13,10 +13,11 @@ import logoUrl from '../assets/logo.webp';
  * @param {Function} props.onOpenCart - Callback lors du clic sur l'icône Panier
  * @param {Function} props.onOpenOrders - Callback lors du clic sur Mes Commandes
  * @param {Function} props.onOpenSeller - Callback lors du clic sur Espace Vendeur
+ * @param {Function} [props.onOpenProfile] - Callback lors du clic sur Profil Vendeur
  * @param {Function} [props.onOpenCatalog] - Callback lors du clic sur Offres
  * @returns {HTMLElement}
  */
-export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller, onLogoClick, onOpenCatalog } = {}) {
+export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller, onOpenProfile, onLogoClick, onOpenCatalog } = {}) {
     const headerEl = document.createElement('header');
     headerEl.className = 'sticky-gpu-top z-30 bg-white border-b border-slate-200/70 shadow-xs lg:ml-64 lg:w-[calc(100%-16rem)] w-full pt-safe';
 
@@ -45,7 +46,7 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
 
                     <!-- Bouton 3 : Espace Vendeur Desktop & Tablette (masqué sur mobile car dans la barre inférieure fixe) -->
                     <button id="header-seller-btn" type="button" title="Accéder à l'espace vendeur" class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-amber-950 bg-amber-100/80 hover:bg-amber-200/90 rounded-full transition-colors min-h-[44px] cursor-pointer">
-                        <i class="fa-solid fa-shop text-amber-700 text-sm"></i>
+                        <i id="header-seller-icon" class="fa-solid fa-shop text-amber-700 text-sm"></i>
                         <span id="header-seller-btn-text">Espace Vendeur</span>
                         <span id="header-seller-dot-desktop" class="hidden w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>
                     </button>
@@ -129,7 +130,15 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
         if (typeof onOpenOrders === 'function') onOpenOrders();
     });
 
+    let currentSellerState = null;
+
     const handleSellerClick = () => {
+        if (currentSellerState && (currentSellerState.role === 'vendeur' || currentSellerState.role === 'superadmin')) {
+            if (typeof onOpenProfile === 'function') {
+                onOpenProfile();
+                return;
+            }
+        }
         if (typeof onOpenSeller === 'function') onOpenSeller();
     };
     headerEl.querySelector('#header-seller-btn')?.addEventListener('click', handleSellerClick);
@@ -162,7 +171,7 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
 
     /**
      * Met en surbrillance l'onglet actif dans le header (desktop)
-     * @param {string} tabName ('catalog' | 'orders' | 'seller')
+     * @param {string} tabName ('catalog' | 'orders' | 'seller' | 'profile')
      */
     headerEl.setActiveTab = (tabName) => {
         const catalogBtn = headerEl.querySelector('#header-catalog-btn');
@@ -193,7 +202,7 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
 
         if (sellerBtn) {
             const baseClass = 'hidden sm:flex items-center gap-1.5 px-3.5 py-2 text-xs rounded-full transition-colors min-h-[44px] cursor-pointer';
-            if (tabName === 'seller') {
+            if (tabName === 'seller' || tabName === 'profile') {
                 sellerBtn.className = `${baseClass} font-bold text-amber-950 bg-amber-200 border border-amber-400`;
             } else {
                 sellerBtn.className = `${baseClass} font-bold text-amber-950 bg-amber-100/80 hover:bg-amber-200/90`;
@@ -219,20 +228,36 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
     };
 
     /**
-     * Met à jour l'affichage de l'état vendeur (nom de boutique & pastille connectée sur desktop)
+     * Met à jour l'affichage de l'état vendeur (nom/bouton & pastille connectée sur desktop)
+     * Si connecté : affiche "Profil" et icône utilisateur
+     * Si déconnecté : affiche "Espace Vendeur" et icône boutique
      * @param {Object|null} seller
      */
     headerEl.updateSellerState = (seller) => {
+        currentSellerState = seller;
         const desktopText = headerEl.querySelector('#header-seller-btn-text');
         const desktopDot = headerEl.querySelector('#header-seller-dot-desktop');
+        const desktopIcon = headerEl.querySelector('#header-seller-icon');
+        const sellerBtn = headerEl.querySelector('#header-seller-btn');
 
         if (seller && (seller.role === 'vendeur' || seller.role === 'superadmin')) {
-            const displayName = seller.prenom ? `Boutique ${seller.prenom}` : 'Ma Boutique';
-            if (desktopText) desktopText.textContent = displayName;
+            if (desktopText) desktopText.textContent = 'Profil';
             if (desktopDot) desktopDot.classList.remove('hidden');
+            if (desktopIcon) {
+                desktopIcon.className = 'fa-solid fa-circle-user text-amber-800 text-sm';
+            }
+            if (sellerBtn) {
+                sellerBtn.title = 'Accéder à mon profil vendeur';
+            }
         } else {
             if (desktopText) desktopText.textContent = 'Espace Vendeur';
             if (desktopDot) desktopDot.classList.add('hidden');
+            if (desktopIcon) {
+                desktopIcon.className = 'fa-solid fa-shop text-amber-700 text-sm';
+            }
+            if (sellerBtn) {
+                sellerBtn.title = "Accéder à l'espace vendeur";
+            }
         }
     };
 
