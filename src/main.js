@@ -421,6 +421,9 @@ async function initApp() {
         let targetHash = viewName === 'catalog' ? '' : `#${viewName}`;
         if (viewName === 'shop' && params.sellerId) {
             targetHash = `#shop/${params.sellerId}`;
+        } else if (viewName === 'seller') {
+            const sub = params.subTab || 'dashboard';
+            targetHash = sub === 'dashboard' ? '#seller' : `#seller/${sub}`;
         }
         if (window.location.hash !== targetHash) {
             history.replaceState(null, '', targetHash || window.location.pathname);
@@ -583,9 +586,15 @@ async function initApp() {
             seller: appState.currentSeller,
             initialTab: targetTab,
             onBackToCatalog: () => navigateToView('catalog'),
+            onTabChange: (newSubTab) => {
+                const subHash = newSubTab === 'dashboard' ? '#seller' : `#seller/${newSubTab}`;
+                if (window.location.hash !== subHash) {
+                    history.replaceState(null, '', subHash);
+                }
+            },
             onOpenProfile: () => {
-                if (window.location.hash !== '#seller/profile' && window.location.hash !== '#profile') {
-                    window.location.hash = '#seller/profile';
+                if (activeDashboardEl && typeof activeDashboardEl.setTab === 'function') {
+                    activeDashboardEl.setTab('profile');
                 }
             },
             onProfileUpdated: (updatedProfile) => {
@@ -937,7 +946,7 @@ async function initApp() {
         const route = resolveRoute(window.location.hash, window.location.search);
         if (route.view === 'seller') {
             checkPaymentReturnFlow();
-            navigateToView('seller');
+            navigateToView('seller', route.params);
         } else if (route.view === 'product') {
             if (appState.currentView !== 'catalog') {
                 navigateToView('catalog');

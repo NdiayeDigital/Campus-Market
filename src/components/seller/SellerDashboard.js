@@ -48,6 +48,7 @@ export function createSellerDashboard({
     onOpenAdminDashboard,
     onOpenProfile,
     onProfileUpdated,
+    onTabChange,
     onLogout,
     onShowToast,
 } = {}) {
@@ -284,10 +285,19 @@ export function createSellerDashboard({
         }
     }
 
-    function handleOpenProfile() {
-        activeSubTab = 'profile';
+    function switchSubTab(tabName) {
+        if (!tabName) return;
+        const normalized = tabName === 'add' ? 'add-product' : tabName;
+        activeSubTab = normalized;
         render();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof onTabChange === 'function') {
+            onTabChange(normalized === 'add-product' ? 'add' : normalized);
+        }
+    }
+
+    function handleOpenProfile() {
+        switchSubTab('profile');
         if (typeof onOpenProfile === 'function') {
             onOpenProfile();
         }
@@ -1177,10 +1187,10 @@ export function createSellerDashboard({
                 isSuspended,
                 initialTab: activeSubTab === 'add-product' ? 'add' : 'list',
                 onTabChange: (tab) => {
-                    activeSubTab = tab;
+                    switchSubTab(tab);
                 },
                 onProductChanged: () => {
-                    activeSubTab = 'products';
+                    switchSubTab('products');
                     loadData(true);
                 },
             });
@@ -1200,8 +1210,7 @@ export function createSellerDashboard({
                     render();
                 },
                 onOpenDashboard: () => {
-                    activeSubTab = 'dashboard';
-                    render();
+                    switchSubTab('dashboard');
                 },
                 onOpenShop: (sId) => {
                     window.location.hash = `#shop/${sId || sellerId}`;
@@ -2046,74 +2055,60 @@ export function createSellerDashboard({
 
         // Sous-onglets de navigation Sidebar Desktop
         containerEl.querySelector('#subtab-dashboard')?.addEventListener('click', () => {
-            activeSubTab = 'dashboard';
-            render();
+            switchSubTab('dashboard');
         });
 
         containerEl.querySelector('#subtab-orders')?.addEventListener('click', () => {
-            activeSubTab = 'orders';
-            render();
+            switchSubTab('orders');
         });
 
         containerEl.querySelector('#subtab-products')?.addEventListener('click', () => {
-            activeSubTab = 'products';
-            render();
+            switchSubTab('products');
         });
 
         containerEl.querySelector('#subtab-add-product')?.addEventListener('click', () => {
-            activeSubTab = 'add-product';
-            render();
+            switchSubTab('add-product');
         });
 
         // Sous-onglets de navigation Tablette
         containerEl.querySelectorAll('button[data-seller-tab]').forEach((btn) => {
             btn.addEventListener('click', () => {
-                activeSubTab = btn.getAttribute('data-seller-tab') || 'dashboard';
-                render();
+                switchSubTab(btn.getAttribute('data-seller-tab') || 'dashboard');
             });
         });
 
         // Navigation fixe mobile vendeur (Bottom Nav)
         containerEl.querySelector('#bnav-seller-dashboard')?.addEventListener('click', () => {
-            activeSubTab = 'dashboard';
-            render();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            switchSubTab('dashboard');
         });
 
         containerEl.querySelector('#bnav-seller-orders')?.addEventListener('click', () => {
-            activeSubTab = 'orders';
-            render();
+            switchSubTab('orders');
         });
 
         containerEl.querySelector('#bnav-seller-products')?.addEventListener('click', () => {
-            activeSubTab = 'products';
-            render();
+            switchSubTab('products');
         });
 
         containerEl.querySelector('#bnav-seller-add')?.addEventListener('click', () => {
-            activeSubTab = 'add-product';
-            render();
+            switchSubTab('add-product');
         });
 
         // Raccourcis et boutons de l'onglet Dashboard
         containerEl.querySelector('#btn-dashboard-go-products')?.addEventListener('click', () => {
-            activeSubTab = 'products';
-            render();
+            switchSubTab('products');
         });
 
         containerEl.querySelector('#btn-dashboard-go-add-product')?.addEventListener('click', () => {
-            activeSubTab = 'add-product';
-            render();
+            switchSubTab('add-product');
         });
 
         containerEl.querySelector('#btn-dashboard-go-orders')?.addEventListener('click', () => {
-            activeSubTab = 'orders';
-            render();
+            switchSubTab('orders');
         });
 
         containerEl.querySelector('#btn-dashboard-view-all-orders')?.addEventListener('click', () => {
-            activeSubTab = 'orders';
-            render();
+            switchSubTab('orders');
         });
 
         // Recherche textuelle commandes
@@ -2147,8 +2142,7 @@ export function createSellerDashboard({
 
         // Onboarding CTA: Publier un article
         containerEl.querySelector('#btn-onboarding-add-product')?.addEventListener('click', () => {
-            activeSubTab = 'add-product';
-            render();
+            switchSubTab('add-product');
         });
 
         // Onboarding CTA: Partager sur WhatsApp
@@ -2235,9 +2229,7 @@ export function createSellerDashboard({
         if (!tabName) return;
         const normalized = tabName === 'add' ? 'add-product' : tabName;
         if (activeSubTab !== normalized) {
-            activeSubTab = normalized;
-            render();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            switchSubTab(normalized);
         }
     };
 

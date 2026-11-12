@@ -58,15 +58,15 @@ export function createSellerProfileView({
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-24 flex flex-col gap-6 select-none';
 
-    let currentSeller = { ...seller };
+    let currentSeller = seller ? { ...seller } : {};
     let isSubmitting = false;
 
     function render() {
         const subStatus = computeSubscriptionStatus(currentSeller);
-        const initials = `${(currentSeller.prenom || 'V')[0]}${(currentSeller.nom || 'M')[0]}`.toUpperCase();
-        const shopUrl = `${window.location.origin}/#shop/${currentSeller.id}`;
+        const initials = `${((currentSeller?.prenom || 'V')[0] || 'V')}${((currentSeller?.nom || 'M')[0] || 'M')}`.toUpperCase();
+        const shopUrl = `${window.location.origin}/#shop/${currentSeller?.id || ''}`;
         const whatsappShareText = encodeURIComponent(
-            `Salam ! Découvrez ma boutique "${currentSeller.shop_name || currentSeller.prenom}" sur Campus Market UIDT. Commandez directement ici : ${shopUrl}`
+            `Salam ! Découvrez ma boutique "${currentSeller?.shop_name || currentSeller?.prenom || 'Campus Market'}" sur Campus Market UIDT. Commandez directement ici : ${shopUrl}`
         );
 
         containerEl.innerHTML = `

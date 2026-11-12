@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --experimental-websocket tests/sanity-check.js && node tests/test-seo.js && node tests/test-image-compressor.js && node tests/test-pwa-install.js && node tests/test-router.js && node tests/test-bottom-nav.js && node tests/test-top-shops.js && node --experimental-websocket tests/test-catalog-round-robin.js && node --experimental-websocket tests/test-push-notifications.js",
+    "test": "node --experimental-websocket tests/sanity-check.js && node tests/test-seo.js && node tests/test-image-compressor.js && node tests/test-pwa-install.js && node tests/test-router.js && node tests/test-bottom-nav.js && node tests/test-seller-profile-navigation.js && node tests/test-top-shops.js && node --experimental-websocket tests/test-catalog-round-robin.js && node --experimental-websocket tests/test-push-notifications.js",
     "test:seo": "node tests/test-seo.js",
     "create-superadmin": "node scripts/create-superadmin.js"
   },
