@@ -1,7 +1,9 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import createCheckoutHandler from './api/create-subscription-checkout.js';
 import verifyPaymentHandler from './api/verify-payment.js';
 import webhookHandler from './api/webhook-saspay.js';
+import sendOrderPushHandler from './api/send-order-push.js';
+import adminResetPasswordHandler from './api/admin-reset-password.js';
 
 function apiDevMiddleware() {
   return {
@@ -53,6 +55,12 @@ function apiDevMiddleware() {
           if (pathname === '/api/webhook-saspay') {
             return await webhookHandler(req, res);
           }
+          if (pathname === '/api/send-order-push') {
+            return await sendOrderPushHandler(req, res);
+          }
+          if (pathname === '/api/admin-reset-password') {
+            return await adminResetPasswordHandler(req, res);
+          }
         } catch (err) {
           console.error('[API Middleware Error]:', err);
           return res.status(500).json({ error: err.message });
@@ -64,24 +72,29 @@ function apiDevMiddleware() {
   };
 }
 
-export default defineConfig({
-  plugins: [apiDevMiddleware()],
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (
-            id.includes('@supabase/supabase-js') ||
-            id.includes('@supabase/auth-js') ||
-            id.includes('@supabase/postgrest-js') ||
-            id.includes('@supabase/realtime-js') ||
-            id.includes('@supabase/storage-js')
-          ) {
-            return 'supabase-vendor';
-          }
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  Object.assign(process.env, env);
+
+  return {
+    plugins: [apiDevMiddleware()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (
+              id.includes('@supabase/supabase-js') ||
+              id.includes('@supabase/auth-js') ||
+              id.includes('@supabase/postgrest-js') ||
+              id.includes('@supabase/realtime-js') ||
+              id.includes('@supabase/storage-js')
+            ) {
+              return 'supabase-vendor';
+            }
+          },
         },
       },
+      chunkSizeWarningLimit: 600,
     },
-    chunkSizeWarningLimit: 600,
-  },
+  };
 });

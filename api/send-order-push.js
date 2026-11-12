@@ -12,19 +12,19 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL |
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
 
-// Configuration Web Push VAPID (Strictement via variables d'environnement)
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:contact@campusmarket-uidt.com';
-
+// Configuration Web Push VAPID (Strictement via variables d'environnement dynamiques)
 let vapidConfigured = false;
 function ensureVapidConfigured() {
     if (vapidConfigured) return true;
-    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
+    const privateKey = process.env.VAPID_PRIVATE_KEY;
+    const subject = process.env.VAPID_SUBJECT || 'mailto:contact@campusmarket-uidt.com';
+
+    if (!publicKey || !privateKey) {
         return false;
     }
     try {
-        webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+        webpush.setVapidDetails(subject, publicKey, privateKey);
         vapidConfigured = true;
         return true;
     } catch (e) {
