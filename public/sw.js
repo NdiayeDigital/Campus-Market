@@ -7,7 +7,7 @@
  * 3. NETWORK-FIRST (avec fallback offline) : HTML et bundles JS/CSS Vite pour réception immédiate des mises à jour.
  */
 
-const CACHE_NAME = 'campus-market-v23';
+const CACHE_NAME = 'campus-market-v24';
 
 const STATIC_PRECACHE = [
     '/',
@@ -137,26 +137,47 @@ self.addEventListener('fetch', (event) => {
 
 // Notifications Push
 self.addEventListener('push', (event) => {
+    let data = {};
     if (event.data) {
         try {
-            const data = event.data.json();
-            const options = {
-                body: data.body || 'Une nouvelle commande vient d\'arriver !',
-                icon: data.icon || '/assets/logo-192x192.png',
-                badge: data.badge || '/assets/logo-192x192.png',
-                vibrate: [200, 100, 200, 100, 200],
-                tag: data.reference ? `order-${data.reference}` : `order-${Date.now()}`,
-                renotify: true,
-                requireInteraction: true,
-                data: {
-                    url: data.url || '/#seller',
-                },
-            };
-            event.waitUntil(self.registration.showNotification(data.title || '🛍️ Nouvelle commande - Campus Market', options));
+            data = event.data.json();
         } catch {
-            // Ignorer
+            try {
+                data = { body: event.data.text() };
+            } catch {
+                data = {};
+            }
         }
     }
+
+    const title = data.title || '🛍️ Nouvelle commande - Campus Market';
+    const reference = data.reference || '';
+    const uniqueTag = `order-${reference ? reference.replace(/[^a-zA-Z0-9_-]/g, '') : 'alert'}-${Date.now()}`;
+
+    const options = {
+        body: data.body || 'Une nouvelle commande vient d\'arriver sur votre boutique !',
+        icon: data.icon || '/assets/logo-192x192.png',
+        badge: data.badge || '/assets/logo-192x192.png',
+        vibrate: [300, 100, 300, 100, 300],
+        tag: uniqueTag,
+        renotify: true,
+        requireInteraction: true,
+        silent: false,
+        data: {
+            url: data.url || '/#seller',
+            timestamp: Date.now(),
+        },
+        actions: [
+            { action: 'open', title: '👀 Voir la commande' },
+        ],
+    };
+
+    // RÈGLE ANDROID CHROME CRUCIALE : showNotification doit impérativement être résolu dans event.waitUntil
+    event.waitUntil(
+        self.registration.showNotification(title, options).catch((err) => {
+            console.error('[SW] Erreur showNotification:', err);
+        })
+    );
 });
 
 self.addEventListener('notificationclick', (event) => {

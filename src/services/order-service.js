@@ -312,16 +312,17 @@ export async function createOrder({
         // Succès : vidage automatique du panier
         clearCart();
 
-        // Déclenchement asynchrone non-bloquant de la notification Web Push vers le téléphone du marchand (en veille)
+        // Déclenchement asynchrone sécurisé de la notification Web Push vers le téléphone du marchand (en veille)
         try {
             const sellerIds = [...new Set(ordersToInsert.map((o) => o.seller_id).filter(Boolean))];
             const totalPrice = ordersToInsert.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
             const deliveryLocation = `${pavillon || ''} - ${chambre || ''}`.trim();
 
-            sellerIds.forEach((sId) => {
+            const pushPromises = sellerIds.map((sId) =>
                 fetch('/api/send-order-push', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    keepalive: true, // Crucial pour mobile : empêche le navigateur d'avorter la requête lors de la navigation
                     body: JSON.stringify({
                         sellerId: sId,
                         buyerName: `${clientPrenom} ${clientNom}`.trim(),
@@ -331,8 +332,14 @@ export async function createOrder({
                     }),
                 }).catch((pushErr) => {
                     console.warn('[OrderService] Push non-bloquant:', pushErr);
-                });
-            });
+                })
+            );
+
+            // Attente courte bornée (800ms max) pour laisser le temps au navigateur mobile d'initier la requête
+            await Promise.race([
+                Promise.allSettled(pushPromises),
+                new Promise((resolve) => setTimeout(resolve, 800)),
+            ]);
         } catch {
             // Envoi push non bloquant
         }
