@@ -1469,6 +1469,125 @@ export async function uploadAdminMedia(file, folder = 'carousel') {
     return publicData?.publicUrl || '';
 }
 
+/**
+ * Diffuse une notification Web Push native via l'endpoint serverless sécurisé /api/admin-broadcast-push.
+ * @param {Object} options
+ * @param {string} options.title - Titre de l'alerte (3-80 caractères)
+ * @param {string} options.body - Message (5-250 caractères)
+ * @param {string} [options.url='/'] - URL de redirection au clic
+ * @param {'all'|'sellers'|'buyers'} [options.targetAudience='all'] - Cible
+ * @returns {Promise<Object>} Résumé de délivrabilité
+ */
+export async function broadcastPushNotification({ title, body, url = '/', targetAudience = 'all' } = {}) {
+    const cleanTitle = (title || '').trim();
+    const cleanBody = (body || '').trim();
+    const cleanUrl = (url || '/').trim();
+
+    if (!cleanTitle || cleanTitle.length < 3 || cleanTitle.length > 80) {
+        throw new Error('Le titre est obligatoire (entre 3 et 80 caractères).');
+    }
+    if (!cleanBody || cleanBody.length < 5 || cleanBody.length > 250) {
+        throw new Error('Le message est obligatoire (entre 5 et 250 caractères).');
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || !session.access_token) {
+        throw new Error('Authentification requise. Veuillez vous reconnecter en tant que Super Administrateur.');
+    }
+
+    const response = await fetch('/api/admin-broadcast-push', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+            title: cleanTitle,
+            body: cleanBody,
+            url: cleanUrl,
+            targetAudience,
+        }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(result.error || `Erreur lors de la diffusion push (Code ${response.status})`);
+    }
+
+    return result;
+}
+
+/**
+ * Récupère l'historique des campagnes push diffusées par le SuperAdmin.
+ * @returns {Promise<Array>}
+ */
+export async function fetchPushBroadcasts() {
+    try {
+        const { data, error } = await supabase
+            .from('push_broadcasts')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(30);
+
+        if (error) {
+            console.warn('[AdminService] push_broadcasts non disponible ou non migré:', error.message);
+            return [];
+        }
+        return data || [];
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Récupère le nombre d'appareils et terminaux enregistrés pour recevoir les notifications.
+ * @returns {Promise<{ total: number, sellers: number, buyers: number }>}
+ */
+export async function fetchPushSubscribersCount() {
+    let globalCount = 0;
+    let sellersCount = 0;
+    let buyersCount = 0;
+
+    try {
+        const { data: globalSubs, error: globalErr } = await supabase
+            .from('push_subscriptions')
+            .select('role, endpoint');
+
+        if (!globalErr && Array.isArray(globalSubs)) {
+            globalCount = globalSubs.length;
+            sellersCount = globalSubs.filter((s) => s.role === 'vendeur').length;
+            buyersCount = globalSubs.filter((s) => s.role === 'acheteur' || s.role === 'visitor').length;
+        }
+    } catch {
+        // Table push_subscriptions non migrée encore
+    }
+
+    // Compléter avec seller_push_subscriptions pour rétrocompatibilité
+    try {
+        const { count, error } = await supabase
+            .from('seller_push_subscriptions')
+            .select('id', { count: 'exact', head: true });
+
+        if (!error && typeof count === 'number' && count > 0) {
+            if (globalCount === 0) {
+                globalCount = count;
+                sellersCount = count;
+            } else {
+                sellersCount = Math.max(sellersCount, count);
+                globalCount = Math.max(globalCount, sellersCount + buyersCount);
+            }
+        }
+    } catch {
+        // Table seller_push_subscriptions non accessible
+    }
+
+    return {
+        total: globalCount,
+        sellers: sellersCount,
+        buyers: buyersCount,
+    };
+}
+
 export default {
     ensureAdminSellerProfile,
     verifyAdminRole,
@@ -1509,5 +1628,8 @@ export default {
     togglePartner,
     deletePartner,
     uploadAdminMedia,
+    broadcastPushNotification,
+    fetchPushBroadcasts,
+    fetchPushSubscribersCount,
 };
 

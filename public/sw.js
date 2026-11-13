@@ -152,7 +152,12 @@ self.addEventListener('push', (event) => {
 
     const title = data.title || '🛍️ Nouvelle commande - Campus Market';
     const reference = data.reference || '';
-    const uniqueTag = `order-${reference ? reference.replace(/[^a-zA-Z0-9_-]/g, '') : 'alert'}-${Date.now()}`;
+    const isBroadcast = (data.tag && data.tag.startsWith('broadcast-')) || !reference;
+    const uniqueTag = reference
+        ? `order-${reference.replace(/[^a-zA-Z0-9_-]/g, '')}-${Date.now()}`
+        : `alert-${Date.now()}`;
+
+    const actionTitle = isBroadcast ? '✨ Découvrir' : '👀 Voir la commande';
 
     const options = {
         body: data.body || 'Une nouvelle commande vient d\'arriver sur votre boutique !',
@@ -164,11 +169,11 @@ self.addEventListener('push', (event) => {
         requireInteraction: true,
         silent: false,
         data: {
-            url: data.url || '/#seller',
+            url: data.url || (isBroadcast ? '/' : '/#seller'),
             timestamp: Date.now(),
         },
         actions: [
-            { action: 'open', title: '👀 Voir la commande' },
+            { action: 'open', title: actionTitle },
         ],
     };
 

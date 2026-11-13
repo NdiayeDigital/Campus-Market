@@ -45,6 +45,11 @@ export default async function handler(req, res) {
         const token = authHeader.replace(/^Bearer\s+/i, '').trim();
         const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: { persistSession: false },
+            global: {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            },
         });
 
         const { data: userData, error: userError } = await authClient.auth.getUser(token);
@@ -55,13 +60,28 @@ export default async function handler(req, res) {
         const callerId = userData.user.id;
 
         // 2. Vérification stricte du rôle SuperAdmin dans la table profiles
-        const { data: callerProfile, error: profileError } = await authClient
+        let callerProfile = null;
+        const { data: profileData, error: profileError } = await authClient
             .from('profiles')
             .select('role')
             .eq('id', callerId)
             .maybeSingle();
 
-        if (profileError || !callerProfile || callerProfile.role !== 'superadmin') {
+        callerProfile = profileData;
+
+        if ((!callerProfile || profileError) && SUPABASE_SERVICE_ROLE_KEY) {
+            const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+                auth: { persistSession: false },
+            });
+            const { data: sProfile } = await serviceClient
+                .from('profiles')
+                .select('role')
+                .eq('id', callerId)
+                .maybeSingle();
+            if (sProfile) callerProfile = sProfile;
+        }
+
+        if (!callerProfile || callerProfile.role !== 'superadmin') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Administrateur requis.' });
         }
 

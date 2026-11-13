@@ -41,6 +41,91 @@ export async function requestNotificationPermission() {
 }
 
 /**
+ * Enregistre le terminal de tout utilisateur ou visiteur (étudiant, acheteur, vendeur)
+ * pour recevoir les notifications et annonces diffusées sur la plateforme.
+ * @param {Object} options
+ * @param {'acheteur'|'vendeur'|'visitor'|'superadmin'} [options.role='visitor'] - Rôle de l'utilisateur
+ * @param {string} [options.userId=null] - UUID du profil (si connecté)
+ * @returns {Promise<boolean>}
+ */
+export async function subscribePlatformPush({ role = 'visitor', userId = null } = {}) {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('[WebPush] PushManager non supporté par ce navigateur.');
+        return false;
+    }
+
+    try {
+        const permission = await requestNotificationPermission();
+        if (permission !== 'granted') return false;
+
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+
+        if (!sub) {
+            const applicationServerKey = urlBase64ToUint8Array(VAPID_CONFIG.publicKey);
+            sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey,
+            });
+        }
+
+        const subJson = sub.toJSON();
+        const endpoint = sub.endpoint;
+        const p256dh = subJson.keys?.p256dh;
+        const auth = subJson.keys?.auth;
+
+        if (!endpoint || !p256dh || !auth) {
+            console.warn('[WebPush] Données de souscription incomplètes.');
+            return false;
+        }
+
+        // 1. Sauvegarde dans la table globale push_subscriptions
+        const { error: globalErr } = await supabase
+            .from('push_subscriptions')
+            .upsert(
+                {
+                    user_id: userId || null,
+                    role: role || 'visitor',
+                    endpoint,
+                    p256dh,
+                    auth,
+                    user_agent: navigator.userAgent || 'Inconnu',
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'endpoint' }
+            );
+
+        if (globalErr) {
+            console.warn('[WebPush] push_subscriptions upsert (repli normal si non migré):', globalErr.message);
+        }
+
+        // 2. Rétrocompatibilité : si c'est un vendeur connecté, alimenter aussi seller_push_subscriptions
+        if (userId && (role === 'vendeur' || role === 'superadmin')) {
+            await supabase
+                .from('seller_push_subscriptions')
+                .upsert(
+                    {
+                        seller_id: userId,
+                        endpoint,
+                        p256dh,
+                        auth,
+                        user_agent: navigator.userAgent || 'Inconnu',
+                        updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: 'endpoint' }
+                )
+                .catch(() => {});
+        }
+
+        console.log('[WebPush] Terminal abonné avec succès aux annonces Campus Market !');
+        return true;
+    } catch (err) {
+        console.warn('[WebPush] Échec enregistrement abonnement platforme:', err);
+        return false;
+    }
+}
+
+/**
  * Enregistre le terminal du vendeur pour recevoir les notifications Push même en veille.
  * @param {string} sellerId - UUID du vendeur
  * @returns {Promise<boolean>}
@@ -191,6 +276,7 @@ export default {
     isNotificationSupported,
     getNotificationPermission,
     requestNotificationPermission,
+    subscribePlatformPush,
     subscribeSellerToPush,
     isSellerPushSubscribed,
     showOrderNotification,

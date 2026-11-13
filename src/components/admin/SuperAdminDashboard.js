@@ -44,6 +44,9 @@ import {
     togglePartner,
     deletePartner,
     uploadAdminMedia,
+    broadcastPushNotification,
+    fetchPushBroadcasts,
+    fetchPushSubscribersCount,
 } from '../../services/admin-service.js';
 import { CAROUSEL_TYPES } from '../../config/announcements.js';
 import { PARTNER_CATEGORIES } from '../../config/partners.js';
@@ -78,7 +81,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     let carouselSlides = [];
     let partners = [];
     let allProfiles = [];
-    let activeTab = 'overview'; // 'overview' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations' | 'carousels' | 'partners'
+    let pushBroadcasts = [];
+    let pushSubscribersCount = { total: 0, sellers: 0, buyers: 0 };
+    let activeTab = 'overview'; // 'overview' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations' | 'carousels' | 'partners' | 'broadcast'
     let productSearchQuery = '';
     let sellerSearchQuery = '';
     let sellerFilterTab = 'all'; // 'all' | 'pending' | 'active' | 'suspended' | 'payments'
@@ -122,7 +127,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         render();
 
         try {
-            const [m, p, a, prods, ords, locs, profs, subPays, carSlides, pts] = await Promise.all([
+            const [m, p, a, prods, ords, locs, profs, subPays, carSlides, pts, bCasts, pSubs] = await Promise.all([
                 fetchGlobalMetrics(),
                 fetchPendingSellers(),
                 fetchActiveSellers(),
@@ -133,6 +138,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 fetchPendingSubscriptionPayments().catch(() => []),
                 fetchCarouselSlides(true).catch(() => []),
                 fetchPartners(true).catch(() => []),
+                fetchPushBroadcasts().catch(() => []),
+                fetchPushSubscribersCount().catch(() => ({ total: 0, sellers: 0, buyers: 0 })),
             ]);
             metrics = m;
             pendingSellers = p || [];
@@ -144,6 +151,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             pendingSubscriptionPayments = subPays || [];
             carouselSlides = carSlides || [];
             partners = pts || [];
+            pushBroadcasts = bCasts || [];
+            pushSubscribersCount = pSubs || { total: 0, sellers: 0, buyers: 0 };
         } catch (err) {
             console.error('[SuperAdmin] Erreur chargement données:', err);
             if (typeof onShowToast === 'function') {
@@ -247,6 +256,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             { id: 'locations', label: "Lieux", icon: 'fa-location-dot', badge: deliveryLocations.length },
             { id: 'carousels', label: "Carrousel", icon: 'fa-sliders', badge: carouselSlides.length },
             { id: 'partners', label: "Partenaires", icon: 'fa-handshake', badge: partners.length },
+            { id: 'broadcast', label: "Diffusions Push", icon: 'fa-paper-plane', badge: pushSubscribersCount.total || null },
         ];
 
         containerEl.innerHTML = `
@@ -552,6 +562,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         ${activeTab === 'locations' ? renderLocationsTab() : ''}
                         ${activeTab === 'carousels' ? renderCarouselsTab() : ''}
                         ${activeTab === 'partners' ? renderPartnersTab() : ''}
+                        ${activeTab === 'broadcast' ? renderBroadcastTab() : ''}
                     </div>
                 </div>
             </main>
@@ -2943,6 +2954,271 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         `;
     }
 
+    function renderBroadcastTab() {
+        const totalSubs = pushSubscribersCount?.total || 0;
+        const sellersSubs = pushSubscribersCount?.sellers || 0;
+        const buyersSubs = pushSubscribersCount?.buyers || 0;
+
+        return `
+            <div class="flex flex-col gap-6">
+                <!-- En-tête Statistique & Identité du Studio Push -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary mb-1">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Studio de Diffusion Web Push Platform-Wide</span>
+                        </div>
+                        <h3 class="font-heading font-extrabold text-base sm:text-xl text-slate-900">Diffuser des Notifications Push Instantanées</h3>
+                        <p class="text-xs text-slate-500 max-w-2xl mt-0.5">Diffusez des alertes en direct sur les téléphones (verrouillés ou en veille) et ordinateurs des étudiants, clients et marchands de l'UIDT.</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Abonnés en veille</span>
+                                <span class="text-xs font-black text-slate-900" id="broadcast-subscribers-badge">${totalSubs} appareil${totalSubs > 1 ? 's' : ''} actif${totalSubs > 1 ? 's' : ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grille Principale : Formulaire de Composition (Gauche) & Live Mockup Smartphone (Droite) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <!-- Colonne Gauche : Formulaire de Diffusion (7 colonnes) -->
+                    <div class="lg:col-span-7 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-4">
+                        <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                            <div>
+                                <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Rédiger un message de diffusion</h4>
+                                <p class="text-xs text-slate-500">Les notifications sont reçues même avec le navigateur fermé</p>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-primary border border-blue-100">
+                                <i class="fa-solid fa-tower-broadcast mr-1"></i>VAPID Native
+                            </span>
+                        </div>
+
+                        <form id="form-broadcast-push" class="flex flex-col gap-4">
+                            <!-- Titre de l'alerte -->
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs font-bold text-slate-700" for="broadcast-title-input">Titre de la notification *</label>
+                                    <span class="text-[10px] font-semibold text-slate-400" id="title-char-count">0 / 60</span>
+                                </div>
+                                <input 
+                                    type="text" 
+                                    id="broadcast-title-input" 
+                                    maxlength="60" 
+                                    placeholder="Ex: 🔥 Flash Info : Bons plans du jour au Pavillon A !" 
+                                    required
+                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                                />
+                            </div>
+
+                            <!-- Corps du message -->
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs font-bold text-slate-700" for="broadcast-body-input">Corps du message (texte de l'alerte) *</label>
+                                    <span class="text-[10px] font-semibold text-slate-400" id="body-char-count">0 / 210</span>
+                                </div>
+                                <textarea 
+                                    id="broadcast-body-input" 
+                                    rows="3" 
+                                    maxlength="210" 
+                                    placeholder="Ex: Les restaurants et boutiques du campus viennent de publier de nouveaux articles. Commandez vite et faites-vous livrer en chambre !" 
+                                    required
+                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all resize-none"
+                                ></textarea>
+                            </div>
+
+                            <!-- Audience Cible -->
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-bold text-slate-700">Audience cible (qui reçoit l'alerte ?)</label>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex flex-col items-center text-center gap-1.5 hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:shadow-2xs">
+                                        <input type="radio" name="broadcast-audience" value="all" checked class="sr-only" />
+                                        <i class="fa-solid fa-users text-primary text-base"></i>
+                                        <span class="text-xs font-extrabold text-slate-800">Tout le monde</span>
+                                        <span class="text-[10px] text-slate-500">Tous les abonnés</span>
+                                    </label>
+                                    <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex flex-col items-center text-center gap-1.5 hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:shadow-2xs">
+                                        <input type="radio" name="broadcast-audience" value="sellers" class="sr-only" />
+                                        <i class="fa-solid fa-store text-emerald-600 text-base"></i>
+                                        <span class="text-xs font-extrabold text-slate-800">Marchands</span>
+                                        <span class="text-[10px] text-slate-500">Boutiques (${sellersSubs})</span>
+                                    </label>
+                                    <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex flex-col items-center text-center gap-1.5 hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:shadow-2xs">
+                                        <input type="radio" name="broadcast-audience" value="buyers" class="sr-only" />
+                                        <i class="fa-solid fa-graduation-cap text-amber-600 text-base"></i>
+                                        <span class="text-xs font-extrabold text-slate-800">Étudiants</span>
+                                        <span class="text-[10px] text-slate-500">Acheteurs (${buyersSubs})</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Lien de redirection au clic -->
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-bold text-slate-700" for="broadcast-url-input">Lien de redirection au clic (URL de destination)</label>
+                                <input 
+                                    type="text" 
+                                    id="broadcast-url-input" 
+                                    value="/" 
+                                    placeholder="/ ou /#catalog ou /#shop/..." 
+                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                                />
+                                <!-- Raccourcis rapides -->
+                                <div class="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                    <span class="text-[10px] text-slate-400 font-semibold">Raccourcis :</span>
+                                    <button type="button" class="btn-url-preset px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold transition-all" data-url="/">Accueil (/)</button>
+                                    <button type="button" class="btn-url-preset px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold transition-all" data-url="/#catalog">Offres (#catalog)</button>
+                                    <button type="button" class="btn-url-preset px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold transition-all" data-url="/#partners">Partenaires (#partners)</button>
+                                    <button type="button" class="btn-url-preset px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold transition-all" data-url="/#seller">Espace Vendeur (#seller)</button>
+                                </div>
+                            </div>
+
+                            <!-- Bouton d'action principal -->
+                            <div class="pt-2">
+                                <button 
+                                    type="submit" 
+                                    id="btn-submit-broadcast" 
+                                    class="w-full px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-heading font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.99] cursor-pointer"
+                                >
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                    <span>Diffuser la notification push maintenant 📢</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Colonne Droite : Live Smartphone Mockup (5 colonnes) -->
+                    <div class="lg:col-span-5 flex flex-col gap-4">
+                        <div class="bg-gradient-to-b from-slate-900 to-slate-950 p-5 rounded-3xl border border-slate-800 shadow-xl text-white flex flex-col items-center">
+                            <div class="w-full flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                                <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-mobile-screen text-primary"></i>
+                                    <span>Aperçu Écran de Veille (Mobile)</span>
+                                </span>
+                                <span class="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">En direct</span>
+                            </div>
+
+                            <!-- Mockup Smartphone Frame -->
+                            <div class="w-full max-w-[280px] bg-slate-900/90 rounded-[2.5rem] p-3 border-4 border-slate-700 shadow-2xl relative select-none">
+                                <!-- Encoche haut -->
+                                <div class="w-20 h-3.5 bg-slate-800 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-slate-900 border border-slate-700"></div>
+                                </div>
+
+                                <!-- Heure et Date -->
+                                <div class="text-center mb-6">
+                                    <span class="text-3xl font-black tracking-tight font-heading text-white block">14:30</span>
+                                    <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mt-0.5">Campus Market • Thiès</span>
+                                </div>
+
+                                <!-- Carte de Notification Native Glassmorphism -->
+                                <div class="w-full bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/20 shadow-lg text-white flex flex-col gap-1.5 transition-all">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-1.5">
+                                            <div class="w-4 h-4 rounded-md bg-white p-0.5 flex items-center justify-center">
+                                                <img src="${logoUrl}" alt="Logo" class="w-full h-full object-contain" />
+                                            </div>
+                                            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-200">CAMPUS MARKET</span>
+                                        </div>
+                                        <span class="text-[9px] text-slate-300">maintenant</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5 mt-0.5">
+                                        <span class="text-xs font-extrabold text-white leading-tight break-words" id="mockup-notification-title">
+                                            🔥 Flash Info : Bons plans du jour !
+                                        </span>
+                                        <span class="text-[11px] text-slate-200 leading-snug break-words" id="mockup-notification-body">
+                                            Les restaurants et boutiques du campus viennent de publier de nouveaux articles...
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Bas Smartphone / Barre Home -->
+                                <div class="w-24 h-1 bg-white/30 rounded-full mx-auto mt-12 mb-1"></div>
+                            </div>
+
+                            <!-- Conseil SuperAdmin -->
+                            <div class="w-full mt-4 p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-slate-300 flex items-start gap-2">
+                                <i class="fa-solid fa-lightbulb text-amber-400 text-xs shrink-0 mt-0.5"></i>
+                                <span>Les notifications push avec 1 émoji ont un taux d'ouverture 40% supérieur auprès des étudiants.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historique des Campagnes Envoyées -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-4">
+                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <div>
+                            <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Historique des diffusions récentes</h4>
+                            <p class="text-xs text-slate-500">Traçabilité complète des notifications envoyées sur la plateforme</p>
+                        </div>
+                        <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                            ${pushBroadcasts.length} diffusion${pushBroadcasts.length > 1 ? 's' : ''}
+                        </span>
+                    </div>
+
+                    ${pushBroadcasts.length === 0 ? `
+                        <div class="text-center py-8 text-slate-400 text-xs flex flex-col items-center gap-2">
+                            <i class="fa-solid fa-bullhorn text-3xl text-slate-300"></i>
+                            <p>Aucune diffusion push enregistrée pour le moment. Rédigez votre premier message ci-dessus !</p>
+                        </div>
+                    ` : `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-3 px-3">Date & Heure</th>
+                                        <th class="py-3 px-3">Titre & Message</th>
+                                        <th class="py-3 px-3">Audience</th>
+                                        <th class="py-3 px-3">Délivrabilité</th>
+                                        <th class="py-3 px-3">Redirection</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${pushBroadcasts.map((b) => {
+                                        const dateStr = b.created_at ? new Date(b.created_at).toLocaleDateString('fr-FR', {
+                                            day: '2-digit',
+                                            month: 'short',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        }) : 'Récent';
+                                        const audienceLabel = b.target_audience === 'sellers' ? 'Marchands' : (b.target_audience === 'buyers' ? 'Étudiants' : 'Tous');
+                                        const audienceBadge = b.target_audience === 'sellers' ? 'bg-emerald-50 text-emerald-700' : (b.target_audience === 'buyers' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-primary');
+
+                                        return `
+                                            <tr class="hover:bg-slate-50 transition-colors">
+                                                <td class="py-3 px-3 font-semibold text-slate-500 whitespace-nowrap">${dateStr}</td>
+                                                <td class="py-3 px-3 min-w-[200px]">
+                                                    <span class="font-bold text-slate-800 block">${escapeHTML(b.title)}</span>
+                                                    <span class="text-slate-500 text-[11px] block line-clamp-1">${escapeHTML(b.body)}</span>
+                                                </td>
+                                                <td class="py-3 px-3 whitespace-nowrap">
+                                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${audienceBadge}">
+                                                        ${audienceLabel}
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 px-3 whitespace-nowrap">
+                                                    <span class="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                                                        ✅ ${b.sent_count || 0} envoyé${b.sent_count > 1 ? 's' : ''}
+                                                    </span>
+                                                    ${b.failure_count > 0 ? `<span class="ml-1 text-slate-400 text-[10px]">(${b.failure_count} échec${b.failure_count > 1 ? 's' : ''})</span>` : ''}
+                                                </td>
+                                                <td class="py-3 px-3 text-slate-600 font-mono text-[11px] truncate max-w-[120px]">
+                                                    ${escapeHTML(b.url || '/')}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
     function renderLoginModal() {
         containerEl.innerHTML = `
             <div class="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-slate-50 relative overflow-hidden">
@@ -4112,6 +4388,113 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             });
         }
 
+        function bindBroadcastEvents() {
+            const titleInput = containerEl.querySelector('#broadcast-title-input');
+            const bodyInput = containerEl.querySelector('#broadcast-body-input');
+            const urlInput = containerEl.querySelector('#broadcast-url-input');
+            const titleCharCount = containerEl.querySelector('#title-char-count');
+            const bodyCharCount = containerEl.querySelector('#body-char-count');
+            const mockupTitle = containerEl.querySelector('#mockup-notification-title');
+            const mockupBody = containerEl.querySelector('#mockup-notification-body');
+            const form = containerEl.querySelector('#form-broadcast-push');
+            const submitBtn = containerEl.querySelector('#btn-submit-broadcast');
+
+            // Mise à jour temps réel du mockup smartphone
+            if (titleInput && mockupTitle) {
+                titleInput.addEventListener('input', () => {
+                    const val = titleInput.value.trim();
+                    mockupTitle.textContent = val || '🔥 Flash Info : Bons plans du jour !';
+                    if (titleCharCount) titleCharCount.textContent = `${titleInput.value.length} / 60`;
+                });
+            }
+
+            if (bodyInput && mockupBody) {
+                bodyInput.addEventListener('input', () => {
+                    const val = bodyInput.value.trim();
+                    mockupBody.textContent = val || 'Les restaurants et boutiques du campus viennent de publier de nouveaux articles...';
+                    if (bodyCharCount) bodyCharCount.textContent = `${bodyInput.value.length} / 210`;
+                });
+            }
+
+            // Raccourcis de liens de redirection rapides
+            containerEl.querySelectorAll('.btn-url-preset').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    if (urlInput) {
+                        urlInput.value = btn.getAttribute('data-url') || '/';
+                    }
+                });
+            });
+
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const title = (titleInput?.value || '').trim();
+                    const body = (bodyInput?.value || '').trim();
+                    const url = (urlInput?.value || '/').trim();
+                    const audienceRadio = form.querySelector('input[name="broadcast-audience"]:checked');
+                    const targetAudience = audienceRadio?.value || 'all';
+
+                    if (!title || !body) {
+                        showToast('Veuillez renseigner le titre et le message de l\'alerte.', 'warning');
+                        return;
+                    }
+
+                    const audienceLabel = targetAudience === 'sellers' ? 'Marchands uniquement' : (targetAudience === 'buyers' ? 'Étudiants uniquement' : 'Tous les abonnés');
+
+                    const confirmed = await showConfirm({
+                        title: 'Confirmer la diffusion push',
+                        message: `Voulez-vous vraiment diffuser cette notification push à "${audienceLabel}" ? Tous les appareils réceptifs recevront l'alerte instantanément.`,
+                        confirmText: 'Diffuser maintenant 📢',
+                        cancelText: 'Annuler',
+                        isDestructive: false,
+                        icon: 'fa-paper-plane',
+                    });
+
+                    if (!confirmed) return;
+
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i><span>Diffusion en cours...</span>';
+                    }
+
+                    try {
+                        const res = await broadcastPushNotification({
+                            title,
+                            body,
+                            url,
+                            targetAudience,
+                        });
+
+                        if (res.sentCount > 0) {
+                            showToast(`🎉 Alerte diffusée avec succès ! ${res.sentCount} appareil(s) notifié(s).`, 'success');
+                        } else {
+                            showToast(res.message || 'ℹ️ Aucun appareil enregistré en veille pour cette audience pour le moment.', 'info');
+                        }
+
+                        if (titleInput) titleInput.value = '';
+                        if (bodyInput) bodyInput.value = '';
+                        if (urlInput) urlInput.value = '/';
+
+                        const [refreshedBroadcasts, refreshedCounts] = await Promise.all([
+                            fetchPushBroadcasts().catch(() => []),
+                            fetchPushSubscribersCount().catch(() => ({ total: 0, sellers: 0, buyers: 0 })),
+                        ]);
+                        pushBroadcasts = refreshedBroadcasts;
+                        pushSubscribersCount = refreshedCounts;
+                        render();
+                    } catch (err) {
+                        console.error('[SuperAdmin] Erreur diffusion push:', err);
+                        showToast(err.message || 'Échec de la diffusion push.', 'error');
+                    } finally {
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i><span>Diffuser la notification push maintenant 📢</span>';
+                        }
+                    }
+                });
+            }
+        }
+
         function bindSellersEvents() {
             // Recherche vendeurs
             const sellerSearchInput = containerEl.querySelector('#admin-seller-search');
@@ -4541,6 +4924,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         if (activeTab === 'locations') bindLocationsEvents();
         if (activeTab === 'carousels') bindCarouselsEvents();
         if (activeTab === 'partners') bindPartnersEvents();
+        if (activeTab === 'broadcast') bindBroadcastEvents();
     }
 
     containerEl.cleanup = () => {

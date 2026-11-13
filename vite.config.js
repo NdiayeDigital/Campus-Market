@@ -4,6 +4,7 @@ import verifyPaymentHandler from './api/verify-payment.js';
 import webhookHandler from './api/webhook-saspay.js';
 import sendOrderPushHandler from './api/send-order-push.js';
 import adminResetPasswordHandler from './api/admin-reset-password.js';
+import adminBroadcastPushHandler from './api/admin-broadcast-push.js';
 
 function apiDevMiddleware() {
   return {
@@ -60,6 +61,9 @@ function apiDevMiddleware() {
           }
           if (pathname === '/api/admin-reset-password') {
             return await adminResetPasswordHandler(req, res);
+          }
+          if (pathname === '/api/admin-broadcast-push') {
+            return await adminBroadcastPushHandler(req, res);
           }
         } catch (err) {
           console.error('[API Middleware Error]:', err);

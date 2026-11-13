@@ -36,6 +36,7 @@ import { SUPPORT_CONFIG } from './config/support.js';
 import { updateSEO, setCatalogSEO, setOrdersSEO, setSellerSEO, resetDefaultSEO } from './utils/seo.js';
 import { resolveRoute } from './utils/router.js';
 import { initPwaInstallPrompt } from './utils/pwa-install.js';
+import { initPushNotificationPrompt } from './utils/push-prompt.js';
 import logoUrl from './assets/logo.webp';
 
 export { showToast };
@@ -1116,5 +1117,6 @@ if (
             .catch((err) => console.warn('[SW] Ignoré:', err.message));
         
         initPwaInstallPrompt();
+        initPushNotificationPrompt();
     });
 }
