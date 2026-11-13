@@ -235,6 +235,13 @@ export function createBottomNav({
                         </div>
                     </a>
 
+                    <!-- Liens Légaux & À propos Sidebar -->
+                    <div class="px-2 pt-1 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                        <button type="button" id="sidebar-link-about" class="hover:text-primary transition-colors cursor-pointer">À propos</button>
+                        <span>•</span>
+                        <button type="button" id="sidebar-link-terms" class="hover:text-primary transition-colors cursor-pointer">Règles & CGU</button>
+                    </div>
+
                     <!-- Indicateur Réseau & Version -->
                     <div class="px-2 pt-1 flex items-center justify-between text-[10px] text-slate-400">
                         <span class="flex items-center gap-1.5 font-medium">
@@ -310,6 +317,14 @@ export function createBottomNav({
             if (typeof onNavigate === 'function') {
                 onNavigate('seller');
             }
+        });
+
+        navContainer.querySelector('#sidebar-link-about')?.addEventListener('click', () => {
+            if (typeof onNavigate === 'function') onNavigate('about');
+        });
+
+        navContainer.querySelector('#sidebar-link-terms')?.addEventListener('click', () => {
+            if (typeof onNavigate === 'function') onNavigate('terms');
         });
     }
 

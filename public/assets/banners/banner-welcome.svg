@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <linearGradient id="bgWelcome" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#091b36"/>
+      <stop offset="45%" stop-color="#0f2d59"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <radialGradient id="glowWelcome" cx="85%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadowBox" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Fond Dégradé 16:9 -->
+  <rect width="1600" height="900" fill="url(#bgWelcome)"/>
+  <rect width="1600" height="900" fill="url(#glowWelcome)"/>
+
+  <!-- Motifs géométriques décoratifs -->
+  <circle cx="1400" cy="200" r="280" fill="#3b82f6" opacity="0.08"/>
+  <circle cx="1480" cy="720" r="220" fill="#f59e0b" opacity="0.06"/>
+  <circle cx="120" cy="800" r="180" fill="#ffffff" opacity="0.03"/>
+
+  <!-- Trame de points légers -->
+  <g opacity="0.12" fill="#ffffff">
+    <circle cx="700" cy="120" r="3"/><circle cx="740" cy="120" r="3"/><circle cx="780" cy="120" r="3"/><circle cx="820" cy="120" r="3"/><circle cx="860" cy="120" r="3"/>
+    <circle cx="700" cy="160" r="3"/><circle cx="740" cy="160" r="3"/><circle cx="780" cy="160" r="3"/><circle cx="820" cy="160" r="3"/><circle cx="860" cy="160" r="3"/>
+    <circle cx="700" cy="200" r="3"/><circle cx="740" cy="200" r="3"/><circle cx="780" cy="200" r="3"/><circle cx="820" cy="200" r="3"/><circle cx="860" cy="200" r="3"/>
+  </g>
+
+  <!-- Badge Institutionnel -->
+  <g transform="translate(100, 140)">
+    <rect width="440" height="46" rx="23" fill="#ffffff" fill-opacity="0.12" stroke="#ffffff" stroke-opacity="0.25" stroke-width="2"/>
+    <circle cx="28" cy="23" r="10" fill="#f59e0b"/>
+    <text x="50" y="29" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="16" font-weight="800" fill="#ffffff" letter-spacing="2">
+      UNIVERSITÉ IBA DER THIAM DE THIÈS
+    </text>
+  </g>
+
+  <!-- Titre Principal & Accroche -->
+  <text x="100" y="270" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="62" font-weight="900" fill="#ffffff" letter-spacing="-1">
+    CAMPUS MARKET
+  </text>
+  
+  <text x="100" y="340" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="34" font-weight="800" fill="url(#goldGrad)">
+    La 1ère Marketplace des Étudiants de l'UIDT
+  </text>
+
+  <text x="100" y="420" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="24" font-weight="500" fill="#e2e8f0">
+    Vos repas chauds, fournitures, mode et polycopies livrés
+  </text>
+  <text x="100" y="460" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#ffffff">
+    Directement dans votre chambre de pavillon en 15 à 30 minutes !
+  </text>
+
+  <!-- 3 Puces Visuelles Avantages -->
+  <g transform="translate(100, 540)">
+    <!-- Avantage 1 -->
+    <rect x="0" y="0" width="260" height="72" rx="20" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
+    <text x="24" y="34" font-family="'Plus Jakarta Sans', sans-serif" font-size="16" font-weight="800" fill="#fbbf24">⚡ RAPIDITÉ</text>
+    <text x="24" y="56" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="600" fill="#ffffff">Livraison 15-30 min</text>
+
+    <!-- Avantage 2 -->
+    <rect x="280" y="0" width="280" height="72" rx="20" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
+    <text x="304" y="34" font-family="'Plus Jakarta Sans', sans-serif" font-size="16" font-weight="800" fill="#34d399">📍 EN PAVILLON</text>
+    <text x="304" y="56" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="600" fill="#ffffff">Pavillons A, B, 1000 lits</text>
+
+    <!-- Avantage 3 -->
+    <rect x="580" y="0" width="260" height="72" rx="20" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
+    <text x="604" y="34" font-family="'Plus Jakarta Sans', sans-serif" font-size="16" font-weight="800" fill="#60a5fa">💵 PAIEMENT SOUPLE</text>
+    <text x="604" y="56" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="600" fill="#ffffff">Espèces &amp; Wave direct</text>
+  </g>
+
+  <!-- Illustration Graphique Stylisée à Droite -->
+  <g transform="translate(1040, 160)" filter="url(#shadowBox)">
+    <!-- Carte Principale Flottante -->
+    <rect x="0" y="40" width="440" height="520" rx="36" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.25" stroke-width="2"/>
+    
+    <!-- Cercle d'illustration -->
+    <circle cx="220" cy="200" r="110" fill="url(#goldGrad)" opacity="0.95"/>
+    
+    <!-- Icône de colis / cadeau / livraison en chambre -->
+    <path d="M 220 120 L 290 160 L 220 200 L 150 160 Z" fill="#ffffff" opacity="0.9"/>
+    <path d="M 150 170 L 215 210 L 215 285 L 150 240 Z" fill="#ffffff" opacity="0.75"/>
+    <path d="M 290 170 L 225 210 L 225 285 L 290 240 Z" fill="#ffffff" opacity="0.6"/>
+    
+    <!-- Ruban -->
+    <line x1="220" y1="200" x2="220" y2="285" stroke="#0f2d59" stroke-width="6"/>
+
+    <text x="220" y="370" font-family="'Plus Jakarta Sans', sans-serif" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">
+      LIVRAISON EN CHAMBRE
+    </text>
+    <text x="220" y="415" font-family="'Plus Jakarta Sans', sans-serif" font-size="18" font-weight="600" fill="#93c5fd" text-anchor="middle">
+      De porte à porte sur tout le campus
+    </text>
+
+    <!-- Pastille Prix Étudiant -->
+    <g transform="translate(70, 460)">
+      <rect width="300" height="54" rx="27" fill="#10b981"/>
+      <text x="150" y="34" font-family="'Plus Jakarta Sans', sans-serif" font-size="17" font-weight="900" fill="#ffffff" text-anchor="middle">
+        0 FCFA DE FRAIS CACHÉS
+      </text>
+    </g>
+  </g>
+</svg>

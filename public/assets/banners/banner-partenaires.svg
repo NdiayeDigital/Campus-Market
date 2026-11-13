@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <linearGradient id="bgPartenaire" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="45%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#022c22"/>
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6ee7b7"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <radialGradient id="glowPartenaire" cx="80%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadowBoxPart" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Fond Dégradé Émeraude 16:9 -->
+  <rect width="1600" height="900" fill="url(#bgPartenaire)"/>
+  <rect width="1600" height="900" fill="url(#glowPartenaire)"/>
+
+  <!-- Cercles décoratifs -->
+  <circle cx="1400" cy="220" r="260" fill="#10b981" opacity="0.12"/>
+  <circle cx="150" cy="750" r="200" fill="#059669" opacity="0.15"/>
+
+  <!-- Badge Partenariats -->
+  <g transform="translate(100, 140)">
+    <rect width="400" height="46" rx="23" fill="#ffffff" fill-opacity="0.15" stroke="#ffffff" stroke-opacity="0.3" stroke-width="2"/>
+    <circle cx="28" cy="23" r="10" fill="#10b981"/>
+    <text x="50" y="29" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="16" font-weight="900" fill="#ffffff" letter-spacing="2">
+      🤝 ÉCOSYSTÈME PARTENAIRE
+    </text>
+  </g>
+
+  <!-- Titre Principal -->
+  <text x="100" y="270" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="62" font-weight="900" fill="#ffffff" letter-spacing="-1">
+    DEVENEZ PARTENAIRE
+  </text>
+  
+  <text x="100" y="340" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="34" font-weight="800" fill="url(#emeraldGrad)">
+    Amicales, Commerces Locaux &amp; Sponsors
+  </text>
+
+  <text x="100" y="420" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="24" font-weight="500" fill="#a7f3d0">
+    Gagnez en visibilité et proposez vos avantages exclusifs
+  </text>
+  <text x="100" y="460" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#ffffff">
+    Auprès de milliers d'étudiants de l'Université Iba Der Thiam !
+  </text>
+
+  <!-- 3 Cartouches Partenaires -->
+  <g transform="translate(100, 540)">
+    <rect x="0" y="0" width="260" height="72" rx="20" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1.5"/>
+    <text x="24" y="34" font-family="'Plus Jakarta Sans', sans-serif" font-size="16" font-weight="800" fill="#6ee7b7">🎓 AMICALES UFR</text>
+    <text x="24" y="56" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="600" fill="#ffffff">Clubs &amp; associations</text>
+
+    <rect x="280" y="0" width="280" height="72" rx="20" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1.5"/>
+    <text x="304" y="34" font-family="'Plus Jakarta Sans', sans-serif" font-size="16" font-weight="800" fill="#a7f3d0">🏪 COMMERCES THIÈS</text>
+    <text x="304" y="56" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="600" fill="#ffffff">Offres &amp; bons plans</text>
+
+    <rect x="580" y="0" width="260" height="72" rx="20" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1.5"/>
+    <text x="604" y="34" font-family="'Plus Jakarta Sans', sans-serif" font-size="16" font-weight="800" fill="#fde047">✨ SPONSORS OFFICIELS</text>
+    <text x="604" y="56" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="600" fill="#ffffff">Visibilité garantie</text>
+  </g>
+
+  <!-- Visuel Graphique à Droite -->
+  <g transform="translate(1040, 160)" filter="url(#shadowBoxPart)">
+    <rect x="0" y="40" width="440" height="520" rx="36" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.3" stroke-width="2"/>
+    
+    <circle cx="220" cy="200" r="110" fill="#047857"/>
+    <circle cx="220" cy="200" r="95" fill="#059669"/>
+    
+    <!-- Poignée de mains stylisée -->
+    <path d="M 160 210 L 205 170 C 215 160, 230 160, 240 170 L 280 210 L 250 240 L 225 215 L 210 230 L 180 200 Z" fill="#ffffff" opacity="0.95"/>
+    <path d="M 280 210 L 245 245 C 235 255, 220 255, 210 245 L 175 210" stroke="#fde047" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+    <text x="220" y="370" font-family="'Plus Jakarta Sans', sans-serif" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">
+      ALLIANCES CAMPUS
+    </text>
+    <text x="220" y="415" font-family="'Plus Jakarta Sans', sans-serif" font-size="18" font-weight="600" fill="#a7f3d0" text-anchor="middle">
+      Rejoignez notre réseau officiel
+    </text>
+
+    <!-- Pastille Contact -->
+    <g transform="translate(70, 460)">
+      <rect width="300" height="54" rx="27" fill="#047857"/>
+      <text x="150" y="34" font-family="'Plus Jakarta Sans', sans-serif" font-size="17" font-weight="900" fill="#ffffff" text-anchor="middle">
+        SECTION EN BAS DE PAGE
+      </text>
+    </g>
+  </g>
+</svg>

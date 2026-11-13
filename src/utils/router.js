@@ -59,7 +59,27 @@ export function resolveRoute(rawHash = '', search = '') {
         return { view: 'orders', params: {} };
     }
 
-    // 6. Support des paramètres d'URL (?shop=UUID ou ?seller=UUID)
+    // 6. Pages institutionnelles & légales (#about, #terms, #privacy)
+    if (hash === '#about' || hash.startsWith('#about?') || hash === '#a-propos' || hash.startsWith('#a-propos?')) {
+        return { view: 'about', params: {} };
+    }
+    if (
+        hash === '#terms' || hash.startsWith('#terms?') ||
+        hash === '#cgu' || hash.startsWith('#cgu?') ||
+        hash === '#conditions' || hash.startsWith('#conditions?') ||
+        hash === '#regles' || hash.startsWith('#regles?')
+    ) {
+        return { view: 'terms', params: {} };
+    }
+    if (
+        hash === '#privacy' || hash.startsWith('#privacy?') ||
+        hash === '#confidentialite' || hash.startsWith('#confidentialite?') ||
+        hash === '#donnees-personnelles' || hash.startsWith('#donnees-personnelles?')
+    ) {
+        return { view: 'privacy', params: {} };
+    }
+
+    // 7. Support des paramètres d'URL (?shop=UUID ou ?seller=UUID)
     try {
         const searchStr = typeof search === 'string' 
             ? search 

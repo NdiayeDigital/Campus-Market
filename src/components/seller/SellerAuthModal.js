@@ -302,6 +302,10 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                             <i class="fa-solid fa-check text-emerald-600 text-[11px] mt-0.5 shrink-0"></i>
                             <span>Examen et validation de votre dossier sous <strong>24h à 48h</strong> par l'administration.</span>
                         </li>
+                        <li class="flex items-start gap-2 pt-1 border-t border-slate-200/60">
+                            <i class="fa-solid fa-file-contract text-primary text-[11px] mt-0.5 shrink-0"></i>
+                            <span>Adhésion aux <a href="#terms" target="_blank" class="text-primary hover:underline font-bold">Règles & CGU officielles</a> du campus.</span>
+                        </li>
                     </ul>
                 </div>
 

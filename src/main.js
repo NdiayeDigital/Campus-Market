@@ -13,7 +13,10 @@ import { createCheckoutModal } from './components/CheckoutModal.js';
 import { createOrderStatusView, trackRecentOrder } from './components/OrderStatus.js';
 import { createProductDetailModal } from './components/ProductDetailModal.js';
 import { createBottomNav } from './components/BottomNav.js';
-import { createHeroBanner } from './components/HeroBanner.js';
+import { createAnnouncementCarousel } from './components/AnnouncementCarousel.js';
+import { createPartnersSection } from './components/PartnersSection.js';
+import { createLegalView } from './components/LegalView.js';
+import { fetchCarouselSlides, fetchPartners } from './services/admin-service.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
 import { createForcePasswordChangeModal } from './components/seller/ForcePasswordChangeModal.js';
 import { createSellerShowcase } from './components/seller/SellerShowcase.js';
@@ -67,7 +70,7 @@ async function initApp() {
     appEl.innerHTML = ''; // Nettoyage initial
 
     const rootWrapper = document.createElement('div');
-    rootWrapper.className = 'min-h-[100dvh] bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white';
+    rootWrapper.className = 'min-h-[100dvh] bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white overflow-x-hidden w-full';
 
     let headerComponent = null;
     let categoryChipsComponent = null;
@@ -266,18 +269,41 @@ async function initApp() {
 
     rootWrapper.appendChild(categoryChipsComponent);
 
-    // 4. Hero Banner (Accueil & Découverte UIDT)
-    const heroBannerComponent = createHeroBanner({
-        onSelectTag: async (tagQuery) => {
-            appState.searchQuery = tagQuery;
+    // 4. Carrousel 16:9 d'Accueil (Panneau d'Annonces, Pubs & Partenaires)
+    const announcementCarouselComponent = createAnnouncementCarousel({
+        onNavigate: (targetView) => {
+            navigateToView(targetView);
+        },
+        onSelectCategory: async (category) => {
+            appState.searchQuery = '';
+            appState.currentCategory = category;
+            categoryChipsComponent?.setActiveCategory(category);
             const searchInput = document.getElementById('header-search-input');
-            if (searchInput) searchInput.value = tagQuery;
+            if (searchInput) searchInput.value = '';
             if (appState.currentView !== 'catalog') {
                 navigateToView('catalog');
             }
             await reloadProducts();
         },
+        onScrollToPartners: () => {
+            const partnersEl = document.getElementById('partners-section');
+            if (partnersEl) {
+                partnersEl.scrollIntoView({ behavior: 'smooth' });
+            }
+        },
     });
+
+    // 4b. Section Nos Partenaires (En bas de page)
+    const partnersSectionComponent = createPartnersSection();
+
+    // Synchronisation asynchrone des données dynamiques carrousel & partenaires
+    fetchCarouselSlides().then((slides) => {
+        announcementCarouselComponent.setSlides?.(slides);
+    }).catch(() => {});
+
+    fetchPartners().then((pts) => {
+        partnersSectionComponent.setPartners?.(pts);
+    }).catch(() => {});
 
     // 5. Conteneur principal (Vues dynamiques - Plein écran fluide)
     const mainContentEl = document.createElement('main');
@@ -328,40 +354,56 @@ async function initApp() {
     const footerEl = document.createElement('footer');
     footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 sm:px-6 lg:px-8 xl:px-10 text-center mt-auto pb-safe-content sm:pb-8 lg:ml-64 lg:w-[calc(100%-16rem)] w-full';
     footerEl.innerHTML = `
-        <div class="w-full flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-slate-500">
-            <!-- Marque & Identité UIDT -->
-            <div class="flex flex-col sm:flex-row items-center gap-3">
-                <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-10 sm:h-12 w-auto max-w-[200px] object-contain" onerror="this.src='/assets/logo.webp'">
-                <div class="text-left hidden sm:block">
-                    <span class="text-[11px] text-slate-400 block font-medium">Université Iba Der Thiam de Thiès</span>
+        <div class="w-full flex flex-col gap-6 text-xs text-slate-500">
+            <!-- Haut du footer : Identité, Liens Rapides & Support -->
+            <div class="w-full flex flex-col sm:flex-row items-center justify-between gap-5">
+                <!-- Marque & Identité UIDT -->
+                <div class="flex flex-col sm:flex-row items-center gap-3">
+                    <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-10 sm:h-12 w-auto max-w-[200px] object-contain" onerror="this.src='/assets/logo.webp'">
+                    <div class="text-left hidden sm:block">
+                        <span class="text-[11px] text-slate-400 block font-medium">Université Iba Der Thiam de Thiès</span>
+                    </div>
+                </div>
+
+                <!-- Liens de navigation Desktop & Tablette -->
+                <div class="hidden sm:flex items-center gap-5 text-slate-600 font-medium flex-wrap justify-center">
+                    <button id="footer-link-catalog" class="hover:text-primary transition-colors cursor-pointer">Offres</button>
+                    <button id="footer-link-orders" class="hover:text-primary transition-colors cursor-pointer">Mes commandes</button>
+                    <button id="footer-link-seller" class="hover:text-amber-700 text-amber-900 font-semibold transition-colors cursor-pointer">Espace Vendeur</button>
+                    <a href="${SUPPORT_CONFIG.whatsappUrl}" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1 cursor-pointer">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> Aide & Support (${SUPPORT_CONFIG.phoneDisplay})
+                    </a>
+                </div>
+
+                <!-- Bouton Support WhatsApp Mobile -->
+                <div class="flex sm:hidden items-center justify-center w-full">
+                    <a href="${SUPPORT_CONFIG.whatsappUrl}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 rounded-full font-bold text-xs transition-all shadow-sm active:scale-95 min-h-[44px]">
+                        <i class="fa-brands fa-whatsapp text-base"></i>
+                        <span>Besoin d'aide ? Support WhatsApp (${SUPPORT_CONFIG.phoneDisplay})</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Liens de navigation Desktop & Tablette (masqués sur mobile car déjà dans BottomNav) -->
-            <div class="hidden sm:flex items-center gap-5 text-slate-600 font-medium flex-wrap justify-center">
-                <button id="footer-link-catalog" class="hover:text-primary transition-colors">Offres</button>
-                <button id="footer-link-orders" class="hover:text-primary transition-colors">Mes commandes</button>
-                <button id="footer-link-seller" class="hover:text-amber-700 text-amber-900 font-semibold transition-colors">Espace Vendeur</button>
-                <a href="${SUPPORT_CONFIG.whatsappUrl}" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> Aide & Support (${SUPPORT_CONFIG.phoneDisplay})
-                </a>
+            <!-- Bas du footer : Liens Institutionnels & Légaux -->
+            <div class="w-full pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
+                <div class="flex items-center gap-3 sm:gap-4 flex-wrap justify-center text-slate-500 font-medium">
+                    <button id="footer-link-about" class="hover:text-primary transition-colors cursor-pointer">À propos</button>
+                    <span>•</span>
+                    <button id="footer-link-terms" class="hover:text-primary transition-colors cursor-pointer">Conditions d'utilisation</button>
+                    <span>•</span>
+                    <button id="footer-link-privacy" class="hover:text-primary transition-colors cursor-pointer">Confidentialité</button>
+                </div>
+                <p>© 2026 Campus Market · Université Iba Der Thiam de Thiès · Livraison Pavillon-à-Pavillon.</p>
             </div>
-
-            <!-- Bouton Support WhatsApp Mobile (visible uniquement sur smartphone au lieu des liens doublons) -->
-            <div class="flex sm:hidden items-center justify-center w-full">
-                <a href="${SUPPORT_CONFIG.whatsappUrl}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 rounded-full font-bold text-xs transition-all shadow-sm active:scale-95 min-h-[44px]">
-                    <i class="fa-brands fa-whatsapp text-base"></i>
-                    <span>Besoin d'aide ? Support WhatsApp (${SUPPORT_CONFIG.phoneDisplay})</span>
-                </a>
-            </div>
-
-            <p class="text-[11px] text-slate-400">© 2026 Campus Market. Livraison Pavillon-à-Pavillon.</p>
         </div>
     `;
 
     footerEl.querySelector('#footer-link-catalog')?.addEventListener('click', () => navigateToView('catalog'));
     footerEl.querySelector('#footer-link-orders')?.addEventListener('click', () => navigateToView('orders'));
     footerEl.querySelector('#footer-link-seller')?.addEventListener('click', openSellerFlow);
+    footerEl.querySelector('#footer-link-about')?.addEventListener('click', () => navigateToView('about'));
+    footerEl.querySelector('#footer-link-terms')?.addEventListener('click', () => navigateToView('terms'));
+    footerEl.querySelector('#footer-link-privacy')?.addEventListener('click', () => navigateToView('privacy'));
 
     rootWrapper.appendChild(footerEl);
     appEl.appendChild(rootWrapper);
@@ -471,6 +513,25 @@ async function initApp() {
                 description: 'Gérez vos coordonnées, pavillon, chambre, statut de boutique et abonnement Campus Market.'
             });
             renderSellerView('profile');
+        } else if (viewName === 'about' || viewName === 'terms' || viewName === 'privacy') {
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            if (headerComponent.setMode) headerComponent.setMode('catalog');
+            categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.remove('hidden');
+            if (bottomNavComponent) bottomNavComponent.setHidden(false);
+
+            const titles = {
+                about: 'À Propos de Campus Market — Marketplace Étudiante UIDT',
+                terms: "Conditions Générales d'Utilisation (CGU) — Campus Market UIDT",
+                privacy: 'Politique de Confidentialité & Données Personnelles — Campus Market UIDT',
+            };
+            const descs = {
+                about: "Découvrez la 1ère marketplace des étudiants de l'Université Iba Der Thiam de Thiès : livraison en chambre, économie solidaire et proximité.",
+                terms: "Consultez les règles officielles et conditions d'utilisation de Campus Market UIDT : intermédiation, paiements directs et produits interdits.",
+                privacy: "Politique de confidentialité et protection des données personnelles à l'UIDT en conformité avec la loi sénégalaise CDP 2008-12.",
+            };
+            updateSEO({ title: titles[viewName], description: descs[viewName] });
+            renderLegalPageView(viewName);
         } else {
             mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
@@ -508,6 +569,19 @@ async function initApp() {
             onShowToast: showToast,
         });
         mainContentEl.appendChild(orderView);
+    }
+
+    // Rendu des pages institutionnelles et légales (À propos, CGU, Confidentialité)
+    function renderLegalPageView(tabName) {
+        mainContentEl.innerHTML = '';
+        const legalEl = createLegalView({
+            initialTab: tabName,
+            onBackToCatalog: () => navigateToView('catalog'),
+            onNavigate: (newTab) => {
+                navigateToView(newTab);
+            },
+        });
+        mainContentEl.appendChild(legalEl);
     }
 
     // Rendu du Profil Vendeur (redirigé vers l'espace vendeur unifié avec le sous-onglet profil)
@@ -665,9 +739,9 @@ async function initApp() {
     function renderCatalogView() {
         mainContentEl.innerHTML = '';
 
-        // 1. Bannière d'accueil & Découverte UIDT (affichée en mode accueil sans recherche active)
+        // 1. Carrousel 16:9 d'Accueil (Panneau d'Annonces, Pubs & Partenaires)
         if (!appState.searchQuery && appState.currentCategory === 'all') {
-            mainContentEl.appendChild(heroBannerComponent);
+            mainContentEl.appendChild(announcementCarouselComponent);
         }
 
         // 2. Section Top Shops (Vendeurs populaires certifiés)
@@ -804,6 +878,9 @@ async function initApp() {
                 await reloadProducts();
             });
             mainContentEl.appendChild(emptyEl);
+            if (!appState.searchQuery && appState.currentCategory === 'all') {
+                mainContentEl.appendChild(partnersSectionComponent);
+            }
             return;
         }
 
@@ -831,6 +908,11 @@ async function initApp() {
         });
 
         mainContentEl.appendChild(gridEl);
+
+        // 4. Section Nos Partenaires (affichée en bas de page du catalogue d'accueil)
+        if (!appState.searchQuery && appState.currentCategory === 'all') {
+            mainContentEl.appendChild(partnersSectionComponent);
+        }
     }
 
     /**

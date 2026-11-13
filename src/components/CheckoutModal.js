@@ -232,6 +232,12 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                         <span>Confirmer ma commande</span>
                         <i class="fa-solid fa-check text-sm"></i>
                     </button>
+                    <p class="text-[11px] text-slate-400 text-center mt-2.5 leading-snug">
+                        En confirmant, vous acceptez les 
+                        <a href="#terms" target="_blank" class="text-primary hover:underline font-semibold">Conditions d'utilisation</a> 
+                        et la 
+                        <a href="#privacy" target="_blank" class="text-primary hover:underline font-semibold">Politique de confidentialité</a>.
+                    </p>
                 </div>
             </form>
         </div>

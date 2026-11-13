@@ -83,7 +83,28 @@ assert.equal(r10_profile.view, 'seller', '#profile doit diriger vers le sous-ong
 assert.equal(r10_profile.params.subTab, 'profile');
 console.log('✅ [#profile] Accès au 5e sous-onglet Profil de l\'Espace Vendeur validé !');
 
-// Test 11: Catalogue par défaut
+// Test 11: Pages institutionnelles et légales (#about, #terms, #privacy)
+const r11_about = resolveRoute('#about');
+assert.equal(r11_about.view, 'about');
+const r11_about_alias = resolveRoute('#a-propos');
+assert.equal(r11_about_alias.view, 'about');
+console.log('✅ [#about & #a-propos] Résolution de la page À Propos validée !');
+
+const r11_terms = resolveRoute('#terms');
+assert.equal(r11_terms.view, 'terms');
+const r11_cgu = resolveRoute('#cgu');
+assert.equal(r11_cgu.view, 'terms');
+const r11_cond = resolveRoute('#conditions');
+assert.equal(r11_cond.view, 'terms');
+console.log('✅ [#terms & #cgu] Résolution des Conditions d\'Utilisation validée !');
+
+const r11_privacy = resolveRoute('#privacy');
+assert.equal(r11_privacy.view, 'privacy');
+const r11_conf = resolveRoute('#confidentialite');
+assert.equal(r11_conf.view, 'privacy');
+console.log('✅ [#privacy & #confidentialite] Résolution de la Politique de Confidentialité validée !');
+
+// Test 12: Catalogue par défaut
 const r10 = resolveRoute('');
 assert.equal(r10.view, 'catalog');
 const r10b = resolveRoute('#');

@@ -33,7 +33,20 @@ import {
     fetchPendingSubscriptionPayments,
     approveSubscriptionPayment,
     rejectSubscriptionPayment,
+    fetchCarouselSlides,
+    addCarouselSlide,
+    updateCarouselSlide,
+    toggleCarouselSlide,
+    deleteCarouselSlide,
+    fetchPartners,
+    addPartner,
+    updatePartner,
+    togglePartner,
+    deletePartner,
+    uploadAdminMedia,
 } from '../../services/admin-service.js';
+import { CAROUSEL_TYPES } from '../../config/announcements.js';
+import { PARTNER_CATEGORIES } from '../../config/partners.js';
 import { computeSubscriptionStatus, getPlanDetails } from '../../config/subscription.js';
 import { supabase } from '../../services/supabase.js';
 import { escapeHTML } from '../../utils/security.js';
@@ -62,8 +75,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     let allProducts = [];
     let allOrders = [];
     let deliveryLocations = [];
+    let carouselSlides = [];
+    let partners = [];
     let allProfiles = [];
-    let activeTab = 'overview'; // 'overview' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations'
+    let activeTab = 'overview'; // 'overview' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations' | 'carousels' | 'partners'
     let productSearchQuery = '';
     let sellerSearchQuery = '';
     let sellerFilterTab = 'all'; // 'all' | 'pending' | 'active' | 'suspended' | 'payments'
@@ -107,7 +122,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         render();
 
         try {
-            const [m, p, a, prods, ords, locs, profs, subPays] = await Promise.all([
+            const [m, p, a, prods, ords, locs, profs, subPays, carSlides, pts] = await Promise.all([
                 fetchGlobalMetrics(),
                 fetchPendingSellers(),
                 fetchActiveSellers(),
@@ -116,6 +131,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 fetchDeliveryLocations(true).catch(() => []),
                 fetchAllProfilesAdmin().catch(() => []),
                 fetchPendingSubscriptionPayments().catch(() => []),
+                fetchCarouselSlides(true).catch(() => []),
+                fetchPartners(true).catch(() => []),
             ]);
             metrics = m;
             pendingSellers = p || [];
@@ -125,6 +142,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             deliveryLocations = locs || [];
             allProfiles = (profs && profs.length > 0) ? profs : [...pendingSellers, ...activeSellers];
             pendingSubscriptionPayments = subPays || [];
+            carouselSlides = carSlides || [];
+            partners = pts || [];
         } catch (err) {
             console.error('[SuperAdmin] Erreur chargement données:', err);
             if (typeof onShowToast === 'function') {
@@ -226,6 +245,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             { id: 'products', label: "Produits", icon: 'fa-box', badge: allProducts.length },
             { id: 'orders', label: "Commandes", icon: 'fa-truck-ramp-box', badge: allOrders.length },
             { id: 'locations', label: "Lieux", icon: 'fa-location-dot', badge: deliveryLocations.length },
+            { id: 'carousels', label: "Carrousel", icon: 'fa-sliders', badge: carouselSlides.length },
+            { id: 'partners', label: "Partenaires", icon: 'fa-handshake', badge: partners.length },
         ];
 
         containerEl.innerHTML = `
@@ -529,13 +550,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         ${activeTab === 'products' ? renderProductsTab() : ''}
                         ${activeTab === 'orders' ? renderOrdersTab() : ''}
                         ${activeTab === 'locations' ? renderLocationsTab() : ''}
+                        ${activeTab === 'carousels' ? renderCarouselsTab() : ''}
+                        ${activeTab === 'partners' ? renderPartnersTab() : ''}
                     </div>
                 </div>
             </main>
 
             <!-- 6. BARRE INFÉRIEURE FIXE MOBILE SUPERADMIN (lg:hidden, TOUJOURS visible, z-50) -->
             <nav class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white border-t border-slate-200/80 text-slate-900 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation admin mobile">
-                <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around">
+                <div class="w-full px-2 py-1.5 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
                     ${navTabs.map(tab => `
                         <button 
                             type="button"
@@ -2037,6 +2060,41 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         `;
     }
 
+    const renderPaymentBadge = (method) => {
+        if (method === 'wave') {
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#1DA1F2]/10 text-[#0c7abf] border border-[#1DA1F2]/30"><i class="fa-solid fa-mobile-screen"></i> Wave</span>`;
+        }
+        if (method === 'om') {
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF7900]/10 text-[#d95f00] border border-[#FF7900]/30"><i class="fa-solid fa-wallet"></i> OM</span>`;
+        }
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-money-bill-wave"></i> Espèces</span>`;
+    };
+
+    const renderOrderStatusBadge = (status) => {
+        const statusMap = {
+            pending: { label: 'En attente', class: 'bg-amber-50 text-amber-800 border border-amber-200' },
+            confirmed: { label: 'Confirmée', class: 'bg-sky-50 text-sky-800 border border-sky-200' },
+            shipped: { label: 'En livraison', class: 'bg-indigo-50 text-indigo-800 border border-indigo-200' },
+            delivered: { label: 'Livrée', class: 'bg-emerald-50 text-emerald-800 border border-emerald-200' },
+            cancelled: { label: 'Annulée', class: 'bg-rose-50 text-rose-800 border border-rose-200' },
+        };
+        const config = statusMap[status] || { label: status || 'En attente', class: 'bg-slate-100 text-slate-700 border border-slate-200' };
+        return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${config.class}">${config.label}</span>`;
+    };
+
+    const renderPaymentStatusBadge = (status) => {
+        if (status === 'paid') {
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300"><i class="fa-solid fa-circle-check"></i> Payé</span>`;
+        }
+        if (status === 'failed') {
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300"><i class="fa-solid fa-circle-xmark"></i> Échoué</span>`;
+        }
+        if (status === 'refunded') {
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300"><i class="fa-solid fa-rotate-left"></i> Remboursé</span>`;
+        }
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200"><i class="fa-solid fa-clock"></i> Non payé</span>`;
+    };
+
     function renderOrdersTab() {
         const query = (orderSearchQuery || '').toLowerCase().trim();
         const filteredOrders = allOrders.filter((ord) => {
@@ -2070,28 +2128,6 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             ...deliveryLocations.map((l) => l.name),
             ...allOrders.map((o) => o.delivery_address).filter(Boolean)
         ])).sort();
-
-        const renderPaymentBadge = (method) => {
-            if (method === 'wave') {
-                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#1DA1F2]/10 text-[#0c7abf] border border-[#1DA1F2]/30"><i class="fa-solid fa-mobile-screen"></i> Wave</span>`;
-            }
-            if (method === 'om') {
-                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF7900]/10 text-[#d95f00] border border-[#FF7900]/30"><i class="fa-solid fa-wallet"></i> OM</span>`;
-            }
-            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-money-bill-wave"></i> Espèces</span>`;
-        };
-
-        const renderOrderStatusBadge = (status) => {
-            const statusMap = {
-                pending: { label: 'En attente', class: 'bg-amber-50 text-amber-800 border border-amber-200' },
-                confirmed: { label: 'Confirmée', class: 'bg-sky-50 text-sky-800 border border-sky-200' },
-                shipped: { label: 'En livraison', class: 'bg-indigo-50 text-indigo-800 border border-indigo-200' },
-                delivered: { label: 'Livrée', class: 'bg-emerald-50 text-emerald-800 border border-emerald-200' },
-                cancelled: { label: 'Annulée', class: 'bg-rose-50 text-rose-800 border border-rose-200' },
-            };
-            const config = statusMap[status] || { label: status || 'En attente', class: 'bg-slate-100 text-slate-700 border border-slate-200' };
-            return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${config.class}">${config.label}</span>`;
-        };
 
         return `
             <div class="flex flex-col gap-4">
@@ -2213,18 +2249,30 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                 ${renderOrderStatusBadge(ord.status)}
                                             </td>
                                             <td class="py-3 px-4 text-right">
-                                                <select 
-                                                    data-action="change-order-status" 
-                                                    data-id="${ord.id}"
-                                                    class="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-h-[36px]"
-                                                >
-                                                    <option value="" disabled selected>Modifier...</option>
-                                                    <option value="pending" ${ord.status === 'pending' ? 'disabled' : ''}>En attente</option>
-                                                    <option value="confirmed" ${ord.status === 'confirmed' ? 'disabled' : ''}>Confirmée</option>
-                                                    <option value="shipped" ${ord.status === 'shipped' ? 'disabled' : ''}>Expédiée</option>
-                                                    <option value="delivered" ${ord.status === 'delivered' ? 'disabled' : ''}>Livrée</option>
-                                                    <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler (Litige)</option>
-                                                </select>
+                                                <div class="flex items-center justify-end gap-1.5">
+                                                    <button 
+                                                        type="button"
+                                                        data-action="view-order-details" 
+                                                        data-id="${ord.id}"
+                                                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-primary/10 text-slate-700 hover:text-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer min-h-[36px]"
+                                                        title="Consulter tous les détails de la commande"
+                                                    >
+                                                        <i class="fa-solid fa-eye text-xs"></i>
+                                                        <span>Détails</span>
+                                                    </button>
+                                                    <select 
+                                                        data-action="change-order-status" 
+                                                        data-id="${ord.id}"
+                                                        class="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-h-[36px]"
+                                                    >
+                                                        <option value="" disabled selected>Modifier...</option>
+                                                        <option value="pending" ${ord.status === 'pending' ? 'disabled' : ''}>En attente</option>
+                                                        <option value="confirmed" ${ord.status === 'confirmed' ? 'disabled' : ''}>Confirmée</option>
+                                                        <option value="shipped" ${ord.status === 'shipped' ? 'disabled' : ''}>Expédiée</option>
+                                                        <option value="delivered" ${ord.status === 'delivered' ? 'disabled' : ''}>Livrée</option>
+                                                        <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler (Litige)</option>
+                                                    </select>
+                                                </div>
                                             </td>
                                         </tr>
                                     `).join('')}
@@ -2261,25 +2309,37 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center justify-between border-t border-slate-200/60 pt-2.5">
-                                        <div class="min-w-0 flex-1 pr-2">
+                                    <div class="flex items-center justify-between border-t border-slate-200/60 pt-2.5 gap-2">
+                                        <div class="min-w-0 flex-1 pr-1">
                                             <span class="text-xs font-semibold text-slate-800 block truncate">${escapeHTML(ord.product?.title || 'Article')} (x${ord.quantity || 1})</span>
                                             <span class="font-heading font-extrabold text-sm text-slate-900 block mt-0.5 tabular-nums">${Number(ord.price).toLocaleString('fr-FR')} FCFA</span>
                                         </div>
 
-                                        <div class="w-36 shrink-0">
-                                            <select 
-                                                data-action="change-order-status" 
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <button 
+                                                type="button" 
+                                                data-action="view-order-details" 
                                                 data-id="${ord.id}"
-                                                class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-h-[44px]"
+                                                class="px-2.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 min-h-[44px] cursor-pointer"
+                                                title="Consulter tous les détails"
                                             >
-                                                <option value="" disabled selected>Modifier...</option>
-                                                <option value="pending" ${ord.status === 'pending' ? 'disabled' : ''}>En attente</option>
-                                                <option value="confirmed" ${ord.status === 'confirmed' ? 'disabled' : ''}>Confirmée</option>
-                                                <option value="shipped" ${ord.status === 'shipped' ? 'disabled' : ''}>Expédiée</option>
-                                                <option value="delivered" ${ord.status === 'delivered' ? 'disabled' : ''}>Livrée</option>
-                                                <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler</option>
-                                            </select>
+                                                <i class="fa-solid fa-eye text-xs"></i>
+                                                <span>Détails</span>
+                                            </button>
+                                            <div class="w-32">
+                                                <select 
+                                                    data-action="change-order-status" 
+                                                    data-id="${ord.id}"
+                                                    class="w-full px-2 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-h-[44px]"
+                                                >
+                                                    <option value="" disabled selected>Modifier...</option>
+                                                    <option value="pending" ${ord.status === 'pending' ? 'disabled' : ''}>En attente</option>
+                                                    <option value="confirmed" ${ord.status === 'confirmed' ? 'disabled' : ''}>Confirmée</option>
+                                                    <option value="shipped" ${ord.status === 'shipped' ? 'disabled' : ''}>Expédiée</option>
+                                                    <option value="delivered" ${ord.status === 'delivered' ? 'disabled' : ''}>Livrée</option>
+                                                    <option value="cancelled" ${ord.status === 'cancelled' ? 'disabled' : ''}>Annuler</option>
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -2433,6 +2493,449 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     </div>
                                 </div>
                             `).join('')}
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCarouselsTab() {
+        return `
+            <div class="flex flex-col gap-6">
+                <!-- En-tête -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary mb-1">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>Panneau d'Accueil Widescreen (16:9)</span>
+                        </div>
+                        <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900">Gestion des Affiches du Carrousel (Format 16:9)</h3>
+                        <p class="text-xs text-slate-500">Diffusez des affiches et bannières graphiques (Canva, Photoshop) sur l'accueil. Affichage 100% visuel sans texte superposé.</p>
+                    </div>
+                    <span class="text-xs text-slate-500 font-bold bg-slate-100 px-3 py-1.5 rounded-full self-start sm:self-auto">
+                        ${carouselSlides.length} affiche${carouselSlides.length > 1 ? 's' : ''}
+                    </span>
+                </div>
+
+                <!-- Formulaire d'ajout d'une affiche -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-4">
+                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <div>
+                            <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Ajouter une affiche / bannière 16:9 (Image pure)</h4>
+                            <p class="text-xs text-slate-500">L'image sera affichée en plein écran 16:9 sans texte HTML ni filtre sur la marketplace</p>
+                        </div>
+                        <span class="text-xs font-bold text-accent px-2 py-0.5 bg-accent/10 rounded-md">Format 16:9</span>
+                    </div>
+
+                    <form id="form-add-carousel-slide" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Nom de référence interne -->
+                        <div class="flex flex-col gap-1 md:col-span-2">
+                            <label class="text-xs font-bold text-slate-700" for="slide-title-input">Nom de référence de l'affiche *</label>
+                            <input 
+                                type="text" 
+                                id="slide-title-input" 
+                                placeholder="Ex: Affiche Bienvenue Pavillons, Promo Rentrée, Partenariat Amicale" 
+                                required
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Type d'affiche -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="slide-type-select">Catégorie de l'affiche *</label>
+                            <select 
+                                id="slide-type-select" 
+                                required
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                                <option value="annonce">📢 Annonce Campus (Infos officielles, vie universitaire)</option>
+                                <option value="pub">🔥 Bons Plans & Promotions (Offres marchandes)</option>
+                                <option value="partenaire">🤝 Partenariat Officiel (Amicales, Commerces, Sponsors)</option>
+                            </select>
+                        </div>
+
+                        <!-- Ordre d'affichage -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="slide-order-input">Ordre d'affichage (numérique)</label>
+                            <input 
+                                type="number" 
+                                id="slide-order-input" 
+                                value="${carouselSlides.length + 1}"
+                                min="1"
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Image 16:9 (Upload OU URL) -->
+                        <div class="flex flex-col gap-1.5 md:col-span-2 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                            <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-image text-primary"></i>
+                                Visuel de l'affiche 16:9 (Fichier ou URL) *
+                            </span>
+                            <p class="text-[11px] text-slate-500">Téléversez un visuel 16:9 (ex: 1600×900 px conçu sur Canva ou Photoshop) ou renseignez son URL directe. L'affiche sera diffusée telle quelle, sans aucun texte superposé.</p>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="slide-image-file">Téléverser depuis l'appareil :</label>
+                                    <input 
+                                        type="file" 
+                                        id="slide-image-file" 
+                                        accept="image/*"
+                                        class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                                    >
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="slide-image-url">Ou URL directe de l'affiche :</label>
+                                    <input 
+                                        type="text" 
+                                        id="slide-image-url" 
+                                        placeholder="https://... ou /assets/banners/mon-affiche.svg" 
+                                        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-primary/20 focus:outline-none min-h-[38px]"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bouton de soumission -->
+                        <div class="flex items-center md:col-span-2 justify-end">
+                            <button 
+                                type="submit" 
+                                id="btn-submit-carousel-slide"
+                                class="px-6 py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                            >
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Publier cette affiche 16:9</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Liste des affiches configurées -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Affiches Actuelles du Carrousel</h4>
+                            <p class="text-xs text-slate-500">Activez, mettez en pause ou supprimez les affiches diffusées sur l'accueil</p>
+                        </div>
+                    </div>
+
+                    ${carouselSlides.length === 0 ? `
+                        <div class="text-center py-10 text-slate-400 text-xs">Aucune affiche personnalisée configurée. Les 3 bannières par défaut sont diffusées.</div>
+                    ` : `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 sm:p-5">
+                            ${carouselSlides.map((slide) => {
+                                const typeConfig = CAROUSEL_TYPES[slide.slide_type] || CAROUSEL_TYPES.annonce;
+                                const hasImg = Boolean(slide.image_url && slide.image_url.trim());
+
+                                return `
+                                    <div class="bg-slate-50 rounded-2xl border border-slate-200/80 overflow-hidden flex flex-col justify-between shadow-2xs group">
+                                        <!-- Aperçu 16:9 miniature pure (sans overlay sombre) -->
+                                        <div class="w-full aspect-[16/9] relative overflow-hidden bg-slate-950 flex items-center justify-center">
+                                            ${hasImg ? `
+                                                <img 
+                                                    src="${escapeHTML(slide.image_url)}" 
+                                                    alt="${escapeHTML(slide.title)}" 
+                                                    class="w-full h-full object-cover"
+                                                    onerror="this.style.display='none'"
+                                                />
+                                            ` : `
+                                                <div class="flex flex-col items-center justify-center text-white/60 p-4 text-center">
+                                                    <i class="fa-solid fa-image text-2xl mb-1"></i>
+                                                    <span class="text-xs font-bold line-clamp-1">${escapeHTML(slide.title)}</span>
+                                                </div>
+                                            `}
+                                        </div>
+
+                                        <!-- Détails & Actions -->
+                                        <div class="p-3.5 flex flex-col gap-2.5">
+                                            <div class="flex items-center justify-between text-xs">
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${typeConfig.badgeColor}">
+                                                    <i class="fa-solid ${typeConfig.icon}"></i>
+                                                    <span>${escapeHTML(typeConfig.label || slide.slide_type)}</span>
+                                                </span>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${slide.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'}">
+                                                    ${slide.is_active ? 'Visible en ligne' : 'En pause'}
+                                                </span>
+                                            </div>
+
+                                            <div>
+                                                <h5 class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 line-clamp-1">${escapeHTML(slide.title)}</h5>
+                                                <span class="text-[11px] text-slate-400">Ordre d'affichage : <strong>#${slide.display_order || 0}</strong></span>
+                                            </div>
+
+                                            <div class="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-200/60">
+                                                <button 
+                                                    data-action="toggle-slide" 
+                                                    data-id="${slide.id}" 
+                                                    data-active="${slide.is_active}"
+                                                    class="px-2.5 py-1 text-xs font-bold rounded-lg border transition-all active:scale-95 cursor-pointer ${
+                                                        slide.is_active 
+                                                            ? 'border-amber-200 text-amber-800 bg-amber-50 hover:bg-amber-100' 
+                                                            : 'border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
+                                                    }"
+                                                >
+                                                    ${slide.is_active ? 'Mettre en pause' : 'Activer'}
+                                                </button>
+                                                <button 
+                                                    data-action="delete-slide" 
+                                                    data-id="${slide.id}" 
+                                                    data-title="${escapeHTML(slide.title)}"
+                                                    class="w-8 h-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+                                                    title="Supprimer cette affiche"
+                                                >
+                                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderPartnersTab() {
+        return `
+            <div class="flex flex-col gap-6">
+                <!-- En-tête -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary mb-1">
+                            <i class="fa-solid fa-handshake"></i>
+                            <span>Écosystème & Alliances Campus UIDT</span>
+                        </div>
+                        <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900">Gestion des Partenaires Officiels</h3>
+                        <p class="text-xs text-slate-500">Ajoutez, activez ou gérez les partenaires affichés en bas de page (Amicales, Paiements, Commerces).</p>
+                    </div>
+                    <span class="text-xs text-slate-500 font-bold bg-slate-100 px-3 py-1.5 rounded-full self-start sm:self-auto">
+                        ${partners.length} partenaire${partners.length > 1 ? 's' : ''}
+                    </span>
+                </div>
+
+                <!-- Formulaire d'ajout d'un partenaire -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-4">
+                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <div>
+                            <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Ajouter un nouveau partenaire officiel</h4>
+                            <p class="text-xs text-slate-500">Visible dans la section "Nos Partenaires" en bas de page</p>
+                        </div>
+                    </div>
+
+                    <form id="form-add-partner" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Nom -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="partner-name-input">Nom du partenaire *</label>
+                            <input 
+                                type="text" 
+                                id="partner-name-input" 
+                                placeholder="Ex: Wave Sénégal, Amicale SES UIDT, Burger Campus..." 
+                                required
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Catégorie -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="partner-category-select">Catégorie de partenariat *</label>
+                            <select 
+                                id="partner-category-select" 
+                                required
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                                <option value="amicale">🎓 Amicale ou Association étudiante</option>
+                                <option value="payment">🛡️ Solution de Paiement Sécurisé</option>
+                                <option value="local_business">🍽️ Commerce ou Restauration locale</option>
+                                <option value="sponsor">🏆 Sponsor ou Institution partenaire</option>
+                                <option value="autre">🤝 Autre Service</option>
+                            </select>
+                        </div>
+
+                        <!-- Badge -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="partner-badge-input">Badge officiel</label>
+                            <input 
+                                type="text" 
+                                id="partner-badge-input" 
+                                placeholder="Ex: Partenaire Officiel, Paiement Certifié, Commerce Agréé" 
+                                value="Partenaire Officiel"
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Avantage étudiant (Perk) -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="partner-perk-input">Avantage pour les étudiants (Perk)</label>
+                            <input 
+                                type="text" 
+                                id="partner-perk-input" 
+                                placeholder="Ex: Paiement 0% de frais, Menus étudiants dès 1 000 F, Ateliers gratuits" 
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Description -->
+                        <div class="flex flex-col gap-1 md:col-span-2">
+                            <label class="text-xs font-bold text-slate-700" for="partner-desc-input">Description courte</label>
+                            <input 
+                                type="text" 
+                                id="partner-desc-input" 
+                                placeholder="Ex: Solution de paiement mobile rapide sans frais pour tous les étudiants et vendeurs." 
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Logo (Upload OU URL) -->
+                        <div class="flex flex-col gap-1.5 md:col-span-2 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                            <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-user text-primary"></i>
+                                Logo du Partenaire
+                            </span>
+                            <p class="text-[11px] text-slate-500">Sélectionnez le fichier logo (compressé automatiquement en carré 400x400) ou collez une URL d'image.</p>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="partner-logo-file">Fichier depuis l'appareil :</label>
+                                    <input 
+                                        type="file" 
+                                        id="partner-logo-file" 
+                                        accept="image/*"
+                                        class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                                    >
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="partner-logo-url">Ou URL directe du logo :</label>
+                                    <input 
+                                        type="text" 
+                                        id="partner-logo-url" 
+                                        placeholder="https://... ou /assets/wave.jpg" 
+                                        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-primary/20 focus:outline-none min-h-[38px]"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lien Web / WhatsApp -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="partner-link-url-input">Lien Web ou Contact WhatsApp</label>
+                            <input 
+                                type="text" 
+                                id="partner-link-url-input" 
+                                placeholder="https://... ou https://wa.me/221..." 
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Ordre d'affichage -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="partner-order-input">Ordre d'affichage</label>
+                            <input 
+                                type="number" 
+                                id="partner-order-input" 
+                                value="${partners.length + 1}"
+                                min="1"
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Bouton de soumission -->
+                        <div class="flex items-end md:col-span-2">
+                            <button 
+                                type="submit" 
+                                id="btn-submit-partner"
+                                class="w-full sm:w-auto px-6 py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                            >
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Ajouter ce partenaire officiel</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Liste des partenaires configurés -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Partenaires Enregistrés</h4>
+                            <p class="text-xs text-slate-500">Gérez la présence et l'ordre d'affichage des partenaires</p>
+                        </div>
+                    </div>
+
+                    ${partners.length === 0 ? `
+                        <div class="text-center py-10 text-slate-400 text-xs">Aucun partenaire configuré. Les partenaires par défaut sont affichés.</div>
+                    ` : `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 sm:p-5">
+                            ${partners.map((partner) => {
+                                const catConfig = PARTNER_CATEGORIES[partner.category] || PARTNER_CATEGORIES.autre;
+                                const hasLogo = Boolean(partner.logo_url && partner.logo_url.trim());
+                                const initial = (partner.name?.[0] || 'P').toUpperCase();
+
+                                return `
+                                    <div class="bg-slate-50 rounded-2xl border border-slate-200/80 p-4 flex flex-col justify-between gap-3 shadow-2xs group">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-12 h-12 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0">
+                                                ${hasLogo ? `
+                                                    <img 
+                                                        src="${escapeHTML(partner.logo_url)}" 
+                                                        alt="${escapeHTML(partner.name)}" 
+                                                        class="w-full h-full object-contain p-1"
+                                                        onerror="this.parentElement.innerHTML='<span class=\\'font-bold text-primary text-sm\\'>${escapeHTML(initial)}</span>'"
+                                                    />
+                                                ` : `
+                                                    <span class="font-bold text-primary text-sm">${escapeHTML(initial)}</span>
+                                                `}
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${catConfig.badgeClass || 'bg-slate-200 text-slate-700'}">
+                                                        ${escapeHTML(partner.category_label || catConfig.label)}
+                                                    </span>
+                                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${partner.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'}">
+                                                        ${partner.is_active ? 'Actif' : 'Pause'}
+                                                    </span>
+                                                </div>
+                                                <h5 class="font-heading font-bold text-slate-900 text-xs sm:text-sm truncate mt-1">${escapeHTML(partner.name)}</h5>
+                                            </div>
+                                        </div>
+
+                                        ${partner.perk ? `
+                                            <div class="p-1.5 rounded-lg bg-emerald-50/70 border border-emerald-200/70 text-[10px] text-emerald-800 font-semibold line-clamp-1">
+                                                🎁 ${escapeHTML(partner.perk)}
+                                            </div>
+                                        ` : ''}
+
+                                        <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                                            <span class="text-[10px] text-slate-400">#${partner.display_order || 0}</span>
+                                            <div class="flex items-center gap-1.5">
+                                                <button 
+                                                    data-action="toggle-partner" 
+                                                    data-id="${partner.id}" 
+                                                    data-active="${partner.is_active}"
+                                                    class="px-2.5 py-1 text-xs font-bold rounded-lg border transition-all active:scale-95 cursor-pointer ${
+                                                        partner.is_active 
+                                                            ? 'border-amber-200 text-amber-800 bg-amber-50 hover:bg-amber-100' 
+                                                            : 'border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
+                                                    }"
+                                                >
+                                                    ${partner.is_active ? 'Pause' : 'Activer'}
+                                                </button>
+                                                <button 
+                                                    data-action="delete-partner" 
+                                                    data-id="${partner.id}" 
+                                                    data-name="${escapeHTML(partner.name)}"
+                                                    class="w-8 h-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+                                                    title="Supprimer ce partenaire"
+                                                >
+                                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     `}
                 </div>
@@ -2912,7 +3415,340 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             });
         }
 
+        function openOrderDetailsModal(ord) {
+            if (!ord) return;
+
+            const ref = ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6).toUpperCase() : ''));
+            const createdAtStr = ord.created_at
+                ? new Date(ord.created_at).toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                  })
+                : 'Date inconnue';
+
+            const formatPhoneForWa = (raw) => {
+                if (!raw) return null;
+                let digits = String(raw).replace(/\D/g, '');
+                if (!digits) return null;
+                if (digits.startsWith('00221')) digits = digits.slice(2);
+                if (!digits.startsWith('221') && digits.length === 9) digits = `221${digits}`;
+                return digits;
+            };
+
+            const cleanPhone = (raw) => (raw ? String(raw).replace(/[^\d+]/g, '') : '');
+
+            const cleanBuyerPhone = cleanPhone(ord.buyer_phone);
+            const buyerWaPhone = formatPhoneForWa(ord.buyer_phone);
+            const buyerWaMsg = `Bonjour ${ord.buyer_name || ''} ! Je suis l'administrateur de Campus Market au sujet de votre commande ${ref}.`;
+            const buyerWaUrl = buyerWaPhone ? `https://wa.me/${buyerWaPhone}?text=${encodeURIComponent(buyerWaMsg)}` : null;
+
+            const sellerName = (ord.seller?.prenom ? `${ord.seller.prenom} ${ord.seller.nom || ''}` : ord.seller_name) || 'Vendeur';
+            const sellerShop = ord.seller?.shop_name || 'Boutique Étudiante';
+            const rawSellerPhone = ord.seller?.telephone || ord.seller_phone || '';
+            const cleanSellerPhone = cleanPhone(rawSellerPhone);
+            const sellerWaPhone = formatPhoneForWa(rawSellerPhone);
+            const sellerWaMsg = `Bonjour ${sellerName} ! Je suis l'administrateur de Campus Market au sujet de la commande ${ref}.`;
+            const sellerWaUrl = sellerWaPhone ? `https://wa.me/${sellerWaPhone}?text=${encodeURIComponent(sellerWaMsg)}` : null;
+
+            const quantity = ord.quantity || 1;
+            const totalPrice = Number(ord.price) || 0;
+            const deliveryFee = Number(ord.delivery_fee) || 0;
+            const unitPrice = ord.product?.price ? Number(ord.product.price) : Math.max(0, Math.round((totalPrice - deliveryFee) / quantity));
+            const subtotal = unitPrice * quantity;
+            const productTitle = ord.product?.title || 'Article commandé';
+            const productImage = ord.product?.image_url;
+            const productCategory = ord.product?.category;
+
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in overflow-y-auto';
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full my-auto flex flex-col max-h-[92vh] overflow-hidden">
+                    <!-- Entête Modale -->
+                    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 sticky top-0 z-10">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-lg shrink-0">
+                                <i class="fa-solid fa-receipt"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg leading-tight truncate">
+                                        Commande <span class="text-primary font-mono">${escapeHTML(ref)}</span>
+                                    </h3>
+                                    ${renderOrderStatusBadge(ord.status)}
+                                </div>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    <i class="fa-regular fa-clock mr-1"></i>${createdAtStr}
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            id="btn-close-order-modal" 
+                            class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all shrink-0 cursor-pointer min-h-[36px] min-w-[36px]"
+                            aria-label="Fermer"
+                        >
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                        </button>
+                    </div>
+
+                    <!-- Corps de la modale scrollable -->
+                    <div class="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+                        
+                        <!-- 1. Acheteur / Client -->
+                        <div class="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4">
+                            <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200/60">
+                                <span class="font-heading font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-user text-primary"></i> Client / Destinataire
+                                </span>
+                                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Acheteur</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">Nom complet</span>
+                                    <span class="font-bold text-slate-900 block text-sm">${escapeHTML(ord.buyer_name || 'Étudiant (Invité)')}</span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">Numéro de téléphone</span>
+                                    <span class="font-semibold text-slate-800 block">${escapeHTML(ord.buyer_phone || 'Non renseigné')}</span>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">Lieu de livraison & Pavillon</span>
+                                    <div class="flex items-start gap-2 text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200/70">
+                                        <i class="fa-solid fa-location-dot text-rose-500 mt-0.5 shrink-0"></i>
+                                        <span class="font-medium">${escapeHTML(ord.delivery_address || 'Non spécifié')}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions directes Client -->
+                            <div class="mt-3 pt-3 border-t border-slate-200/60 flex items-center gap-2 flex-wrap">
+                                ${buyerWaUrl ? `
+                                    <a 
+                                        href="${buyerWaUrl}" 
+                                        target="_blank" 
+                                        rel="noopener" 
+                                        class="px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-xs"
+                                    >
+                                        <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp Client
+                                    </a>
+                                ` : ''}
+                                ${cleanBuyerPhone ? `
+                                    <a 
+                                        href="tel:${cleanBuyerPhone}" 
+                                        class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all"
+                                    >
+                                        <i class="fa-solid fa-phone text-xs"></i> Appeler Client
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- 2. Vendeur / Boutique -->
+                        <div class="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4">
+                            <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200/60">
+                                <span class="font-heading font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-store text-emerald-600"></i> Boutique / Vendeur
+                                </span>
+                                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Fournisseur</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">Boutique</span>
+                                    <span class="font-bold text-slate-900 block text-sm">${escapeHTML(sellerShop)}</span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">Gestionnaire</span>
+                                    <span class="font-semibold text-slate-800 block">${escapeHTML(sellerName)}</span>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">Téléphone vendeur</span>
+                                    <span class="font-medium text-slate-700">${escapeHTML(rawSellerPhone || 'Non renseigné')}</span>
+                                </div>
+                            </div>
+
+                            <!-- Actions directes Vendeur -->
+                            <div class="mt-3 pt-3 border-t border-slate-200/60 flex items-center gap-2 flex-wrap">
+                                ${sellerWaUrl ? `
+                                    <a 
+                                        href="${sellerWaUrl}" 
+                                        target="_blank" 
+                                        rel="noopener" 
+                                        class="px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-xs"
+                                    >
+                                        <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp Vendeur
+                                    </a>
+                                ` : ''}
+                                ${cleanSellerPhone ? `
+                                    <a 
+                                        href="tel:${cleanSellerPhone}" 
+                                        class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all"
+                                    >
+                                        <i class="fa-solid fa-phone text-xs"></i> Appeler Vendeur
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- 3. Article commandé et détail des montants -->
+                        <div class="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4">
+                            <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200/60">
+                                <span class="font-heading font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-box text-amber-500"></i> Produit & Tarification
+                                </span>
+                                <div class="flex items-center gap-1.5">
+                                    ${renderPaymentBadge(ord.payment_method)}
+                                    ${renderPaymentStatusBadge(ord.payment_status)}
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200/70 mb-3">
+                                <div class="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                                    ${productImage ? `
+                                        <img src="${escapeHTML(productImage)}" alt="${escapeHTML(productTitle)}" class="w-full h-full object-cover">
+                                    ` : `
+                                        <i class="fa-solid fa-box text-slate-400 text-xl"></i>
+                                    `}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <span class="font-bold text-slate-900 text-sm block truncate">${escapeHTML(productTitle)}</span>
+                                    <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                        ${productCategory ? `<span class="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-medium text-slate-600">${escapeHTML(productCategory)}</span>` : ''}
+                                        <span>Quantité : <strong class="text-slate-800">x${quantity}</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Récapitulatif chiffré -->
+                            <div class="space-y-1.5 text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-200/70">
+                                <div class="flex justify-between items-center">
+                                    <span>Prix unitaire</span>
+                                    <span class="font-medium text-slate-900 tabular-nums">${Number(unitPrice).toLocaleString('fr-FR')} FCFA</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span>Sous-total articles (x${quantity})</span>
+                                    <span class="font-medium text-slate-900 tabular-nums">${Number(subtotal).toLocaleString('fr-FR')} FCFA</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span>Frais de livraison pavillon</span>
+                                    <span class="font-medium text-slate-900 tabular-nums">${deliveryFee > 0 ? `${Number(deliveryFee).toLocaleString('fr-FR')} FCFA` : 'Gratuit'}</span>
+                                </div>
+                                <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-sm font-heading font-extrabold text-slate-900">
+                                    <span>Total de la commande</span>
+                                    <span class="text-primary text-base tabular-nums">${Number(totalPrice).toLocaleString('fr-FR')} FCFA</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Arbitrage & Changement de statut par le SuperAdmin -->
+                        <div class="bg-primary/5 border border-primary/20 rounded-2xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <label for="modal-select-order-status" class="font-heading font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-scale-balanced text-primary"></i>
+                                    Arbitrage SuperAdmin & Statut
+                                </label>
+                                <span class="text-[10px] text-primary font-bold">Mise à jour directe</span>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+                                <select 
+                                    id="modal-select-order-status" 
+                                    class="flex-1 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary min-h-[42px] cursor-pointer"
+                                >
+                                    <option value="pending" ${ord.status === 'pending' ? 'selected' : ''}>⏳ En attente</option>
+                                    <option value="confirmed" ${ord.status === 'confirmed' ? 'selected' : ''}>✔️ Confirmée</option>
+                                    <option value="shipped" ${ord.status === 'shipped' ? 'selected' : ''}>🚚 En cours d'acheminement / Expédiée</option>
+                                    <option value="delivered" ${ord.status === 'delivered' ? 'selected' : ''}>📦 Livrée avec succès</option>
+                                    <option value="cancelled" ${ord.status === 'cancelled' ? 'selected' : ''}>❌ Annulée / Litige résolu</option>
+                                </select>
+                                <button 
+                                    type="button" 
+                                    id="modal-btn-apply-order-status"
+                                    class="px-4 py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 min-h-[42px] cursor-pointer shrink-0"
+                                >
+                                    <i class="fa-solid fa-check"></i>
+                                    <span>Appliquer</span>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Pied de page Modale -->
+                    <div class="p-4 sm:p-5 border-t border-slate-100 flex items-center justify-between bg-slate-50/80 sticky bottom-0 z-10">
+                        <span class="text-[11px] text-slate-400 font-mono">ID: ${escapeHTML(ord.id || 'N/A')}</span>
+                        <button 
+                            type="button" 
+                            id="modal-btn-close-bottom" 
+                            class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[40px]"
+                        >
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const onKeyDown = (e) => {
+                if (e.key === 'Escape') closeModal();
+            };
+            window.addEventListener('keydown', onKeyDown);
+
+            const closeModal = () => {
+                window.removeEventListener('keydown', onKeyDown);
+                modal.remove();
+            };
+
+            modal.querySelector('#btn-close-order-modal')?.addEventListener('click', closeModal);
+            modal.querySelector('#modal-btn-close-bottom')?.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+
+            const applyBtn = modal.querySelector('#modal-btn-apply-order-status');
+            const selectStatus = modal.querySelector('#modal-select-order-status');
+            applyBtn?.addEventListener('click', async () => {
+                const newStatus = selectStatus.value;
+                if (newStatus === ord.status) {
+                    showToast('Le statut est déjà ' + newStatus, 'info');
+                    return;
+                }
+
+                applyBtn.disabled = true;
+                applyBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Mise à jour...`;
+
+                try {
+                    await updateOrderStatusAdmin(ord.id, newStatus);
+                    ord.status = newStatus;
+                    const liveOrd = allOrders.find((o) => o.id === ord.id);
+                    if (liveOrd) liveOrd.status = newStatus;
+                    showToast(`Statut de la commande mis à jour : ${newStatus} ✔️`, 'success');
+                    closeModal();
+                    render();
+                } catch (err) {
+                    showToast(err.message || 'Erreur lors de la mise à jour', 'error');
+                    applyBtn.disabled = false;
+                    applyBtn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Appliquer</span>`;
+                }
+            });
+        }
+
         function bindOrdersEvents() {
+            // Consultation détaillée d'une commande
+            containerEl.querySelectorAll('button[data-action="view-order-details"]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const orderId = btn.getAttribute('data-id');
+                    const ord = allOrders.find((o) => o.id === orderId);
+                    if (ord) {
+                        openOrderDetailsModal(ord);
+                    } else {
+                        showToast('Détails de la commande introuvables', 'error');
+                    }
+                });
+            });
+
             // Recherche commande
             const searchInput = containerEl.querySelector('#admin-order-search');
             searchInput?.addEventListener('input', (e) => {
@@ -3060,6 +3896,212 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             await deleteDeliveryLocation(id);
                             deliveryLocations = deliveryLocations.filter((l) => l.id !== id);
                             showToast(`Lieu "${name}" supprimé.`, 'info');
+                            render();
+                        } catch (err) {
+                            showToast(err.message, 'error');
+                            btn.disabled = false;
+                        }
+                    }
+                });
+            });
+        }
+
+        function bindCarouselsEvents() {
+            const formAddSlide = containerEl.querySelector('#form-add-carousel-slide');
+            formAddSlide?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = formAddSlide.querySelector('#btn-submit-carousel-slide');
+                const type = formAddSlide.querySelector('#slide-type-select')?.value || 'annonce';
+                const title = formAddSlide.querySelector('#slide-title-input')?.value?.trim();
+                const displayOrder = parseInt(formAddSlide.querySelector('#slide-order-input')?.value, 10) || 0;
+                const fileInput = formAddSlide.querySelector('#slide-image-file');
+                const urlInput = formAddSlide.querySelector('#slide-image-url');
+
+                if (!title) {
+                    showToast("Le nom de référence de l'affiche est obligatoire.", 'error');
+                    return;
+                }
+
+                const hasFile = Boolean(fileInput?.files?.[0]);
+                const hasUrl = Boolean(urlInput?.value?.trim());
+
+                if (!hasFile && !hasUrl) {
+                    showToast("Veuillez fournir une affiche 16:9 (téléversement de fichier ou URL directe).", 'error');
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Traitement...`;
+
+                try {
+                    let imageUrl = urlInput?.value?.trim() || '';
+                    if (hasFile) {
+                        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Compression & upload...`;
+                        imageUrl = await uploadAdminMedia(fileInput.files[0], 'carousel');
+                    }
+
+                    const newSlide = await addCarouselSlide({
+                        title,
+                        subtitle: '',
+                        slide_type: type,
+                        badge: '',
+                        image_url: imageUrl,
+                        link_url: '',
+                        link_text: '',
+                        display_order: displayOrder,
+                        is_active: true,
+                    });
+
+                    carouselSlides.push(newSlide);
+                    showToast(`Affiche 16:9 publiée avec succès ! 🚀`, 'success');
+                    render();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Publier cette affiche 16:9`;
+                }
+            });
+
+            // Toggle activation slide
+            containerEl.querySelectorAll('button[data-action="toggle-slide"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const isCurrentlyActive = btn.getAttribute('data-active') === 'true';
+                    btn.disabled = true;
+                    try {
+                        await toggleCarouselSlide(id, !isCurrentlyActive);
+                        const target = carouselSlides.find((s) => s.id === id);
+                        if (target) target.is_active = !isCurrentlyActive;
+                        showToast(`Statut affiche : ${!isCurrentlyActive ? 'En ligne' : 'En pause'}`, 'info');
+                        render();
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        btn.disabled = false;
+                    }
+                });
+            });
+
+            // Suppression slide
+            containerEl.querySelectorAll('button[data-action="delete-slide"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const title = btn.getAttribute('data-title') || 'cette affiche';
+                    const confirmed = await showConfirm({
+                        title: 'Supprimer l\'affiche',
+                        message: `Voulez-vous vraiment supprimer "${title}" du carrousel d'accueil ?`,
+                        confirmText: 'Supprimer',
+                        cancelText: 'Annuler',
+                        isDestructive: true,
+                        icon: 'fa-sliders',
+                    });
+
+                    if (confirmed) {
+                        btn.disabled = true;
+                        try {
+                            await deleteCarouselSlide(id);
+                            carouselSlides = carouselSlides.filter((s) => s.id !== id);
+                            showToast(`Affiche supprimée du carrousel.`, 'info');
+                            render();
+                        } catch (err) {
+                            showToast(err.message, 'error');
+                            btn.disabled = false;
+                        }
+                    }
+                });
+            });
+        }
+
+        function bindPartnersEvents() {
+            const formAddPartner = containerEl.querySelector('#form-add-partner');
+            formAddPartner?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = formAddPartner.querySelector('#btn-submit-partner');
+                const name = formAddPartner.querySelector('#partner-name-input')?.value?.trim();
+                const category = formAddPartner.querySelector('#partner-category-select')?.value || 'autre';
+                const badge = formAddPartner.querySelector('#partner-badge-input')?.value?.trim();
+                const perk = formAddPartner.querySelector('#partner-perk-input')?.value?.trim();
+                const description = formAddPartner.querySelector('#partner-desc-input')?.value?.trim();
+                const websiteUrl = formAddPartner.querySelector('#partner-link-url-input')?.value?.trim();
+                const displayOrder = parseInt(formAddPartner.querySelector('#partner-order-input')?.value, 10) || 0;
+                const fileInput = formAddPartner.querySelector('#partner-logo-file');
+                const urlInput = formAddPartner.querySelector('#partner-logo-url');
+
+                if (!name) {
+                    showToast('Le nom du partenaire est requis.', 'error');
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Traitement...`;
+
+                try {
+                    let logoUrl = urlInput?.value?.trim() || '';
+                    if (fileInput?.files?.[0]) {
+                        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Compression & upload...`;
+                        logoUrl = await uploadAdminMedia(fileInput.files[0], 'partners');
+                    }
+
+                    const newPartner = await addPartner({
+                        name,
+                        category,
+                        badge,
+                        perk,
+                        description,
+                        logo_url: logoUrl,
+                        website_url: websiteUrl,
+                        display_order: displayOrder,
+                        is_active: true,
+                    });
+
+                    partners.push(newPartner);
+                    showToast(`Partenaire "${name}" ajouté avec succès ! 🤝`, 'success');
+                    render();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Ajouter ce partenaire officiel`;
+                }
+            });
+
+            // Toggle activation partner
+            containerEl.querySelectorAll('button[data-action="toggle-partner"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const isCurrentlyActive = btn.getAttribute('data-active') === 'true';
+                    btn.disabled = true;
+                    try {
+                        await togglePartner(id, !isCurrentlyActive);
+                        const target = partners.find((p) => p.id === id);
+                        if (target) target.is_active = !isCurrentlyActive;
+                        showToast(`Statut partenaire : ${!isCurrentlyActive ? 'Actif' : 'En pause'}`, 'info');
+                        render();
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        btn.disabled = false;
+                    }
+                });
+            });
+
+            // Suppression partner
+            containerEl.querySelectorAll('button[data-action="delete-partner"]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const name = btn.getAttribute('data-name') || 'ce partenaire';
+                    const confirmed = await showConfirm({
+                        title: 'Supprimer le partenaire',
+                        message: `Voulez-vous vraiment supprimer "${name}" des partenaires officiels ?`,
+                        confirmText: 'Supprimer',
+                        cancelText: 'Annuler',
+                        isDestructive: true,
+                        icon: 'fa-handshake',
+                    });
+
+                    if (confirmed) {
+                        btn.disabled = true;
+                        try {
+                            await deletePartner(id);
+                            partners = partners.filter((p) => p.id !== id);
+                            showToast(`Partenaire supprimé.`, 'info');
                             render();
                         } catch (err) {
                             showToast(err.message, 'error');
@@ -3497,6 +4539,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         if (activeTab === 'products') bindProductsEvents();
         if (activeTab === 'orders') bindOrdersEvents();
         if (activeTab === 'locations') bindLocationsEvents();
+        if (activeTab === 'carousels') bindCarouselsEvents();
+        if (activeTab === 'partners') bindPartnersEvents();
     }
 
     containerEl.cleanup = () => {

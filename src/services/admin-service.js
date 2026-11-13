@@ -11,6 +11,9 @@ import {
     SUBSCRIPTION_PLANS,
     FREE_TRIAL_CONFIG,
 } from '../config/subscription.js';
+import { DEFAULT_CAROUSEL_SLIDES, CAROUSEL_TYPES } from '../config/announcements.js';
+import { DEFAULT_PARTNERS, PARTNER_CATEGORIES } from '../config/partners.js';
+import { compressImage, dataURLtoBlob } from '../utils/image-compressor.js';
 
 /**
  * Vérifie formellement si l'utilisateur possède le rôle 'superadmin'.
@@ -709,9 +712,9 @@ export async function fetchAllOrdersAdmin() {
     try {
         const { data, error } = await supabase
             .from('orders')
-            .select('*, product:product_id(title, image_url), seller:seller_id(prenom, nom, telephone)')
+            .select('*, product:product_id(id, title, image_url, price, category), seller:seller_id(id, prenom, nom, telephone, shop_name)')
             .order('created_at', { ascending: false })
-            .limit(100);
+            .limit(200);
 
         if (error) throw error;
         return data || [];
@@ -1181,6 +1184,291 @@ export async function rejectSubscriptionPayment(paymentId, reason = '') {
     return { success: true, payment: updatedPay };
 }
 
+/**
+ * Récupère les diapositives du carrousel d'accueil (avec repli local).
+ * @param {boolean} [includeInactive=false]
+ * @returns {Promise<Array>}
+ */
+export async function fetchCarouselSlides(includeInactive = false) {
+    try {
+        let query = supabase
+            .from('carousel_slides')
+            .select('*')
+            .order('display_order', { ascending: true })
+            .order('created_at', { ascending: false });
+
+        if (!includeInactive) {
+            query = query.eq('is_active', true);
+        }
+
+        const { data, error } = await query;
+        if (error || !data || data.length === 0) {
+            return includeInactive 
+                ? DEFAULT_CAROUSEL_SLIDES 
+                : DEFAULT_CAROUSEL_SLIDES.filter((s) => s.is_active);
+        }
+        return data;
+    } catch {
+        return includeInactive 
+            ? DEFAULT_CAROUSEL_SLIDES 
+            : DEFAULT_CAROUSEL_SLIDES.filter((s) => s.is_active);
+    }
+}
+
+/**
+ * Ajoute une diapositive au carrousel (SuperAdmin).
+ * @param {Object} slideData
+ * @returns {Promise<Object>}
+ */
+export async function addCarouselSlide(slideData) {
+    if (!slideData.title?.trim()) {
+        throw new Error('Le titre de la diapositive est obligatoire.');
+    }
+
+    const payload = {
+        title: slideData.title.trim(),
+        subtitle: slideData.subtitle?.trim() || '',
+        slide_type: slideData.slide_type || 'annonce',
+        badge: slideData.badge?.trim() || (CAROUSEL_TYPES[slideData.slide_type]?.defaultBadge || '📢 Info Campus'),
+        image_url: slideData.image_url?.trim() || '',
+        link_url: slideData.link_url?.trim() || '#catalog',
+        link_text: slideData.link_text?.trim() || 'Découvrir',
+        display_order: parseInt(slideData.display_order, 10) || 0,
+        is_active: slideData.is_active !== false,
+    };
+
+    const { data, error } = await supabase
+        .from('carousel_slides')
+        .insert([payload])
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec d'ajout de la diapositive : ${error.message}`);
+    }
+    return data;
+}
+
+/**
+ * Met à jour une diapositive du carrousel (SuperAdmin).
+ * @param {string} id
+ * @param {Object} updates
+ * @returns {Promise<Object>}
+ */
+export async function updateCarouselSlide(id, updates) {
+    if (!id) throw new Error('ID diapositive manquant.');
+
+    const payload = { ...updates };
+    if (payload.title) payload.title = payload.title.trim();
+    if (payload.subtitle) payload.subtitle = payload.subtitle.trim();
+    if (payload.display_order !== undefined) payload.display_order = parseInt(payload.display_order, 10) || 0;
+
+    const { data, error } = await supabase
+        .from('carousel_slides')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec de mise à jour de la diapositive : ${error.message}`);
+    }
+    return data;
+}
+
+/**
+ * Active ou désactive une diapositive du carrousel.
+ * @param {string} id
+ * @param {boolean} isActive
+ * @returns {Promise<Object>}
+ */
+export async function toggleCarouselSlide(id, isActive) {
+    return updateCarouselSlide(id, { is_active: isActive });
+}
+
+/**
+ * Supprime une diapositive du carrousel (SuperAdmin).
+ * @param {string} id
+ * @returns {Promise<boolean>}
+ */
+export async function deleteCarouselSlide(id) {
+    if (!id) throw new Error('ID diapositive manquant.');
+    const { error } = await supabase
+        .from('carousel_slides')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        throw new Error(`Échec de suppression de la diapositive : ${error.message}`);
+    }
+    return true;
+}
+
+/**
+ * Récupère les partenaires officiels de la plateforme (avec repli local).
+ * @param {boolean} [includeInactive=false]
+ * @returns {Promise<Array>}
+ */
+export async function fetchPartners(includeInactive = false) {
+    try {
+        let query = supabase
+            .from('partners')
+            .select('*')
+            .order('display_order', { ascending: true })
+            .order('created_at', { ascending: false });
+
+        if (!includeInactive) {
+            query = query.eq('is_active', true);
+        }
+
+        const { data, error } = await query;
+        if (error || !data || data.length === 0) {
+            return includeInactive 
+                ? DEFAULT_PARTNERS 
+                : DEFAULT_PARTNERS.filter((p) => p.is_active);
+        }
+        return data;
+    } catch {
+        return includeInactive 
+            ? DEFAULT_PARTNERS 
+            : DEFAULT_PARTNERS.filter((p) => p.is_active);
+    }
+}
+
+/**
+ * Ajoute un nouveau partenaire (SuperAdmin).
+ * @param {Object} partnerData
+ * @returns {Promise<Object>}
+ */
+export async function addPartner(partnerData) {
+    if (!partnerData.name?.trim()) {
+        throw new Error('Le nom du partenaire est obligatoire.');
+    }
+
+    const category = partnerData.category || 'autre';
+    const catConfig = PARTNER_CATEGORIES[category] || PARTNER_CATEGORIES.autre;
+
+    const payload = {
+        name: partnerData.name.trim(),
+        category,
+        category_label: partnerData.category_label?.trim() || catConfig.label,
+        logo_url: partnerData.logo_url?.trim() || '',
+        description: partnerData.description?.trim() || '',
+        perk: partnerData.perk?.trim() || '',
+        badge: partnerData.badge?.trim() || 'Partenaire Officiel',
+        website_url: partnerData.website_url?.trim() || '',
+        display_order: parseInt(partnerData.display_order, 10) || 0,
+        is_active: partnerData.is_active !== false,
+    };
+
+    const { data, error } = await supabase
+        .from('partners')
+        .insert([payload])
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec d'ajout du partenaire : ${error.message}`);
+    }
+    return data;
+}
+
+/**
+ * Met à jour un partenaire (SuperAdmin).
+ * @param {string} id
+ * @param {Object} updates
+ * @returns {Promise<Object>}
+ */
+export async function updatePartner(id, updates) {
+    if (!id) throw new Error('ID partenaire manquant.');
+
+    const payload = { ...updates };
+    if (payload.name) payload.name = payload.name.trim();
+    if (payload.description) payload.description = payload.description.trim();
+    if (payload.perk) payload.perk = payload.perk.trim();
+    if (payload.display_order !== undefined) payload.display_order = parseInt(payload.display_order, 10) || 0;
+
+    const { data, error } = await supabase
+        .from('partners')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Échec de mise à jour du partenaire : ${error.message}`);
+    }
+    return data;
+}
+
+/**
+ * Active ou désactive un partenaire.
+ * @param {string} id
+ * @param {boolean} isActive
+ * @returns {Promise<Object>}
+ */
+export async function togglePartner(id, isActive) {
+    return updatePartner(id, { is_active: isActive });
+}
+
+/**
+ * Supprime un partenaire (SuperAdmin).
+ * @param {string} id
+ * @returns {Promise<boolean>}
+ */
+export async function deletePartner(id) {
+    if (!id) throw new Error('ID partenaire manquant.');
+    const { error } = await supabase
+        .from('partners')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        throw new Error(`Échec de suppression du partenaire : ${error.message}`);
+    }
+    return true;
+}
+
+/**
+ * Téléverse un média d'administration (bannière ou logo) vers Supabase Storage.
+ * @param {File|Blob} file
+ * @param {string} [folder='carousel'] - 'carousel' ou 'partners'
+ * @returns {Promise<string>} URL publique du fichier
+ */
+export async function uploadAdminMedia(file, folder = 'carousel') {
+    if (!file) throw new Error('Aucun fichier fourni.');
+
+    // Compression adaptée
+    let blob;
+    if (folder === 'carousel') {
+        const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 720, quality: 0.8 });
+        blob = dataURLtoBlob(compressed);
+    } else {
+        const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
+        blob = dataURLtoBlob(compressed);
+    }
+
+    const ext = 'jpg';
+    const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('products')
+        .upload(fileName, blob, {
+            contentType: 'image/jpeg',
+            upsert: true,
+        });
+
+    if (uploadError) {
+        throw new Error(`Échec de l'upload du média : ${uploadError.message}`);
+    }
+
+    const { data: publicData } = supabase.storage
+        .from('products')
+        .getPublicUrl(fileName);
+
+    return publicData?.publicUrl || '';
+}
+
 export default {
     ensureAdminSellerProfile,
     verifyAdminRole,
@@ -1210,5 +1498,16 @@ export default {
     approveSubscriptionPayment,
     rejectSubscriptionPayment,
     DEFAULT_DELIVERY_LOCATIONS,
+    fetchCarouselSlides,
+    addCarouselSlide,
+    updateCarouselSlide,
+    toggleCarouselSlide,
+    deleteCarouselSlide,
+    fetchPartners,
+    addPartner,
+    updatePartner,
+    togglePartner,
+    deletePartner,
+    uploadAdminMedia,
 };
 
