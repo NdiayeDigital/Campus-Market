@@ -9,19 +9,28 @@ import { PARTNER_CATEGORIES, DEFAULT_PARTNERS, getBecomePartnerWhatsappUrl } fro
 
 /**
  * Crée la section des partenaires officiels en petits blocs compacts côte à côte.
+ * Supporte deux variantes :
+ * - 'full' : Le bloc complet avec en-tête officiel, bande défilante et bandeau d'appel (tout en bas de page)
+ * - 'ticker' : Uniquement la bande défilante pure sans en-tête ni bandeau (insérée au cœur du catalogue)
+ * 
  * @param {Object} props
  * @param {Array} [props.partners] - Liste des partenaires
  * @param {Function} [props.onBecomePartner] - Callback lors du clic sur Devenir Partenaire
+ * @param {'full'|'ticker'} [props.variant='full'] - Mode d'affichage ('full' ou 'ticker')
  * @returns {HTMLElement}
  */
 export function createPartnersSection({
     partners = DEFAULT_PARTNERS,
     onBecomePartner,
+    variant = 'full',
 } = {}) {
+    const isTicker = variant === 'ticker';
     const containerEl = document.createElement('section');
-    containerEl.id = 'partners-section';
-    containerEl.className = 'w-full py-8 sm:py-10 flex flex-col gap-5 select-none overflow-hidden';
-    containerEl.setAttribute('aria-label', 'Section des Partenaires Campus Market');
+    containerEl.id = isTicker ? 'partners-ticker-section' : 'partners-section';
+    containerEl.className = isTicker 
+        ? 'w-full py-2.5 sm:py-3.5 select-none overflow-hidden my-1 sm:my-2' 
+        : 'w-full py-5 sm:py-7 flex flex-col gap-3.5 select-none overflow-hidden my-2 sm:my-3';
+    containerEl.setAttribute('aria-label', isTicker ? 'Bande Défilante des Partenaires Campus' : 'Section des Partenaires Campus Market');
 
     let currentPartners = Array.isArray(partners) && partners.length > 0 
         ? partners.filter((p) => p.is_active !== false) 
@@ -38,10 +47,10 @@ export function createPartnersSection({
                 role="button"
                 tabindex="0"
                 title="Cliquer pour découvrir ${escapeHTML(partner.name)}"
-                class="partner-tile group bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200/80 hover:border-primary/50 hover:shadow-card transition-all flex flex-col items-center text-center justify-between gap-2.5 cursor-pointer active:scale-95 min-w-0 w-full min-h-[148px] sm:min-h-[160px] select-none"
+                class="partner-tile group bg-white hover:bg-slate-50/90 rounded-2xl p-2 sm:p-2.5 border border-slate-200/90 hover:border-primary/40 hover:shadow-card transition-all flex items-center gap-2.5 cursor-pointer active:scale-95 shrink-0 w-[215px] sm:w-[245px] select-none"
             >
-                <!-- Boîte Logo Carrée Strictement 56x56 / 64x64 -->
-                <div class="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] sm:min-w-[64px] sm:min-h-[64px] rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1.5 shrink-0 group-hover:bg-primary/5 transition-colors overflow-hidden shadow-2xs">
+                <!-- Boîte Logo Carrée 56x56 -->
+                <div class="w-14 h-14 min-w-[56px] min-h-[56px] rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1.5 shrink-0 group-hover:bg-primary/5 transition-colors overflow-hidden shadow-2xs">
                     ${hasLogo ? `
                         <img 
                             src="${escapeHTML(partner.logo_url)}" 
@@ -54,28 +63,26 @@ export function createPartnersSection({
                     `}
                 </div>
 
-                <!-- Nom & Catégorie -->
-                <div class="w-full flex flex-col items-center gap-0.5 min-w-0">
+                <!-- Nom, Catégorie & Avantage compact -->
+                <div class="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
                     <span class="font-heading font-extrabold text-xs sm:text-sm text-slate-800 group-hover:text-primary transition-colors truncate w-full" title="${escapeHTML(partner.name)}">
                         ${escapeHTML(partner.name)}
                     </span>
                     <span class="text-[10px] text-slate-400 font-semibold truncate w-full">
                         ${escapeHTML(partner.category_label || catConfig.label)}
                     </span>
+                    ${partner.perk ? `
+                        <span class="text-[9px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/70 rounded-md px-1.5 py-0.5 truncate w-fit max-w-full flex items-center gap-1 mt-0.5" title="${escapeHTML(partner.perk)}">
+                            <i class="fa-solid fa-gift text-emerald-600 text-[8px] shrink-0"></i>
+                            <span class="truncate">${escapeHTML(partner.perk)}</span>
+                        </span>
+                    ` : `
+                        <span class="text-[9px] font-bold text-slate-500 bg-slate-100 rounded px-1.5 py-0.5 truncate w-fit flex items-center gap-1 mt-0.5">
+                            <i class="fa-solid fa-circle-check text-emerald-500 text-[8px]"></i>
+                            <span>Partenaire</span>
+                        </span>
+                    `}
                 </div>
-
-                <!-- Pastille Avantage Étudiant ou Badge -->
-                ${partner.perk ? `
-                    <div class="w-full px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/70 text-emerald-800 text-[10px] font-bold flex items-center justify-center gap-1 truncate" title="${escapeHTML(partner.perk)}">
-                        <i class="fa-solid fa-gift text-emerald-600 text-[9px] shrink-0"></i>
-                        <span class="truncate">${escapeHTML(partner.perk)}</span>
-                    </div>
-                ` : `
-                    <div class="w-full px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center gap-1">
-                        <i class="fa-solid fa-circle-check text-emerald-500 text-[9px]"></i>
-                        <span>Partenaire</span>
-                    </div>
-                `}
             </div>
         `;
     }
@@ -204,85 +211,125 @@ export function createPartnersSection({
     function render() {
         const whatsappUrl = getBecomePartnerWhatsappUrl();
 
+        // Répétition intelligente pour garantir un défilement continu fluide sans coupure visuelle
+        const repeatCount = currentPartners.length < 3 ? 6 : (currentPartners.length < 6 ? 4 : 2);
+        const duplicatedPartners = currentPartners.length > 0 
+            ? Array(repeatCount).fill(currentPartners).flat() 
+            : [];
+
+        // Mode Ticker : SEULE la bande défilante (affichée en haut après les premières lignes de produits)
+        if (isTicker) {
+            if (currentPartners.length === 0) {
+                containerEl.style.display = 'none';
+                containerEl.innerHTML = '';
+                return;
+            }
+
+            containerEl.style.display = '';
+            containerEl.innerHTML = `
+                <div class="relative w-full overflow-hidden py-1 group/marquee">
+                    <!-- Masques dégradés latéraux gauche & droite -->
+                    <div class="absolute left-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none"></div>
+                    <div class="absolute right-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none"></div>
+
+                    <!-- Piste défilante continue (pause au survol/clic) -->
+                    <div class="animate-marquee flex items-center gap-3 sm:gap-4 w-max py-1 hover:[animation-play-state:paused]">
+                        ${duplicatedPartners.map((partner) => renderPartnerTile(partner)).join('')}
+                    </div>
+                </div>
+            `;
+            bindEvents();
+            return;
+        }
+
+        // Mode Complet : Le bloc complet avec en-tête officiel, bande défilante et bandeau d'appel (répété tout en bas)
+        containerEl.style.display = '';
         containerEl.innerHTML = `
-            <div class="flex flex-col gap-5 w-full">
-                <!-- En-tête de la section -->
-                <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-200/80 pb-4">
-                    <div>
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-2">
+            <div class="flex flex-col gap-3.5 w-full">
+                <!-- En-tête compact de la section -->
+                <div class="flex items-center justify-between gap-3 border-b border-slate-200/80 pb-2.5">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
                             <i class="fa-solid fa-handshake"></i>
-                            <span>Écosystème & Alliances UIDT</span>
                         </div>
-                        <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight">
-                            Nos Partenaires Campus
-                        </h2>
-                        <p class="text-xs sm:text-sm text-slate-500 max-w-2xl mt-1">
-                            Amicales étudiantes, solutions de paiement et commerces locaux engagés pour la vie étudiante à Thiès.
-                        </p>
+                        <div class="flex flex-col min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h2 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 tracking-tight leading-snug truncate">
+                                    Nos Partenaires Campus
+                                </h2>
+                                <span class="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-bold shrink-0">
+                                    Officiel UIDT
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 font-medium truncate">
+                                Amicales étudiantes, paiements et commerces locaux engagés
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Bouton Devenir Partenaire En-tête -->
-                    <div class="flex items-center">
-                        <a 
-                            href="${whatsappUrl}" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            id="btn-partner-cta-top"
-                            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-xs active:scale-95"
-                        >
-                            <i class="fa-brands fa-whatsapp text-sm"></i>
-                            <span>Devenir Partenaire</span>
-                        </a>
-                    </div>
+                    <a 
+                        href="${whatsappUrl}" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        id="btn-partner-cta-top"
+                        class="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-xs active:scale-95 shrink-0"
+                    >
+                        <i class="fa-brands fa-whatsapp text-xs sm:text-sm"></i>
+                        <span class="hidden sm:inline">Devenir Partenaire</span>
+                        <span class="sm:hidden">Partenaire</span>
+                    </a>
                 </div>
 
-                <!-- Grille des Partenaires Réels Côte à Côte -->
+                <!-- Bande défilante des Partenaires (Marquee fluide) -->
                 ${currentPartners.length === 0 ? `
-                    <!-- État d'attente élégant avant configuration des premiers partenaires par le SuperAdmin -->
-                    <div class="text-center py-8 px-4 bg-white rounded-3xl border border-slate-200/80 shadow-xs flex flex-col items-center justify-center gap-2">
-                        <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-lg mb-1">
+                    <!-- État d'attente élégant et compact -->
+                    <div class="text-center py-6 px-4 bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm shrink-0">
                             <i class="fa-solid fa-handshake-angle"></i>
                         </div>
-                        <h3 class="font-heading font-extrabold text-sm sm:text-base text-slate-800">
-                            Nos partenariats officiels arrivent très prochainement
-                        </h3>
-                        <p class="text-xs text-slate-500 max-w-md">
-                            Amicales étudiantes, commerces de Thiès et sponsors engagés pour les étudiants de l'UIDT.
-                        </p>
+                        <div class="text-left">
+                            <h3 class="font-heading font-extrabold text-xs sm:text-sm text-slate-800">
+                                Nos partenariats officiels arrivent très prochainement
+                            </h3>
+                            <p class="text-[11px] text-slate-500">
+                                Amicales étudiantes, commerces de Thiès et sponsors engagés pour les étudiants de l'UIDT.
+                            </p>
+                        </div>
                     </div>
                 ` : `
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 w-full">
-                        ${currentPartners.map((partner) => renderPartnerTile(partner)).join('')}
+                    <div class="relative w-full overflow-hidden py-1 group/marquee">
+                        <!-- Masques dégradés latéraux gauche & droite -->
+                        <div class="absolute left-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none"></div>
+                        <div class="absolute right-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none"></div>
+
+                        <!-- Piste défilante continue (pause au survol/clic) -->
+                        <div class="animate-marquee flex items-center gap-3 sm:gap-4 w-max py-1 hover:[animation-play-state:paused]">
+                            ${duplicatedPartners.map((partner) => renderPartnerTile(partner)).join('')}
+                        </div>
                     </div>
                 `}
 
-                <!-- Bloc Appel à Candidature (Devenir Partenaire) -->
-                <div class="bg-gradient-to-br from-slate-900 via-primary to-indigo-950 rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-lg mt-2 w-full">
-                    <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-accent/20 rounded-full blur-2xl pointer-events-none"></div>
-                    <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-                        <div class="flex flex-col gap-1.5 max-w-xl">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-bold text-accent w-fit">
-                                <i class="fa-solid fa-bullhorn"></i>
-                                <span>Opportunité de Partenariat</span>
-                            </span>
-                            <h3 class="font-heading font-extrabold text-lg sm:text-xl text-white">
-                                Vous êtes une amicale, un commerce ou un sponsor ?
-                            </h3>
-                            <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                                Rejoignez l'écosystème Campus Market pour valoriser vos offres et services auprès de toute la communauté universitaire de Thiès.
-                            </p>
-                        </div>
-                        <a 
-                            href="${whatsappUrl}" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            id="btn-partner-cta-bottom"
-                            class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm shadow-md transition-all active:scale-95 shrink-0"
-                        >
-                            <i class="fa-brands fa-whatsapp text-base"></i>
-                            <span>Devenir Partenaire Officiel</span>
-                        </a>
+                <!-- Bandeau compact Appel à Partenariat -->
+                <div class="bg-gradient-to-r from-slate-900 via-primary to-indigo-950 rounded-2xl px-4 py-3 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-accent text-xs shrink-0">
+                            <i class="fa-solid fa-bullhorn"></i>
+                        </span>
+                        <p class="text-xs text-slate-200 truncate">
+                            <strong class="text-white font-bold">Amicale, commerce ou sponsor à Thiès ?</strong> Rejoignez l'écosystème Campus Market.
+                        </p>
                     </div>
+                    <a 
+                        href="${whatsappUrl}" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        id="btn-partner-cta-bottom"
+                        class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[11px] shadow-xs transition-all active:scale-95 shrink-0 self-end sm:self-auto"
+                    >
+                        <i class="fa-brands fa-whatsapp text-xs"></i>
+                        <span>Devenir Partenaire Officiel</span>
+                    </a>
                 </div>
             </div>
         `;
@@ -326,4 +373,13 @@ export function createPartnersSection({
     };
 
     return containerEl;
+}
+
+/**
+ * Crée uniquement la bande défilante pure des partenaires (variante 'ticker').
+ * @param {Object} props
+ * @returns {HTMLElement}
+ */
+export function createPartnersTicker(props = {}) {
+    return createPartnersSection({ ...props, variant: 'ticker' });
 }

@@ -15,7 +15,7 @@ import {
     deletePartner,
 } from '../src/services/admin-service.js';
 import { createAnnouncementCarousel } from '../src/components/AnnouncementCarousel.js';
-import { createPartnersSection } from '../src/components/PartnersSection.js';
+import { createPartnersSection, createPartnersTicker } from '../src/components/PartnersSection.js';
 
 console.log('🧪 Démarrage des tests du Carrousel 16:9 et de la Section Partenaires...');
 
@@ -199,6 +199,33 @@ function testComponents() {
     assert.ok(!partnersEl.innerHTML.includes('Rejoindre'), 'La tuile + Rejoindre doit être absente de la grille pour afficher uniquement les partenaires réels');
     assert.ok(!partnersEl.innerHTML.includes('partner-filter-btn'), 'La barre de filtres par catégories doit être absente');
     console.log('✅ [PartnersSection] Petits blocs compacts côte à côte épurés (sans filtres ni tuile +) validés !');
+
+    // Test variante ticker pure ("seule la bande en haut")
+    const tickerEl = createPartnersTicker({ partners: [] });
+    assert.ok(tickerEl, 'Le ticker partenaires doit être instancié');
+    assert.equal(tickerEl.id, 'partners-ticker-section', 'ID partners-ticker-section requis');
+    assert.equal(typeof tickerEl.setPartners, 'function', 'setPartners doit être exposé sur le ticker');
+    
+    // À vide, le ticker reste masqué
+    assert.equal(tickerEl.style.display, 'none', 'Le ticker vide doit être masqué');
+    
+    // Avec des partenaires, il s'affiche sans en-tête ni bandeau d'appel
+    tickerEl.setPartners([
+        {
+            id: 'real-partner-1',
+            name: 'Amicale UFR SES',
+            category: 'amicale',
+            badge: 'Partenaire Officiel',
+            perk: 'Soutien aux étudiants de SES',
+            is_active: true,
+        },
+    ]);
+    assert.equal(tickerEl.style.display, '', 'Le ticker avec partenaires doit être visible');
+    assert.ok(tickerEl.innerHTML.includes('animate-marquee'), 'Le ticker doit contenir la classe animate-marquee');
+    assert.ok(tickerEl.innerHTML.includes('Amicale UFR SES'), 'Le ticker doit contenir le partenaire');
+    assert.ok(!tickerEl.innerHTML.includes('Nos Partenaires Campus'), 'Le ticker pur ne doit pas comporter le grand titre');
+    assert.ok(!tickerEl.innerHTML.includes('Rejoignez l\'écosystème'), 'Le ticker pur ne doit pas comporter le bandeau appel');
+    console.log('✅ [PartnersSection Ticker] Variante bande défilante pure (seule la bande en haut) validée !');
 }
 
 await testServices();

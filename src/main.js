@@ -294,8 +294,11 @@ async function initApp() {
         },
     });
 
-    // 4b. Section Nos Partenaires (En bas de page)
-    const partnersSectionComponent = createPartnersSection();
+    // 4b. Section Nos Partenaires :
+    // - partnersTickerComponent : SEULE la bande défilante pure en haut (après quelques lignes de produits)
+    // - partnersSectionComponent : Le bloc complet officiel répété tout en bas de page
+    const partnersTickerComponent = createPartnersSection({ variant: 'ticker' });
+    const partnersSectionComponent = createPartnersSection({ variant: 'full' });
 
     // Synchronisation asynchrone des données dynamiques carrousel & partenaires
     fetchCarouselSlides().then((slides) => {
@@ -303,6 +306,7 @@ async function initApp() {
     }).catch(() => {});
 
     fetchPartners().then((pts) => {
+        partnersTickerComponent.setPartners?.(pts);
         partnersSectionComponent.setPartners?.(pts);
     }).catch(() => {});
 
@@ -885,34 +889,62 @@ async function initApp() {
             return;
         }
 
-        // Grille des cartes produits (Plein écran fluide)
-        const gridEl = document.createElement('div');
-        gridEl.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full';
-
-        appState.products.forEach((product) => {
-            const card = createProductCard({
-                product,
-                onAddToCart: (prod) => {
-                    cartStore.addToCart(prod, 1);
-                    showToast(`Ajouté au panier : ${prod.title}`, 'success');
-                },
-                onClickCard: (prod) => {
-                    productDetailModalController.open(prod);
-                },
-                onOpenSeller: (seller) => {
-                    if (seller?.id) {
-                        navigateToView('shop', { sellerId: seller.id });
-                    }
-                },
-            });
-            gridEl.appendChild(card);
+        // Fonction d'instanciation réutilisable de carte produit
+        const buildProductCard = (product) => createProductCard({
+            product,
+            onAddToCart: (prod) => {
+                cartStore.addToCart(prod, 1);
+                showToast(`Ajouté au panier : ${prod.title}`, 'success');
+            },
+            onClickCard: (prod) => {
+                productDetailModalController.open(prod);
+            },
+            onOpenSeller: (seller) => {
+                if (seller?.id) {
+                    navigateToView('shop', { sellerId: seller.id });
+                }
+            },
         });
 
-        mainContentEl.appendChild(gridEl);
+        // 4. Insertion de la bande défilante des Partenaires après quelques lignes de produits (ex: 6 produits)
+        const shouldShowPartners = !appState.searchQuery && appState.currentCategory === 'all';
+        const INLINE_PARTNERS_INDEX = 6; // Après 6 produits (3 rangées mobile, 2 sur tablette, 1 complète sur desktop)
 
-        // 4. Section Nos Partenaires (affichée en bas de page du catalogue d'accueil)
-        if (!appState.searchQuery && appState.currentCategory === 'all') {
+        if (shouldShowPartners && appState.products.length > INLINE_PARTNERS_INDEX) {
+            // 1ère grille : Les premières rangées de produits
+            const firstGridEl = document.createElement('div');
+            firstGridEl.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full';
+            appState.products.slice(0, INLINE_PARTNERS_INDEX).forEach((product) => {
+                firstGridEl.appendChild(buildProductCard(product));
+            });
+            mainContentEl.appendChild(firstGridEl);
+
+            // EN HAUT : SEULE la bande défilante (ticker pur, sans en-tête ni bandeau d'appel)
+            mainContentEl.appendChild(partnersTickerComponent);
+
+            // 2ème grille : Reste des produits du catalogue
+            const secondGridEl = document.createElement('div');
+            secondGridEl.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full';
+            appState.products.slice(INLINE_PARTNERS_INDEX).forEach((product) => {
+                secondGridEl.appendChild(buildProductCard(product));
+            });
+            mainContentEl.appendChild(secondGridEl);
+
+            // TOUT EN BAS : Le bloc complet des Partenaires répété (avec en-tête officiel, bouton WhatsApp et bandeau d'appel)
             mainContentEl.appendChild(partnersSectionComponent);
+        } else {
+            // Grille standard (en cas de recherche, de catégorie filtrée ou de catalogue court <= 6 articles)
+            const gridEl = document.createElement('div');
+            gridEl.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full';
+            appState.products.forEach((product) => {
+                gridEl.appendChild(buildProductCard(product));
+            });
+            mainContentEl.appendChild(gridEl);
+
+            // Si catalogue affiché sans recherche ni filtre, afficher le bloc complet tout en bas
+            if (shouldShowPartners) {
+                mainContentEl.appendChild(partnersSectionComponent);
+            }
         }
     }
 
