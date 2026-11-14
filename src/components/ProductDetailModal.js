@@ -24,6 +24,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
 
     let currentProduct = null;
     let selectedQuantity = 1;
+    let activeImageIndex = 0;
 
     function render() {
         if (!currentProduct) {
@@ -53,10 +54,17 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
             discountBadge = `<span class="bg-accent text-slate-900 font-extrabold text-xs px-2.5 py-1 rounded-full shadow-sm">-${pct}%</span>`;
         }
 
-        // Image sécurisée
-        const safeImageUrl = p.image_url?.includes('photo-1611591475823-3882f0592965')
-            ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
-            : p.image_url;
+        // Galerie multi-photos (jusqu'à 3 images)
+        const rawImages = Array.isArray(p.images) && p.images.length > 0 
+            ? p.images.filter(Boolean) 
+            : (p.image_url ? [p.image_url] : []);
+        const productImages = rawImages.map((img) => 
+            img?.includes('photo-1611591475823-3882f0592965')
+                ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
+                : img
+        );
+        const hasMultipleImages = productImages.length > 1;
+        const safeActiveImage = productImages[activeImageIndex] || productImages[0] || null;
 
         modalEl.innerHTML = `
             <div class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
@@ -65,17 +73,35 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                     <div class="w-12 h-1.5 bg-slate-300 rounded-full"></div>
                 </div>
 
-                <!-- En-tête / Image -->
-                <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-100 overflow-hidden shrink-0">
-                    ${safeImageUrl 
-                        ? `<img src="${escapeHTML(safeImageUrl)}" alt="${escapeHTML(p.title)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
+                <!-- En-tête / Image principale -->
+                <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-100 overflow-hidden shrink-0 group">
+                    ${safeActiveImage 
+                        ? `<img src="${escapeHTML(safeActiveImage)}" alt="${escapeHTML(p.title)}" id="detail-active-image" class="w-full h-full object-cover transition-all duration-300" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
                         : `<div class="w-full h-full flex items-center justify-center bg-primary/5 text-primary text-5xl">
                              <i class="fa-solid ${escapeHTML(p.icon || 'fa-box')}"></i>
                            </div>`
                     }
 
+                    <!-- Flèches de navigation (si multi-photos) -->
+                    ${hasMultipleImages ? `
+                        <button type="button" id="btn-prev-photo" aria-label="Photo précédente" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/60 hover:bg-slate-900/80 text-white flex items-center justify-center transition-all cursor-pointer z-20 backdrop-blur-xs active:scale-95 shadow-md">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                        </button>
+                        <button type="button" id="btn-next-photo" aria-label="Photo suivante" class="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/60 hover:bg-slate-900/80 text-white flex items-center justify-center transition-all cursor-pointer z-20 backdrop-blur-xs active:scale-95 shadow-md">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    ` : ''}
+
+                    <!-- Compteur de photos flottant -->
+                    ${hasMultipleImages ? `
+                        <div class="absolute top-3 left-3 z-10 bg-slate-900/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
+                            <i class="fa-solid fa-camera text-[10px]"></i>
+                            <span>${activeImageIndex + 1} / ${productImages.length}</span>
+                        </div>
+                    ` : ''}
+
                     <!-- Boutons Partager & Fermer -->
-                    <div class="absolute top-3 right-3 flex items-center gap-2">
+                    <div class="absolute top-3 right-3 flex items-center gap-2 z-20">
                         <button id="btn-share-detail" title="Partager ce produit (Lien & WhatsApp)" aria-label="Partager ce produit" class="w-10 h-10 rounded-full bg-slate-900/60 hover:bg-slate-900/80 backdrop-blur-md text-white flex items-center justify-center transition-all shadow-md min-h-[44px] min-w-[44px] cursor-pointer active:scale-95">
                             <i class="fa-solid fa-share-nodes text-sm"></i>
                         </button>
@@ -85,7 +111,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                     </div>
 
                     <!-- Badges flottants -->
-                    <div class="absolute bottom-3 left-3 flex items-center gap-2">
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2 z-10">
                         ${discountBadge}
                         <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
                             isSuspended
@@ -100,6 +126,27 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                         </span>
                     </div>
                 </div>
+
+                <!-- Barre de vignettes miniatures cliquables (si multi-photos) -->
+                ${hasMultipleImages ? `
+                    <div class="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-200/80 shrink-0 overflow-x-auto">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 hidden sm:inline">Photos :</span>
+                        ${productImages.map((img, idx) => `
+                            <button 
+                                type="button" 
+                                class="btn-detail-thumbnail w-12 h-12 rounded-xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                                    idx === activeImageIndex 
+                                        ? 'border-primary ring-2 ring-primary/30 scale-105 shadow-xs' 
+                                        : 'border-slate-200 opacity-60 hover:opacity-100 hover:border-slate-300'
+                                }"
+                                data-photo-index="${idx}"
+                                title="Voir photo ${idx + 1}"
+                            >
+                                <img src="${escapeHTML(img)}" alt="Miniature ${idx + 1}" class="w-full h-full object-cover">
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : ''}
 
                 <!-- Corps défilable fluide -->
                 <div class="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 min-h-0 flex flex-col gap-4" style="-webkit-overflow-scrolling: touch;">
@@ -134,8 +181,11 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                     <!-- Info Vendeur & Contact direct -->
                     <div class="border border-slate-200/80 rounded-2xl p-3.5 flex items-center justify-between gap-3 bg-white">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm">
-                                ${((sellerName[0] || 'V')).toUpperCase()}
+                            <div class="w-10 h-10 rounded-full bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm overflow-hidden shrink-0 border border-slate-200">
+                                ${p.seller?.avatar_url 
+                                    ? `<img src="${escapeHTML(p.seller.avatar_url)}" alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.textContent='${((sellerName[0] || 'V')).toUpperCase()}';">`
+                                    : ((sellerName[0] || 'V')).toUpperCase()
+                                }
                             </div>
                             <div class="flex flex-col">
                                 <span class="text-[11px] text-slate-400 block">Vendu par</span>
@@ -212,6 +262,40 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
             if (e.target === modalEl) close();
         });
 
+        // Navigation multi-photos (vignettes miniatures)
+        modalEl.querySelectorAll('.btn-detail-thumbnail').forEach((thumb) => {
+            thumb.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(thumb.getAttribute('data-photo-index'), 10);
+                if (!isNaN(idx) && idx !== activeImageIndex) {
+                    activeImageIndex = idx;
+                    render();
+                }
+            });
+        });
+
+        // Navigation multi-photos (flèches Précédent / Suivant)
+        const rawImages = Array.isArray(currentProduct?.images) && currentProduct.images.length > 0 
+            ? currentProduct.images.filter(Boolean) 
+            : (currentProduct?.image_url ? [currentProduct.image_url] : []);
+        const totalPhotos = rawImages.length;
+
+        modalEl.querySelector('#btn-prev-photo')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (totalPhotos > 1) {
+                activeImageIndex = (activeImageIndex - 1 + totalPhotos) % totalPhotos;
+                render();
+            }
+        });
+
+        modalEl.querySelector('#btn-next-photo')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (totalPhotos > 1) {
+                activeImageIndex = (activeImageIndex + 1) % totalPhotos;
+                render();
+            }
+        });
+
         // Actions de partage du produit
         const shareAction = () => {
             if (currentProduct) {
@@ -259,6 +343,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
     function open(product) {
         currentProduct = product;
         selectedQuantity = 1;
+        activeImageIndex = 0;
         setProductSEO(product);
         render();
         modalEl.classList.remove('opacity-0', 'pointer-events-none');

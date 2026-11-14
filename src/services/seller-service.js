@@ -6,6 +6,7 @@
 
 import { supabase } from './supabase.js';
 import { isUniversityEmail } from '../utils/security.js';
+import { compressImage, dataURLtoBlob } from '../utils/image-compressor.js';
 import { SUPPORT_CONFIG } from '../config/support.js';
 import {
     SUBSCRIPTION_PLANS,
@@ -894,7 +895,100 @@ export async function changeSellerPassword({ newPassword, confirmPassword }) {
 }
 
 /**
- * Met à jour les coordonnées du profil vendeur (prénom, nom, boutique, catégorie, pavillon, chambre, statut ouvert/fermé).
+ * Téléverse et compresse le logo / avatar de la boutique d'un vendeur vers Supabase Storage.
+ * Met à jour le champ avatar_url dans la table profiles.
+ *
+ * @param {Object} params
+ * @param {string} params.sellerId - UUID du vendeur
+ * @param {File|Blob|string} params.file - Fichier image ou DataURL du logo
+ * @returns {Promise<{ avatar_url: string }>}
+ */
+export async function uploadSellerLogo({ sellerId, file }) {
+    if (!sellerId) throw new Error('Identifiant vendeur requis pour téléverser un logo.');
+    if (!file) throw new Error('Fichier image requis pour le logo.');
+
+    const STORAGE_BUCKET = 'product-images';
+    let blob = null;
+
+    if (file instanceof Blob && (file._isCompressed || file.type === 'image/jpeg' || file.type === 'image/webp')) {
+        blob = file;
+    } else if (typeof file === 'string' && file.startsWith('data:image/')) {
+        blob = dataURLtoBlob(file);
+    } else {
+        // Compression en format carré 400x400 max pour avatar boutique
+        const compressedDataUrl = await compressImage(file, {
+            maxWidth: 400,
+            maxHeight: 400,
+            quality: 0.8,
+        });
+        blob = dataURLtoBlob(compressedDataUrl);
+    }
+
+    const fileName = `${sellerId}/avatar_${Date.now()}.jpg`;
+
+    let { data: uploadData, error: uploadErr } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(fileName, blob, {
+            contentType: 'image/jpeg',
+            upsert: true,
+        });
+
+    if (uploadErr) {
+        console.warn('[SellerService] Erreur upload avatar 1, tentative avec rafraîchissement auth...', uploadErr);
+        try {
+            await supabase.auth.refreshSession();
+            const retry = await supabase.storage
+                .from(STORAGE_BUCKET)
+                .upload(fileName, blob, {
+                    contentType: 'image/jpeg',
+                    upsert: true,
+                });
+            uploadData = retry.data;
+            uploadErr = retry.error;
+        } catch (retryEx) {
+            console.warn('[SellerService] Exception rafraîchissement auth:', retryEx);
+        }
+    }
+
+    if (uploadErr) {
+        throw new Error(`Échec du téléversement du logo (${uploadErr.message || 'Erreur stockage'}). Veuillez réessayer.`);
+    }
+
+    const { data: publicUrlData } = supabase.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(fileName);
+
+    const avatarUrl = publicUrlData?.publicUrl || null;
+
+    if (!avatarUrl) {
+        throw new Error("Impossible d'obtenir l'URL publique du logo.");
+    }
+
+    // Mise à jour du profil en base
+    await updateSellerProfile({
+        sellerId,
+        avatar_url: avatarUrl,
+    });
+
+    return { avatar_url: avatarUrl };
+}
+
+/**
+ * Supprime le logo de la boutique du vendeur (rétablit les initiales).
+ * @param {string} sellerId - UUID du vendeur
+ * @returns {Promise<boolean>}
+ */
+export async function removeSellerLogo(sellerId) {
+    if (!sellerId) throw new Error('Identifiant vendeur requis.');
+    await updateSellerProfile({
+        sellerId,
+        avatar_url: null,
+    });
+    return true;
+}
+
+/**
+ * Met à jour les coordonnées du profil vendeur (prénom, nom, boutique, catégorie, pavillon, chambre, statut ouvert/fermé, avatar_url).
  * L'email universitaire et le numéro de téléphone ne sont pas modifiables (règle de sécurité FR-01).
  *
  * @param {Object} params
@@ -906,6 +1000,7 @@ export async function changeSellerPassword({ newPassword, confirmPassword }) {
  * @param {string} [params.pavillon]
  * @param {string} [params.chambre]
  * @param {boolean} [params.isOpen]
+ * @param {string|null} [params.avatar_url]
  * @returns {Promise<Object>} Profil mis à jour
  */
 export async function updateSellerProfile({
@@ -917,6 +1012,7 @@ export async function updateSellerProfile({
     pavillon,
     chambre,
     isOpen,
+    avatar_url,
 }) {
     if (!sellerId) {
         throw new Error('Identifiant vendeur requis pour mettre à jour le profil.');
@@ -930,6 +1026,7 @@ export async function updateSellerProfile({
     if (isOpen !== undefined) payload.is_open = !!isOpen;
     if (pavillon !== undefined) payload.pavillon = String(pavillon).trim();
     if (chambre !== undefined) payload.chambre = String(chambre).trim();
+    if (avatar_url !== undefined) payload.avatar_url = avatar_url ? String(avatar_url).trim() : null;
     payload.updated_at = new Date().toISOString();
 
     // 1. Tentative de mise à jour complète en base
@@ -940,12 +1037,13 @@ export async function updateSellerProfile({
         .select()
         .single();
 
-    // Repli gracieux si les colonnes pavillon ou chambre ne sont pas encore créées en base
-    if (error && (error.message.includes('pavillon') || error.message.includes('chambre') || error.message.includes('column'))) {
-        console.warn('[SellerService] Colonnes pavillon/chambre non encore ajoutées en base, repli sans ces colonnes:', error.message);
+    // Repli gracieux si les colonnes pavillon, chambre ou avatar_url ne sont pas encore créées en base
+    if (error && (error.message.includes('pavillon') || error.message.includes('chambre') || error.message.includes('avatar_url') || error.message.includes('column'))) {
+        console.warn('[SellerService] Colonnes optionnelles non encore ajoutées en base, repli sans ces colonnes:', error.message);
         const fallbackPayload = { ...payload };
         delete fallbackPayload.pavillon;
         delete fallbackPayload.chambre;
+        delete fallbackPayload.avatar_url;
 
         const { data: fbData, error: fbError } = await supabase
             .from('profiles')
@@ -959,6 +1057,7 @@ export async function updateSellerProfile({
             ...fbData,
             pavillon: pavillon || '',
             chambre: chambre || '',
+            avatar_url: avatar_url !== undefined ? avatar_url : fbData?.avatar_url,
         };
     } else if (error) {
         throw new Error(error.message);
@@ -999,4 +1098,6 @@ export default {
     fetchSellerPendingPayments,
     changeSellerPassword,
     updateSellerProfile,
+    uploadSellerLogo,
+    removeSellerLogo,
 };

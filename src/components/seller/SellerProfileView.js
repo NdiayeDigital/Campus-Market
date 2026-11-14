@@ -6,7 +6,7 @@
  */
 
 import { escapeHTML } from '../../utils/security.js';
-import { updateSellerProfile, changeSellerPassword } from '../../services/seller-service.js';
+import { updateSellerProfile, changeSellerPassword, uploadSellerLogo, removeSellerLogo } from '../../services/seller-service.js';
 import { computeSubscriptionStatus } from '../../config/subscription.js';
 import { SUPPORT_CONFIG } from '../../config/support.js';
 
@@ -104,11 +104,34 @@ export function createSellerProfileView({
                 <div class="flex flex-col gap-6">
                     <!-- Carte 1 : Identité & Statut -->
                     <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col items-center text-center gap-3">
-                        <div class="relative">
-                            <div class="w-20 h-20 rounded-full bg-linear-to-tr from-primary to-blue-600 text-white flex items-center justify-center text-2xl font-black shadow-md border-4 border-white">
-                                ${initials}
+                        <div class="relative group">
+                            <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center shadow-md border-4 border-white overflow-hidden shrink-0">
+                                ${currentSeller.avatar_url 
+                                    ? `<img src="${escapeHTML(currentSeller.avatar_url)}" alt="Logo ${escapeHTML(currentSeller.shop_name || '')}" class="w-full h-full object-cover" id="seller-logo-img" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
+                                    : `<span class="text-2xl font-black">${initials}</span>`
+                                }
                             </div>
-                            <span class="absolute bottom-0 right-0 w-5 h-5 rounded-full ${currentSeller.is_open ? 'bg-emerald-500' : 'bg-rose-500'} border-2 border-white" title="${currentSeller.is_open ? 'Boutique ouverte' : 'Boutique fermée'}"></span>
+                            <!-- Bouton Déclencheur Fichier (Caméra) -->
+                            <label for="seller-logo-file-input" class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary hover:bg-primary-hover active:scale-95 text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer transition-transform" title="Modifier le logo de ma boutique">
+                                <i class="fa-solid fa-camera text-xs"></i>
+                                <input type="file" id="seller-logo-file-input" accept="image/png, image/jpeg, image/webp" class="sr-only" />
+                            </label>
+                            <!-- Indicateur statut ouvert/fermé -->
+                            <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full ${currentSeller.is_open ? 'bg-emerald-500' : 'bg-rose-500'} border-2 border-white" title="${currentSeller.is_open ? 'Boutique ouverte' : 'Boutique fermée'}"></span>
+                        </div>
+
+                        <!-- Actions Logo Boutique -->
+                        <div class="flex items-center gap-2 flex-wrap justify-center">
+                            <label for="seller-logo-file-input" class="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1.5">
+                                <i class="fa-solid fa-image text-xs text-primary"></i>
+                                <span>${currentSeller.avatar_url ? 'Changer le logo' : 'Ajouter un logo'}</span>
+                            </label>
+                            ${currentSeller.avatar_url ? `
+                                <button type="button" id="btn-remove-logo" class="px-2 py-1 rounded-lg hover:bg-rose-50 text-rose-600 text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1" title="Supprimer le logo et rétablir les initiales">
+                                    <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                    <span>Supprimer</span>
+                                </button>
+                            ` : ''}
                         </div>
 
                         <div>
@@ -493,6 +516,57 @@ export function createSellerProfileView({
                 render();
                 if (typeof onShowToast === 'function') {
                     onShowToast(newStatus ? '🟢 Votre boutique est maintenant ouverte !' : '🔴 Votre boutique est mise en pause.', 'info');
+                }
+                if (typeof onProfileUpdated === 'function') onProfileUpdated(currentSeller);
+            } catch (err) {
+                if (typeof onShowToast === 'function') {
+                    onShowToast(`Erreur : ${err.message}`, 'error');
+                }
+            }
+        });
+
+        // Téléversement & Modification du Logo de la boutique
+        const logoInput = containerEl.querySelector('#seller-logo-file-input');
+        logoInput?.addEventListener('change', async (e) => {
+            const file = e.target?.files?.[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                if (typeof onShowToast === 'function') {
+                    onShowToast('Veuillez sélectionner un fichier image valide (PNG, JPEG, WebP).', 'warning');
+                }
+                return;
+            }
+
+            try {
+                if (typeof onShowToast === 'function') {
+                    onShowToast('Compression et mise à jour de votre logo en cours...', 'info');
+                }
+                const res = await uploadSellerLogo({
+                    sellerId: currentSeller.id,
+                    file,
+                });
+                currentSeller.avatar_url = res.avatar_url;
+                render();
+                if (typeof onShowToast === 'function') {
+                    onShowToast('Logo de votre boutique mis à jour avec succès ! 🎨', 'success');
+                }
+                if (typeof onProfileUpdated === 'function') onProfileUpdated(currentSeller);
+            } catch (err) {
+                if (typeof onShowToast === 'function') {
+                    onShowToast(`Erreur téléversement logo : ${err.message}`, 'error');
+                }
+            }
+        });
+
+        // Suppression du Logo (Rétablissement des initiales)
+        containerEl.querySelector('#btn-remove-logo')?.addEventListener('click', async () => {
+            try {
+                await removeSellerLogo(currentSeller.id);
+                currentSeller.avatar_url = null;
+                render();
+                if (typeof onShowToast === 'function') {
+                    onShowToast('Logo retiré. Affichage des initiales rétabli.', 'info');
                 }
                 if (typeof onProfileUpdated === 'function') onProfileUpdated(currentSeller);
             } catch (err) {

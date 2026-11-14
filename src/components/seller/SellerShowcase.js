@@ -177,8 +177,11 @@ export function createSellerShowcase({
                     <!-- Identité Vendeur -->
                     <div class="flex items-start sm:items-center gap-4">
                         <div class="relative">
-                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white font-heading font-extrabold text-xl sm:text-2xl flex items-center justify-center shadow-md shadow-primary/20 shrink-0">
-                                ${initials}
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white font-heading font-extrabold text-xl sm:text-2xl flex items-center justify-center shadow-md shadow-primary/20 shrink-0 overflow-hidden border-2 border-white">
+                                ${seller.avatar_url 
+                                    ? `<img src="${escapeHTML(seller.avatar_url)}" alt="${escapeHTML(shopTitle)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='${initials}';">`
+                                    : initials
+                                }
                             </div>
                             <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-white flex items-center justify-center shadow-xs">
                                 <i class="fa-solid fa-shield-halved text-xs text-emerald-600"></i>

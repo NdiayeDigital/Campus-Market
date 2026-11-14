@@ -62,17 +62,24 @@ export function createProductManager({
         render();
     };
 
-    // Formulaire d'ajout & état dynamique Live Preview
+    // Formulaire d'ajout & état dynamique Live Preview (Multi-photos jusqu'à 3)
     let addFormData = {
         title: '',
         price: '',
         stock: '10',
         category: 'restauration',
         description: '',
-        imageFile: null,
-        imagePreviewUrl: null,
-        compressedBlob: null,
-        compressedDataUrl: null,
+        photos: [], // Array de { file, previewUrl, compressedBlob, compressedDataUrl }
+        // Getters rétrocompatibles
+        get imageFile() {
+            return this.photos[0]?.file || null;
+        },
+        get imagePreviewUrl() {
+            return this.photos[0]?.compressedDataUrl || this.photos[0]?.previewUrl || null;
+        },
+        get compressedBlob() {
+            return this.photos[0]?.compressedBlob || null;
+        },
     };
 
     // Calcul dynamique du quota d'articles autorisés selon l'abonnement
@@ -291,48 +298,49 @@ export function createProductManager({
                     <div id="add-product-error" class="hidden p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium"></div>
 
                     <form id="add-product-form" class="flex flex-col gap-4.5">
-                        <!-- 1. Zone d'upload photo soignée (Drag & drop + bouton tactile) -->
+                        <!-- 1. Multi-photos du produit (3 emplacements) -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                                Photo de l'article <span class="text-slate-400 font-normal">(Recommandée pour vendre vite)</span>
-                            </label>
-
-                            <div 
-                                id="photo-dropzone" 
-                                class="border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 rounded-2xl p-5 sm:p-6 text-center transition-all cursor-pointer flex flex-col items-center justify-center relative overflow-hidden group min-h-[160px]"
-                            >
-                                <input type="file" id="new-prod-image-file" accept="image/*" class="sr-only">
-                                
-                                <div id="photo-dropzone-content" class="w-full flex flex-col items-center justify-center">
-                                ${addFormData.imagePreviewUrl ? `
-                                    <div class="flex items-center gap-4 w-full">
-                                        <div class="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                                            <img src="${addFormData.imagePreviewUrl}" alt="Aperçu sélection" class="w-full h-full object-cover">
-                                        </div>
-                                        <div class="flex-1 text-left min-w-0">
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${addFormData.compressedBlob ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'} border">
-                                                <i class="fa-solid ${addFormData.compressedBlob ? 'fa-check text-[9px]' : 'fa-spinner fa-spin text-[9px]'}"></i> 
-                                                ${addFormData.compressedBlob ? 'Photo prête' : 'Optimisation...'}
-                                            </span>
-                                            <p class="text-xs font-bold text-slate-800 truncate mt-1">${addFormData.imageFile ? escapeHTML(addFormData.imageFile.name) : 'Image sélectionnée'}</p>
-                                            <p class="text-[11px] text-slate-400">Cliquez ou glissez pour remplacer</p>
-                                        </div>
-                                        <button type="button" id="btn-remove-selected-photo" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0 cursor-pointer" title="Retirer la photo">
-                                            <i class="fa-solid fa-trash-can text-xs"></i>
-                                        </button>
-                                    </div>
-                                ` : `
-                                    <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
-                                        <i class="fa-solid fa-camera"></i>
-                                    </div>
-                                    <span class="text-xs font-bold text-slate-800">Cliquez pour choisir une photo</span>
-                                    <span class="text-[11px] text-slate-500 mt-0.5">ou glissez-déposez le fichier ici</span>
-                                    <span class="text-[10px] text-slate-400 mt-2 px-2.5 py-0.5 rounded-full bg-white border border-slate-200/80">
-                                        JPEG, PNG, WebP • Compression automatique
-                                    </span>
-                                `}
-                                </div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-xs font-bold text-slate-700">
+                                    Photos de l'article <span class="text-primary font-bold">(Jusqu'à 3 photos)</span>
+                                </label>
+                                <span class="text-[11px] font-semibold text-slate-400" id="add-photos-count-badge">
+                                    ${addFormData.photos.length} / 3 photos ajoutées
+                                </span>
                             </div>
+
+                            <div class="grid grid-cols-3 gap-2.5 sm:gap-3.5 mb-2" id="add-photos-slots-container">
+                                ${[0, 1, 2].map((slotIdx) => {
+                                    const photo = addFormData.photos[slotIdx];
+                                    if (photo) {
+                                        return `
+                                            <div class="relative aspect-square rounded-2xl bg-slate-100 border-2 border-primary/40 overflow-hidden shadow-2xs group">
+                                                <img src="${photo.compressedDataUrl || photo.previewUrl}" alt="Photo ${slotIdx + 1}" class="w-full h-full object-cover">
+                                                <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-black ${slotIdx === 0 ? 'bg-primary text-white shadow-xs' : 'bg-slate-900/75 text-white backdrop-blur-xs'}">
+                                                    ${slotIdx === 0 ? '★ Principale' : `Angle ${slotIdx + 1}`}
+                                                </span>
+                                                <button type="button" class="btn-remove-add-photo absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white flex items-center justify-center transition-all shadow-md cursor-pointer" data-slot-index="${slotIdx}" title="Supprimer cette photo">
+                                                    <i class="fa-solid fa-xmark text-[10px]"></i>
+                                                </button>
+                                            </div>
+                                        `;
+                                    } else {
+                                        return `
+                                            <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
+                                                <input type="file" class="add-slot-file-input sr-only" accept="image/*" data-slot-index="${slotIdx}">
+                                                <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm mb-1 group-hover:scale-110 transition-transform">
+                                                    <i class="fa-solid fa-camera"></i>
+                                                </div>
+                                                <span class="text-[10px] font-bold text-slate-700 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
+                                                <span class="text-[9px] text-slate-400 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
+                                            </label>
+                                        `;
+                                    }
+                                }).join('')}
+                            </div>
+                            <p class="text-[10px] text-slate-400">
+                                💡 Ajoutez jusqu'à 3 photos pour présenter l'article sous différents angles (vue d'ensemble, détail, emballage).
+                            </p>
                         </div>
 
                         <!-- 2. Nom du produit -->
@@ -453,6 +461,12 @@ export function createProductManager({
                                     class="w-full h-full object-cover transition-transform duration-300"
                                     onerror="this.onerror=null; this.src='/assets/placeholder.webp';"
                                 >
+                                ${addFormData.photos.length > 1 ? `
+                                    <span id="live-preview-photo-badge" class="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-900/75 text-white backdrop-blur-md shadow-xs flex items-center gap-1">
+                                        <i class="fa-solid fa-camera text-[9px]"></i>
+                                        <span>${addFormData.photos.length} photos</span>
+                                    </span>
+                                ` : ''}
                                 <span id="live-preview-price" class="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-xs font-black bg-white/95 text-primary backdrop-blur-md shadow-sm border border-slate-200/80 tabular-nums">
                                     ${previewPrice} F
                                 </span>
@@ -790,19 +804,16 @@ export function createProductManager({
                             <textarea id="edit-prod-desc" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"></textarea>
                         </div>
 
-                        <!-- Remplacement photo -->
+                        <!-- Photos de l'article (jusqu'à 3) -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Remplacer la photo (facultatif)</label>
-                            <div class="flex items-center gap-3">
-                                <label class="cursor-pointer flex-1 flex flex-col items-center justify-center p-3 border-2 border-dashed border-slate-200 hover:border-primary rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-                                    <i class="fa-solid fa-camera text-slate-400 text-base mb-0.5"></i>
-                                    <span class="text-xs font-semibold text-slate-600">Choisir un nouveau fichier</span>
-                                    <input type="file" id="edit-prod-image-file" accept="image/*" class="sr-only">
-                                </label>
-                                <div class="w-16 h-16 rounded-xl border border-slate-200 bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
-                                    <img id="edit-image-preview-img" src="" alt="Aperçu" class="w-full h-full object-cover">
-                                </div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-xs font-bold text-slate-700">Photos de l'article (Jusqu'à 3)</label>
+                                <span class="text-[11px] font-semibold text-slate-400" id="edit-photos-count-badge">0 / 3 photos</span>
                             </div>
+                            <div class="grid grid-cols-3 gap-2.5" id="edit-photos-slots-container"></div>
+                            <p class="text-[10px] text-slate-400 mt-1.5">
+                                Vous pouvez supprimer une photo ou en ajouter une nouvelle dans les emplacements disponibles.
+                            </p>
                         </div>
 
                         <button 
@@ -851,8 +862,8 @@ export function createProductManager({
 
         // 3. Interactions formulaire "Ajouter un produit" & Live Preview
         if (activeTab === 'add') {
-            const dropzone = containerEl.querySelector('#photo-dropzone');
-            const fileInput = containerEl.querySelector('#new-prod-image-file');
+            const addSlotsContainer = containerEl.querySelector('#add-photos-slots-container');
+            const addPhotosCountBadge = containerEl.querySelector('#add-photos-count-badge');
             const titleInput = containerEl.querySelector('#new-prod-title');
             const priceInput = containerEl.querySelector('#new-prod-price');
             const stockInput = containerEl.querySelector('#new-prod-stock');
@@ -866,6 +877,7 @@ export function createProductManager({
             const livePrice = containerEl.querySelector('#live-preview-price');
             const liveCategory = containerEl.querySelector('#live-preview-category');
             const liveImg = containerEl.querySelector('#live-preview-img');
+            const livePreviewContainer = liveImg?.parentElement;
 
             // Mise à jour synchrone de l'aperçu dynamique
             const updateLivePreview = () => {
@@ -905,74 +917,85 @@ export function createProductManager({
                 addFormData.description = e.target.value;
             });
 
-            // Sauvegarder la saisie en cours avant tout re-render
-            const snapshotInputs = () => {
-                if (titleInput) addFormData.title = titleInput.value;
-                if (priceInput) addFormData.price = priceInput.value;
-                if (stockInput) addFormData.stock = stockInput.value;
-                if (catSelect) addFormData.category = catSelect.value;
-                if (descInput) addFormData.description = descInput.value;
-            };
+            // Gestion de l'affichage et des interactions des 3 emplacements photos
+            const renderAddPhotosUI = () => {
+                if (!addSlotsContainer) return;
 
-            const dropzoneContent = containerEl.querySelector('#photo-dropzone-content');
-
-            // Gestion in-place de la sélection / suppression d'image (sans détruire l'input file)
-            const updateDropzoneUI = (file, previewUrl, isCompressing = false) => {
-                if (!dropzoneContent) return;
-                dropzoneContent.innerHTML = `
-                    <div class="flex items-center gap-4 w-full">
-                        <div class="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                            <img src="${previewUrl}" alt="Aperçu sélection" class="w-full h-full object-cover">
-                        </div>
-                        <div class="flex-1 text-left min-w-0">
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${isCompressing ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'} border">
-                                <i class="fa-solid ${isCompressing ? 'fa-spinner fa-spin text-[9px]' : 'fa-check text-[9px]'}"></i> 
-                                ${isCompressing ? 'Optimisation de la photo...' : 'Photo prête'}
-                            </span>
-                            <p class="text-xs font-bold text-slate-800 truncate mt-1">${file?.name ? escapeHTML(file.name) : 'Image sélectionnée'}</p>
-                            <p class="text-[11px] text-slate-400">Cliquez ou glissez pour remplacer</p>
-                        </div>
-                        <button type="button" id="btn-remove-selected-photo" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0 cursor-pointer" title="Retirer la photo">
-                            <i class="fa-solid fa-trash-can text-xs"></i>
-                        </button>
-                    </div>
-                `;
-                dropzoneContent.querySelector('#btn-remove-selected-photo')?.addEventListener('click', onRemovePhoto);
-                if (liveImg) liveImg.src = previewUrl;
-            };
-
-            const resetDropzoneUI = () => {
-                if (!dropzoneContent) return;
-                dropzoneContent.innerHTML = `
-                    <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-camera"></i>
-                    </div>
-                    <span class="text-xs font-bold text-slate-800">Cliquez pour choisir une photo</span>
-                    <span class="text-[11px] text-slate-500 mt-0.5">ou glissez-déposez le fichier ici</span>
-                    <span class="text-[10px] text-slate-400 mt-2 px-2.5 py-0.5 rounded-full bg-white border border-slate-200/80">
-                        JPEG, PNG, WebP • Compression automatique
-                    </span>
-                `;
-                if (liveImg) liveImg.src = '/assets/placeholder.webp';
-            };
-
-            const onRemovePhoto = (e) => {
-                e?.stopPropagation();
-                if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
-                    URL.revokeObjectURL(addFormData.imagePreviewUrl);
+                if (addPhotosCountBadge) {
+                    addPhotosCountBadge.textContent = `${addFormData.photos.length} / 3 photos ajoutées`;
                 }
-                addFormData.imageFile = null;
-                addFormData.imagePreviewUrl = null;
-                addFormData.compressedBlob = null;
-                addFormData.compressedDataUrl = null;
-                if (fileInput) fileInput.value = '';
-                resetDropzoneUI();
+
+                addSlotsContainer.innerHTML = [0, 1, 2].map((slotIdx) => {
+                    const photo = addFormData.photos[slotIdx];
+                    if (photo) {
+                        return `
+                            <div class="relative aspect-square rounded-2xl bg-slate-100 border-2 border-primary/40 overflow-hidden shadow-2xs group">
+                                <img src="${photo.compressedDataUrl || photo.previewUrl}" alt="Photo ${slotIdx + 1}" class="w-full h-full object-cover">
+                                <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-black ${slotIdx === 0 ? 'bg-primary text-white shadow-xs' : 'bg-slate-900/75 text-white backdrop-blur-xs'}">
+                                    ${slotIdx === 0 ? '★ Principale' : `Angle ${slotIdx + 1}`}
+                                </span>
+                                <button type="button" class="btn-remove-add-photo absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white flex items-center justify-center transition-all shadow-md cursor-pointer" data-slot-index="${slotIdx}" title="Supprimer cette photo">
+                                    <i class="fa-solid fa-xmark text-[10px]"></i>
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
+                                <input type="file" class="add-slot-file-input sr-only" accept="image/*" data-slot-index="${slotIdx}">
+                                <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm mb-1 group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-camera"></i>
+                                </div>
+                                <span class="text-[10px] font-bold text-slate-700 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
+                                <span class="text-[9px] text-slate-400 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
+                            </label>
+                        `;
+                    }
+                }).join('');
+
+                // Synchronisation Live Preview
+                if (liveImg) {
+                    liveImg.src = addFormData.photos[0]?.compressedDataUrl || addFormData.photos[0]?.previewUrl || '/assets/placeholder.webp';
+                }
+                const existingBadge = livePreviewContainer?.querySelector('#live-preview-photo-badge');
+                if (addFormData.photos.length > 1) {
+                    if (existingBadge) {
+                        const span = existingBadge.querySelector('span');
+                        if (span) span.textContent = `${addFormData.photos.length} photos`;
+                    } else if (livePreviewContainer) {
+                        const badgeEl = document.createElement('span');
+                        badgeEl.id = 'live-preview-photo-badge';
+                        badgeEl.className = 'absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-900/75 text-white backdrop-blur-md shadow-xs flex items-center gap-1';
+                        badgeEl.innerHTML = `<i class="fa-solid fa-camera text-[9px]"></i><span>${addFormData.photos.length} photos</span>`;
+                        livePreviewContainer.appendChild(badgeEl);
+                    }
+                } else if (existingBadge) {
+                    existingBadge.remove();
+                }
+
+                // Écouteurs de sélection de photo
+                addSlotsContainer.querySelectorAll('.add-slot-file-input').forEach((input) => {
+                    input.addEventListener('change', async (e) => {
+                        const file = e.target.files?.[0];
+                        const slotIdx = parseInt(e.target.getAttribute('data-slot-index'), 10) || 0;
+                        if (file) await processAddFile(file, slotIdx);
+                    });
+                });
+
+                // Écouteurs de suppression de photo
+                addSlotsContainer.querySelectorAll('.btn-remove-add-photo').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const slotIdx = parseInt(btn.getAttribute('data-slot-index'), 10);
+                        removeAddPhoto(slotIdx);
+                    });
+                });
             };
 
-            const processFile = async (file) => {
+            const processAddFile = async (file, slotIdx) => {
                 if (!file) return;
 
-                // Tolérance souple pour les mobiles Android : vérifie le MIME ou l'extension du fichier
                 const isImageMime = file.type && file.type.startsWith('image/');
                 const isImageExt = /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '');
                 if (!isImageMime && !isImageExt) {
@@ -985,10 +1008,6 @@ export function createProductManager({
                     return;
                 }
 
-                if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
-                    URL.revokeObjectURL(addFormData.imagePreviewUrl);
-                }
-
                 let instantPreviewUrl = null;
                 try {
                     instantPreviewUrl = URL.createObjectURL(file);
@@ -996,12 +1015,20 @@ export function createProductManager({
                     instantPreviewUrl = '/assets/placeholder.webp';
                 }
 
-                addFormData.imageFile = file;
-                addFormData.imagePreviewUrl = instantPreviewUrl;
-                updateDropzoneUI(file, instantPreviewUrl, true);
+                const photoObj = {
+                    file,
+                    previewUrl: instantPreviewUrl,
+                    compressedBlob: null,
+                    compressedDataUrl: null,
+                };
 
-                // COMPRESSION IMMÉDIATE : dès la sélection, on fige le Blob en mémoire vive
-                // pour parer à toute révocation de permission ou fermeture de flux par l'OS mobile
+                if (slotIdx >= addFormData.photos.length) {
+                    addFormData.photos.push(photoObj);
+                } else {
+                    addFormData.photos[slotIdx] = photoObj;
+                }
+                renderAddPhotosUI();
+
                 try {
                     const compressedDataUrl = await compressImage(file, {
                         maxWidth: 800,
@@ -1010,55 +1037,26 @@ export function createProductManager({
                     });
                     const blob = dataURLtoBlob(compressedDataUrl);
                     blob._isCompressed = true;
-                    addFormData.compressedBlob = blob;
-                    addFormData.compressedDataUrl = compressedDataUrl;
-                    updateDropzoneUI(file, compressedDataUrl, false);
+                    photoObj.compressedBlob = blob;
+                    photoObj.compressedDataUrl = compressedDataUrl;
+                    renderAddPhotosUI();
                 } catch (compressErr) {
-                    console.warn('[ProductManager] Erreur compression immédiate:', compressErr);
-                    showToast(compressErr.message || "Impossible de lire cette photo. Essayez une autre photo.", 'warning');
-                    onRemovePhoto();
+                    console.warn('[ProductManager] Erreur compression photo:', compressErr);
+                    showToast(compressErr.message || "Impossible d'optimiser cette photo.", 'warning');
                 }
             };
 
-            // Écouteur unique sur le champ input de sélection de fichier (permanent dans le DOM)
-            fileInput?.addEventListener('change', (e) => {
-                const f = e.target.files?.[0];
-                if (f) processFile(f);
-            });
+            const removeAddPhoto = (slotIdx) => {
+                const photo = addFormData.photos[slotIdx];
+                if (photo?.previewUrl && photo.previewUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(photo.previewUrl);
+                }
+                addFormData.photos.splice(slotIdx, 1);
+                renderAddPhotosUI();
+            };
 
-            // Écouteur bouton suppression initial si une image était déjà sélectionnée
-            dropzoneContent?.querySelector('#btn-remove-selected-photo')?.addEventListener('click', onRemovePhoto);
-
-            dropzone?.addEventListener('click', (e) => {
-                if (e.target.tagName === 'INPUT' || e.target.closest('#btn-remove-selected-photo')) return;
-                fileInput?.click();
-            });
-
-            // Événements Drag & Drop
-            if (dropzone) {
-                ['dragenter', 'dragover'].forEach((evt) => {
-                    dropzone.addEventListener(evt, (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        dropzone.classList.add('border-primary', 'bg-blue-50/50');
-                    });
-                });
-
-                ['dragleave', 'drop'].forEach((evt) => {
-                    dropzone.addEventListener(evt, (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        dropzone.classList.remove('border-primary', 'bg-blue-50/50');
-                    });
-                });
-
-                dropzone.addEventListener('drop', (e) => {
-                    const dt = e.dataTransfer;
-                    if (dt && dt.files && dt.files.length > 0) {
-                        processFile(dt.files[0]);
-                    }
-                });
-            }
+            // Rendu initial des slots
+            renderAddPhotosUI();
 
             // Soumission du formulaire d'ajout
             form?.addEventListener('submit', async (e) => {
@@ -1088,7 +1086,9 @@ export function createProductManager({
                 const stock = stockInput?.value;
                 const category = catSelect?.value;
                 const description = descInput?.value.trim();
-                const imageFile = addFormData.compressedBlob || addFormData.imageFile || fileInput?.files?.[0] || null;
+                const imageFiles = addFormData.photos
+                    .map((p) => p.compressedBlob || p.file)
+                    .filter(Boolean);
 
                 if (!title || !price) {
                     if (errorEl) {
@@ -1110,12 +1110,16 @@ export function createProductManager({
                         stock,
                         category,
                         description,
-                        imageFile,
+                        imageFiles,
                     });
 
-                    if (addFormData.imagePreviewUrl && addFormData.imagePreviewUrl.startsWith('blob:')) {
-                        URL.revokeObjectURL(addFormData.imagePreviewUrl);
-                    }
+                    // Libération des URLs Blob
+                    addFormData.photos.forEach((p) => {
+                        if (p?.previewUrl && p.previewUrl.startsWith('blob:')) {
+                            URL.revokeObjectURL(p.previewUrl);
+                        }
+                    });
+
                     // Réinitialisation de l'état du formulaire
                     addFormData = {
                         title: '',
@@ -1123,14 +1127,19 @@ export function createProductManager({
                         stock: '10',
                         category: 'restauration',
                         description: '',
-                        imageFile: null,
-                        imagePreviewUrl: null,
-                        compressedBlob: null,
-                        compressedDataUrl: null,
+                        photos: [],
+                        get imageFile() {
+                            return this.photos[0]?.file || null;
+                        },
+                        get imagePreviewUrl() {
+                            return this.photos[0]?.compressedDataUrl || this.photos[0]?.previewUrl || null;
+                        },
+                        get compressedBlob() {
+                            return this.photos[0]?.compressedBlob || null;
+                        },
                     };
                     if (form) form.reset();
-                    if (fileInput) fileInput.value = '';
-                    resetDropzoneUI();
+                    renderAddPhotosUI();
 
                     showToast('Produit publié au catalogue avec succès ! 🎉', 'success');
                     changeActiveTab('list');
@@ -1152,10 +1161,129 @@ export function createProductManager({
         const editModal = containerEl.querySelector('#edit-product-modal');
         const closeEditBtn = containerEl.querySelector('#btn-close-edit-modal');
         const editForm = containerEl.querySelector('#edit-product-form');
-        const editFileInput = containerEl.querySelector('#edit-prod-image-file');
-        const editPreviewImg = containerEl.querySelector('#edit-image-preview-img');
         const editErrorEl = containerEl.querySelector('#edit-product-error');
         const editSubmitBtn = containerEl.querySelector('#btn-submit-edit-product');
+        let editPhotos = [];
+
+        const renderEditPhotosUI = () => {
+            const editSlotsContainer = containerEl.querySelector('#edit-photos-slots-container');
+            const editCountBadge = containerEl.querySelector('#edit-photos-count-badge');
+            if (!editSlotsContainer) return;
+
+            if (editCountBadge) {
+                editCountBadge.textContent = `${editPhotos.length} / 3 photos`;
+            }
+
+            editSlotsContainer.innerHTML = [0, 1, 2].map((slotIdx) => {
+                const photo = editPhotos[slotIdx];
+                if (photo) {
+                    const imgSrc = photo.compressedDataUrl || photo.previewUrl || photo.url || '/assets/placeholder.webp';
+                    return `
+                        <div class="relative aspect-square rounded-2xl bg-slate-100 border-2 border-primary/40 overflow-hidden shadow-2xs group">
+                            <img src="${imgSrc}" alt="Photo ${slotIdx + 1}" class="w-full h-full object-cover">
+                            <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-black ${slotIdx === 0 ? 'bg-primary text-white shadow-xs' : 'bg-slate-900/75 text-white backdrop-blur-xs'}">
+                                ${slotIdx === 0 ? '★ Principale' : `Angle ${slotIdx + 1}`}
+                            </span>
+                            <button type="button" class="btn-remove-edit-photo absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white flex items-center justify-center transition-all shadow-md cursor-pointer" data-slot-index="${slotIdx}" title="Supprimer cette photo">
+                                <i class="fa-solid fa-xmark text-[10px]"></i>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
+                            <input type="file" class="edit-slot-file-input sr-only" accept="image/*" data-slot-index="${slotIdx}">
+                            <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm mb-1 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-slate-700 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
+                            <span class="text-[9px] text-slate-400 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
+                        </label>
+                    `;
+                }
+            }).join('');
+
+            editSlotsContainer.querySelectorAll('.edit-slot-file-input').forEach((input) => {
+                input.addEventListener('change', async (e) => {
+                    const file = e.target.files?.[0];
+                    const slotIdx = parseInt(e.target.getAttribute('data-slot-index'), 10) || 0;
+                    if (file) await processEditFile(file, slotIdx);
+                });
+            });
+
+            editSlotsContainer.querySelectorAll('.btn-remove-edit-photo').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const slotIdx = parseInt(btn.getAttribute('data-slot-index'), 10);
+                    removeEditPhoto(slotIdx);
+                });
+            });
+        };
+
+        const processEditFile = async (file, slotIdx) => {
+            if (!file) return;
+
+            const isImageMime = file.type && file.type.startsWith('image/');
+            const isImageExt = /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '');
+            if (!isImageMime && !isImageExt) {
+                showToast('Veuillez sélectionner un fichier image valide (JPEG, PNG, WebP).', 'warning');
+                return;
+            }
+
+            if (file.size > 20 * 1024 * 1024) {
+                showToast("L'image sélectionnée est trop volumineuse (max 20 Mo).", 'warning');
+                return;
+            }
+
+            let instantPreviewUrl = null;
+            try {
+                instantPreviewUrl = URL.createObjectURL(file);
+            } catch {
+                instantPreviewUrl = '/assets/placeholder.webp';
+            }
+
+            const photoObj = {
+                file,
+                url: null,
+                previewUrl: instantPreviewUrl,
+                compressedBlob: null,
+                compressedDataUrl: null,
+                isExisting: false,
+            };
+
+            if (slotIdx >= editPhotos.length) {
+                editPhotos.push(photoObj);
+            } else {
+                editPhotos[slotIdx] = photoObj;
+            }
+            renderEditPhotosUI();
+
+            try {
+                const compressedDataUrl = await compressImage(file, {
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    quality: 0.75,
+                });
+                const blob = dataURLtoBlob(compressedDataUrl);
+                blob._isCompressed = true;
+                photoObj.compressedBlob = blob;
+                photoObj.compressedDataUrl = compressedDataUrl;
+                renderEditPhotosUI();
+            } catch (err) {
+                console.warn('[ProductManager] Erreur compression modif:', err);
+                showToast(err.message || 'Impossible de lire cette photo.', 'warning');
+            }
+        };
+
+        const removeEditPhoto = (slotIdx) => {
+            const photo = editPhotos[slotIdx];
+            if (photo?.previewUrl && photo.previewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(photo.previewUrl);
+            }
+            editPhotos.splice(slotIdx, 1);
+            renderEditPhotosUI();
+        };
 
         function openEditModal(prod) {
             editingProduct = prod;
@@ -1167,15 +1295,33 @@ export function createProductManager({
             containerEl.querySelector('#edit-prod-category').value = prod.category || 'autres';
             containerEl.querySelector('#edit-prod-desc').value = prod.description || '';
 
-            if (editPreviewImg) {
-                editPreviewImg.src = prod.image_url || '/assets/placeholder.webp';
+            if (Array.isArray(prod.images) && prod.images.length > 0) {
+                editPhotos = prod.images.slice(0, 3).map((url) => ({
+                    url,
+                    file: null,
+                    previewUrl: url,
+                    compressedBlob: null,
+                    compressedDataUrl: url,
+                    isExisting: true,
+                }));
+            } else if (prod.image_url) {
+                editPhotos = [{
+                    url: prod.image_url,
+                    file: null,
+                    previewUrl: prod.image_url,
+                    compressedBlob: null,
+                    compressedDataUrl: prod.image_url,
+                    isExisting: true,
+                }];
+            } else {
+                editPhotos = [];
             }
+
+            renderEditPhotosUI();
 
             editModal.classList.remove('hidden');
             requestAnimationFrame(() => editModal.classList.remove('opacity-0'));
         }
-
-        let editCompressedBlob = null;
 
         function closeEditModal() {
             if (editModal) {
@@ -1183,44 +1329,17 @@ export function createProductManager({
                 setTimeout(() => editModal.classList.add('hidden'), 300);
             }
             editingProduct = null;
-            editCompressedBlob = null;
-            if (editFileInput) editFileInput.value = '';
+            editPhotos.forEach((p) => {
+                if (p?.previewUrl && p.previewUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(p.previewUrl);
+                }
+            });
+            editPhotos = [];
         }
 
         closeEditBtn?.addEventListener('click', closeEditModal);
         editModal?.addEventListener('click', (e) => {
             if (e.target === editModal) closeEditModal();
-        });
-
-        editFileInput?.addEventListener('change', async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-
-            const isImageMime = file.type && file.type.startsWith('image/');
-            const isImageExt = /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '');
-            if (!isImageMime && !isImageExt) {
-                showToast('Veuillez sélectionner un fichier image valide (JPEG, PNG, WebP).', 'warning');
-                return;
-            }
-
-            try {
-                if (editPreviewImg) editPreviewImg.src = URL.createObjectURL(file);
-            } catch {}
-
-            try {
-                const compressedDataUrl = await compressImage(file, {
-                    maxWidth: 800,
-                    maxHeight: 800,
-                    quality: 0.75,
-                });
-                const blob = dataURLtoBlob(compressedDataUrl);
-                blob._isCompressed = true;
-                editCompressedBlob = blob;
-                if (editPreviewImg) editPreviewImg.src = compressedDataUrl;
-            } catch (err) {
-                console.warn('[ProductManager] Erreur compression modif:', err);
-                showToast(err.message || 'Impossible de lire cette photo.', 'warning');
-            }
         });
 
         editForm?.addEventListener('submit', async (e) => {
@@ -1232,7 +1351,9 @@ export function createProductManager({
             const stock = containerEl.querySelector('#edit-prod-stock').value;
             const category = containerEl.querySelector('#edit-prod-category').value;
             const description = containerEl.querySelector('#edit-prod-desc').value.trim();
-            const imageFile = editCompressedBlob || editFileInput?.files?.[0] || null;
+            const imageFiles = editPhotos
+                .map((p) => p.compressedBlob || p.file || p.url)
+                .filter(Boolean);
 
             editSubmitBtn.disabled = true;
             editSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> Enregistrement...`;
@@ -1247,7 +1368,7 @@ export function createProductManager({
                     stock,
                     category,
                     description,
-                    imageFile,
+                    imageFiles,
                 });
                 closeEditModal();
                 await loadData();

@@ -186,7 +186,7 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
     try {
         let query = supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, subscription_plan, subscription_status, subscription_expires_at, trial_started_at, trial_ends_at, created_at)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, subscription_plan, subscription_status, subscription_expires_at, trial_started_at, trial_ends_at, created_at, avatar_url, shop_name)')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)
             .abortSignal(controller.signal);
@@ -332,7 +332,7 @@ export async function fetchTopShops(preloadedProducts = []) {
         const queries = [
             supabase
                 .from('profiles')
-                .select('id, prenom, nom, telephone, is_open, shop_name, shop_category')
+                .select('id, prenom, nom, telephone, is_open, shop_name, shop_category, avatar_url')
                 .eq('role', 'vendeur')
                 .abortSignal(controller.signal),
             supabase
@@ -480,7 +480,7 @@ export async function fetchSellerProfile(sellerId) {
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, prenom, nom, telephone, is_open, role, created_at, shop_name, shop_category')
+            .select('id, prenom, nom, telephone, is_open, role, created_at, shop_name, shop_category, avatar_url')
             .eq('id', sellerId)
             .single();
 
@@ -511,7 +511,7 @@ export async function fetchSellerProducts(sellerId) {
     try {
         const { data, error } = await supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, shop_name, shop_category)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, shop_name, shop_category, avatar_url)')
             .eq('seller_id', sellerId)
             .order('created_at', { ascending: false });
 
@@ -547,7 +547,7 @@ export async function fetchProductById(productId) {
     try {
         const { data, error } = await supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, shop_name, avatar_url)')
             .eq('id', productId)
             .single();
 

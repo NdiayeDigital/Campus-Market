@@ -16,7 +16,80 @@ import {
 const STORAGE_BUCKET = 'product-images';
 
 /**
- * Crée un nouveau produit avec photo compressée et uploadée.
+ * Compresse et téléverse une photo produit vers Supabase Storage.
+ * Si l'élément est déjà une URL distante existante, il est conservé tel quel.
+ * @param {File|Blob|string} item
+ * @param {string} sellerId
+ * @param {number} index
+ * @returns {Promise<string|null>} URL publique
+ */
+async function processAndUploadProductPhoto(item, sellerId, index = 0) {
+    if (!item) return null;
+    if (typeof item === 'string' && (item.startsWith('http://') || item.startsWith('https://'))) {
+        return item;
+    }
+
+    try {
+        let blob = null;
+        if (item instanceof Blob && (item._isCompressed || item.type === 'image/jpeg')) {
+            blob = item;
+        } else if (item?.compressedBlob instanceof Blob) {
+            blob = item.compressedBlob;
+        } else if (typeof item === 'string' && item.startsWith('data:image/')) {
+            blob = dataURLtoBlob(item);
+        } else {
+            const compressedDataUrl = await compressImage(item, {
+                maxWidth: 800,
+                maxHeight: 800,
+                quality: 0.75,
+            });
+            blob = dataURLtoBlob(compressedDataUrl);
+        }
+
+        const fileName = `${sellerId || 'seller'}/${Date.now()}_prod_${index}.jpg`;
+
+        let { data: uploadData, error: uploadErr } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .upload(fileName, blob, {
+                contentType: 'image/jpeg',
+                upsert: true,
+            });
+
+        if (uploadErr) {
+            console.warn(`[ProductManagement] Erreur upload photo ${index}, tentative rafraîchissement...`, uploadErr);
+            try {
+                await supabase.auth.refreshSession();
+                const retry = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .upload(fileName, blob, {
+                        contentType: 'image/jpeg',
+                        upsert: true,
+                    });
+                uploadData = retry.data;
+                uploadErr = retry.error;
+            } catch {}
+        }
+
+        if (uploadErr) {
+            console.error(`[ProductManagement] Échec upload photo ${index}:`, uploadErr);
+            throw new Error(`Échec du téléversement de la photo ${index + 1} (${uploadErr.message || 'Erreur stockage'}).`);
+        }
+
+        if (uploadData) {
+            const { data: publicUrlData } = supabase.storage
+                .from(STORAGE_BUCKET)
+                .getPublicUrl(fileName);
+            return publicUrlData?.publicUrl || null;
+        }
+    } catch (err) {
+        console.error(`[ProductManagement] Erreur traitement photo ${index}:`, err);
+        throw err;
+    }
+    return null;
+}
+
+/**
+ * Crée un nouveau produit avec jusqu'à 3 photos compressées et uploadées.
  *
  * @param {Object} data
  * @param {string} data.sellerId - Identifiant UUID du vendeur
@@ -24,7 +97,8 @@ const STORAGE_BUCKET = 'product-images';
  * @param {number|string} data.price - Prix unitaire en FCFA
  * @param {string} data.category - Catégorie du produit
  * @param {number|string} [data.stock=-1] - Quantité en stock (-1 = illimité)
- * @param {File|Blob} [data.imageFile] - Fichier image sélectionné par l'étudiant
+ * @param {File|Blob|string} [data.imageFile] - Photo unique historique (rétrocompatibilité)
+ * @param {Array<File|Blob|string>} [data.imageFiles] - Tableau de photos (jusqu'à 3)
  * @param {string} [data.icon='fa-box'] - Icône de secours
  * @param {string} [data.color='#1D4ED8'] - Couleur de fond de secours
  * @returns {Promise<Object>} Produit créé
@@ -36,6 +110,7 @@ export async function createProduct({
     category = 'autres',
     stock = -1,
     imageFile = null,
+    imageFiles = null,
     icon = 'fa-box',
     color = '#1D4ED8',
     description = '',
@@ -175,72 +250,24 @@ export async function createProduct({
 
     if (!activeSellerId) throw new Error('Identifiant vendeur requis.');
 
-    let imageUrl = null;
+    // 2. Traitement et téléversement des photos (jusqu'à 3)
+    let photosToProcess = [];
+    if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+        photosToProcess = imageFiles.slice(0, 3);
+    } else if (imageFile) {
+        photosToProcess = [imageFile];
+    }
 
-    // 2. Compression et Téléversement de l'image si fournie
-    if (imageFile) {
-        try {
-            let blob = null;
-
-            if (imageFile instanceof Blob && (imageFile._isCompressed || imageFile.type === 'image/jpeg')) {
-                blob = imageFile;
-            } else if (imageFile?.compressedBlob instanceof Blob) {
-                blob = imageFile.compressedBlob;
-            } else if (typeof imageFile === 'string' && imageFile.startsWith('data:image/')) {
-                blob = dataURLtoBlob(imageFile);
-            } else {
-                // Compression Canvas multi-stratégies (max 800x800, qualité 0.75)
-                const compressedDataUrl = await compressImage(imageFile, {
-                    maxWidth: 800,
-                    maxHeight: 800,
-                    quality: 0.75,
-                });
-                blob = dataURLtoBlob(compressedDataUrl);
-            }
-
-            const fileName = `${activeSellerId}/${Date.now()}_prod.jpg`;
-
-            let { data: uploadData, error: uploadErr } = await supabase.storage
-                .from(STORAGE_BUCKET)
-                .upload(fileName, blob, {
-                    contentType: 'image/jpeg',
-                    upsert: true,
-                });
-
-            if (uploadErr) {
-                console.warn('[ProductManagement] Erreur upload image tentative 1, rafraîchissement auth...', uploadErr);
-                try {
-                    await supabase.auth.refreshSession();
-                    const retry = await supabase.storage
-                        .from(STORAGE_BUCKET)
-                        .upload(fileName, blob, {
-                            contentType: 'image/jpeg',
-                            upsert: true,
-                        });
-                    uploadData = retry.data;
-                    uploadErr = retry.error;
-                } catch (retryEx) {
-                    console.warn('[ProductManagement] Exception rafraîchissement auth:', retryEx);
-                }
-            }
-
-            if (uploadErr) {
-                console.error('[ProductManagement] Erreur upload image définitive:', uploadErr);
-                throw new Error(`Échec du téléversement de la photo (${uploadErr.message || 'Erreur stockage'}). Veuillez réessayer.`);
-            }
-
-            if (uploadData) {
-                const { data: publicUrlData } = supabase.storage
-                    .from(STORAGE_BUCKET)
-                    .getPublicUrl(fileName);
-
-                imageUrl = publicUrlData?.publicUrl || null;
-            }
-        } catch (imgError) {
-            console.error('[ProductManagement] Échec traitement photo produit:', imgError);
-            throw imgError;
+    const uploadedUrls = [];
+    for (let i = 0; i < photosToProcess.length; i++) {
+        const photoItem = photosToProcess[i];
+        if (photoItem) {
+            const url = await processAndUploadProductPhoto(photoItem, activeSellerId, i);
+            if (url) uploadedUrls.push(url);
         }
     }
+
+    const primaryImageUrl = uploadedUrls[0] || null;
 
     // 3. Insertion dans la table `products`
     const productPayload = {
@@ -249,7 +276,8 @@ export async function createProduct({
         price: parsedPrice,
         category,
         stock: parsedStock,
-        image_url: imageUrl,
+        image_url: primaryImageUrl,
+        images: uploadedUrls,
         icon,
     };
 
@@ -265,16 +293,23 @@ export async function createProduct({
             .single();
 
         if (error) {
-            // Repli gracieux si la colonne description n'a pas encore été créée en base
-            if (error.message && error.message.includes('description')) {
-                delete productPayload.description;
+            // Repli gracieux si la colonne images ou description n'a pas encore été créée en base
+            if (error.message && (error.message.includes('images') || error.message.includes('description'))) {
+                console.warn('[ProductManagement] Colonnes optionnelles absentes en base, repli gracieux:', error.message);
+                const fallbackPayload = { ...productPayload };
+                if (error.message.includes('images')) delete fallbackPayload.images;
+                if (error.message.includes('description')) delete fallbackPayload.description;
+
                 const { data: fbData, error: fbErr } = await supabase
                     .from('products')
-                    .insert([productPayload])
+                    .insert([fallbackPayload])
                     .select()
                     .single();
                 if (fbErr) throw fbErr;
-                return fbData;
+                return {
+                    ...fbData,
+                    images: uploadedUrls,
+                };
             }
             throw error;
         }
@@ -289,7 +324,7 @@ export async function createProduct({
 }
 
 /**
- * Modifie un produit existant (titre, prix, stock, catégorie, description, image).
+ * Modifie un produit existant (titre, prix, stock, catégorie, description, images).
  * @param {Object} data
  * @returns {Promise<Object>}
  */
@@ -302,6 +337,7 @@ export async function updateProduct({
     stock,
     description = '',
     imageFile = null,
+    imageFiles = null,
 }) {
     if (!productId) throw new Error('Identifiant produit requis pour la modification.');
     if (!title || !price) throw new Error('Veuillez renseigner le titre et le prix.');
@@ -320,58 +356,24 @@ export async function updateProduct({
         stock: parsedStock,
     };
 
-    if (imageFile) {
-        try {
-            let blob = null;
-
-            if (imageFile instanceof Blob && (imageFile._isCompressed || imageFile.type === 'image/jpeg')) {
-                blob = imageFile;
-            } else if (imageFile?.compressedBlob instanceof Blob) {
-                blob = imageFile.compressedBlob;
-            } else if (typeof imageFile === 'string' && imageFile.startsWith('data:image/')) {
-                blob = dataURLtoBlob(imageFile);
-            } else {
-                const compressedDataUrl = await compressImage(imageFile, {
-                    maxWidth: 800,
-                    maxHeight: 800,
-                    quality: 0.75,
-                });
-                blob = dataURLtoBlob(compressedDataUrl);
+    // Gestion multi-photos lors de la modification (jusqu'à 3)
+    if (Array.isArray(imageFiles)) {
+        const uploadedUrls = [];
+        const photosToProcess = imageFiles.slice(0, 3);
+        for (let i = 0; i < photosToProcess.length; i++) {
+            const item = photosToProcess[i];
+            if (item) {
+                const url = await processAndUploadProductPhoto(item, sellerId, i);
+                if (url) uploadedUrls.push(url);
             }
-
-            const fileName = `${sellerId || 'seller'}/${Date.now()}_prod.jpg`;
-
-            let { data: uploadData, error: uploadErr } = await supabase.storage
-                .from(STORAGE_BUCKET)
-                .upload(fileName, blob, {
-                    contentType: 'image/jpeg',
-                    upsert: true,
-                });
-
-            if (uploadErr) {
-                console.warn('[ProductManagement] Erreur upload image modif 1, tentative rafraîchissement auth...', uploadErr);
-                try {
-                    await supabase.auth.refreshSession();
-                    const retry = await supabase.storage
-                        .from(STORAGE_BUCKET)
-                        .upload(fileName, blob, {
-                            contentType: 'image/jpeg',
-                            upsert: true,
-                        });
-                    uploadData = retry.data;
-                    uploadErr = retry.error;
-                } catch {}
-            }
-
-            if (!uploadErr && uploadData) {
-                const { data: publicUrlData } = supabase.storage
-                    .from(STORAGE_BUCKET)
-                    .getPublicUrl(fileName);
-
-                updates.image_url = publicUrlData?.publicUrl || null;
-            }
-        } catch (imgError) {
-            console.warn('[ProductManagement] Erreur upload image modification:', imgError);
+        }
+        updates.images = uploadedUrls;
+        updates.image_url = uploadedUrls[0] || null;
+    } else if (imageFile) {
+        const singleUrl = await processAndUploadProductPhoto(imageFile, sellerId, 0);
+        if (singleUrl) {
+            updates.image_url = singleUrl;
+            updates.images = [singleUrl];
         }
     }
 
@@ -388,16 +390,23 @@ export async function updateProduct({
             .single();
 
         if (error) {
-            if (error.message && error.message.includes('description')) {
-                delete updates.description;
+            if (error.message && (error.message.includes('images') || error.message.includes('description'))) {
+                console.warn('[ProductManagement] Colonnes optionnelles absentes lors de la mise à jour, repli:', error.message);
+                const fallbackUpdates = { ...updates };
+                if (error.message.includes('images')) delete fallbackUpdates.images;
+                if (error.message.includes('description')) delete fallbackUpdates.description;
+
                 const { data: fbData, error: fbErr } = await supabase
                     .from('products')
-                    .update(updates)
+                    .update(fallbackUpdates)
                     .eq('id', productId)
                     .select()
                     .single();
                 if (fbErr) throw fbErr;
-                return fbData;
+                return {
+                    ...fbData,
+                    images: updates.images || fbData?.images || [],
+                };
             }
             throw error;
         }

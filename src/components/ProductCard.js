@@ -28,6 +28,13 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
     const isOutOfStock = product.stock === 0;
     const isUnavailable = !isOpen || isOutOfStock || isSuspended;
 
+    // Gestion multi-photos et image principale
+    const productImages = Array.isArray(product.images) && product.images.length > 0 
+        ? product.images.filter(Boolean) 
+        : (product.image_url ? [product.image_url] : []);
+    const photoCount = productImages.length;
+    const primaryImg = productImages[0] || product.image_url;
+
     // Badges statut
     let statusBadge = '';
     if (isSuspended) {
@@ -43,11 +50,11 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
 
     // Gestion de l'image ou icône
     let imageContent = '';
-    if (product.image_url) {
+    if (primaryImg) {
         // Remplacement préventif de l'URL Unsplash restreinte par ORB (bracelet)
-        const safeImageUrl = product.image_url.includes('photo-1611591475823-3882f0592965')
+        const safeImageUrl = primaryImg.includes('photo-1611591475823-3882f0592965')
             ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
-            : product.image_url;
+            : primaryImg;
 
         imageContent = `
             <img 
@@ -72,12 +79,20 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
     const sellerName = product.seller
         ? `${product.seller.prenom || ''} ${product.seller.nom || ''}`.trim()
         : 'Vendeur UIDT';
+    const sellerAvatar = product.seller?.avatar_url;
 
     cardEl.innerHTML = `
         <!-- Image Container -->
         <div class="relative w-full aspect-square bg-slate-100/80 overflow-hidden">
             ${statusBadge}
             ${imageContent}
+            ${photoCount > 1 ? `
+                <!-- Badge Multi-Photos -->
+                <span class="absolute bottom-2 left-2 z-10 bg-slate-900/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs pointer-events-none">
+                    <i class="fa-solid fa-camera text-[9px]"></i>
+                    <span>${photoCount}</span>
+                </span>
+            ` : ''}
             <!-- Bouton Partager Rapide (Cible tactile ergonomique min 44x44px) -->
             <button 
                 type="button" 
@@ -101,8 +116,11 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                     title="Voir la vitrine de ${escapeHTML(sellerName)}"
                     class="text-[11px] font-medium text-slate-500 hover:text-primary line-clamp-1 flex items-center gap-1.5 transition-colors cursor-pointer text-left focus:outline-none w-fit"
                 >
-                    <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">
-                        ${(sellerName[0] || 'V').toUpperCase()}
+                    <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold overflow-hidden shrink-0">
+                        ${sellerAvatar 
+                            ? `<img src="${escapeHTML(sellerAvatar)}" alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.textContent='${(sellerName[0] || 'V').toUpperCase()}';">`
+                            : (sellerName[0] || 'V').toUpperCase()
+                        }
                     </span>
                     <span class="truncate hover:underline">${escapeHTML(sellerName)}</span>
                 </button>
