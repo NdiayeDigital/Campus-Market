@@ -121,7 +121,7 @@ export function createProductManager({
 
         containerEl.innerHTML = `
             <!-- Barre de sous-navigation interne du catalogue avec jauge d'abonnement -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 sm:p-4 flex items-center justify-between gap-3 flex-wrap">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-3 sm:p-4 flex items-center justify-between gap-3 flex-wrap">
                 <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <button 
                         type="button" 
@@ -129,13 +129,13 @@ export function createProductManager({
                         class="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[42px] cursor-pointer active:scale-95 ${
                             activeTab === 'list'
                                 ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         }"
                     >
                         <i class="fa-solid fa-boxes-stacked text-xs"></i>
                         <span>Mes Articles</span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            activeTab === 'list' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                            activeTab === 'list' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                         }">
                             ${products.length}
                         </span>
@@ -148,14 +148,14 @@ export function createProductManager({
                             class="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[42px] cursor-pointer active:scale-95 ${
                                 activeTab === 'add'
                                     ? 'bg-primary text-white shadow-xs'
-                                    : (isLimitReached ? 'bg-amber-50 text-amber-900 border border-amber-300' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
+                                    : (isLimitReached ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800')
                             }"
                         >
                             <i class="fa-solid ${isLimitReached ? 'fa-lock text-amber-600' : 'fa-plus text-xs'}"></i>
                             <span>${isLimitReached ? `Ajouter (Complet : ${count}/${maxAllowed})` : 'Ajouter un produit'}</span>
                         </button>
                     ` : `
-                        <div class="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1.5">
+                        <div class="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-800 flex items-center gap-1.5">
                             <i class="fa-solid fa-ban text-[11px]"></i>
                             <span>Ajout bloqué (boutique suspendue)</span>
                         </div>
@@ -166,8 +166,8 @@ export function createProductManager({
                 <div class="flex items-center gap-2 flex-wrap">
                     <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
                         isLimitReached
-                            ? 'bg-amber-50 text-amber-950 border-amber-300 shadow-2xs'
-                            : 'bg-slate-50 text-slate-700 border-slate-200/80'
+                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-700 shadow-2xs'
+                            : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700'
                     }">
                         <div class="flex items-center gap-1.5">
                             <i class="fa-solid ${isLimitReached ? 'fa-lock text-amber-600' : 'fa-crown text-amber-500'} text-xs"></i>
@@ -175,7 +175,7 @@ export function createProductManager({
                             <span class="tabular-nums">${count} / ${maxAllowed} produits</span>
                         </div>
                         <span class="text-[10px] font-black px-1.5 py-0.2 rounded-full ${
-                            isLimitReached ? 'bg-amber-400 text-slate-950' : 'bg-slate-200 text-slate-700'
+                            isLimitReached ? 'bg-amber-400 text-slate-950' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                         }">${percent}%</span>
                     </div>
 
@@ -183,7 +183,7 @@ export function createProductManager({
                         <button 
                             type="button" 
                             id="pm-btn-cancel-add" 
-                            class="text-xs text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                            class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         >
                             <i class="fa-solid fa-arrow-left text-[11px]"></i>
                             <span>Retour aux articles</span>
@@ -227,31 +227,31 @@ export function createProductManager({
         return `
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <!-- Colonne de gauche : Formulaire de saisie -->
-                <div class="lg:col-span-7 xl:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 flex flex-col gap-5">
+                <div class="lg:col-span-7 xl:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5 sm:p-6 flex flex-col gap-5">
                     <div>
                         <div class="flex items-center justify-between gap-2 flex-wrap">
-                            <h3 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg">Nouvelle Annonce</h3>
+                            <h3 class="font-heading font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">Nouvelle Annonce</h3>
                             <span class="px-2.5 py-1 rounded-xl text-xs font-bold ${
-                                isLimitReached ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-slate-100 text-slate-700'
+                                isLimitReached ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                             }">
                                 ${subStatus?.isTrial ? 'Essai Gratuit' : planObj.name} • ${count} / ${maxAllowed} articles
                             </span>
                         </div>
-                        <p class="text-xs text-slate-500 mt-0.5">Remplissez les détails pour publier immédiatement votre article aux étudiants de l'UIDT.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Remplissez les détails pour publier immédiatement votre article aux étudiants de l'UIDT.</p>
                     </div>
 
                     ${subStatus?.isExpired ? `
                         <!-- Alerte Période d'essai Terminée -->
-                        <div class="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex flex-col gap-2.5 shadow-2xs">
+                        <div class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-200 flex flex-col gap-2.5 shadow-2xs">
                             <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-rose-200 text-rose-950 flex items-center justify-center text-sm shrink-0">
+                                <div class="w-9 h-9 rounded-xl bg-rose-200 dark:bg-rose-900/60 text-rose-950 dark:text-rose-200 flex items-center justify-center text-sm shrink-0">
                                     <i class="fa-solid fa-lock"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <h4 class="font-heading font-extrabold text-sm text-rose-950">
+                                    <h4 class="font-heading font-extrabold text-sm text-rose-950 dark:text-rose-200">
                                         Période d'essai terminée
                                     </h4>
-                                    <p class="text-xs text-rose-800">
+                                    <p class="text-xs text-rose-800 dark:text-rose-300">
                                         Votre période d'essai de 7 jours est terminée. Veuillez activer votre formule pour continuer à ajouter des articles.
                                     </p>
                                 </div>
@@ -263,22 +263,22 @@ export function createProductManager({
                         </div>
                     ` : (isLimitReached ? `
                         <!-- Alerte Quota Atteint Stricte -->
-                        <div class="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex flex-col gap-2.5 shadow-2xs">
+                        <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-200 flex flex-col gap-2.5 shadow-2xs">
                             <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-amber-200 text-amber-950 flex items-center justify-center text-sm shrink-0">
+                                <div class="w-9 h-9 rounded-xl bg-amber-200 dark:bg-amber-900/60 text-amber-950 dark:text-amber-200 flex items-center justify-center text-sm shrink-0">
                                     <i class="fa-solid fa-layer-group"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <h4 class="font-heading font-extrabold text-sm text-amber-950">
+                                    <h4 class="font-heading font-extrabold text-sm text-amber-950 dark:text-amber-200">
                                         Plafond de catalogue atteint (${count} / ${maxAllowed} produits)
                                     </h4>
-                                    <p class="text-xs text-amber-800">
+                                    <p class="text-xs text-amber-800 dark:text-amber-300">
                                         Votre formule actuelle <strong>${subStatus?.isTrial ? 'Essai Gratuit (3 articles max)' : `${planObj.name} (${maxAllowed} articles max)`}</strong> est complète.
                                     </p>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between gap-3 border-t border-amber-200/80 pt-2 flex-wrap">
-                                <p class="text-xs text-amber-900 leading-relaxed">
+                            <div class="flex items-center justify-between gap-3 border-t border-amber-200/80 dark:border-amber-700/80 pt-2 flex-wrap">
+                                <p class="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
                                     ${subStatus?.isTrial
                                         ? "L'essai gratuit est limité à 3 articles. Passez au <strong>Pack Starter (5 prod.)</strong> ou <strong>Pack Pro (10 prod.)</strong> pour publier plus d'articles."
                                         : (plan === 'starter' 
@@ -295,16 +295,16 @@ export function createProductManager({
                         </div>
                     ` : '')}
 
-                    <div id="add-product-error" class="hidden p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium"></div>
+                    <div id="add-product-error" class="hidden p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 font-medium"></div>
 
                     <form id="add-product-form" class="flex flex-col gap-4.5">
                         <!-- 1. Multi-photos du produit (3 emplacements) -->
                         <div>
                             <div class="flex items-center justify-between mb-1.5">
-                                <label class="block text-xs font-bold text-slate-700">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
                                     Photos de l'article <span class="text-primary font-bold">(Jusqu'à 3 photos)</span>
                                 </label>
-                                <span class="text-[11px] font-semibold text-slate-400" id="add-photos-count-badge">
+                                <span class="text-[11px] font-semibold text-slate-400 dark:text-slate-500" id="add-photos-count-badge">
                                     ${addFormData.photos.length} / 3 photos ajoutées
                                 </span>
                             </div>
@@ -314,7 +314,7 @@ export function createProductManager({
                                     const photo = addFormData.photos[slotIdx];
                                     if (photo) {
                                         return `
-                                            <div class="relative aspect-square rounded-2xl bg-slate-100 border-2 border-primary/40 overflow-hidden shadow-2xs group">
+                                            <div class="relative aspect-square rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-primary/40 overflow-hidden shadow-2xs group">
                                                 <img src="${photo.compressedDataUrl || photo.previewUrl}" alt="Photo ${slotIdx + 1}" class="w-full h-full object-cover">
                                                 <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-black ${slotIdx === 0 ? 'bg-primary text-white shadow-xs' : 'bg-slate-900/75 text-white backdrop-blur-xs'}">
                                                     ${slotIdx === 0 ? '★ Principale' : `Angle ${slotIdx + 1}`}
@@ -326,26 +326,26 @@ export function createProductManager({
                                         `;
                                     } else {
                                         return `
-                                            <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
+                                            <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary/60 dark:hover:border-primary/60 bg-slate-50/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
                                                 <input type="file" class="add-slot-file-input sr-only" accept="image/*" data-slot-index="${slotIdx}">
                                                 <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm mb-1 group-hover:scale-110 transition-transform">
                                                     <i class="fa-solid fa-camera"></i>
                                                 </div>
-                                                <span class="text-[10px] font-bold text-slate-700 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
-                                                <span class="text-[9px] text-slate-400 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
+                                                <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
+                                                <span class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
                                             </label>
                                         `;
                                     }
                                 }).join('')}
                             </div>
-                            <p class="text-[10px] text-slate-400">
+                            <p class="text-[10px] text-slate-400 dark:text-slate-500">
                                 💡 Ajoutez jusqu'à 3 photos pour présenter l'article sous différents angles (vue d'ensemble, détail, emballage).
                             </p>
                         </div>
 
                         <!-- 2. Nom du produit -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="new-prod-title">
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="new-prod-title">
                                 Nom du produit ou plat *
                             </label>
                             <input 
@@ -354,14 +354,14 @@ export function createProductManager({
                                 required 
                                 value="${escapeHTML(addFormData.title)}"
                                 placeholder="Ex: Thiéboudienne Penda Mbaye, Clé USB 32Go, Calculatrice TI..." 
-                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]"
+                                class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]"
                             >
                         </div>
 
                         <!-- 3. Prix avec mention 'FCFA' intégrée & Stock initial -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1" for="new-prod-price">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="new-prod-price">
                                     Prix unitaire *
                                 </label>
                                 <div class="relative">
@@ -373,16 +373,16 @@ export function createProductManager({
                                         step="50" 
                                         value="${addFormData.price}"
                                         placeholder="1500" 
-                                        class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]"
+                                        class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]"
                                     >
-                                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 select-none pointer-events-none">
+                                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 dark:text-slate-500 select-none pointer-events-none">
                                         FCFA
                                     </span>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1" for="new-prod-stock">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="new-prod-stock">
                                     Quantité en stock
                                 </label>
                                 <input 
@@ -391,20 +391,20 @@ export function createProductManager({
                                     value="${addFormData.stock}" 
                                     min="-1" 
                                     placeholder="-1 = illimité" 
-                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]"
+                                    class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]"
                                 >
                             </div>
                         </div>
 
                         <!-- 4. Catégorie -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="new-prod-category">
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="new-prod-category">
                                 Catégorie de l'article *
                             </label>
                             <select 
                                 id="new-prod-category" 
                                 required 
-                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px] cursor-pointer"
+                                class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px] cursor-pointer"
                             >
                                 ${CATEGORIES.filter((c) => c.id !== 'all').map((c) => `
                                     <option value="${c.id}" ${c.id === addFormData.category ? 'selected' : ''}>${c.label}</option>
@@ -414,14 +414,14 @@ export function createProductManager({
 
                         <!-- 5. Description -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="new-prod-desc">
-                                Description détaillée <span class="text-slate-400 font-normal">(facultatif)</span>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="new-prod-desc">
+                                Description détaillée <span class="text-slate-400 dark:text-slate-500 font-normal">(facultatif)</span>
                             </label>
                             <textarea 
                                 id="new-prod-desc" 
                                 rows="3" 
                                 placeholder="Précisez la taille, les ingrédients, la garantie, le pavillon de retrait..." 
-                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"
+                                class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"
                             >${escapeHTML(addFormData.description)}</textarea>
                         </div>
 
@@ -440,20 +440,20 @@ export function createProductManager({
 
                 <!-- Colonne de droite (Desktop) : Carte d'aperçu dynamique (Live Preview) -->
                 <div class="lg:col-span-5 xl:col-span-5 hidden lg:flex flex-col gap-3.5 sticky top-20">
-                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col gap-4">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5 flex flex-col gap-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                             <div class="flex items-center gap-2">
                                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <h4 class="font-heading font-bold text-xs uppercase tracking-wider text-slate-600">Aperçu en direct (Vue Étudiant)</h4>
+                                <h4 class="font-heading font-bold text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">Aperçu en direct (Vue Étudiant)</h4>
                             </div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                                 Live Preview
                             </span>
                         </div>
 
                         <!-- Carte produit reproduite fidèlement -->
-                        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden flex flex-col">
-                            <div class="relative aspect-[4/3] w-full bg-slate-100 overflow-hidden flex items-center justify-center">
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-card overflow-hidden flex flex-col">
+                            <div class="relative aspect-[4/3] w-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
                                 <img 
                                     id="live-preview-img" 
                                     src="${previewImg}" 
@@ -467,31 +467,31 @@ export function createProductManager({
                                         <span>${addFormData.photos.length} photos</span>
                                     </span>
                                 ` : ''}
-                                <span id="live-preview-price" class="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-xs font-black bg-white/95 text-primary backdrop-blur-md shadow-sm border border-slate-200/80 tabular-nums">
+                                <span id="live-preview-price" class="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-xs font-black bg-white/95 dark:bg-slate-900/95 text-primary backdrop-blur-md shadow-sm border border-slate-200/80 dark:border-slate-700 tabular-nums">
                                     ${previewPrice} F
                                 </span>
-                                <span id="live-preview-category" class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-slate-800 backdrop-blur-md shadow-xs">
+                                <span id="live-preview-category" class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-200 backdrop-blur-md shadow-xs">
                                     ${escapeHTML(selectedCat.label)}
                                 </span>
                             </div>
 
                             <div class="p-4 flex flex-col gap-2.5">
-                                <h4 id="live-preview-title" class="font-heading font-bold text-sm text-slate-900 truncate">
+                                <h4 id="live-preview-title" class="font-heading font-bold text-sm text-slate-900 dark:text-white truncate">
                                     ${escapeHTML(previewTitle)}
                                 </h4>
 
-                                <div class="flex items-center justify-between text-xs text-slate-500">
+                                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                                     <span class="flex items-center gap-1.5 truncate">
-                                        <i class="fa-solid fa-store text-[10px] text-slate-400"></i>
+                                        <i class="fa-solid fa-store text-[10px] text-slate-400 dark:text-slate-500"></i>
                                         <span>Votre Boutique • UIDT</span>
                                     </span>
-                                    <span id="live-preview-stock-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span id="live-preview-stock-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                                         En stock
                                     </span>
                                 </div>
 
-                                <div class="pt-3 border-t border-slate-100 mt-1 flex items-center justify-between">
-                                    <span class="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                                <div class="pt-3 border-t border-slate-100 dark:border-slate-800 mt-1 flex items-center justify-between">
+                                    <span class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-1">
                                         <i class="fa-solid fa-truck-fast text-primary"></i> Livraison campus
                                     </span>
                                     <span class="px-3 py-1 bg-primary text-white text-[11px] font-bold rounded-lg pointer-events-none">
@@ -501,7 +501,7 @@ export function createProductManager({
                             </div>
                         </div>
 
-                        <p class="text-[11px] text-slate-400 text-center leading-relaxed">
+                        <p class="text-[11px] text-slate-400 dark:text-slate-500 text-center leading-relaxed">
                             Cet aperçu montre exactement le rendu de votre annonce tel qu'il apparaîtra aux étudiants dans le catalogue.
                         </p>
                     </div>
@@ -521,11 +521,11 @@ export function createProductManager({
                     <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-blue-500 text-white flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-primary/25">
                         <i class="fa-solid fa-boxes-stacked"></i>
                     </div>
-                    <span class="px-3 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-200 inline-block mb-2">
+                    <span class="px-3 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800 inline-block mb-2">
                         Boutique prête aux ventes
                     </span>
-                    <h4 class="font-heading font-extrabold text-slate-900 text-lg sm:text-xl mb-1.5">Votre catalogue est encore vide</h4>
-                    <p class="text-xs sm:text-sm text-slate-600 max-w-md mx-auto mb-6 leading-relaxed">
+                    <h4 class="font-heading font-extrabold text-slate-900 dark:text-white text-lg sm:text-xl mb-1.5">Votre catalogue est encore vide</h4>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto mb-6 leading-relaxed">
                         Publiez votre premier article en moins de 30 secondes avec photo, prix en FCFA et stock pour commencer à recevoir des commandes des étudiants de l'UIDT.
                     </p>
                     ${!isSuspended ? `
@@ -554,28 +554,28 @@ export function createProductManager({
                     <button type="button" data-article-filter="all" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         articleFilter === 'all'
                             ? 'bg-primary text-white shadow-xs'
-                            : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }">
                         Tous (${products.length})
                     </button>
                     <button type="button" data-article-filter="active" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         articleFilter === 'active'
                             ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-white text-emerald-800 border border-emerald-200 hover:bg-emerald-50'
+                            : 'bg-white dark:bg-slate-800 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
                     }">
                         En vente (${forSaleCount})
                     </button>
                     <button type="button" data-article-filter="sold" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         articleFilter === 'sold'
                             ? 'bg-rose-600 text-white shadow-xs'
-                            : 'bg-white text-rose-800 border border-rose-200 hover:bg-rose-50'
+                            : 'bg-white dark:bg-slate-800 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/40'
                     }">
                         Vendu (${soldCount})
                     </button>
                     <button type="button" data-article-filter="paused" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         articleFilter === 'paused'
                             ? 'bg-amber-600 text-white shadow-xs'
-                            : 'bg-white text-amber-800 border border-amber-200 hover:bg-amber-50'
+                            : 'bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/40'
                     }">
                         Pause (${pausedCount})
                     </button>
@@ -583,7 +583,7 @@ export function createProductManager({
 
                 <!-- Liste des articles sous forme de cartes compactes -->
                 ${filtered.length === 0 ? `
-                    <div class="p-8 text-center bg-white rounded-2xl border border-slate-200/80 text-xs text-slate-400">
+                    <div class="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500">
                         Aucun article ne correspond à ce filtre.
                     </div>
                 ` : `
@@ -599,29 +599,29 @@ export function createProductManager({
                             // Badges de statut & alertes de stock
                             let statusBadge = '';
                             if (isSold) {
-                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">Vendu</span>`;
+                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">Vendu</span>`;
                             } else if (isPaused) {
-                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Pause</span>`;
+                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Pause</span>`;
                             } else {
-                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">En vente</span>`;
+                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">En vente</span>`;
                             }
 
                             let stockAlertBadge = '';
                             if (prod.stock === 0) {
-                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation text-[9px]"></i> Épuisé</span>`;
+                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation text-[9px]"></i> Épuisé</span>`;
                             } else if (prod.stock > 0 && prod.stock <= 2) {
-                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1 animate-pulse"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Stock faible (${prod.stock})</span>`;
+                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1 animate-pulse"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Stock faible (${prod.stock})</span>`;
                             } else if (prod.stock > 2) {
-                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Stock : ${prod.stock}</span>`;
+                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">Stock : ${prod.stock}</span>`;
                             } else {
-                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">Illimité</span>`;
+                                stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">Illimité</span>`;
                             }
 
                             return `
-                                <div class="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-xs hover:shadow-card transition-all">
+                                <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-xs hover:shadow-card transition-all">
                                     <!-- Vignette carrée w-20 h-20 object-cover + Métadonnées au centre -->
                                     <div class="flex items-center gap-3.5 min-w-0 flex-1">
-                                        <div class="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-100 shrink-0 flex items-center justify-center relative">
+                                        <div class="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shrink-0 flex items-center justify-center relative">
                                             ${safeImg ? `
                                                 <img 
                                                     src="${escapeHTML(safeImg)}" 
@@ -637,7 +637,7 @@ export function createProductManager({
 
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center gap-2 flex-wrap">
-                                                <h4 class="font-heading font-bold text-slate-900 text-sm truncate leading-snug" title="${escapeHTML(prod.title)}">
+                                                <h4 class="font-heading font-bold text-slate-900 dark:text-white text-sm truncate leading-snug" title="${escapeHTML(prod.title)}">
                                                     ${escapeHTML(prod.title)}
                                                 </h4>
                                                 ${statusBadge}
@@ -648,8 +648,8 @@ export function createProductManager({
                                                 <span class="font-heading font-extrabold text-sm sm:text-base text-primary tabular-nums">
                                                     ${Number(prod.price).toLocaleString('fr-FR')} FCFA
                                                 </span>
-                                                <span class="text-slate-300">•</span>
-                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                                <span class="text-slate-300 dark:text-slate-600">•</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                                                     ${escapeHTML(prod.category || 'Général')}
                                                 </span>
                                             </div>
@@ -657,21 +657,21 @@ export function createProductManager({
                                     </div>
 
                                     <!-- Contrôle rapide du stock Stepper + Actions (Boutons tactiles min-h-[44px]) -->
-                                    <div class="flex items-center gap-2 self-end sm:self-center border-t sm:border-t-0 border-slate-100 pt-2.5 sm:pt-0 w-full sm:w-auto justify-end flex-wrap">
+                                    <div class="flex items-center gap-2 self-end sm:self-center border-t sm:border-t-0 border-slate-100 dark:border-slate-800 pt-2.5 sm:pt-0 w-full sm:w-auto justify-end flex-wrap">
                                         <!-- Stepper Rapide de Stock [-] [qty] [+] -->
                                         ${prod.stock !== -1 ? `
-                                            <div class="flex items-center gap-1 bg-slate-100/90 rounded-xl p-1 border border-slate-200/80 mr-1" title="Ajuster rapidement la quantité en stock">
+                                            <div class="flex items-center gap-1 bg-slate-100/90 dark:bg-slate-800 rounded-xl p-1 border border-slate-200/80 dark:border-slate-700 mr-1" title="Ajuster rapidement la quantité en stock">
                                                 <button 
                                                     type="button" 
                                                     data-action="quick-stock-dec" 
                                                     data-id="${prod.id}" 
                                                     data-current="${prod.stock}" 
                                                     title="Diminuer stock" 
-                                                    class="w-8 h-8 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition-all shadow-xs active:scale-90 cursor-pointer min-h-[32px] min-w-[32px]"
+                                                    class="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center justify-center text-xs font-bold transition-all shadow-xs active:scale-90 cursor-pointer min-h-[32px] min-w-[32px]"
                                                 >
                                                     <i class="fa-solid fa-minus text-[10px]"></i>
                                                 </button>
-                                                <span class="px-2 font-heading font-extrabold text-xs text-slate-900 tabular-nums min-w-[28px] text-center">
+                                                <span class="px-2 font-heading font-extrabold text-xs text-slate-900 dark:text-white tabular-nums min-w-[28px] text-center">
                                                     ${prod.stock > 0 ? prod.stock : '0'}
                                                 </span>
                                                 <button 
@@ -680,7 +680,7 @@ export function createProductManager({
                                                     data-id="${prod.id}" 
                                                     data-current="${prod.stock}" 
                                                     title="Augmenter stock" 
-                                                    class="w-8 h-8 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition-all shadow-xs active:scale-90 cursor-pointer min-h-[32px] min-w-[32px]"
+                                                    class="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center justify-center text-xs font-bold transition-all shadow-xs active:scale-90 cursor-pointer min-h-[32px] min-w-[32px]"
                                                 >
                                                     <i class="fa-solid fa-plus text-[10px]"></i>
                                                 </button>
@@ -692,7 +692,7 @@ export function createProductManager({
                                             data-action="share" 
                                             data-id="${prod.id}" 
                                             title="Partager cet article (Lien & WhatsApp)"
-                                            class="w-11 h-11 flex items-center justify-center rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-600 hover:text-emerald-700 hover:border-emerald-300 text-xs font-bold transition-all min-h-[44px] min-w-[44px] active:scale-95 cursor-pointer shadow-xs"
+                                            class="w-11 h-11 flex items-center justify-center rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:border-emerald-300 text-xs font-bold transition-all min-h-[44px] min-w-[44px] active:scale-95 cursor-pointer shadow-xs"
                                         >
                                             <i class="fa-solid fa-share-nodes text-xs"></i>
                                         </button>
@@ -702,7 +702,7 @@ export function createProductManager({
                                             data-action="edit" 
                                             data-id="${prod.id}" 
                                             title="Modifier l'article"
-                                            class="px-3.5 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all min-h-[44px] flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
+                                            class="px-3.5 py-2 rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all min-h-[44px] flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
                                         >
                                             <i class="fa-solid fa-pen text-xs text-primary"></i>
                                             <span>Modifier</span>
@@ -716,8 +716,8 @@ export function createProductManager({
                                             title="${isSold ? 'Remettre en stock' : 'Mettre en pause / rupture'}"
                                             class="px-3 py-2 rounded-xl border text-xs font-bold transition-all min-h-[44px] flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs ${
                                                 isSold 
-                                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' 
-                                                    : 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                                                    ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60' 
+                                                    : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60'
                                             }"
                                         >
                                             <i class="fa-solid ${isSold ? 'fa-rotate-left' : 'fa-pause'} text-xs"></i>
@@ -749,49 +749,49 @@ export function createProductManager({
     function renderEditModalMarkup() {
         return `
             <div id="edit-product-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-300">
-                <div class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-popIn">
-                    <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto sm:hidden mt-2.5"></div>
+                <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-popIn border border-slate-100 dark:border-slate-800">
+                    <div class="w-12 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto sm:hidden mt-2.5"></div>
 
-                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+                    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/80">
                         <div class="flex items-center gap-2">
                             <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm">
                                 <i class="fa-solid fa-pen"></i>
                             </div>
-                            <h4 class="font-heading font-bold text-slate-900 text-base">Modifier l'article</h4>
+                            <h4 class="font-heading font-bold text-slate-900 dark:text-white text-base">Modifier l'article</h4>
                         </div>
-                        <button id="btn-close-edit-modal" aria-label="Fermer" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 min-h-[38px] min-w-[38px] transition-colors cursor-pointer">
+                        <button id="btn-close-edit-modal" aria-label="Fermer" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 min-h-[38px] min-w-[38px] transition-colors cursor-pointer">
                             <i class="fa-solid fa-xmark text-sm"></i>
                         </button>
                     </div>
 
                     <form id="edit-product-form" class="p-5 overflow-y-auto flex flex-col gap-4">
-                        <div id="edit-product-error" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600 font-medium"></div>
+                        <div id="edit-product-error" class="hidden p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-600 dark:text-rose-300 font-medium"></div>
 
                         <!-- Titre -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-title">Nom du produit ou plat *</label>
-                            <input type="text" id="edit-prod-title" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="edit-prod-title">Nom du produit ou plat *</label>
+                            <input type="text" id="edit-prod-title" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
                         </div>
 
                         <!-- Prix avec mention FCFA & Stock -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-price">Prix *</label>
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="edit-prod-price">Prix *</label>
                                 <div class="relative">
-                                    <input type="number" id="edit-prod-price" required min="50" step="50" class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
-                                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 select-none pointer-events-none">FCFA</span>
+                                    <input type="number" id="edit-prod-price" required min="50" step="50" class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 dark:text-slate-500 select-none pointer-events-none">FCFA</span>
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-stock">Stock restant</label>
-                                <input type="number" id="edit-prod-stock" min="-1" placeholder="-1 = illimité" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="edit-prod-stock">Stock restant</label>
+                                <input type="number" id="edit-prod-stock" min="-1" placeholder="-1 = illimité" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
                             </div>
                         </div>
 
                         <!-- Catégorie -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-category">Catégorie *</label>
-                            <select id="edit-prod-category" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="edit-prod-category">Catégorie *</label>
+                            <select id="edit-prod-category" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
                                 ${CATEGORIES.filter((c) => c.id !== 'all').map((c) => `
                                     <option value="${c.id}">${c.label}</option>
                                 `).join('')}
@@ -800,18 +800,18 @@ export function createProductManager({
 
                         <!-- Description -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-desc">Description</label>
-                            <textarea id="edit-prod-desc" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"></textarea>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1" for="edit-prod-desc">Description</label>
+                            <textarea id="edit-prod-desc" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"></textarea>
                         </div>
 
                         <!-- Photos de l'article (jusqu'à 3) -->
                         <div>
                             <div class="flex items-center justify-between mb-1.5">
-                                <label class="block text-xs font-bold text-slate-700">Photos de l'article (Jusqu'à 3)</label>
-                                <span class="text-[11px] font-semibold text-slate-400" id="edit-photos-count-badge">0 / 3 photos</span>
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">Photos de l'article (Jusqu'à 3)</label>
+                                <span class="text-[11px] font-semibold text-slate-400 dark:text-slate-500" id="edit-photos-count-badge">0 / 3 photos</span>
                             </div>
                             <div class="grid grid-cols-3 gap-2.5" id="edit-photos-slots-container"></div>
-                            <p class="text-[10px] text-slate-400 mt-1.5">
+                            <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">
                                 Vous pouvez supprimer une photo ou en ajouter une nouvelle dans les emplacements disponibles.
                             </p>
                         </div>
@@ -941,13 +941,13 @@ export function createProductManager({
                         `;
                     } else {
                         return `
-                            <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
+                            <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary/60 dark:hover:border-primary/60 bg-slate-50/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
                                 <input type="file" class="add-slot-file-input sr-only" accept="image/*" data-slot-index="${slotIdx}">
                                 <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm mb-1 group-hover:scale-110 transition-transform">
                                     <i class="fa-solid fa-camera"></i>
                                 </div>
-                                <span class="text-[10px] font-bold text-slate-700 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
-                                <span class="text-[9px] text-slate-400 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
+                                <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
+                                <span class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
                             </label>
                         `;
                     }
@@ -1191,13 +1191,13 @@ export function createProductManager({
                     `;
                 } else {
                     return `
-                        <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
+                        <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary/60 dark:hover:border-primary/60 bg-slate-50/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
                             <input type="file" class="edit-slot-file-input sr-only" accept="image/*" data-slot-index="${slotIdx}">
                             <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm mb-1 group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-camera"></i>
                             </div>
-                            <span class="text-[10px] font-bold text-slate-700 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
-                            <span class="text-[9px] text-slate-400 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
+                            <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
+                            <span class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
                         </label>
                     `;
                 }

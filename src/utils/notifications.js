@@ -58,21 +58,21 @@ export function showToast(message, type = 'success', duration = 3500) {
     const theme = TOAST_THEMES[type] || TOAST_THEMES.success;
 
     const toast = document.createElement('div');
-    toast.className = `pointer-events-auto relative overflow-hidden flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xl ${theme.accentShadow} transition-all duration-300 transform -translate-y-3 opacity-0`;
+    toast.className = `pointer-events-auto relative overflow-hidden flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-xl ${theme.accentShadow} transition-all duration-300 transform -translate-y-3 opacity-0`;
 
     toast.innerHTML = `
         <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${theme.iconBg}">
             <i class="fa-solid ${theme.icon}"></i>
         </div>
         <div class="flex-1 min-w-0 pr-1">
-            <p class="text-xs sm:text-sm font-semibold text-slate-800 leading-snug break-words">
+            <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug break-words">
                 ${escapeHTML(message)}
             </p>
         </div>
-        <button type="button" aria-label="Fermer" class="text-slate-400 hover:text-slate-600 p-1 -mr-1 -mt-1 rounded-lg transition-colors flex-shrink-0">
+        <button type="button" aria-label="Fermer" class="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 p-1 -mr-1 -mt-1 rounded-lg transition-colors flex-shrink-0">
             <i class="fa-solid fa-xmark text-sm"></i>
         </button>
-        <div class="absolute bottom-0 inset-x-0 h-1 bg-slate-100 overflow-hidden">
+        <div class="absolute bottom-0 inset-x-0 h-1 bg-slate-100 dark:bg-slate-800 overflow-hidden">
             <div class="toast-progress-bar h-full ${theme.barColor} transition-all ease-linear" style="width: 100%;"></div>
         </div>
     `;
@@ -146,23 +146,23 @@ export function showConfirm({
             : 'bg-primary hover:bg-primary-dark text-white shadow-primary/30';
 
         overlay.innerHTML = `
-            <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-100 max-w-sm sm:max-w-md w-full flex flex-col gap-4 transform scale-95 transition-transform duration-200" role="dialog" aria-modal="true">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-100 dark:border-slate-800 max-w-sm sm:max-w-md w-full flex flex-col gap-4 transform scale-95 transition-transform duration-200" role="dialog" aria-modal="true">
                 <div class="flex items-start gap-4">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${iconBg}">
                         <i class="fa-solid ${iconClass}"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg leading-snug">
+                        <h3 class="font-heading font-extrabold text-slate-900 dark:text-white text-base sm:text-lg leading-snug">
                             ${escapeHTML(title)}
                         </h3>
-                        <p class="text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed">
+                        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                             ${escapeHTML(message || '')}
                         </p>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-2.5 pt-2">
-                    <button id="modal-confirm-cancel" type="button" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold transition-colors min-h-[44px]">
+                    <button id="modal-confirm-cancel" type="button" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold transition-colors min-h-[44px]">
                         ${escapeHTML(cancelText)}
                     </button>
                     <button id="modal-confirm-action" type="button" class="px-5 py-2.5 rounded-xl font-heading font-bold text-xs sm:text-sm shadow-md transition-all min-h-[44px] ${confirmBtnClass}">

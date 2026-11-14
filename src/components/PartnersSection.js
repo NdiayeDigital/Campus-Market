@@ -91,7 +91,7 @@ export function createPartnersSection({
         document.getElementById('partner-detail-modal')?.remove();
 
         const catConfig = PARTNER_CATEGORIES[partner.category] || PARTNER_CATEGORIES.autre;
-        const badgeStyle = catConfig.badgeClass || 'bg-slate-50 text-slate-700 border-slate-200';
+        const badgeStyle = catConfig.badgeClass || 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
         const hasLogo = Boolean(partner.logo_url && partner.logo_url.trim());
         const initial = (partner.name?.[0] || 'P').toUpperCase();
         const whatsappUrl = getBecomePartnerWhatsappUrl();

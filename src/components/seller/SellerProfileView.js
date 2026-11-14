@@ -71,20 +71,20 @@ export function createSellerProfileView({
 
         containerEl.innerHTML = `
             <!-- Navigation de retour & Raccourcis -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
                 <div class="flex items-center gap-3">
                     <button 
                         type="button" 
                         id="btn-back-to-catalog" 
-                        class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-200 text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                        class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-950 dark:text-amber-200 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
                         title="Retour à la boutique publique"
                     >
-                        <i class="fa-solid fa-store text-amber-700 text-sm"></i>
+                        <i class="fa-solid fa-store text-amber-700 dark:text-amber-400 text-sm"></i>
                         <span>Retour à la boutique</span>
                     </button>
                     <div>
-                        <h1 class="text-base sm:text-lg font-extrabold text-slate-900 leading-tight">Mon Profil Marchand</h1>
-                        <p class="text-xs text-slate-500">Gérez vos coordonnées de livraison et les paramètres de votre boutique</p>
+                        <h1 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white leading-tight">Mon Profil Marchand</h1>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Gérez vos coordonnées de livraison et les paramètres de votre boutique</p>
                     </div>
                 </div>
 
@@ -103,31 +103,31 @@ export function createSellerProfileView({
                 <!-- Colonne Gauche : Identité & Résumé Abonnement (1 col) -->
                 <div class="flex flex-col gap-6">
                     <!-- Carte 1 : Identité & Statut -->
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col items-center text-center gap-3">
+                    <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center text-center gap-3">
                         <div class="relative group">
-                            <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center shadow-md border-4 border-white overflow-hidden shrink-0">
+                            <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center shadow-md border-4 border-white dark:border-slate-800 overflow-hidden shrink-0">
                                 ${currentSeller.avatar_url 
                                     ? `<img src="${escapeHTML(currentSeller.avatar_url)}" alt="Logo ${escapeHTML(currentSeller.shop_name || '')}" class="w-full h-full object-cover" id="seller-logo-img" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
                                     : `<span class="text-2xl font-black">${initials}</span>`
                                 }
                             </div>
                             <!-- Bouton Déclencheur Fichier (Caméra) -->
-                            <label for="seller-logo-file-input" class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary hover:bg-primary-hover active:scale-95 text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer transition-transform" title="Modifier le logo de ma boutique">
+                            <label for="seller-logo-file-input" class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary hover:bg-primary-hover active:scale-95 text-white flex items-center justify-center shadow-md border-2 border-white dark:border-slate-800 cursor-pointer transition-transform" title="Modifier le logo de ma boutique">
                                 <i class="fa-solid fa-camera text-xs"></i>
                                 <input type="file" id="seller-logo-file-input" accept="image/png, image/jpeg, image/webp" class="sr-only" />
                             </label>
                             <!-- Indicateur statut ouvert/fermé -->
-                            <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full ${currentSeller.is_open ? 'bg-emerald-500' : 'bg-rose-500'} border-2 border-white" title="${currentSeller.is_open ? 'Boutique ouverte' : 'Boutique fermée'}"></span>
+                            <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full ${currentSeller.is_open ? 'bg-emerald-500' : 'bg-rose-500'} border-2 border-white dark:border-slate-800" title="${currentSeller.is_open ? 'Boutique ouverte' : 'Boutique fermée'}"></span>
                         </div>
 
                         <!-- Actions Logo Boutique -->
                         <div class="flex items-center gap-2 flex-wrap justify-center">
-                            <label for="seller-logo-file-input" class="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1.5">
-                                <i class="fa-solid fa-image text-xs text-primary"></i>
+                            <label for="seller-logo-file-input" class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1.5">
+                                <i class="fa-solid fa-image text-xs text-primary dark:text-blue-400"></i>
                                 <span>${currentSeller.avatar_url ? 'Changer le logo' : 'Ajouter un logo'}</span>
                             </label>
                             ${currentSeller.avatar_url ? `
-                                <button type="button" id="btn-remove-logo" class="px-2 py-1 rounded-lg hover:bg-rose-50 text-rose-600 text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1" title="Supprimer le logo et rétablir les initiales">
+                                <button type="button" id="btn-remove-logo" class="px-2 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1" title="Supprimer le logo et rétablir les initiales">
                                     <i class="fa-solid fa-trash-can text-[10px]"></i>
                                     <span>Supprimer</span>
                                 </button>
@@ -135,24 +135,24 @@ export function createSellerProfileView({
                         </div>
 
                         <div>
-                            <h2 class="text-base font-bold text-slate-900">${escapeHTML(currentSeller.prenom || '')} ${escapeHTML(currentSeller.nom || '')}</h2>
-                            <p class="text-xs text-primary font-semibold mt-0.5">${escapeHTML(currentSeller.shop_name || 'Boutique Étudiante')}</p>
-                            <span class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold ${currentSeller.role === 'superadmin' ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'}">
+                            <h2 class="text-base font-bold text-slate-900 dark:text-white">${escapeHTML(currentSeller.prenom || '')} ${escapeHTML(currentSeller.nom || '')}</h2>
+                            <p class="text-xs text-primary dark:text-blue-400 font-semibold mt-0.5">${escapeHTML(currentSeller.shop_name || 'Boutique Étudiante')}</p>
+                            <span class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold ${currentSeller.role === 'superadmin' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300' : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'}">
                                 <i class="fa-solid ${currentSeller.role === 'superadmin' ? 'fa-shield-halved' : 'fa-certificate'}"></i>
                                 <span>${currentSeller.role === 'superadmin' ? 'Super Administrateur UIDT' : 'Marchand Certifié UIDT'}</span>
                             </span>
                         </div>
 
                         <!-- Interrupteur Ouvert / Fermé -->
-                        <div class="w-full pt-3 mt-1 border-t border-slate-100 flex items-center justify-between">
+                        <div class="w-full pt-3 mt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <div class="text-left">
-                                <span class="text-xs font-bold text-slate-800">Statut de la Boutique</span>
-                                <p class="text-[10px] text-slate-500">${currentSeller.is_open ? 'Vous acceptez les commandes' : 'Boutique en pause'}</p>
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Statut de la Boutique</span>
+                                <p class="text-[10px] text-slate-500 dark:text-slate-400">${currentSeller.is_open ? 'Vous acceptez les commandes' : 'Boutique en pause'}</p>
                             </div>
                             <button 
                                 type="button" 
                                 id="btn-toggle-shop-status" 
-                                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${currentSeller.is_open ? 'bg-emerald-500' : 'bg-slate-300'}"
+                                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${currentSeller.is_open ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}"
                                 role="switch" 
                                 aria-checked="${currentSeller.is_open ? 'true' : 'false'}"
                             >
@@ -162,22 +162,22 @@ export function createSellerProfileView({
                     </div>
 
                     <!-- Carte 2 : Abonnement & Quotas -->
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-3.5">
+                    <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col gap-3.5">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Formule & Quota</span>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${subStatus.isSuperAdmin ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-900'}">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Formule & Quota</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${subStatus.isSuperAdmin ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300' : 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300'}">
                                 ${subStatus.plan.name}
                             </span>
                         </div>
 
-                        <div class="flex flex-col gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div class="flex flex-col gap-2 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                             <div class="flex items-center justify-between text-xs">
-                                <span class="text-slate-600">Limite articles catalogue :</span>
-                                <span class="font-bold text-slate-900">${currentSeller.max_products || subStatus.maxProducts} articles</span>
+                                <span class="text-slate-600 dark:text-slate-400">Limite articles catalogue :</span>
+                                <span class="font-bold text-slate-900 dark:text-white">${currentSeller.max_products || subStatus.maxProducts} articles</span>
                             </div>
                             <div class="flex items-center justify-between text-xs">
-                                <span class="text-slate-600">Validité restante :</span>
-                                <span class="font-bold ${subStatus.daysLeft <= 3 ? 'text-rose-600' : 'text-emerald-700'}">
+                                <span class="text-slate-600 dark:text-slate-400">Validité restante :</span>
+                                <span class="font-bold ${subStatus.daysLeft <= 3 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}">
                                     ${subStatus.isSuperAdmin ? 'Accès Permanent ♾️' : `${subStatus.daysLeft} jours restants`}
                                 </span>
                             </div>
@@ -194,15 +194,15 @@ export function createSellerProfileView({
                     </div>
 
                     <!-- Carte 3 : Partage de Vitrine Marchande -->
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Partager Ma Vitrine</span>
-                        <p class="text-xs text-slate-600 leading-relaxed">Partagez votre lien boutique à vos camarades et groupes de promotion :</p>
+                    <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col gap-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Partager Ma Vitrine</span>
+                        <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">Partagez votre lien boutique à vos camarades et groupes de promotion :</p>
                         
                         <div class="flex gap-2">
                             <button 
                                 type="button" 
                                 id="btn-copy-shop-link" 
-                                class="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                                class="flex-1 py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                             >
                                 <i class="fa-regular fa-copy text-xs"></i>
                                 <span id="copy-btn-text">Copier le lien</span>
@@ -221,19 +221,19 @@ export function createSellerProfileView({
 
                 <!-- Colonne Droite : Formulaire d'Édition des Coordonnées (2 cols) -->
                 <div class="lg:col-span-2 flex flex-col gap-6">
-                    <form id="form-seller-profile" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-5">
-                        <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <form id="form-seller-profile" class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col gap-5">
+                        <div class="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
                             <div>
-                                <h3 class="text-sm sm:text-base font-bold text-slate-900">Coordonnées & Paramètres</h3>
-                                <p class="text-xs text-slate-500">Mettez à jour vos informations de livraison sur le campus</p>
+                                <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Coordonnées & Paramètres</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Mettez à jour vos informations de livraison sur le campus</p>
                             </div>
-                            <span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">ID: ${(currentSeller.id || '').slice(0, 8)}</span>
+                            <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">ID: ${(currentSeller.id || '').slice(0, 8)}</span>
                         </div>
 
                         <!-- Ligne 1 : Prénom et Nom (Modifiables) -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="prof-prenom" class="block text-xs font-bold text-slate-700 mb-1.5">
+                                <label for="prof-prenom" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                                     Prénom <span class="text-rose-500">*</span>
                                 </label>
                                 <input 
@@ -241,13 +241,13 @@ export function createSellerProfileView({
                                     id="prof-prenom" 
                                     required 
                                     value="${escapeHTML(currentSeller.prenom || '')}" 
-                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden transition-all"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden transition-all"
                                     placeholder="Votre prénom"
                                 />
                             </div>
 
                             <div>
-                                <label for="prof-nom" class="block text-xs font-bold text-slate-700 mb-1.5">
+                                <label for="prof-nom" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                                     Nom de famille <span class="text-rose-500">*</span>
                                 </label>
                                 <input 
@@ -255,7 +255,7 @@ export function createSellerProfileView({
                                     id="prof-nom" 
                                     required 
                                     value="${escapeHTML(currentSeller.nom || '')}" 
-                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden transition-all"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden transition-all"
                                     placeholder="Votre nom"
                                 />
                             </div>
@@ -265,9 +265,9 @@ export function createSellerProfileView({
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <div class="flex items-center justify-between mb-1.5">
-                                    <label class="text-xs font-bold text-slate-700">Email Universitaire</label>
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md" title="Pour des raisons de sécurité, l'email étudiant ne peut pas être modifié.">
-                                        <i class="fa-solid fa-lock text-[9px] text-slate-400"></i>
+                                    <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Email Universitaire</label>
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md" title="Pour des raisons de sécurité, l'email étudiant ne peut pas être modifié.">
+                                        <i class="fa-solid fa-lock text-[9px] text-slate-400 dark:text-slate-500"></i>
                                         <span>Certifié 🔒</span>
                                     </span>
                                 </div>
@@ -276,16 +276,16 @@ export function createSellerProfileView({
                                     disabled 
                                     readonly 
                                     value="${escapeHTML(currentSeller.email || '')}" 
-                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-xs cursor-not-allowed select-all font-mono"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-xs cursor-not-allowed select-all font-mono"
                                 />
-                                <p class="text-[10px] text-slate-400 mt-1">Identifiant universitaire UIDT non modifiable.</p>
+                                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Identifiant universitaire UIDT non modifiable.</p>
                             </div>
 
                             <div>
                                 <div class="flex items-center justify-between mb-1.5">
-                                    <label class="text-xs font-bold text-slate-700">Numéro de Téléphone</label>
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md" title="Pour changer de numéro, contactez le support administrateur.">
-                                        <i class="fa-solid fa-lock text-[9px] text-slate-400"></i>
+                                    <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Numéro de Téléphone</label>
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md" title="Pour changer de numéro, contactez le support administrateur.">
+                                        <i class="fa-solid fa-lock text-[9px] text-slate-400 dark:text-slate-500"></i>
                                         <span>Vérifié 🔒</span>
                                     </span>
                                 </div>
@@ -294,30 +294,30 @@ export function createSellerProfileView({
                                     disabled 
                                     readonly 
                                     value="${escapeHTML(currentSeller.telephone || '')}" 
-                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-xs cursor-not-allowed select-all font-mono"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-xs cursor-not-allowed select-all font-mono"
                                 />
-                                <p class="text-[10px] text-slate-400 mt-1">Contact Wave / Orange Money certifié.</p>
+                                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Contact Wave / Orange Money certifié.</p>
                             </div>
                         </div>
 
                         <!-- Ligne 3 : Résidence Universitaire (Pavillon & Chambre) -->
-                        <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-200/80 flex flex-col gap-3">
+                        <div class="bg-amber-50/60 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-200/80 dark:border-amber-800/60 flex flex-col gap-3">
                             <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-hotel text-amber-700 text-sm"></i>
-                                <span class="text-xs font-extrabold text-amber-950 uppercase tracking-wide">Résidence sur le Campus UIDT</span>
+                                <i class="fa-solid fa-hotel text-amber-700 dark:text-amber-400 text-sm"></i>
+                                <span class="text-xs font-extrabold text-amber-950 dark:text-amber-200 uppercase tracking-wide">Résidence sur le Campus UIDT</span>
                             </div>
-                            <p class="text-[11px] text-amber-900/80 leading-relaxed">
+                            <p class="text-[11px] text-amber-900/80 dark:text-amber-300/80 leading-relaxed">
                                 Renseignez votre pavillon et votre numéro de chambre. Ces coordonnées facilitent la livraison de proximité et sont indispensables aux vérifications du campus.
                             </p>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
                                 <div>
-                                    <label for="prof-pavillon" class="block text-xs font-bold text-slate-800 mb-1">
+                                    <label for="prof-pavillon" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                                         Pavillon de Résidence <span class="text-rose-500">*</span>
                                     </label>
                                     <select 
                                         id="prof-pavillon" 
-                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden cursor-pointer"
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden cursor-pointer"
                                     >
                                         <option value="">-- Choisir votre pavillon --</option>
                                         ${PAVILLONS_UIDT.map(p => `
@@ -327,14 +327,14 @@ export function createSellerProfileView({
                                 </div>
 
                                 <div>
-                                    <label for="prof-chambre" class="block text-xs font-bold text-slate-800 mb-1">
+                                    <label for="prof-chambre" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                                         Numéro de Chambre <span class="text-rose-500">*</span>
                                     </label>
                                     <input 
                                         type="text" 
                                         id="prof-chambre" 
                                         value="${escapeHTML(currentSeller.chambre || '')}" 
-                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
                                         placeholder="Ex: Chambre 14, B-205, etc."
                                     />
                                 </div>
@@ -344,7 +344,7 @@ export function createSellerProfileView({
                         <!-- Ligne 4 : Nom de la Boutique & Catégorie -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="prof-shop-name" class="block text-xs font-bold text-slate-700 mb-1.5">
+                                <label for="prof-shop-name" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                                     Enseigne / Nom de Boutique <span class="text-rose-500">*</span>
                                 </label>
                                 <input 
@@ -352,18 +352,18 @@ export function createSellerProfileView({
                                     id="prof-shop-name" 
                                     required 
                                     value="${escapeHTML(currentSeller.shop_name || '')}" 
-                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden transition-all"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden transition-all"
                                     placeholder="Ex: Chez Fatou Resto"
                                 />
                             </div>
 
                             <div>
-                                <label for="prof-shop-cat" class="block text-xs font-bold text-slate-700 mb-1.5">
+                                <label for="prof-shop-cat" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                                     Catégorie Principale
                                 </label>
                                 <select 
                                     id="prof-shop-cat" 
-                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden cursor-pointer"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden cursor-pointer"
                                 >
                                     ${CATEGORIES_BOUTIQUE.map(c => `
                                         <option value="${c.id}" ${currentSeller.shop_category === c.id ? 'selected' : ''}>${c.label}</option>
@@ -373,7 +373,7 @@ export function createSellerProfileView({
                         </div>
 
                         <!-- Bouton d'enregistrement du formulaire -->
-                        <div class="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+                        <div class="pt-2 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
                             <button 
                                 type="submit" 
                                 id="btn-save-profile" 
@@ -387,11 +387,11 @@ export function createSellerProfileView({
                     </form>
 
                     <!-- Section Sécurité : Modification du Mot de Passe -->
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-4">
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col gap-4">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h4 class="text-sm font-bold text-slate-900">Sécurité du Compte</h4>
-                                <p class="text-xs text-slate-500">Mettez à jour votre mot de passe pour protéger votre boutique</p>
+                                <h4 class="text-sm font-bold text-slate-900 dark:text-white">Sécurité du Compte</h4>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Mettez à jour votre mot de passe pour protéger votre boutique</p>
                             </div>
                             <button 
                                 type="button" 
@@ -402,28 +402,28 @@ export function createSellerProfileView({
                             </button>
                         </div>
 
-                        <form id="form-change-password" class="hidden flex-col gap-3 pt-3 border-t border-slate-100">
+                        <form id="form-change-password" class="hidden flex-col gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label for="pwd-new" class="block text-xs font-semibold text-slate-700 mb-1">Nouveau mot de passe</label>
+                                    <label for="pwd-new" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nouveau mot de passe</label>
                                     <input 
                                         type="password" 
                                         id="pwd-new" 
                                         required 
                                         minlength="6" 
                                         placeholder="Min. 6 caractères" 
-                                        class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
+                                        class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
                                     />
                                 </div>
                                 <div>
-                                    <label for="pwd-confirm" class="block text-xs font-semibold text-slate-700 mb-1">Confirmer</label>
+                                    <label for="pwd-confirm" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Confirmer</label>
                                     <input 
                                         type="password" 
                                         id="pwd-confirm" 
                                         required 
                                         minlength="6" 
                                         placeholder="Retapez le mot de passe" 
-                                        class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
+                                        class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
                                     />
                                 </div>
                             </div>

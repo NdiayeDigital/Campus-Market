@@ -61,17 +61,17 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
 
     function render() {
         modalEl.innerHTML = `
-            <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-100 dark:border-slate-800">
                 <!-- En-tête -->
-                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+                <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 shrink-0">
                     <div class="flex items-center gap-2.5">
                         <img src="${logoUrl}" alt="Campus Market" class="h-9 w-auto max-w-[140px] object-contain">
                         <div>
-                            <h2 class="font-heading font-bold text-slate-900 text-base leading-tight">Espace Vendeur</h2>
-                            <span class="text-[10px] text-slate-400 font-medium">UIDT Thiès</span>
+                            <h2 class="font-heading font-bold text-slate-900 dark:text-white text-base leading-tight">Espace Vendeur</h2>
+                            <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">UIDT Thiès</span>
                         </div>
                     </div>
-                    <button id="btn-close-seller-auth" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors min-h-[44px] min-w-[44px] cursor-pointer">
+                    <button id="btn-close-seller-auth" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors min-h-[44px] min-w-[44px] cursor-pointer">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
@@ -98,25 +98,25 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
 
         return `
             <div class="p-6 flex flex-col items-center text-center my-auto overflow-y-auto">
-                <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-3xl mb-4 animate-pulse">
+                <div class="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-3xl mb-4 animate-pulse">
                     <i class="fa-solid fa-hourglass-half"></i>
                 </div>
-                <h3 class="font-heading font-extrabold text-xl text-slate-900 mb-2">Demande en cours d'examen</h3>
-                <div class="mb-4 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700">
-                    <span class="text-slate-400 text-[10px] uppercase font-bold block">Formule sélectionnée</span>
-                    <strong class="text-slate-900">${planLabel}</strong>
+                <h3 class="font-heading font-extrabold text-xl text-slate-900 dark:text-white mb-2">Demande en cours d'examen</h3>
+                <div class="mb-4 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
+                    <span class="text-slate-400 dark:text-slate-500 text-[10px] uppercase font-bold block">Formule sélectionnée</span>
+                    <strong class="text-slate-900 dark:text-white">${planLabel}</strong>
                 </div>
-                <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+                <p class="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
                     Votre candidature pour ouvrir une boutique sur Campus Market a bien été transmise au Super Administrateur de l'UIDT.
                     <br><br>
                     Vous recevrez une confirmation sous <strong>24h à 48h</strong>.
                 </p>
 
-                <div class="w-full mb-5 p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex flex-col gap-2 text-left">
-                    <span class="text-[10px] font-bold text-blue-900 uppercase flex items-center gap-1.5">
-                        <i class="fa-solid fa-headset text-blue-600"></i> Support & Assistance
+                <div class="w-full mb-5 p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 flex flex-col gap-2 text-left">
+                    <span class="text-[10px] font-bold text-blue-900 dark:text-blue-300 uppercase flex items-center gap-1.5">
+                        <i class="fa-solid fa-headset text-blue-600 dark:text-blue-400"></i> Support & Assistance
                     </span>
-                    <p class="text-[11px] text-slate-600">
+                    <p class="text-[11px] text-slate-600 dark:text-slate-300">
                         Une question sur votre dossier ? Contactez directement notre équipe au <strong>${SUPPORT_CONFIG.phoneDisplay}</strong>.
                     </p>
                     <a 
@@ -130,7 +130,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     </a>
                 </div>
 
-                <button id="btn-back-to-login" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl transition-colors min-h-[44px] cursor-pointer">
+                <button id="btn-back-to-login" class="w-full py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs rounded-xl transition-colors min-h-[44px] cursor-pointer">
                     Retour à la connexion
                 </button>
             </div>
@@ -143,25 +143,25 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 <div class="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-3xl mb-3 shadow-xs">
                     <i class="fa-solid fa-envelope-circle-check"></i>
                 </div>
-                <h3 class="font-heading font-extrabold text-xl text-slate-900 mb-1">Vérification de votre compte</h3>
-                <p class="text-xs text-slate-600 mb-2 leading-relaxed">
+                <h3 class="font-heading font-extrabold text-xl text-slate-900 dark:text-white mb-1">Vérification de votre compte</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-300 mb-2 leading-relaxed">
                     Un code de confirmation à <strong>6 chiffres</strong> vous a été envoyé par email à l'adresse :
                 </p>
-                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-800 mb-2 max-w-full truncate">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 mb-2 max-w-full truncate">
                     <i class="fa-solid fa-at text-primary text-xs"></i>
                     <span class="truncate">${pendingOtpEmail || 'votre email institutionnel'}</span>
                 </div>
-                <div class="flex items-center gap-1.5 text-[11px] text-slate-500 mb-4 font-medium">
+                <div class="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 mb-4 font-medium">
                     <i class="fa-regular fa-clock text-emerald-600"></i>
                     <span>Code valable pendant <strong>15 minutes</strong></span>
                 </div>
 
-                <div id="seller-otp-error" class="hidden w-full mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium text-left"></div>
-                <div id="seller-otp-success" class="hidden w-full mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 font-medium text-left"></div>
+                <div id="seller-otp-error" class="hidden w-full mb-3 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-300 font-medium text-left"></div>
+                <div id="seller-otp-success" class="hidden w-full mb-3 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-700 dark:text-emerald-300 font-medium text-left"></div>
 
                 <form id="seller-otp-form" class="w-full flex flex-col gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider" for="seller-otp-input">
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider" for="seller-otp-input">
                             Code de confirmation (6 chiffres)
                         </label>
                         <input 
@@ -174,7 +174,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                             pattern="[0-9]*"
                             autocomplete="one-time-code"
                             placeholder="••••••" 
-                            class="w-full text-center text-2xl font-mono font-extrabold tracking-[0.5em] px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none transition-all placeholder:text-slate-300"
+                            class="w-full text-center text-2xl font-mono font-extrabold tracking-[0.5em] px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
                             autofocus
                         >
                     </div>
@@ -189,9 +189,9 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     </button>
                 </form>
 
-                <div class="w-full mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2.5">
+                <div class="w-full mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2.5">
                     <div class="flex items-center justify-between text-xs">
-                        <span class="text-slate-500">Vous n'avez rien reçu ?</span>
+                        <span class="text-slate-500 dark:text-slate-400">Vous n'avez rien reçu ?</span>
                         <button 
                             type="button" 
                             id="btn-seller-otp-resend" 
@@ -204,7 +204,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                         </button>
                     </div>
 
-                    <p class="text-[11px] text-slate-400 text-left leading-relaxed">
+                    <p class="text-[11px] text-slate-400 dark:text-slate-500 text-left leading-relaxed">
                         <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>
                         Pensez à vérifier vos courriers indésirables (Spam) si le code tarde à arriver.
                     </p>
@@ -212,7 +212,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     <button 
                         type="button" 
                         id="btn-seller-otp-back" 
-                        class="mt-1 py-2 text-xs text-slate-500 hover:text-slate-800 font-semibold cursor-pointer text-center hover:underline"
+                        class="mt-1 py-2 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold cursor-pointer text-center hover:underline"
                     >
                         ← Modifier mon adresse email ou retourner
                     </button>
@@ -224,22 +224,22 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     function renderForgotPasswordScreen() {
         return `
             <div class="p-6 flex flex-col items-center text-center my-auto overflow-y-auto">
-                <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mb-3 shadow-xs animate-bounce-subtle">
+                <div class="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-2xl mb-3 shadow-xs animate-bounce-subtle">
                     <i class="fa-solid fa-key"></i>
                 </div>
-                <h3 class="font-heading font-extrabold text-lg text-slate-900 mb-1.5">Récupération de mot de passe</h3>
-                <p class="text-xs text-slate-600 mb-4 leading-relaxed max-w-sm">
+                <h3 class="font-heading font-extrabold text-lg text-slate-900 dark:text-white mb-1.5">Récupération de mot de passe</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed max-w-sm">
                     Pour garantir la sécurité et vérifier l'identité étudiante à l'UIDT, la réinitialisation de mot de passe est effectuée directement auprès de notre assistance.
                 </p>
 
                 <!-- Encadré explicatif de la procédure -->
-                <div class="w-full mb-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-700 flex flex-col gap-2">
-                    <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1.5">
+                <div class="w-full mb-4 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-left text-xs text-slate-700 dark:text-slate-300 flex flex-col gap-2">
+                    <span class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1.5">
                         <i class="fa-solid fa-shield-halved text-primary"></i> Procédure sécurisée :
                     </span>
-                    <ol class="list-decimal list-inside flex flex-col gap-1.5 text-[11px] text-slate-600">
+                    <ol class="list-decimal list-inside flex flex-col gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
                         <li>Contactez l'assistance par <strong>WhatsApp</strong> ou par <strong>Email</strong>.</li>
-                        <li>L'administrateur réinitialisera votre compte avec le mot de passe temporaire <code class="px-1.5 py-0.5 bg-amber-100 text-amber-900 font-bold rounded">campus1234!</code>.</li>
+                        <li>L'administrateur réinitialisera votre compte avec le mot de passe temporaire <code class="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200 font-bold rounded">campus1234!</code>.</li>
                         <li>Dès votre connexion avec ce code, vous serez <strong>obligé de définir votre mot de passe personnel</strong>.</li>
                     </ol>
                 </div>
@@ -265,7 +265,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     </a>
                 </div>
 
-                <button id="btn-forgot-back-to-login" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors min-h-[40px] cursor-pointer">
+                <button id="btn-forgot-back-to-login" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition-colors min-h-[40px] cursor-pointer">
                     Retour à la connexion
                 </button>
             </div>
@@ -274,22 +274,22 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
 
     function renderTermsScreen() {
         return `
-            <div class="p-5 sm:p-6 overflow-y-auto flex flex-col gap-4 text-slate-900">
+            <div class="p-5 sm:p-6 overflow-y-auto flex flex-col gap-4 text-slate-900 dark:text-slate-100">
                 <div class="text-center">
                     <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl mx-auto mb-2">
                         <i class="fa-solid fa-handshake"></i>
                     </div>
-                    <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 leading-tight">Conditions & Formules d'Adhésion</h3>
-                    <p class="text-xs text-slate-500 mt-1">Rejoignez la première marketplace étudiante de l'UIDT</p>
+                    <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">Conditions & Formules d'Adhésion</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Rejoignez la première marketplace étudiante de l'UIDT</p>
                 </div>
 
                 <!-- Conditions essentielles -->
-                <div class="bg-slate-50 rounded-2xl border border-slate-200/80 p-3.5 flex flex-col gap-2">
-                    <h4 class="font-heading font-bold text-xs text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
+                <div class="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-3.5 flex flex-col gap-2">
+                    <h4 class="font-heading font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5 uppercase tracking-wide">
                         <i class="fa-solid fa-scroll text-primary text-xs"></i>
                         <span>Modalités pour devenir vendeur</span>
                     </h4>
-                    <ul class="flex flex-col gap-1.5 text-xs text-slate-600 leading-snug">
+                    <ul class="flex flex-col gap-1.5 text-xs text-slate-600 dark:text-slate-300 leading-snug">
                         <li class="flex items-start gap-2">
                             <i class="fa-solid fa-check text-emerald-600 text-[11px] mt-0.5 shrink-0"></i>
                             <span>Être <strong>étudiant inscrit</strong> à l'Université Iba Der Thiam de Thiès.</span>
@@ -302,7 +302,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                             <i class="fa-solid fa-check text-emerald-600 text-[11px] mt-0.5 shrink-0"></i>
                             <span>Examen et validation de votre dossier sous <strong>24h à 48h</strong> par l'administration.</span>
                         </li>
-                        <li class="flex items-start gap-2 pt-1 border-t border-slate-200/60">
+                        <li class="flex items-start gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
                             <i class="fa-solid fa-file-contract text-primary text-[11px] mt-0.5 shrink-0"></i>
                             <span>Adhésion aux <a href="#terms" target="_blank" class="text-primary hover:underline font-bold">Règles & CGU officielles</a> du campus.</span>
                         </li>
@@ -310,13 +310,13 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 </div>
 
                 <!-- Offre de bienvenue Free Tier -->
-                <div class="bg-emerald-50 rounded-2xl border border-emerald-200/90 p-3.5 flex items-start gap-3">
+                <div class="bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200/90 dark:border-emerald-800/60 p-3.5 flex items-start gap-3">
                     <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-sm shrink-0 mt-0.5 shadow-xs">
                         <i class="fa-solid fa-gift"></i>
                     </div>
                     <div>
-                        <span class="font-heading font-extrabold text-xs text-emerald-950 block">🎉 7 Jours d'essai 100% GRATUIT</span>
-                        <p class="text-[11px] text-emerald-800 leading-snug mt-0.5">
+                        <span class="font-heading font-extrabold text-xs text-emerald-950 dark:text-emerald-300 block">🎉 7 Jours d'essai 100% GRATUIT</span>
+                        <p class="text-[11px] text-emerald-800 dark:text-emerald-300/90 leading-snug mt-0.5">
                             Dès validation de votre candidature, profitez de <strong>7 jours d'essai offerts (3 articles inclus)</strong> pour tester la vente sans aucun frais initial.
                         </p>
                     </div>
@@ -325,11 +325,11 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 <!-- Formules d'abonnement -->
                 <div class="flex flex-col gap-2.5">
                     <div class="flex items-center justify-between">
-                        <h4 class="font-heading font-bold text-xs text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
+                        <h4 class="font-heading font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5 uppercase tracking-wide">
                             <i class="fa-solid fa-crown text-amber-500 text-xs"></i>
                             <span>Formules d'abonnement post-essai</span>
                         </h4>
-                        <span class="text-[10px] text-slate-400 font-semibold">Tarifs transparents</span>
+                        <span class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Tarifs transparents</span>
                     </div>
 
                     <!-- Option Starter -->
@@ -337,27 +337,27 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                         id="plan-option-starter" 
                         class="p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-3 ${
                             selectedPlan === 'starter' 
-                                ? 'border-primary bg-primary/5 shadow-xs' 
-                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                ? 'border-primary bg-primary/5 dark:bg-primary/10 shadow-xs' 
+                                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700'
                         }"
                     >
                         <div class="flex items-center gap-3">
                             <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                selectedPlan === 'starter' ? 'border-primary' : 'border-slate-300'
+                                selectedPlan === 'starter' ? 'border-primary' : 'border-slate-300 dark:border-slate-600'
                             }">
                                 ${selectedPlan === 'starter' ? '<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>' : ''}
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="font-heading font-extrabold text-sm text-slate-900">Pack Starter</span>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">5 produits</span>
+                                    <span class="font-heading font-extrabold text-sm text-slate-900 dark:text-white">Pack Starter</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">5 produits</span>
                                 </div>
-                                <span class="text-[11px] text-slate-500">Catalogue de 5 produits</span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400">Catalogue de 5 produits</span>
                             </div>
                         </div>
                         <div class="text-right shrink-0">
                             <span class="font-heading font-extrabold text-base text-primary tabular-nums">1 500</span>
-                            <span class="text-[10px] font-bold text-slate-500 block leading-none">FCFA / mois</span>
+                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 block leading-none">FCFA / mois</span>
                         </div>
                     </div>
 
@@ -366,39 +366,39 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                         id="plan-option-pro" 
                         class="p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-3 relative overflow-hidden ${
                             selectedPlan === 'pro' 
-                                ? 'border-amber-400 bg-amber-50/50 shadow-xs' 
-                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/30 shadow-xs' 
+                                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700'
                         }"
                     >
                         <div class="flex items-center gap-3">
                             <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                selectedPlan === 'pro' ? 'border-amber-500' : 'border-slate-300'
+                                selectedPlan === 'pro' ? 'border-amber-500' : 'border-slate-300 dark:border-slate-600'
                             }">
                                 ${selectedPlan === 'pro' ? '<span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>' : ''}
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="font-heading font-extrabold text-sm text-slate-900">Pack Pro</span>
+                                    <span class="font-heading font-extrabold text-sm text-slate-900 dark:text-white">Pack Pro</span>
                                     <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-400 text-slate-950">10 produits</span>
                                 </div>
-                                <span class="text-[11px] text-slate-500">Catalogue de 10 produits & stats avancées</span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400">Catalogue de 10 produits & stats avancées</span>
                             </div>
                         </div>
                         <div class="text-right shrink-0">
-                            <span class="font-heading font-extrabold text-base text-slate-900 tabular-nums">2 500</span>
-                            <span class="text-[10px] font-bold text-slate-500 block leading-none">FCFA / mois</span>
+                            <span class="font-heading font-extrabold text-base text-slate-900 dark:text-white tabular-nums">2 500</span>
+                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 block leading-none">FCFA / mois</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Information Paiement SasPay Wave & OM -->
-                <div class="bg-sky-50/70 rounded-2xl border border-sky-200/90 p-3 flex items-start gap-2.5">
-                    <div class="w-7 h-7 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                <div class="bg-sky-50/70 dark:bg-sky-950/40 rounded-2xl border border-sky-200/90 dark:border-sky-800/60 p-3 flex items-start gap-2.5">
+                    <div class="w-7 h-7 rounded-xl bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 flex items-center justify-center text-xs shrink-0 mt-0.5">
                         <i class="fa-solid fa-mobile-screen"></i>
                     </div>
                     <div>
-                        <span class="font-heading font-bold text-xs text-sky-950 block">Paiement Mobile Wave & Orange Money</span>
-                        <p class="text-[11px] text-sky-800 leading-snug mt-0.5">
+                        <span class="font-heading font-bold text-xs text-sky-950 dark:text-sky-300 block">Paiement Mobile Wave & Orange Money</span>
+                        <p class="text-[11px] text-sky-800 dark:text-sky-300/90 leading-snug mt-0.5">
                             Aucun paiement immédiat n'est requis aujourd'hui. Vos 7 jours d'essai démarrent gratuitement. Vous choisirez ensuite votre opérateur (Wave ou OM) pour vous abonner.
                         </p>
                     </div>
@@ -411,7 +411,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                         id="terms-checkbox" 
                         class="mt-0.5 w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
                     >
-                    <span class="text-xs text-slate-700 leading-tight group-hover:text-slate-900 select-none">
+                    <span class="text-xs text-slate-700 dark:text-slate-300 leading-tight group-hover:text-slate-900 dark:group-hover:text-white select-none">
                         J'ai lu et j'accepte les <strong>modalités pour devenir vendeur</strong> et je confirme ma souscription à la formule sélectionnée.
                     </span>
                 </label>
@@ -431,7 +431,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     <button 
                         type="button" 
                         id="btn-terms-back-login" 
-                        class="w-full py-2.5 text-xs text-slate-500 hover:text-slate-800 font-semibold transition-colors min-h-[40px] cursor-pointer"
+                        class="w-full py-2.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold transition-colors min-h-[40px] cursor-pointer"
                     >
                         Déjà un compte ? Se connecter
                     </button>
@@ -443,18 +443,18 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     function renderTabsAndForm() {
         return `
             <!-- Onglets Connexion / Inscription -->
-            <div class="flex border-b border-slate-200 bg-slate-50/50 shrink-0">
+            <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 shrink-0">
                 <button id="tab-login" class="flex-1 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
                     activeTab === 'login'
-                        ? 'border-primary text-primary bg-white'
-                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                        ? 'border-primary text-primary bg-white dark:bg-slate-900'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }">
                     Se connecter
                 </button>
                 <button id="tab-register" class="flex-1 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
                     activeTab === 'register' || activeTab === 'terms'
-                        ? 'border-primary text-primary bg-white'
-                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                        ? 'border-primary text-primary bg-white dark:bg-slate-900'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }">
                     Devenir Vendeur
                 </button>
@@ -462,7 +462,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
 
             <!-- Formulaires -->
             <div class="p-5 sm:p-6 overflow-y-auto">
-                <div id="seller-auth-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium"></div>
+                <div id="seller-auth-error" class="hidden mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-300 font-medium"></div>
 
                 ${activeTab === 'login' ? renderLoginForm() : renderRegisterForm()}
             </div>
@@ -473,18 +473,18 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
         return `
             <form id="seller-login-form" class="flex flex-col gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1" for="seller-email">Email institutionnel (@univ-thies.sn)</label>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="seller-email">Email institutionnel (@univ-thies.sn)</label>
                     <input 
                         type="email" 
                         id="seller-login-email" 
                         required 
                         placeholder="prenom.nom@univ-thies.sn" 
-                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                     >
                 </div>
                 <div>
                     <div class="flex items-center justify-between mb-1">
-                        <label class="block text-xs font-semibold text-slate-700" for="seller-login-password">Mot de passe</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300" for="seller-login-password">Mot de passe</label>
                         <button type="button" id="btn-to-forgot-password" class="text-[11px] text-primary hover:underline font-semibold cursor-pointer">
                             Mot de passe oublié ?
                         </button>
@@ -494,7 +494,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                         id="seller-login-password" 
                         required 
                         placeholder="••••••••" 
-                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                     >
                 </div>
 
@@ -514,12 +514,12 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
         return `
             <form id="seller-register-form" class="flex flex-col gap-3.5">
                 <!-- Récapitulatif de la formule sélectionnée -->
-                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full shrink-0 ${selectedPlan === 'pro' ? 'bg-amber-400' : 'bg-primary'}"></span>
                         <div class="truncate">
-                            <span class="text-slate-500 text-[10px] block leading-none">Formule choisie (Essai 7j inclus)</span>
-                            <span class="text-slate-800 font-bold text-xs truncate">
+                            <span class="text-slate-500 dark:text-slate-400 text-[10px] block leading-none">Formule choisie (Essai 7j inclus)</span>
+                            <span class="text-slate-800 dark:text-slate-200 font-bold text-xs truncate">
                                 ${selectedPlan === 'pro' 
                                     ? 'Pack Pro (2 500 FCFA/mois — 10 produits)' 
                                     : 'Pack Starter (1 500 FCFA/mois — 5 produits)'}
@@ -533,33 +533,33 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
 
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-prenom">Prénom *</label>
-                        <input type="text" id="reg-prenom" required placeholder="Awa" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="reg-prenom">Prénom *</label>
+                        <input type="text" id="reg-prenom" required placeholder="Awa" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-nom">Nom *</label>
-                        <input type="text" id="reg-nom" required placeholder="Diop" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="reg-nom">Nom *</label>
+                        <input type="text" id="reg-nom" required placeholder="Diop" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-email">Email étudiant (@univ-thies.sn) *</label>
-                    <input type="email" id="reg-email" required placeholder="etudiant@univ-thies.sn" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="reg-email">Email étudiant (@univ-thies.sn) *</label>
+                    <input type="email" id="reg-email" required placeholder="etudiant@univ-thies.sn" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-phone">Téléphone portable (Wave/OM) *</label>
-                    <input type="tel" id="reg-phone" required placeholder="77 000 00 00" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="reg-phone">Téléphone portable (Wave/OM) *</label>
+                    <input type="tel" id="reg-phone" required placeholder="77 000 00 00" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-shop-name">Nom de boutique *</label>
-                        <input type="text" id="reg-shop-name" required placeholder="Ex: Délices UIDT" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="reg-shop-name">Nom de boutique *</label>
+                        <input type="text" id="reg-shop-name" required placeholder="Ex: Délices UIDT" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-category">Catégorie *</label>
-                        <select id="reg-category" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="reg-category">Catégorie *</label>
+                        <select id="reg-category" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer">
                             ${CATEGORIES.filter((c) => c.id !== 'all').map((c) => `
                                 <option value="${c.id}">${c.label}</option>
                             `).join('')}
@@ -568,8 +568,8 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-password">Mot de passe (min 6 car.) *</label>
-                    <input type="password" id="reg-password" required minlength="6" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="reg-password">Mot de passe (min 6 car.) *</label>
+                    <input type="password" id="reg-password" required minlength="6" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none">
                 </div>
 
                 <button 

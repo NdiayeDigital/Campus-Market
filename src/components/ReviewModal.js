@@ -39,18 +39,18 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
             : 'ce marchand';
 
         modalEl.innerHTML = `
-            <div class="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-md w-full p-5 sm:p-7 flex flex-col gap-5 transform transition-all duration-300 scale-95" id="review-modal-box">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl max-w-md w-full p-5 sm:p-7 flex flex-col gap-5 transform transition-all duration-300 scale-95" id="review-modal-box">
                 <!-- En-tête -->
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-lg shadow-xs">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center text-lg shadow-xs">
                             <i class="fa-solid fa-star"></i>
                         </div>
                         <div>
-                            <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 leading-tight">
+                            <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
                                 Évaluer la boutique
                             </h3>
-                            <p class="text-xs text-slate-500 mt-0.5 truncate max-w-[220px]">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-[220px]">
                                 ${escapeHTML(sellerName)}
                             </p>
                         </div>
@@ -59,29 +59,29 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
                         type="button" 
                         id="btn-close-review-modal" 
                         aria-label="Fermer" 
-                        class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                        class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs transition-colors cursor-pointer"
                     >
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
 
                 <!-- Sélecteur d'étoiles interactif -->
-                <div class="flex flex-col items-center gap-2 py-2 bg-slate-50/80 rounded-2xl border border-slate-100 p-4">
-                    <span class="text-xs font-semibold text-slate-500">Votre note globale</span>
+                <div class="flex flex-col items-center gap-2 py-2 bg-slate-50/80 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700 p-4">
+                    <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Votre note globale</span>
                     <div class="flex items-center gap-2" id="star-picker-container">
                         ${[1, 2, 3, 4, 5].map((star) => `
                             <button 
                                 type="button" 
                                 data-star-value="${star}"
                                 class="star-btn text-3xl transition-transform active:scale-125 focus:outline-none cursor-pointer ${
-                                    star <= selectedRating ? 'text-amber-400' : 'text-slate-200 hover:text-amber-200'
+                                    star <= selectedRating ? 'text-amber-400' : 'text-slate-200 dark:text-slate-700 hover:text-amber-200'
                                 }"
                             >
                                 <i class="fa-solid fa-star"></i>
                             </button>
                         `).join('')}
                     </div>
-                    <span id="rating-label-text" class="text-xs font-bold text-slate-700 mt-1 transition-all">
+                    <span id="rating-label-text" class="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1 transition-all">
                         ${RATING_LABELS[selectedRating] || ''}
                     </span>
                 </div>
@@ -89,27 +89,27 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
                 <!-- Formulaire de commentaire -->
                 <div class="flex flex-col gap-3.5">
                     <div>
-                        <label for="review-buyer-name" class="block text-xs font-bold text-slate-700 mb-1">
-                            Votre prénom / identité <span class="text-slate-400 font-normal">(optionnel)</span>
+                        <label for="review-buyer-name" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Votre prénom / identité <span class="text-slate-400 dark:text-slate-500 font-normal">(optionnel)</span>
                         </label>
                         <input 
                             type="text" 
                             id="review-buyer-name" 
                             value="${escapeHTML(enteredBuyerName)}"
                             placeholder="Ex : Moussa Diop (L2 Informatique)" 
-                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"
                         >
                     </div>
 
                     <div>
-                        <label for="review-comment-textarea" class="block text-xs font-bold text-slate-700 mb-1">
+                        <label for="review-comment-textarea" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                             Votre commentaire sur l'expérience
                         </label>
                         <textarea 
                             id="review-comment-textarea" 
                             rows="3" 
                             placeholder="Livraison rapide au pavillon, article bien emballé et conforme... Partagez votre avis aux autres étudiants !" 
-                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all resize-none"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all resize-none"
                         >${escapeHTML(enteredComment)}</textarea>
                     </div>
                 </div>
@@ -119,7 +119,7 @@ export function createReviewModal({ onReviewSubmitted, onShowToast } = {}) {
                     <button 
                         type="button" 
                         id="btn-cancel-review" 
-                        class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
+                        class="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-xs transition-colors cursor-pointer"
                     >
                         Annuler
                     </button>

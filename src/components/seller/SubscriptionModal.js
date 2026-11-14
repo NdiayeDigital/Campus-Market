@@ -93,23 +93,23 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
         const currentPlan = SUBSCRIPTION_PLANS[selectedPlanId] || SUBSCRIPTION_PLANS.starter;
 
         modalEl.innerHTML = `
-            <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh] animate-in fade-in duration-200">
+            <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh] animate-in fade-in duration-200 border border-slate-100 dark:border-slate-800">
                 <!-- En-tête -->
-                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+                <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 shrink-0">
                     <div class="flex items-center gap-3">
                         <img src="${logoUrl}" alt="Campus Market" class="h-9 w-auto max-w-[130px] object-contain">
                         <div>
-                            <h2 class="font-heading font-extrabold text-slate-900 text-base leading-tight">Abonnement Marchand</h2>
-                            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">UIDT Thiès • Passerelle SasPay</span>
+                            <h2 class="font-heading font-extrabold text-slate-900 dark:text-white text-base leading-tight">Abonnement Marchand</h2>
+                            <span class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">UIDT Thiès • Passerelle SasPay</span>
                         </div>
                     </div>
-                    <button id="btn-close-subscription-modal" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer min-h-[44px] min-w-[44px]">
+                    <button id="btn-close-subscription-modal" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer min-h-[44px] min-w-[44px]">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
 
                 <!-- Contenu défilable -->
-                <div class="p-6 overflow-y-auto flex flex-col gap-5 text-slate-900">
+                <div class="p-6 overflow-y-auto flex flex-col gap-5 text-slate-900 dark:text-slate-100">
                     ${submittedProof ? renderProofSubmittedScreen() : (awaitingConfirmation ? renderConfirmationScreen(currentPlan) : renderSelectionScreen(currentPlan))}
                 </div>
             </div>
@@ -121,11 +121,11 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
     function renderSelectionScreen(currentPlan) {
         return `
             ${pendingPaymentInfo ? `
-                <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-900 text-xs">
-                    <i class="fa-solid fa-clock-rotate-left text-amber-600 text-base shrink-0 mt-0.5"></i>
+                <div class="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-start gap-3 text-amber-900 dark:text-amber-200 text-xs">
+                    <i class="fa-solid fa-clock-rotate-left text-amber-600 dark:text-amber-400 text-base shrink-0 mt-0.5"></i>
                     <div>
-                        <strong class="font-heading font-bold block text-amber-950">Demande en cours d'examen</strong>
-                        <p class="text-[11px] text-amber-800 leading-snug mt-0.5">
+                        <strong class="font-heading font-bold block text-amber-950 dark:text-amber-300">Demande en cours d'examen</strong>
+                        <p class="text-[11px] text-amber-800 dark:text-amber-300/90 leading-snug mt-0.5">
                             Un paiement pour le <strong>${pendingPaymentInfo.plan?.toUpperCase()}</strong> est en attente de validation administrative (Réf : <code>${pendingPaymentInfo.provider_session_id || 'N/A'}</code>).
                         </p>
                     </div>
@@ -133,13 +133,13 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
             ` : ''}
 
             <!-- Introduction / Avantages -->
-            <div class="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
+            <div class="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 flex items-start gap-3">
                 <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm shrink-0 mt-0.5 shadow-sm">
                     <i class="fa-solid fa-crown"></i>
                 </div>
                 <div>
-                    <h3 class="font-heading font-bold text-xs text-blue-950 uppercase tracking-wide">Pérennisez votre boutique étudiante</h3>
-                    <p class="text-xs text-blue-800/90 leading-relaxed mt-0.5">
+                    <h3 class="font-heading font-bold text-xs text-blue-950 dark:text-blue-300 uppercase tracking-wide">Pérennisez votre boutique étudiante</h3>
+                    <p class="text-xs text-blue-800/90 dark:text-blue-300/80 leading-relaxed mt-0.5">
                         Activez votre abonnement mensuel pour garder vos articles visibles du campus et recevoir les commandes en continu.
                     </p>
                 </div>
@@ -148,11 +148,11 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
             <!-- Sélection de la Formule (Starter ou Pro) -->
             <div class="flex flex-col gap-2.5">
                 <div class="flex items-center justify-between">
-                    <h4 class="font-heading font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <h4 class="font-heading font-bold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                         <i class="fa-solid fa-layer-group text-primary text-xs"></i>
                         <span>1. Choisissez votre formule</span>
                     </h4>
-                    <span class="text-[10px] text-slate-400 font-bold">Renouvellement 30 jours</span>
+                    <span class="text-[10px] text-slate-400 dark:text-slate-500 font-bold">Renouvellement 30 jours</span>
                 </div>
 
                 <div class="grid grid-cols-1 gap-3">
@@ -163,32 +163,32 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                                 data-plan-id="${p.id}"
                                 class="plan-card p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-3 relative overflow-hidden ${
                                     isSelected 
-                                        ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/30' 
-                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                        ? 'border-primary bg-primary/5 dark:bg-primary/10 shadow-sm ring-1 ring-primary/30' 
+                                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700'
                                 }"
                             >
                                 <div class="flex items-center gap-3.5 min-w-0">
                                     <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                        isSelected ? 'border-primary' : 'border-slate-300'
+                                        isSelected ? 'border-primary' : 'border-slate-300 dark:border-slate-600'
                                     }">
                                         ${isSelected ? '<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>' : ''}
                                     </div>
                                     <div class="truncate">
                                         <div class="flex items-center gap-2">
-                                            <span class="font-heading font-extrabold text-sm text-slate-900">${p.name}</span>
+                                            <span class="font-heading font-extrabold text-sm text-slate-900 dark:text-white">${p.name}</span>
                                             <span class="text-[10px] font-black px-2 py-0.5 rounded-full ${p.badgeColor}">
                                                 ${p.maxProducts} articles
                                             </span>
-                                            <span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                                            <span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                                                 ${p.badge}
                                             </span>
                                         </div>
-                                        <p class="text-[11px] text-slate-500 truncate mt-0.5">${p.description}</p>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">${p.description}</p>
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <span class="font-heading font-black text-base text-slate-900 tabular-nums">${p.price.toLocaleString('fr-FR')}</span>
-                                    <span class="text-[10px] font-bold text-slate-400 block leading-none">FCFA / mois</span>
+                                    <span class="font-heading font-black text-base text-slate-900 dark:text-white tabular-nums">${p.price.toLocaleString('fr-FR')}</span>
+                                    <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 block leading-none">FCFA / mois</span>
                                 </div>
                             </div>
                         `;
@@ -197,14 +197,14 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
             </div>
 
             <!-- Note Passerelle SasPay (Wave / OM) -->
-            <div class="p-3 bg-emerald-50/70 border border-emerald-100 rounded-2xl flex items-center gap-2.5 text-emerald-900 text-xs">
+            <div class="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-2xl flex items-center gap-2.5 text-emerald-900 dark:text-emerald-200 text-xs">
                 <i class="fa-solid fa-shield-halved text-emerald-600 text-sm shrink-0"></i>
                 <div class="flex-1 text-[11px] leading-snug">
                     Paiement direct sécurisé par <strong>SasPay</strong>. Vous choisirez <strong>Wave</strong> ou <strong>Orange Money</strong> sur la page de règlement.
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
                     <img src="/assets/wave.jpg" alt="Wave" class="w-5 h-5 rounded-full object-cover" title="Wave">
-                    <img src="/assets/orange-money.jpg" alt="Orange Money" class="w-5 h-5 rounded object-contain bg-white border border-slate-100" title="Orange Money">
+                    <img src="/assets/orange-money.jpg" alt="Orange Money" class="w-5 h-5 rounded object-contain bg-white border border-slate-100 dark:border-slate-700" title="Orange Money">
                 </div>
             </div>
 
@@ -232,7 +232,7 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
         return `
             <div class="flex flex-col items-center text-center py-2 gap-4">
                 <!-- Animation Radar / Vérification en temps réel -->
-                <div class="relative w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl shadow-xs">
+                <div class="relative w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl shadow-xs">
                     <i class="fa-solid fa-satellite-dish animate-pulse"></i>
                     <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -241,33 +241,33 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                 </div>
 
                 <div>
-                    <span class="text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                    <span class="text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200">
                         Paiement en cours • SasPay
                     </span>
-                    <h3 class="font-heading font-black text-lg text-slate-900 mt-2">En attente de validation sur votre téléphone</h3>
-                    <p class="text-xs text-slate-500 mt-1 max-w-sm leading-relaxed">
+                    <h3 class="font-heading font-black text-lg text-slate-900 dark:text-white mt-2">En attente de validation sur votre téléphone</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm leading-relaxed">
                         Validez le débit Wave ou Orange Money de <strong>${currentPlan.price.toLocaleString('fr-FR')} FCFA</strong>. Dès confirmation de l'opérateur, cette page <strong>s'activera automatiquement</strong>.
                     </p>
                 </div>
 
                 <!-- Récapitulatif ticket -->
-                <div class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-2 text-left text-xs">
-                    <div class="flex justify-between pb-1.5 border-b border-slate-200/60">
-                        <span class="text-slate-500">Formule :</span>
-                        <strong class="text-slate-900">${currentPlan.name} (${currentPlan.maxProducts} articles)</strong>
+                <div class="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-4 flex flex-col gap-2 text-left text-xs">
+                    <div class="flex justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
+                        <span class="text-slate-500 dark:text-slate-400">Formule :</span>
+                        <strong class="text-slate-900 dark:text-white">${currentPlan.name} (${currentPlan.maxProducts} articles)</strong>
                     </div>
-                    <div class="flex justify-between pb-1.5 border-b border-slate-200/60">
-                        <span class="text-slate-500">Durée :</span>
-                        <strong class="text-emerald-700 font-bold">30 jours d'accès</strong>
+                    <div class="flex justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
+                        <span class="text-slate-500 dark:text-slate-400">Durée :</span>
+                        <strong class="text-emerald-700 dark:text-emerald-400 font-bold">30 jours d'accès</strong>
                     </div>
                     <div class="flex justify-between pt-0.5">
-                        <span class="text-slate-800 font-bold">Montant à régler :</span>
-                        <strong class="text-slate-900 text-base font-extrabold font-heading">${currentPlan.price.toLocaleString('fr-FR')} FCFA</strong>
+                        <span class="text-slate-800 dark:text-slate-300 font-bold">Montant à régler :</span>
+                        <strong class="text-slate-900 dark:text-white text-base font-extrabold font-heading">${currentPlan.price.toLocaleString('fr-FR')} FCFA</strong>
                     </div>
                 </div>
 
                 <!-- Lien de secours pour ré-ouvrir le lien de paiement si fermé -->
-                <div class="text-xs text-slate-500">
+                <div class="text-xs text-slate-500 dark:text-slate-400">
                     La page de paiement s'est fermée ?
                     <a href="${link}" target="_blank" rel="noopener noreferrer" class="text-primary font-bold underline inline-flex items-center gap-1 ml-1">
                         Ré-ouvrir le lien SasPay <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
@@ -275,9 +275,9 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                 </div>
 
                 <!-- Section alternative : Soumission manuelle de référence si paiement direct -->
-                <div class="w-full pt-2 border-t border-slate-100 text-left">
-                    <details class="group bg-slate-50 rounded-2xl p-3 border border-slate-200/70 transition-all">
-                        <summary class="font-heading font-bold text-xs text-slate-700 cursor-pointer flex items-center justify-between select-none">
+                <div class="w-full pt-2 border-t border-slate-100 dark:border-slate-800 text-left">
+                    <details class="group bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 border border-slate-200/70 dark:border-slate-700/70 transition-all">
+                        <summary class="font-heading font-bold text-xs text-slate-700 dark:text-slate-300 cursor-pointer flex items-center justify-between select-none">
                             <span class="flex items-center gap-2">
                                 <i class="fa-solid fa-receipt text-slate-400"></i>
                                 <span>Déjà payé mais non détecté automatiquement ?</span>
@@ -286,24 +286,24 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                         </summary>
 
                         <div class="pt-3 flex flex-col gap-3">
-                            <p class="text-[11px] text-slate-500 leading-snug">
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
                                 Saisissez la <strong>référence de transaction</strong> reçue par SMS (Wave ou Orange Money) ou votre <strong>numéro payeur</strong>. Notre administration validera immédiatement votre compte.
                             </p>
 
                             <div class="flex flex-col gap-1.5">
-                                <label class="text-[11px] font-semibold text-slate-700" for="proof-txn-ref">Référence de paiement ou Numéro *</label>
+                                <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300" for="proof-txn-ref">Référence de paiement ou Numéro *</label>
                                 <input 
                                     type="text" 
                                     id="proof-txn-ref" 
                                     placeholder="Ex: WAVE-123456 ou 770000000" 
-                                    class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+                                    class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-primary focus:outline-none"
                                 >
                             </div>
 
                             <button 
                                 type="button" 
                                 id="btn-submit-proof"
-                                class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-heading font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 dark:bg-primary dark:hover:bg-primary-hover text-white font-heading font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 <i class="fa-solid fa-paper-plane text-xs"></i>
                                 <span>Transmettre à l'administration</span>
@@ -317,7 +317,7 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                     <button 
                         type="button" 
                         id="btn-back-to-plans"
-                        class="w-full py-2.5 text-xs text-slate-400 hover:text-slate-700 font-semibold transition-colors cursor-pointer"
+                        class="w-full py-2.5 text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-semibold transition-colors cursor-pointer"
                     >
                         Annuler et retourner au choix des formules
                     </button>
@@ -329,21 +329,21 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
     function renderProofSubmittedScreen() {
         return `
             <div class="flex flex-col items-center text-center py-4 gap-4">
-                <div class="w-16 h-16 rounded-3xl bg-blue-100 text-blue-600 flex items-center justify-center text-3xl shadow-sm">
+                <div class="w-16 h-16 rounded-3xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-3xl shadow-sm">
                     <i class="fa-solid fa-clock"></i>
                 </div>
 
                 <div>
-                    <span class="text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full bg-blue-100 text-blue-800">
+                    <span class="text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200">
                         Demande Enregistrée
                     </span>
-                    <h3 class="font-heading font-black text-xl text-slate-900 mt-2">Preuve de paiement transmise !</h3>
-                    <p class="text-xs text-slate-500 mt-1 max-w-sm leading-relaxed">
-                        Votre référence <code class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-bold">${submittedReference}</code> a été envoyée à l'équipe SuperAdmin. Dès constatation du crédit SasPay, votre boutique sera activée pour 30 jours.
+                    <h3 class="font-heading font-black text-xl text-slate-900 dark:text-white mt-2">Preuve de paiement transmise !</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm leading-relaxed">
+                        Votre référence <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold">${submittedReference}</code> a été envoyée à l'équipe SuperAdmin. Dès constatation du crédit SasPay, votre boutique sera activée pour 30 jours.
                     </p>
                 </div>
 
-                <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl text-[11px] text-blue-800 text-left w-full leading-relaxed">
+                <div class="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-2xl text-[11px] text-blue-800 dark:text-blue-200 text-left w-full leading-relaxed">
                     💡 <strong>Délai habituel de validation :</strong> quelques minutes à 30 minutes. Vous recevrez une confirmation et vos quotas de produits seront immédiatement débloqués.
                 </div>
 

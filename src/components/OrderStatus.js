@@ -117,12 +117,12 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
 
         if (recentOrders.length === 0) {
             container.innerHTML = `
-                <div class="flex flex-col items-center justify-center text-center p-8 bg-white rounded-3xl border border-dashed border-slate-300 shadow-sm my-8">
-                    <div class="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center text-3xl mb-4">
+                <div class="flex flex-col items-center justify-center text-center p-8 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm my-8">
+                    <div class="w-20 h-20 bg-primary/10 dark:bg-primary/20 text-primary dark:text-blue-400 rounded-full flex items-center justify-center text-3xl mb-4">
                         <i class="fa-solid fa-box-open"></i>
                     </div>
-                    <h3 class="font-heading font-extrabold text-slate-900 text-xl mb-1">Aucune commande active</h3>
-                    <p class="text-sm text-slate-500 max-w-sm mb-6 leading-relaxed">
+                    <h3 class="font-heading font-extrabold text-slate-900 dark:text-white text-xl mb-1">Aucune commande active</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
                         Vous n'avez pas encore passé de commande aujourd'hui. Vos commandes pavillon-à-pavillon s'afficheront ici en temps réel.
                     </p>
                     <button id="btn-empty-back-catalog" class="px-6 py-3.5 bg-primary hover:bg-primary-dark text-white font-heading font-bold text-sm rounded-2xl shadow-md shadow-primary/20 transition-all min-h-[44px]">
@@ -142,14 +142,14 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
             <!-- En-tête -->
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <h1 class="font-heading font-extrabold text-2xl text-slate-900">Suivi de vos commandes</h1>
-                    <p class="text-xs text-slate-500 mt-0.5">Livraison directe pavillon-à-pavillon UIDT</p>
+                    <h1 class="font-heading font-extrabold text-2xl text-slate-900 dark:text-white">Suivi de vos commandes</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Livraison directe pavillon-à-pavillon UIDT</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button id="btn-refresh-orders" title="Rafraîchir l'état" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors min-h-[44px] min-w-[44px]">
+                    <button id="btn-refresh-orders" title="Rafraîchir l'état" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-h-[44px] min-w-[44px]">
                         <i class="fa-solid fa-arrows-rotate ${isRefreshing ? 'fa-spin text-primary' : ''}"></i>
                     </button>
-                    <button id="btn-back-to-shop" class="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold bg-primary-light hover:bg-primary text-primary hover:text-white transition-all min-h-[44px]">
+                    <button id="btn-back-to-shop" class="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold bg-primary-light dark:bg-primary/20 hover:bg-primary dark:hover:bg-primary text-primary hover:text-white dark:text-blue-300 rounded-full transition-all min-h-[44px]">
                         <i class="fa-solid fa-store text-xs"></i>
                         <span>Boutique</span>
                     </button>
@@ -179,21 +179,21 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                     const canCancel = ['pending', 'confirmed', 'processing'].includes(currentStatus);
 
                     return `
-                        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4 transition-all">
+                        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-5 flex flex-col gap-4 transition-all">
                             <!-- En-tête de la commande -->
-                            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                                 <div>
-                                    <span class="font-heading font-extrabold text-primary text-base">
+                                    <span class="font-heading font-extrabold text-primary dark:text-blue-400 text-base">
                                         ${escapeHTML(order.reference || `#CMD-${idx + 1}`)}
                                     </span>
-                                    <span class="text-[11px] text-slate-500 font-medium block">${formattedDate} • ${escapeHTML(order.pavillon || 'Campus UIDT')}</span>
+                                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">${formattedDate} • ${escapeHTML(order.pavillon || 'Campus UIDT')}</span>
                                 </div>
                                 <span class="px-3 py-1 rounded-full text-[11px] font-bold ${
                                     isCancelled
-                                        ? 'bg-red-100 text-red-700'
+                                        ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300'
                                         : isDelivered
-                                        ? 'bg-emerald-100 text-emerald-800'
-                                        : 'bg-amber-100 text-amber-900'
+                                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                                        : 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300'
                                 }">
                                     ${isCancelled ? 'Annulée' : STATUS_STEPS[activeIndex]?.label || 'En cours'}
                                 </span>
@@ -203,16 +203,16 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                             ${!isCancelled ? `
                                 <div class="py-2 px-1 flex flex-col gap-3">
                                     <!-- Carte étape active avec radar visuel -->
-                                    <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-blue-50/70 border border-blue-100/80">
+                                    <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100/80 dark:border-blue-900/50">
                                         <div class="relative flex items-center justify-center w-6 h-6">
                                             <span class="absolute w-full h-full rounded-full bg-primary/30 animate-ping"></span>
                                             <span class="relative w-2.5 h-2.5 rounded-full bg-primary"></span>
                                         </div>
                                         <div class="flex flex-col min-w-0">
-                                            <span class="text-xs font-heading font-extrabold text-primary leading-tight">
+                                            <span class="text-xs font-heading font-extrabold text-primary dark:text-blue-300 leading-tight">
                                                 Statut actuel : ${STATUS_STEPS[activeIndex]?.label || 'En cours'}
                                             </span>
-                                            <span class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                                            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                                                 ${
                                                     currentStatus === 'pending'
                                                         ? 'Votre commande a été transmise au marchand étudiant. En attente de confirmation.'
@@ -230,7 +230,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
 
                                     <!-- Barre d'étapes -->
                                     <div class="relative flex items-center justify-between w-full pt-1">
-                                        <div class="absolute top-4 left-0 right-0 h-1 bg-slate-100 -translate-y-1/2 z-0"></div>
+                                        <div class="absolute top-4 left-0 right-0 h-1 bg-slate-100 dark:bg-slate-800 -translate-y-1/2 z-0"></div>
                                         <div class="absolute top-4 left-0 h-1 bg-gradient-to-r from-primary to-blue-500 -translate-y-1/2 z-0 transition-all duration-500" style="width: ${(activeIndex / (STATUS_STEPS.length - 1)) * 100}%;"></div>
 
                                         ${STATUS_STEPS.map((step, sIdx) => {
@@ -242,11 +242,11 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                                     <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${
                                                         isPassed
                                                             ? 'bg-primary text-white shadow-md shadow-primary/30'
-                                                            : 'bg-white border-2 border-slate-200 text-slate-400'
+                                                            : 'bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500'
                                                     } ${isCurrent ? 'ring-4 ring-primary/30 scale-110' : ''}">
                                                         <i class="fa-solid ${step.icon}"></i>
                                                     </div>
-                                                    <span class="text-[9px] sm:text-[10px] font-semibold mt-1.5 ${isCurrent ? 'text-primary font-bold' : isPassed ? 'text-slate-700' : 'text-slate-400'} text-center max-w-[50px] sm:max-w-none leading-tight">
+                                                    <span class="text-[9px] sm:text-[10px] font-semibold mt-1.5 ${isCurrent ? 'text-primary dark:text-blue-400 font-bold' : isPassed ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500'} text-center max-w-[50px] sm:max-w-none leading-tight">
                                                         ${step.label}
                                                     </span>
                                                 </div>
@@ -255,21 +255,21 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                     </div>
                                 </div>
                             ` : `
-                                <div class="p-3 bg-red-50 rounded-2xl border border-red-100 text-xs text-red-700 flex items-center gap-2">
+                                <div class="p-3 bg-red-50 dark:bg-red-950/40 rounded-2xl border border-red-100 dark:border-red-900/50 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
                                     <i class="fa-solid fa-circle-xmark"></i>
                                     <span>Cette commande a été annulée.</span>
                                 </div>
                             `}
 
                             <!-- Détail article commandé -->
-                            <div class="bg-slate-50/80 rounded-2xl p-3.5 flex items-center justify-between text-xs text-slate-700 border border-slate-100">
+                            <div class="bg-slate-50/80 dark:bg-slate-800/60 rounded-2xl p-3.5 flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800">
                                 <div>
-                                    <span class="font-bold text-slate-900 block sm:inline">
+                                    <span class="font-bold text-slate-900 dark:text-white block sm:inline">
                                         ${firstItem ? escapeHTML(firstItem.title) : 'Commande Campus Market'}
                                     </span>
-                                    ${totalItemsCount > 1 ? `<span class="text-slate-400 ml-1">(+${totalItemsCount - 1} autre${totalItemsCount > 2 ? 's' : ''})</span>` : ''}
+                                    ${totalItemsCount > 1 ? `<span class="text-slate-400 dark:text-slate-500 ml-1">(+${totalItemsCount - 1} autre${totalItemsCount > 2 ? 's' : ''})</span>` : ''}
                                 </div>
-                                <span class="font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-xl border border-slate-200/60 shadow-sm">
+                                <span class="font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-xl border border-slate-200/60 dark:border-slate-700 shadow-sm">
                                     Chambre : ${escapeHTML(order.chambre || 'N/A')}
                                 </span>
                             </div>
@@ -279,9 +279,9 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                 ${cleanPhone ? `
                                     <a 
                                         href="tel:${cleanPhone}" 
-                                        class="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all min-h-[44px]"
+                                        class="flex-1 py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all min-h-[44px]"
                                     >
-                                        <i class="fa-solid fa-phone text-emerald-600 text-sm"></i>
+                                        <i class="fa-solid fa-phone text-emerald-600 dark:text-emerald-400 text-sm"></i>
                                         <span>Appeler</span>
                                     </a>
                                     <a 
@@ -294,14 +294,14 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                         <span>WhatsApp</span>
                                     </a>
                                 ` : `
-                                    <span class="text-xs text-slate-500 font-medium italic">Vendeur : ${escapeHTML(sellerName)}</span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 font-medium italic">Vendeur : ${escapeHTML(sellerName)}</span>
                                 `}
 
                                 ${isDelivered && !order.hasReviewed ? `
                                     <button 
                                         data-action="open-review" 
                                         data-idx="${idx}"
-                                        class="py-2.5 px-4 bg-amber-100 hover:bg-amber-200 text-amber-900 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors min-h-[44px]"
+                                        class="py-2.5 px-4 bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors min-h-[44px]"
                                     >
                                         <i class="fa-solid fa-star text-amber-500"></i>
                                         <span>Noter le marchand</span>
@@ -312,7 +312,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                     <button 
                                         data-action="cancel-order" 
                                         data-idx="${idx}"
-                                        class="py-2.5 px-3 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 font-semibold text-xs rounded-xl transition-colors min-h-[44px]"
+                                        class="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/60 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 font-semibold text-xs rounded-xl transition-colors min-h-[44px]"
                                     >
                                         Annuler
                                     </button>
@@ -325,15 +325,15 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
 
             <!-- Modal de dépôt d'avis marchand -->
             <div id="review-modal" class="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-                <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 flex flex-col gap-4">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <h3 class="font-heading font-extrabold text-slate-900 text-base">Noter votre expérience</h3>
-                        <button id="btn-close-review" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-400">
+                <div class="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl p-6 flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <h3 class="font-heading font-extrabold text-slate-900 dark:text-white text-base">Noter votre expérience</h3>
+                        <button id="btn-close-review" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
 
-                    <p class="text-xs text-slate-500">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
                         Votre commande est bien livrée ! Attribuez une note à votre marchand étudiant pour valoriser son sérieux sur le campus.
                     </p>
 

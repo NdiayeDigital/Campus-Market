@@ -197,7 +197,7 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
                 catalogBtn.className = `${baseClass} font-bold text-primary bg-primary/10 border border-primary/20`;
                 catalogBtn.querySelector('i')?.classList.replace('text-slate-500', 'text-primary');
             } else {
-                catalogBtn.className = `${baseClass} font-semibold text-slate-700 hover:text-primary bg-slate-100 hover:bg-slate-200/80`;
+                catalogBtn.className = `${baseClass} font-semibold text-slate-700 hover:text-primary bg-slate-100 hover:bg-slate-200/80 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700/80`;
                 catalogBtn.querySelector('i')?.classList.replace('text-primary', 'text-slate-500');
             }
         }
@@ -208,7 +208,7 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
                 ordersBtn.className = `${baseClass} font-bold text-primary bg-primary/10 border border-primary/20`;
                 ordersBtn.querySelector('i')?.classList.replace('text-slate-500', 'text-primary');
             } else {
-                ordersBtn.className = `${baseClass} font-semibold text-slate-700 hover:text-primary bg-slate-100 hover:bg-slate-200/80`;
+                ordersBtn.className = `${baseClass} font-semibold text-slate-700 hover:text-primary bg-slate-100 hover:bg-slate-200/80 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700/80`;
                 ordersBtn.querySelector('i')?.classList.replace('text-primary', 'text-slate-500');
             }
         }

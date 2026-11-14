@@ -122,12 +122,12 @@ export function createCartModal({ onProceedToCheckout } = {}) {
         if (cart.length === 0) {
             itemsContainer.innerHTML = `
                 <div class="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto">
-                    <div class="w-20 h-20 bg-slate-100 text-slate-300 rounded-full flex items-center justify-center text-3xl mb-4">
+                    <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 rounded-full flex items-center justify-center text-3xl mb-4">
                         <i class="fa-solid fa-cart-shopping"></i>
                     </div>
-                    <h3 class="font-heading font-bold text-slate-800 text-lg mb-1">Votre panier est vide</h3>
-                    <p class="text-sm text-slate-500 max-w-xs mb-6">Explorez les offres des étudiants et faites-vous livrer en bas de votre chambre !</p>
-                    <button id="btn-discover-offers" class="px-5 py-2.5 bg-primary-light text-primary hover:bg-primary hover:text-white font-semibold text-xs rounded-full transition-all min-h-[44px]">
+                    <h3 class="font-heading font-bold text-slate-800 dark:text-white text-lg mb-1">Votre panier est vide</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xs mb-6">Explorez les offres des étudiants et faites-vous livrer en bas de votre chambre !</p>
+                    <button id="btn-discover-offers" class="px-5 py-2.5 bg-primary-light dark:bg-primary/20 text-primary dark:text-blue-300 hover:bg-primary hover:text-white font-semibold text-xs rounded-full transition-all min-h-[44px]">
                         Découvrir les offres
                     </button>
                 </div>

@@ -59,18 +59,18 @@ function showPushPromptBanner() {
     bannerEl = document.createElement('aside');
     bannerEl.id = 'push-prompt-banner';
     bannerEl.setAttribute('aria-label', 'Activer les alertes notifications Campus Market');
-    bannerEl.className = 'fixed bottom-24 lg:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl p-3.5 flex items-center justify-between gap-3 transform translate-y-8 opacity-0 transition-all duration-300 animate-in mb-safe';
+    bannerEl.className = 'fixed bottom-24 lg:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xl p-3.5 flex items-center justify-between gap-3 transform translate-y-8 opacity-0 transition-all duration-300 animate-in mb-safe';
 
     bannerEl.innerHTML = `
         <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-primary text-base flex-shrink-0">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-primary dark:text-blue-400 text-base flex-shrink-0">
                 <i class="fa-solid fa-bell animate-bounce"></i>
             </div>
             <div class="flex flex-col min-w-0">
-                <span class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 leading-tight truncate">
+                <span class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white leading-tight truncate">
                     Bons plans & Repas en chambre
                 </span>
-                <span class="text-[11px] text-slate-500 font-medium leading-tight truncate">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-tight truncate">
                     Activez les alertes pour ne rater aucun arrivage
                 </span>
             </div>

@@ -45,16 +45,16 @@ function showInstallBanner() {
     bannerEl = document.createElement('aside');
     bannerEl.id = 'pwa-install-banner';
     bannerEl.setAttribute('aria-label', 'Installation de l\'application Campus Market');
-    bannerEl.className = 'fixed bottom-20 lg:bottom-6 right-3 left-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl p-3.5 flex items-center justify-between gap-3 transform translate-y-8 opacity-0 transition-all duration-300 animate-in mb-safe';
+    bannerEl.className = 'fixed bottom-20 lg:bottom-6 right-3 left-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xl p-3.5 flex items-center justify-between gap-3 transform translate-y-8 opacity-0 transition-all duration-300 animate-in mb-safe';
 
     bannerEl.innerHTML = `
         <div class="flex items-center gap-3 min-w-0">
-            <img src="${LOGO_URL}" alt="Campus Market" class="w-10 h-10 rounded-xl object-contain bg-slate-50 border border-slate-100 p-1 flex-shrink-0">
+            <img src="${LOGO_URL}" alt="Campus Market" class="w-10 h-10 rounded-xl object-contain bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-1 flex-shrink-0">
             <div class="flex flex-col min-w-0">
-                <span class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 leading-tight truncate">
+                <span class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white leading-tight truncate">
                     Installer Campus Market
                 </span>
-                <span class="text-[11px] text-slate-500 font-medium leading-tight truncate">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-tight truncate">
                     Commandez en 1 clic sur votre écran d'accueil
                 </span>
             </div>

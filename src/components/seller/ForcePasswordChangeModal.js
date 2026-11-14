@@ -23,42 +23,42 @@ export function createForcePasswordChangeModal({ onSuccess, onLogout } = {}) {
 
     function render() {
         modalEl.innerHTML = `
-            <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-slate-100 animate-scale-up">
+            <div class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-slate-100 dark:border-slate-800 animate-scale-up">
                 <!-- En-tête de sécurité -->
-                <div class="px-6 py-5 border-b border-amber-100 bg-amber-50/70 flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-700 flex items-center justify-center text-xl shrink-0 shadow-xs">
+                <div class="px-6 py-5 border-b border-amber-100 dark:border-amber-900/30 bg-amber-50/70 dark:bg-amber-950/30 flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xl shrink-0 shadow-xs">
                         <i class="fa-solid fa-shield-halved"></i>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="font-heading font-extrabold text-slate-900 text-base leading-tight">Sécurité du Compte Vendeur</h2>
+                            <h2 class="font-heading font-extrabold text-slate-900 dark:text-white text-base leading-tight">Sécurité du Compte Vendeur</h2>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 text-amber-950 uppercase tracking-wide">Obligatoire</span>
                         </div>
-                        <span class="text-xs text-slate-500">Changement de mot de passe requis</span>
+                        <span class="text-xs text-slate-500 dark:text-slate-400">Changement de mot de passe requis</span>
                     </div>
                 </div>
 
                 <!-- Corps du formulaire -->
                 <div class="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
                     <!-- Message explicatif -->
-                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed flex flex-col gap-1.5">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed flex flex-col gap-1.5">
                         <p>
-                            Bonjour <strong class="text-slate-900">${currentProfile?.prenom ? currentProfile.prenom : 'Cher marchand'}</strong>, votre mot de passe a été réinitialisé avec le code temporaire <code class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">campus1234!</code>.
+                            Bonjour <strong class="text-slate-900 dark:text-white">${currentProfile?.prenom ? currentProfile.prenom : 'Cher marchand'}</strong>, votre mot de passe a été réinitialisé avec le code temporaire <code class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200 font-bold">campus1234!</code>.
                         </p>
-                        <p class="text-[11px] text-slate-500">
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">
                             Pour protéger votre boutique, vos produits et vos paiements sur Campus Market, vous devez <strong>définir votre mot de passe personnel dès maintenant</strong>.
                         </p>
                     </div>
 
                     <!-- Zone d'erreur -->
-                    <div id="force-pwd-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium"></div>
+                    <div id="force-pwd-error" class="hidden p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-300 font-medium"></div>
 
                     <form id="force-pwd-form" class="flex flex-col gap-3.5">
                         <!-- Nouveau mot de passe -->
                         <div>
                             <div class="flex items-center justify-between mb-1">
-                                <label class="block text-xs font-semibold text-slate-700" for="force-new-password">Nouveau mot de passe *</label>
-                                <button type="button" id="btn-toggle-show-pwd" class="text-[11px] text-slate-400 hover:text-slate-700 cursor-pointer flex items-center gap-1">
+                                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300" for="force-new-password">Nouveau mot de passe *</label>
+                                <button type="button" id="btn-toggle-show-pwd" class="text-[11px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer flex items-center gap-1">
                                     <i class="fa-regular ${showPassword ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                     <span>${showPassword ? 'Masquer' : 'Afficher'}</span>
                                 </button>
@@ -70,22 +70,22 @@ export function createForcePasswordChangeModal({ onSuccess, onLogout } = {}) {
                                     required 
                                     minlength="6"
                                     placeholder="Minimum 6 caractères" 
-                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                                    class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                                 >
                             </div>
-                            <p class="text-[10px] text-slate-400 mt-1">Au moins 6 caractères (différent de <code>campus1234!</code>)</p>
+                            <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Au moins 6 caractères (différent de <code>campus1234!</code>)</p>
                         </div>
 
                         <!-- Confirmation -->
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1" for="force-confirm-password">Confirmer le nouveau mot de passe *</label>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" for="force-confirm-password">Confirmer le nouveau mot de passe *</label>
                             <input 
                                 type="${showPassword ? 'text' : 'password'}" 
                                 id="force-confirm-password" 
                                 required 
                                 minlength="6"
                                 placeholder="Confirmez à l'identique" 
-                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                                class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
                         </div>
 
@@ -103,7 +103,7 @@ export function createForcePasswordChangeModal({ onSuccess, onLogout } = {}) {
                             <button 
                                 type="button" 
                                 id="btn-force-pwd-logout" 
-                                class="w-full py-2.5 text-xs text-slate-500 hover:text-slate-800 font-semibold transition-colors min-h-[40px] cursor-pointer flex items-center justify-center gap-1.5"
+                                class="w-full py-2.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold transition-colors min-h-[40px] cursor-pointer flex items-center justify-center gap-1.5"
                             >
                                 <i class="fa-solid fa-right-from-bracket text-[11px]"></i>
                                 <span>Me déconnecter pour l'instant</span>

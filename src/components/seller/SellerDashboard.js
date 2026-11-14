@@ -406,13 +406,13 @@ export function createSellerDashboard({
 
         if (subCalc.status === 'active') {
             return `
-                <div class="bg-white border border-slate-200/80 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-xs shadow-2xs flex-wrap">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-xs shadow-2xs flex-wrap">
                     <div class="flex items-center gap-2.5 flex-wrap">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
-                        <span class="text-slate-600">Abonnement actif :</span>
-                        <strong class="text-slate-900 font-extrabold">${subCalc.plan.name} (${subCalc.plan.maxProducts} articles max)</strong>
+                        <span class="text-slate-600 dark:text-slate-400">Abonnement actif :</span>
+                        <strong class="text-slate-900 dark:text-white font-extrabold">${subCalc.plan.name} (${subCalc.plan.maxProducts} articles max)</strong>
                         <span class="text-slate-400">•</span>
-                        <span class="text-slate-500 font-medium">${subCalc.daysLeft} jours restants</span>
+                        <span class="text-slate-500 dark:text-slate-400 font-medium">${subCalc.daysLeft} jours restants</span>
                     </div>
                     <button 
                         type="button" 
@@ -432,12 +432,12 @@ export function createSellerDashboard({
         if (isLoading) {
             containerEl.innerHTML = `
                 <div class="w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-5 animate-pulse">
-                    <div class="h-20 bg-white rounded-2xl w-full border border-slate-200/60"></div>
+                    <div class="h-20 bg-white dark:bg-slate-900 rounded-2xl w-full border border-slate-200/60 dark:border-slate-800"></div>
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="h-28 bg-white rounded-2xl border border-slate-200/60"></div>
-                        <div class="h-28 bg-white rounded-2xl border border-slate-200/60"></div>
-                        <div class="h-28 bg-white rounded-2xl border border-slate-200/60"></div>
-                        <div class="h-28 bg-white rounded-2xl border border-slate-200/60"></div>
+                        <div class="h-28 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800"></div>
+                        <div class="h-28 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800"></div>
+                        <div class="h-28 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800"></div>
+                        <div class="h-28 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800"></div>
                     </div>
                 </div>
             `;
@@ -997,7 +997,7 @@ export function createSellerDashboard({
                                     ${((seller?.prenom?.[0] || '') + (seller?.nom?.[0] || 'V')).toUpperCase()}
                                 </div>
                                 <div class="flex flex-col text-left">
-                                    <span class="text-xs font-extrabold text-slate-900 leading-tight truncate max-w-[120px] group-hover:text-primary transition-colors">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
+                                    <span class="text-xs font-extrabold text-slate-900 dark:text-white leading-tight truncate max-w-[120px] group-hover:text-primary transition-colors">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
                                     <span class="text-[10px] text-slate-400 font-bold uppercase leading-none">Profil &gt;</span>
                                 </div>
                             </button>
@@ -1016,16 +1016,16 @@ export function createSellerDashboard({
                 <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex flex-col gap-6 flex-1">
                 ${isSuspended ? `
                     <!-- Alerte rouge Vendeur Suspendu -->
-                    <div class="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-rose-950 animate-fade-in shadow-xs">
-                        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 text-lg shadow-xs">
+                    <div class="bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-800 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-rose-950 dark:text-rose-200 animate-fade-in shadow-xs">
+                        <div class="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 flex items-center justify-center flex-shrink-0 text-lg shadow-xs">
                             <i class="fa-solid fa-ban"></i>
                         </div>
                         <div class="flex-1">
                             <div class="flex items-center gap-2">
-                                <h3 class="font-heading font-extrabold text-sm sm:text-base text-rose-800">Boutique Temporairement Suspendue</h3>
+                                <h3 class="font-heading font-extrabold text-sm sm:text-base text-rose-800 dark:text-rose-200">Boutique Temporairement Suspendue</h3>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-200 text-rose-900">Action requise</span>
                             </div>
-                            <p class="text-xs text-rose-700 mt-1 leading-relaxed">
+                            <p class="text-xs text-rose-700 dark:text-rose-300 mt-1 leading-relaxed">
                                 Votre compte marchand a été suspendu par l'administration centrale de l'UIDT. Vos articles ne sont plus visibles ni commandables par les étudiants dans le catalogue public.
                             </p>
                             <div class="mt-3 flex items-center gap-3 flex-wrap">
@@ -1040,7 +1040,7 @@ export function createSellerDashboard({
                                 </a>
                                 <a 
                                     href="tel:${SUPPORT_CONFIG.phoneRaw}" 
-                                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-rose-200 text-rose-800 font-semibold text-xs rounded-xl hover:bg-rose-50 transition-colors min-h-[40px]"
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 font-semibold text-xs rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors min-h-[40px]"
                                 >
                                     <i class="fa-solid fa-phone text-xs"></i>
                                     <span>Appeler</span>
@@ -1051,14 +1051,14 @@ export function createSellerDashboard({
                 ` : ''}
 
                 <!-- Barre d'onglets de navigation Tablette (sm à lg uniquement, masquée sur desktop et mobile) -->
-                <div class="hidden sm:flex lg:hidden items-center gap-1.5 border-b border-slate-200/80 overflow-x-auto no-scrollbar pb-2">
+                <div class="hidden sm:flex lg:hidden items-center gap-1.5 border-b border-slate-200/80 dark:border-slate-800 overflow-x-auto no-scrollbar pb-2">
                     <button 
                         type="button" 
                         data-seller-tab="dashboard"
                         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'dashboard'
                                 ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         }"
                     >
                         <i class="fa-solid fa-chart-pie text-xs"></i>
@@ -1071,7 +1071,7 @@ export function createSellerDashboard({
                         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'orders'
                                 ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         }"
                     >
                         <i class="fa-solid fa-clipboard-list text-xs"></i>
@@ -1079,7 +1079,7 @@ export function createSellerDashboard({
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                             activeSubTab === 'orders' 
                                 ? 'bg-white/20 text-white' 
-                                : (pendingCount > 0 ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-slate-100 text-slate-600')
+                                : (pendingCount > 0 ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400')
                         }">
                             ${allOrders.length}
                         </span>
@@ -1091,13 +1091,13 @@ export function createSellerDashboard({
                         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'products'
                                 ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         }"
                     >
                         <i class="fa-solid fa-tags text-xs"></i>
                         <span>Mes Articles</span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            activeSubTab === 'products' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                            activeSubTab === 'products' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                         }">
                             ${data.totalProductsCount || 0}
                         </span>
@@ -1110,7 +1110,7 @@ export function createSellerDashboard({
                             class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                                 activeSubTab === 'add-product'
                                     ? 'bg-primary text-white shadow-xs'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                             }"
                         >
                             <i class="fa-solid fa-plus text-xs"></i>
@@ -1124,7 +1124,7 @@ export function createSellerDashboard({
                         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'profile'
                                 ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         }"
                     >
                         <i class="fa-solid fa-circle-user text-xs"></i>
@@ -1140,7 +1140,7 @@ export function createSellerDashboard({
             </main>
 
             <!-- 5. BARRE INFÉRIEURE FIXE MOBILE VENDEUR (lg:hidden, TOUJOURS visible, z-50) -->
-            <nav class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation vendeur mobile">
+            <nav class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation vendeur mobile">
                 <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around">
                     <!-- Dashboard -->
                     <button 
@@ -1149,7 +1149,7 @@ export function createSellerDashboard({
                         class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'dashboard'
                                 ? 'text-primary font-bold'
-                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
                         }"
                     >
                         ${activeSubTab === 'dashboard' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
@@ -1164,14 +1164,14 @@ export function createSellerDashboard({
                         class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'orders'
                                 ? 'text-primary font-bold'
-                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
                         }"
                     >
                         ${activeSubTab === 'orders' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
                         <div class="relative">
                             <i class="fa-solid fa-clipboard-list text-lg mb-0.5"></i>
                             ${pendingCount > 0 ? `
-                                <span class="absolute -top-1.5 -right-2.5 bg-amber-400 text-slate-950 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full border-2 border-white shadow-sm min-w-[18px] text-center transform scale-100 animate-pulse">
+                                <span class="absolute -top-1.5 -right-2.5 bg-amber-400 text-slate-950 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full border-2 border-white dark:border-slate-900 shadow-sm min-w-[18px] text-center transform scale-100 animate-pulse">
                                     ${pendingCount}
                                 </span>
                             ` : ''}
@@ -1186,13 +1186,13 @@ export function createSellerDashboard({
                         class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'products'
                                 ? 'text-primary font-bold'
-                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
                         }"
                     >
                         ${activeSubTab === 'products' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
                         <div class="relative">
                             <i class="fa-solid fa-tags text-lg mb-0.5"></i>
-                            <span class="absolute -top-1.5 -right-2.5 bg-slate-100 text-slate-700 font-bold text-[9px] px-1 py-0.2 rounded-full border border-slate-200 min-w-[16px] text-center">
+                            <span class="absolute -top-1.5 -right-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[9px] px-1 py-0.2 rounded-full border border-slate-200 dark:border-slate-700 min-w-[16px] text-center">
                                 ${data.totalProductsCount || 0}
                             </span>
                         </div>
@@ -1206,8 +1206,8 @@ export function createSellerDashboard({
                             id="bnav-seller-add" 
                             class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
                                 activeSubTab === 'add-product'
-                                    ? 'text-emerald-700 font-bold'
-                                    : 'text-emerald-600 hover:text-emerald-800 font-medium'
+                                    ? 'text-emerald-700 dark:text-emerald-400 font-bold'
+                                    : 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium'
                             }"
                         >
                             ${activeSubTab === 'add-product' ? '<span class="absolute top-0 w-8 h-1 bg-emerald-600 rounded-full"></span>' : ''}
@@ -1223,7 +1223,7 @@ export function createSellerDashboard({
                         class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] cursor-pointer active:scale-95 ${
                             activeSubTab === 'profile'
                                 ? 'text-primary font-bold'
-                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
                         }"
                     >
                         ${activeSubTab === 'profile' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
@@ -1295,69 +1295,69 @@ export function createSellerDashboard({
 
                 <!-- 2. Guide de Démarrage Rapide (Onboarding Hero) si nouveau vendeur -->
                 ${(allOrders.length === 0 || Number(data.totalProductsCount || 0) === 0) && !isSuspended ? `
-                    <div class="bg-gradient-to-br from-blue-50/70 via-white to-amber-50/30 rounded-3xl border border-primary/20 shadow-card p-5 sm:p-7 relative overflow-hidden flex flex-col gap-5">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div class="bg-gradient-to-br from-blue-50/70 via-white to-amber-50/30 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-900 rounded-3xl border border-primary/20 dark:border-slate-800 shadow-card p-5 sm:p-7 relative overflow-hidden flex flex-col gap-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
                             <div class="flex items-center gap-3.5">
                                 <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-primary/20 flex-shrink-0">
                                     <i class="fa-solid fa-rocket"></i>
                                 </div>
                                 <div>
                                     <div class="flex items-center gap-2">
-                                        <h3 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg">
+                                        <h3 class="font-heading font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
                                             Bienvenue sur votre Espace Marchand, ${escapeHTML(seller.prenom)} !
                                         </h3>
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-200">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
                                             Guide 3 étapes
                                         </span>
                                     </div>
-                                    <p class="text-xs text-slate-500 mt-0.5">
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                         Activez votre boutique en quelques clics pour recevoir vos premières commandes sur le campus de Thiès.
                                     </p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 self-start sm:self-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-extrabold ${Number(data.totalProductsCount || 0) > 0 ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-blue-100 text-primary border border-blue-200'}">
+                                <span class="px-3 py-1 rounded-full text-xs font-extrabold ${Number(data.totalProductsCount || 0) > 0 ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800' : 'bg-blue-100 dark:bg-blue-950/60 text-primary border border-blue-200 dark:border-blue-900'}">
                                     ${Number(data.totalProductsCount || 0) > 0 ? 'Étape 2 sur 3 • 66%' : 'Étape 1 sur 3 • 33%'}
                                 </span>
                             </div>
                         </div>
 
                         <!-- Jauge de progression animée -->
-                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
                             <div class="bg-gradient-to-r from-primary to-amber-500 h-full rounded-full transition-all duration-500" style="width: ${Number(data.totalProductsCount || 0) > 0 ? (allOrders.length > 0 ? '100%' : '66%') : '33%'}"></div>
                         </div>
 
                         <!-- Les 3 étapes interactives -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                             <!-- Étape 1 -->
-                            <div class="bg-white/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between gap-3 shadow-xs">
+                            <div class="bg-white/80 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between gap-3 shadow-xs">
                                 <div class="flex items-start gap-3">
-                                    <div class="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-black shrink-0">
+                                    <div class="w-7 h-7 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-xs font-black shrink-0">
                                         <i class="fa-solid fa-check"></i>
                                     </div>
                                     <div>
-                                        <h4 class="font-heading font-bold text-xs text-slate-900">1. Boutique Ouverte</h4>
-                                        <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">Votre boutique est active et prête à recevoir les commandes étudiantes.</p>
+                                        <h4 class="font-heading font-bold text-xs text-slate-900 dark:text-white">1. Boutique Ouverte</h4>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Votre boutique est active et prête à recevoir les commandes étudiantes.</p>
                                     </div>
                                 </div>
-                                <span class="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                                <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                                     <i class="fa-solid fa-circle-check text-[10px]"></i> Opérationnel
                                 </span>
                             </div>
 
                             <!-- Étape 2 -->
-                            <div class="bg-white/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between gap-3 shadow-xs">
+                            <div class="bg-white/80 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between gap-3 shadow-xs">
                                 <div class="flex items-start gap-3">
-                                    <div class="w-7 h-7 rounded-xl ${Number(data.totalProductsCount || 0) > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-primary/10 text-primary'} flex items-center justify-center text-xs font-black shrink-0">
+                                    <div class="w-7 h-7 rounded-xl ${Number(data.totalProductsCount || 0) > 0 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'bg-primary/10 text-primary'} flex items-center justify-center text-xs font-black shrink-0">
                                         ${Number(data.totalProductsCount || 0) > 0 ? '<i class="fa-solid fa-check"></i>' : '2'}
                                     </div>
                                     <div>
-                                        <h4 class="font-heading font-bold text-xs text-slate-900">2. Publier un Article</h4>
-                                        <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">Ajoutez votre premier plat, fourniture ou produit avec photo et prix.</p>
+                                        <h4 class="font-heading font-bold text-xs text-slate-900 dark:text-white">2. Publier un Article</h4>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Ajoutez votre premier plat, fourniture ou produit avec photo et prix.</p>
                                     </div>
                                 </div>
                                 ${Number(data.totalProductsCount || 0) > 0 ? `
-                                    <span class="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                                    <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                                         <i class="fa-solid fa-circle-check text-[10px]"></i> ${data.totalProductsCount} article(s) en ligne
                                     </span>
                                 ` : `
@@ -1368,14 +1368,14 @@ export function createSellerDashboard({
                             </div>
 
                             <!-- Étape 3 -->
-                            <div class="bg-white/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between gap-3 shadow-xs">
+                            <div class="bg-white/80 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between gap-3 shadow-xs">
                                 <div class="flex items-start gap-3">
-                                    <div class="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-black shrink-0">
+                                    <div class="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-black shrink-0">
                                         <i class="fa-brands fa-whatsapp text-sm"></i>
                                     </div>
                                     <div>
-                                        <h4 class="font-heading font-bold text-xs text-slate-900">3. Partager sur WhatsApp</h4>
-                                        <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">Diffusez votre catalogue dans les groupes de vos pavillons.</p>
+                                        <h4 class="font-heading font-bold text-xs text-slate-900 dark:text-white">3. Partager sur WhatsApp</h4>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Diffusez votre catalogue dans les groupes de vos pavillons.</p>
                                     </div>
                                 </div>
                                 <button type="button" id="btn-onboarding-share-wa" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer">
@@ -1385,8 +1385,8 @@ export function createSellerDashboard({
                         </div>
 
                         <!-- Astuce campus UIDT -->
-                        <div class="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 text-amber-900 text-xs">
-                            <i class="fa-solid fa-lightbulb text-amber-600 text-sm mt-0.5 shrink-0"></i>
+                        <div class="bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 text-amber-900 dark:text-amber-200 text-xs">
+                            <i class="fa-solid fa-lightbulb text-amber-600 dark:text-amber-400 text-sm mt-0.5 shrink-0"></i>
                             <div>
                                 <span class="font-bold">Conseil Campus UIDT :</span> Les étudiants commandent principalement entre 12h-14h et 19h-22h dans les Pavillons A et B. Gardez votre boutique en statut "Ouvert" et votre téléphone actif durant ces créneaux pour maximiser vos ventes !
                             </div>
@@ -1400,18 +1400,18 @@ export function createSellerDashboard({
                     <div 
                         data-seller-kpi="orders-delivered" 
                         title="Cliquer pour afficher les commandes livrées"
-                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Revenus réalisés</span>
-                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate group-hover:text-emerald-700 transition-colors">Revenus réalisés</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
                                 <i class="fa-solid fa-sack-dollar"></i>
                             </div>
                         </div>
-                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight tabular-nums">
-                            ${Number(data.totalRevenue || 0).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white tracking-tight tabular-nums">
+                            ${Number(data.totalRevenue || 0).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500 dark:text-slate-400">FCFA</span>
                         </span>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-emerald-600 mt-1">
+                        <div class="flex items-center justify-between text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-1">
                             <span class="flex items-center gap-1"><i class="fa-solid fa-circle-check text-[9px]"></i> Ventes confirmées</span>
                             <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Voir <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
@@ -1421,16 +1421,16 @@ export function createSellerDashboard({
                     <div 
                         data-seller-kpi="orders-pending" 
                         title="Cliquer pour afficher les commandes actives à traiter"
-                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-amber-700 transition-colors">Commandes actives</span>
-                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0 group-hover:bg-blue-100 transition-colors">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate group-hover:text-amber-700 transition-colors">Commandes actives</span>
+                            <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-primary flex items-center justify-center text-xs shrink-0 group-hover:bg-blue-100 transition-colors">
                                 <i class="fa-solid fa-bell"></i>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">
+                            <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white tracking-tight">
                                 ${data.pendingCount || 0}
                             </span>
                             ${(data.pendingCount || 0) > 0 ? `
@@ -1439,7 +1439,7 @@ export function createSellerDashboard({
                                 </span>
                             ` : ''}
                         </div>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
                             <span>Flux direct campus</span>
                             <span class="text-[10px] font-bold text-slate-400 group-hover:text-primary flex items-center gap-0.5 transition-colors">Voir <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
@@ -1449,18 +1449,18 @@ export function createSellerDashboard({
                     <div 
                         data-seller-kpi="products" 
                         title="Cliquer pour gérer mes articles en ligne"
-                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-amber-700 transition-colors">Articles en ligne</span>
-                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-amber-100 transition-colors">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate group-hover:text-amber-700 transition-colors">Articles en ligne</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-amber-100 transition-colors">
                                 <i class="fa-solid fa-boxes-stacked"></i>
                             </div>
                         </div>
-                        <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">
-                            ${data.totalProductsCount || 0} <span class="text-xs font-bold text-slate-400">/ ${maxAllowed}</span>
+                        <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white tracking-tight">
+                            ${data.totalProductsCount || 0} <span class="text-xs font-bold text-slate-400 dark:text-slate-500">/ ${maxAllowed}</span>
                         </span>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
                             <span>${data.activeProductsCount || 0} en stock</span>
                             <span class="text-[10px] font-bold text-slate-400 group-hover:text-amber-600 flex items-center gap-0.5 transition-colors">Gérer <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
@@ -1470,20 +1470,20 @@ export function createSellerDashboard({
                     <div 
                         data-seller-kpi="toggle-shop" 
                         title="${isOpen ? 'Cliquer pour mettre la boutique en pause' : 'Cliquer pour ouvrir la boutique aux commandes'}"
-                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-slate-900 transition-colors">Statut boutique</span>
-                            <div class="w-8 h-8 rounded-xl ${isOpen ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 group-hover:bg-amber-100'} flex items-center justify-center text-xs shrink-0 transition-colors">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Statut boutique</span>
+                            <div class="w-8 h-8 rounded-xl ${isOpen ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 group-hover:bg-emerald-100' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 group-hover:bg-amber-100'} flex items-center justify-center text-xs shrink-0 transition-colors">
                                 <i class="fa-solid ${isOpen ? 'fa-store' : 'fa-pause'}"></i>
                             </div>
                         </div>
-                        <span class="font-heading font-extrabold text-lg sm:text-xl ${isOpen ? 'text-emerald-700' : 'text-amber-700'} tracking-tight">
+                        <span class="font-heading font-extrabold text-lg sm:text-xl ${isOpen ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'} tracking-tight">
                             ${isOpen ? 'Boutique Ouverte' : 'En Pause'}
                         </span>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
                             <span>Commandes étudiantes</span>
-                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-slate-700 flex items-center gap-0.5 transition-colors">Changer <i class="fa-solid fa-arrows-rotate text-[8px]"></i></span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 flex items-center gap-0.5 transition-colors">Changer <i class="fa-solid fa-arrows-rotate text-[8px]"></i></span>
                         </div>
                     </div>
                 </div>
@@ -1493,15 +1493,15 @@ export function createSellerDashboard({
                     <button 
                         type="button" 
                         id="btn-dashboard-go-products" 
-                        class="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
+                        class="flex items-center justify-between p-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
                     >
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
                                 <i class="fa-solid fa-tags"></i>
                             </div>
                             <div>
-                                <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900">Mes Articles</h4>
-                                <p class="text-[11px] text-slate-500 mt-0.5">${data.totalProductsCount || 0} produit(s) au catalogue</p>
+                                <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900 dark:text-white">Mes Articles</h4>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${data.totalProductsCount || 0} produit(s) au catalogue</p>
                             </div>
                         </div>
                         <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-primary transition-colors"></i>
@@ -1511,15 +1511,15 @@ export function createSellerDashboard({
                         <button 
                             type="button" 
                             id="btn-dashboard-go-add-product" 
-                            class="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
+                            class="flex items-center justify-between p-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
                         >
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
                                     <i class="fa-solid fa-plus"></i>
                                 </div>
                                 <div>
-                                    <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900">Ajouter un produit</h4>
-                                    <p class="text-[11px] text-slate-500 mt-0.5">${Math.max(0, maxAllowed - (data.totalProductsCount || 0))} place(s) restante(s)</p>
+                                    <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900 dark:text-white">Ajouter un produit</h4>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${Math.max(0, maxAllowed - (data.totalProductsCount || 0))} place(s) restante(s)</p>
                                 </div>
                             </div>
                             <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-emerald-600 transition-colors"></i>
@@ -1529,15 +1529,15 @@ export function createSellerDashboard({
                     <button 
                         type="button" 
                         id="btn-dashboard-go-orders" 
-                        class="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
+                        class="flex items-center justify-between p-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs transition-all text-left cursor-pointer group active:scale-[0.99]"
                     >
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
+                            <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
                                 <i class="fa-solid fa-clipboard-list"></i>
                             </div>
                             <div>
-                                <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900">Gérer les commandes</h4>
-                                <p class="text-[11px] text-slate-500 mt-0.5">${allOrders.length} commande(s) reçue(s)</p>
+                                <h4 class="font-heading font-bold text-xs sm:text-sm text-slate-900 dark:text-white">Gérer les commandes</h4>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${allOrders.length} commande(s) reçue(s)</p>
                             </div>
                         </div>
                         <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-amber-600 transition-colors"></i>
@@ -1545,12 +1545,12 @@ export function createSellerDashboard({
                 </div>
 
                 <!-- 5. Aperçu des dernières commandes -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-6 flex flex-col gap-4">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-4 sm:p-6 flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                         <div class="flex items-center gap-2">
-                            <h3 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Commandes récentes</h3>
+                            <h3 class="font-heading font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">Commandes récentes</h3>
                             ${pendingOrders.length > 0 ? `
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
                                     ${pendingOrders.length} en attente
                                 </span>
                             ` : ''}
@@ -1567,15 +1567,15 @@ export function createSellerDashboard({
 
                     ${allOrders.length === 0 ? `
                         <div class="py-8 text-center flex flex-col items-center justify-center gap-2">
-                            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-lg">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center text-lg">
                                 <i class="fa-solid fa-inbox"></i>
                             </div>
-                            <p class="text-xs text-slate-500 font-medium max-w-sm">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium max-w-sm">
                                 Vous n'avez pas encore de commandes. Dès qu'un étudiant passe une commande sur votre vitrine, elle apparaîtra ici avec une alerte sonore !
                             </p>
                         </div>
                     ` : `
-                        <div class="divide-y divide-slate-100">
+                        <div class="divide-y divide-slate-100 dark:divide-slate-800">
                             ${allOrders.slice(0, 5).map((order) => {
                                 const buyerName = escapeHTML(order.buyer_name || 'Étudiant');
                                 const total = Number(order.total_price || order.price || 0).toLocaleString('fr-FR');
@@ -1587,26 +1587,26 @@ export function createSellerDashboard({
                                     delivered: { label: 'Livrée', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
                                     cancelled: { label: 'Annulée', color: 'bg-rose-100 text-rose-900 border-rose-300' },
                                 };
-                                const st = statusLabels[order.status] || { label: order.status, color: 'bg-slate-100 text-slate-700 border-slate-200' };
+                                const st = statusLabels[order.status] || { label: order.status, color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
 
                                 return `
                                     <div class="py-3 flex items-center justify-between gap-3 text-xs">
                                         <div class="flex items-center gap-3 min-w-0">
-                                            <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold shrink-0">
+                                            <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs font-bold shrink-0">
                                                 <i class="fa-solid fa-bag-shopping"></i>
                                             </div>
                                             <div class="min-w-0">
                                                 <div class="flex items-center gap-2">
-                                                    <span class="font-bold text-slate-900 truncate">${buyerName}</span>
-                                                    <span class="text-[10px] text-slate-400 font-mono">#${(order.id || '').slice(0, 6)}</span>
+                                                    <span class="font-bold text-slate-900 dark:text-white truncate">${buyerName}</span>
+                                                    <span class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">#${(order.id || '').slice(0, 6)}</span>
                                                 </div>
-                                                <p class="text-[11px] text-slate-500 truncate">
+                                                <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                                                     ${escapeHTML(order.product?.title || order.delivery_address || 'Commande')}
                                                 </p>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-3 shrink-0">
-                                            <span class="font-extrabold text-slate-900 tabular-nums">${total} F</span>
+                                            <span class="font-extrabold text-slate-900 dark:text-white tabular-nums">${total} F</span>
                                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${st.color}">
                                                 ${st.label}
                                             </span>
@@ -1659,16 +1659,16 @@ export function createSellerDashboard({
         return `
             <div class="flex flex-col gap-4">
                 <!-- Barre d'outils commandes : Recherche, Filtre Pavillon & Export CSV -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
                     <!-- Recherche textuelle -->
                     <div class="relative flex-1">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-xs"></i>
                         <input 
                             type="text" 
                             id="input-seller-search-orders" 
                             value="${escapeHTML(orderSearchQuery)}"
                             placeholder="Rechercher étudiant, tél, #CMD..." 
-                            class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[40px]"
+                            class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[40px]"
                         >
                     </div>
 
@@ -1676,7 +1676,7 @@ export function createSellerDashboard({
                         <!-- Filtre Pavillon -->
                         <select 
                             id="select-seller-pavillon" 
-                            class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[40px] cursor-pointer"
+                            class="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[40px] cursor-pointer"
                         >
                             <option value="all" ${orderPavillonFilter === 'all' ? 'selected' : ''}>Tous les pavillons</option>
                             <option value="Pavillon A1" ${orderPavillonFilter === 'Pavillon A1' ? 'selected' : ''}>Pavillon A1</option>
@@ -1692,7 +1692,7 @@ export function createSellerDashboard({
                             type="button" 
                             id="btn-seller-export-orders" 
                             title="Exporter mes ventes en format CSV"
-                            class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all min-h-[40px] cursor-pointer"
+                            class="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all min-h-[40px] cursor-pointer"
                         >
                             <i class="fa-solid fa-file-csv text-primary text-xs"></i>
                             <span>Exporter CSV</span>
@@ -1705,28 +1705,28 @@ export function createSellerDashboard({
                     <button type="button" data-order-filter="all" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         orderFilter === 'all'
                             ? 'bg-primary text-white shadow-xs'
-                            : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }">
                         Toutes (${orders.length})
                     </button>
                     <button type="button" data-order-filter="pending" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         orderFilter === 'pending'
                             ? 'bg-amber-500 text-slate-950 font-extrabold shadow-xs'
-                            : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }">
                         À valider (${pendingOrdersCount})
                     </button>
                     <button type="button" data-order-filter="in_progress" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         orderFilter === 'in_progress'
                             ? 'bg-primary text-white shadow-xs'
-                            : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }">
                         En cours (${inProgressOrdersCount})
                     </button>
                     <button type="button" data-order-filter="delivered" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
                         orderFilter === 'delivered'
                             ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }">
                         Livrées (${deliveredOrdersCount})
                     </button>
@@ -1738,10 +1738,10 @@ export function createSellerDashboard({
                         <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center text-2xl mx-auto mb-3 shadow-md shadow-primary/20">
                             <i class="fa-solid fa-inbox"></i>
                         </div>
-                        <h4 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg mb-1">
+                        <h4 class="font-heading font-extrabold text-slate-900 dark:text-white text-base sm:text-lg mb-1">
                             ${orderSearchQuery || orderPavillonFilter !== 'all' ? 'Aucune commande ne correspond à ces critères' : 'Aucune commande enregistrée pour le moment'}
                         </h4>
-                        <p class="text-xs text-slate-500 max-w-sm mx-auto mb-5 leading-relaxed">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-5 leading-relaxed">
                             ${orderSearchQuery || orderPavillonFilter !== 'all' ? 'Essayez de modifier votre recherche ou de réinitialiser le filtre pavillon.' : 'Vos commandes apparaîtront ici dès qu\'un étudiant valide son panier sur le campus.'}
                         </p>
                         <button type="button" id="btn-empty-share-wa" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all inline-flex items-center gap-2 cursor-pointer">
@@ -1820,14 +1820,14 @@ export function createSellerDashboard({
                                     break;
                                 case 'cancelled':
                                     statusLabel = 'Annulée';
-                                    statusBadgeClass = 'bg-slate-100 text-slate-500 line-through border-slate-200';
+                                    statusBadgeClass = 'bg-slate-100 dark:bg-slate-800 text-slate-500 line-through border-slate-200 dark:border-slate-700';
                                     stepIdx = 0;
                                     break;
                             }
 
                             if (isSuspended) {
                                 nextActionBtn = `
-                                    <span class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1.5 cursor-not-allowed" title="Compte suspendu par l'administration">
+                                    <span class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1.5 cursor-not-allowed" title="Compte suspendu par l'administration">
                                         <i class="fa-solid fa-lock text-[10px]"></i>
                                         <span>Action bloquée (Suspendu)</span>
                                     </span>
@@ -1839,24 +1839,24 @@ export function createSellerDashboard({
                             // Badges officiels de mode de règlement (Wave cyan, OM orange, Cash vert)
                             let paymentBadge = '';
                             if (o.payment_method === 'wave') {
-                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1"><i class="fa-solid fa-water text-[9px]"></i> Wave</span>`;
+                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 inline-flex items-center gap-1"><i class="fa-solid fa-water text-[9px]"></i> Wave</span>`;
                             } else if (o.payment_method === 'om') {
-                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-50 text-orange-700 border border-orange-200 inline-flex items-center gap-1"><i class="fa-solid fa-mobile-screen text-[9px]"></i> Orange Money</span>`;
+                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 inline-flex items-center gap-1"><i class="fa-solid fa-mobile-screen text-[9px]"></i> Orange Money</span>`;
                             } else {
-                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1"><i class="fa-solid fa-money-bill-wave text-[9px]"></i> Espèces</span>`;
+                                paymentBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1"><i class="fa-solid fa-money-bill-wave text-[9px]"></i> Espèces</span>`;
                             }
 
                             // Message WhatsApp type poli et direct
                             const waText = `Bonjour ${o.buyer_name || 'cher client'} ! Je suis votre marchand Campus Market concernant votre commande ${orderRef} (${productTitle}). Je prépare votre commande pour livraison au ${o.delivery_address || 'campus'}. Confirmez-vous votre présence ?`;
 
                             return `
-                                <div class="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-4 sm:p-5 flex flex-col gap-3.5 shadow-xs hover:shadow-card transition-all">
+                                <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col gap-3.5 shadow-xs hover:shadow-card transition-all">
                                     <!-- En-tête de la commande -->
-                                    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-wrap gap-2">
+                                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 flex-wrap gap-2">
                                         <div class="flex items-center gap-2">
                                             <span class="font-mono font-bold text-xs text-primary">${escapeHTML(orderRef)}</span>
-                                            <span class="text-slate-300">•</span>
-                                            <span class="text-xs text-slate-400">
+                                            <span class="text-slate-300 dark:text-slate-600">•</span>
+                                            <span class="text-xs text-slate-400 dark:text-slate-500">
                                                 ${new Date(o.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à ${new Date(o.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
@@ -1870,25 +1870,25 @@ export function createSellerDashboard({
 
                                     <!-- Stepper Visuel 4 Étapes de Commande -->
                                     ${stepIdx > 0 ? `
-                                        <div class="w-full bg-slate-50/80 p-2.5 rounded-xl border border-slate-100/90 my-0.5">
+                                        <div class="w-full bg-slate-50/80 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-100/90 dark:border-slate-700 my-0.5">
                                             <div class="flex items-center justify-between text-[11px] font-bold">
-                                                <div class="flex items-center gap-1.5 ${stepIdx >= 1 ? 'text-primary' : 'text-slate-400'}">
-                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 1 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center text-[9px] font-black">1</span>
+                                                <div class="flex items-center gap-1.5 ${stepIdx >= 1 ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}">
+                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 1 ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'} flex items-center justify-center text-[9px] font-black">1</span>
                                                     <span>Reçue</span>
                                                 </div>
-                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 2 ? 'bg-primary' : 'bg-slate-200'}"></div>
-                                                <div class="flex items-center gap-1.5 ${stepIdx >= 2 ? 'text-primary' : 'text-slate-400'}">
-                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 2 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center text-[9px] font-black">2</span>
+                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 2 ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}"></div>
+                                                <div class="flex items-center gap-1.5 ${stepIdx >= 2 ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}">
+                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 2 ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'} flex items-center justify-center text-[9px] font-black">2</span>
                                                     <span>Confirmée</span>
                                                 </div>
-                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 3 ? 'bg-primary' : 'bg-slate-200'}"></div>
-                                                <div class="flex items-center gap-1.5 ${stepIdx >= 3 ? 'text-primary' : 'text-slate-400'}">
-                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 3 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center text-[9px] font-black">3</span>
+                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 3 ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}"></div>
+                                                <div class="flex items-center gap-1.5 ${stepIdx >= 3 ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}">
+                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 3 ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'} flex items-center justify-center text-[9px] font-black">3</span>
                                                     <span>En route</span>
                                                 </div>
-                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 4 ? 'bg-emerald-600' : 'bg-slate-200'}"></div>
-                                                <div class="flex items-center gap-1.5 ${stepIdx >= 4 ? 'text-emerald-700 font-extrabold' : 'text-slate-400'}">
-                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 4 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center text-[9px] font-black">4</span>
+                                                <div class="flex-1 h-0.5 mx-2 ${stepIdx >= 4 ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700'}"></div>
+                                                <div class="flex items-center gap-1.5 ${stepIdx >= 4 ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : 'text-slate-400 dark:text-slate-500'}">
+                                                    <span class="w-4 h-4 rounded-full ${stepIdx >= 4 ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'} flex items-center justify-center text-[9px] font-black">4</span>
                                                     <span>Livrée</span>
                                                 </div>
                                             </div>
@@ -1896,24 +1896,24 @@ export function createSellerDashboard({
                                     ` : ''}
 
                                     <!-- Détails Acheteur, Pavillon & Article -->
-                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-slate-50/70 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-100 dark:border-slate-700">
                                         <div>
-                                            <div class="font-bold text-slate-900 text-sm flex items-center gap-2">
-                                                <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs">
+                                            <div class="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                                                <div class="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs">
                                                     <i class="fa-solid fa-user text-[10px]"></i>
                                                 </div>
                                                 <span>${escapeHTML(o.buyer_name || 'Client UIDT')}</span>
                                             </div>
-                                            <p class="text-slate-600 mt-1 flex items-center gap-1.5 font-medium">
-                                                <span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold inline-flex items-center gap-1">
+                                            <p class="text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1.5 font-medium">
+                                                <span class="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-semibold inline-flex items-center gap-1">
                                                     <i class="fa-solid fa-location-dot text-[10px]"></i>
                                                     <span>${escapeHTML(o.delivery_address || 'Pavillon Campus')}</span>
                                                 </span>
                                             </p>
                                         </div>
 
-                                        <div class="sm:text-right border-t sm:border-t-0 border-slate-200/60 pt-2 sm:pt-0">
-                                            <span class="font-semibold text-slate-700 block">${escapeHTML(productTitle)} <span class="text-slate-400 font-normal">(x${o.quantity || 1})</span></span>
+                                        <div class="sm:text-right border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60 pt-2 sm:pt-0">
+                                            <span class="font-semibold text-slate-700 dark:text-slate-300 block">${escapeHTML(productTitle)} <span class="text-slate-400 dark:text-slate-500 font-normal">(x${o.quantity || 1})</span></span>
                                             <span class="font-heading font-extrabold text-base text-primary leading-tight block mt-0.5 tabular-nums">
                                                 ${Number(o.price).toLocaleString('fr-FR')} FCFA
                                             </span>
@@ -1926,7 +1926,7 @@ export function createSellerDashboard({
                                         <div class="flex items-center gap-2">
                                             <a 
                                                 href="tel:${clientPhone}" 
-                                                class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 min-h-[44px] transition-colors active:scale-95 cursor-pointer shadow-xs"
+                                                class="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center gap-1.5 min-h-[44px] transition-colors active:scale-95 cursor-pointer shadow-xs"
                                             >
                                                 <i class="fa-solid fa-phone text-emerald-600 text-xs"></i>
                                                 <span>Appel</span>

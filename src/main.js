@@ -761,11 +761,11 @@ async function initApp() {
             topShopsSection.className = 'flex flex-col gap-3';
             topShopsSection.innerHTML = `
                 <div class="flex items-center justify-between">
-                    <h2 class="font-heading font-extrabold text-base text-slate-900 flex items-center gap-1.5">
+                    <h2 class="font-heading font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-1.5">
                         <i class="fa-solid fa-trophy text-accent text-sm"></i>
                         Top Shops du Campus
                     </h2>
-                    <span class="text-xs text-slate-400 font-medium">Vendeurs certifiés</span>
+                    <span class="text-xs text-slate-400 dark:text-slate-500 font-medium">Vendeurs certifiés</span>
                 </div>
                 <div class="flex items-center gap-3 overflow-x-auto no-scrollbar py-1" style="scrollbar-width: none;">
                     ${appState.topShops.map((shop) => {
@@ -779,16 +779,16 @@ async function initApp() {
                         <div 
                             data-shop-id="${shop.id}" 
                             title="Visiter ${escapeHTML(displayName)}"
-                            class="flex-shrink-0 bg-white border border-slate-200/80 hover:border-primary/50 rounded-2xl p-3 flex items-center gap-3 shadow-card hover:shadow-card-hover transition-all min-w-[210px] cursor-pointer active:scale-95 group"
+                            class="flex-shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-primary/50 dark:hover:border-primary/50 rounded-2xl p-3 flex items-center gap-3 shadow-card hover:shadow-card-hover transition-all min-w-[210px] cursor-pointer active:scale-95 group"
                         >
-                            <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white font-heading font-extrabold flex items-center justify-center text-sm shadow-sm transition-colors shrink-0">
+                            <div class="w-11 h-11 rounded-2xl bg-primary/10 dark:bg-primary/20 text-primary dark:text-blue-300 group-hover:bg-primary group-hover:text-white font-heading font-extrabold flex items-center justify-center text-sm shadow-sm transition-colors shrink-0">
                                 ${initial}
                             </div>
                             <div class="flex flex-col min-w-0 flex-1">
-                                <span class="font-heading font-bold text-slate-900 group-hover:text-primary transition-colors text-xs truncate leading-tight">
+                                <span class="font-heading font-bold text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors text-xs truncate leading-tight">
                                     ${escapeHTML(displayName)}
                                 </span>
-                                <span class="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                                <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5">
                                     ${escapeHTML(sellerFullName || 'Vendeur certifié')}
                                 </span>
                                 <div class="flex items-center gap-1.5 mt-1 text-[11px] text-amber-500 font-bold">
@@ -796,26 +796,26 @@ async function initApp() {
                                         <i class="fa-solid fa-star text-[10px]"></i>
                                         <span>${ratingDisplay}</span>
                                     </div>
-                                    <span class="text-slate-400 font-normal text-[10px]">(${reviewsDisplay})</span>
+                                    <span class="text-slate-400 dark:text-slate-500 font-normal text-[10px]">(${reviewsDisplay})</span>
                                     ${shop.deliveredOrders > 0 ? `
-                                        <span class="text-slate-300">•</span>
-                                        <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5" title="${shop.deliveredOrders} commande(s) livrée(s)">
-                                            <i class="fa-solid fa-truck-fast text-[9px]"></i>
-                                            ${shop.deliveredOrders}
-                                        </span>
-                                    ` : (shop.activeProducts > 0 ? `
-                                        <span class="text-slate-300">•</span>
-                                        <span class="text-[10px] text-slate-500 font-medium" title="${shop.activeProducts} article(s) disponible(s)">
-                                            ${shop.activeProducts} art.
-                                        </span>
-                                    ` : '')}
-                                </div>
-                            </div>
-                        </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
+                                        <span class="text-slate-300 dark:text-slate-700">•</span>
+                                        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5" title="${shop.deliveredOrders} commande(s) livrée(s)">
+                                             <i class="fa-solid fa-truck-fast text-[9px]"></i>
+                                             ${shop.deliveredOrders}
+                                         </span>
+                                     ` : (shop.activeProducts > 0 ? `
+                                         <span class="text-slate-300 dark:text-slate-700">•</span>
+                                         <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium" title="${shop.activeProducts} article(s) disponible(s)">
+                                             ${shop.activeProducts} art.
+                                         </span>
+                                     ` : '')}
+                                 </div>
+                             </div>
+                         </div>
+                         `;
+                     }).join('')}
+                 </div>
+             `;
 
             topShopsSection.querySelectorAll('[data-shop-id]').forEach((shopCard) => {
                 shopCard.addEventListener('click', () => {
@@ -832,10 +832,10 @@ async function initApp() {
         productsHeaderSection.className = 'flex items-center justify-between pt-1';
         productsHeaderSection.innerHTML = `
             <div>
-                <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900">
+                <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white">
                     ${appState.searchQuery ? `Résultats pour "${escapeHTML(appState.searchQuery)}"` : 'Offres disponibles'}
                 </h2>
-                <p class="text-xs text-slate-500 mt-0.5">
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     ${appState.isLoading ? 'Recherche des offres...' : `${appState.products.length} article${appState.products.length > 1 ? 's' : ''} disponible${appState.products.length > 1 ? 's' : ''}`}
                 </p>
             </div>
@@ -848,7 +848,7 @@ async function initApp() {
             skeletonGrid.id = 'catalog-loading-skeleton';
             skeletonGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full';
             skeletonGrid.innerHTML = Array(12).fill(0).map(() => `
-                <div class="bg-white rounded-3xl border border-slate-200/70 p-3.5 flex flex-col gap-3 shadow-card overflow-hidden">
+                <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/70 dark:border-slate-800 p-3.5 flex flex-col gap-3 shadow-card overflow-hidden">
                     <div class="w-full aspect-square shimmer-placeholder rounded-2xl"></div>
                     <div class="h-3.5 shimmer-placeholder rounded-md w-3/4"></div>
                     <div class="h-4 shimmer-placeholder rounded-md w-1/2 mt-auto"></div>
@@ -861,15 +861,15 @@ async function initApp() {
         // Empty state si aucun produit
         if (!appState.products || appState.products.length === 0) {
             const emptyEl = document.createElement('div');
-            emptyEl.className = 'flex flex-col items-center justify-center text-center py-16 px-4 bg-white rounded-2xl border border-dashed border-slate-300 my-4';
+            emptyEl.className = 'flex flex-col items-center justify-center text-center py-16 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 my-4';
             emptyEl.innerHTML = `
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center text-2xl mb-3">
+                <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center text-2xl mb-3">
                     <i class="fa-solid ${appState.searchQuery ? 'fa-magnifying-glass' : 'fa-wifi'}"></i>
                 </div>
-                <h3 class="font-heading font-bold text-slate-800 text-lg mb-1">
+                <h3 class="font-heading font-bold text-slate-800 dark:text-white text-lg mb-1">
                     ${appState.searchQuery ? 'Aucun produit trouvé' : 'Aucun produit disponible pour le moment (mode hors-ligne)'}
                 </h3>
-                <p class="text-sm text-slate-500 max-w-sm mb-5">
+                <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-5">
                     ${appState.searchQuery 
                         ? `Aucun article ne correspond à votre recherche "${escapeHTML(appState.searchQuery)}". Essayez un autre mot-clé ou changez de catégorie.`
                         : `Aucune offre n'a pu être chargée depuis le réseau et le cache local est vide. Vérifiez votre connexion internet.`}

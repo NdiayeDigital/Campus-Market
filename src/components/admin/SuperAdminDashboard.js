@@ -623,7 +623,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             </main>
 
             <!-- 6. BARRE INFÉRIEURE FIXE MOBILE SUPERADMIN (lg:hidden, TOUJOURS visible, z-50) -->
-            <nav class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white border-t border-slate-200/80 text-slate-900 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation admin mobile">
+            <nav class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none" aria-label="Navigation admin mobile">
                 <div class="w-full px-2 py-1.5 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
                     ${navTabs.map(tab => `
                         <button 
@@ -632,14 +632,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             class="relative flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 min-h-[48px] min-w-[50px] cursor-pointer active:scale-95 ${
                                 activeTab === tab.id
                                     ? 'text-primary font-bold'
-                                    : 'text-slate-500 hover:text-slate-800 font-medium'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
                             }"
                         >
                             ${activeTab === tab.id ? '<span class="absolute top-0 w-7 h-1 bg-primary rounded-full"></span>' : ''}
                             <div class="relative">
                                 <i class="fa-solid ${tab.icon} text-lg mb-0.5"></i>
                                 ${tab.badge !== null && tab.badge > 0 ? `
-                                    <span class="absolute -top-1.5 -right-2.5 bg-primary text-white font-black text-[9px] px-1.5 py-0.2 rounded-full border-2 border-white shadow-sm min-w-[16px] text-center ${tab.badgeAlert ? 'animate-pulse' : ''}">
+                                    <span class="absolute -top-1.5 -right-2.5 bg-primary text-white font-black text-[9px] px-1.5 py-0.2 rounded-full border-2 border-white dark:border-slate-900 shadow-sm min-w-[16px] text-center ${tab.badgeAlert ? 'animate-pulse' : ''}">
                                         ${tab.badge > 99 ? '99+' : tab.badge}
                                     </span>
                                 ` : ''}
@@ -685,18 +685,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div 
                         data-stat-target="sellers-active" 
                         title="Cliquer pour afficher la liste des marchands certifiés"
-                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
-                        <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Marchands certifiés</span>
-                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
+                        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Marchands certifiés</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/60 transition-colors">
                                 <i class="fa-solid fa-store"></i>
                             </div>
                         </div>
-                        <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${m.activeSellersCount}</span>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-emerald-600 mt-1">
+                        <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white tracking-tight">${m.activeSellersCount}</span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-1">
                             <span class="flex items-center gap-1"><i class="fa-solid fa-circle-check text-[9px]"></i> Boutiques actives</span>
-                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
                     </div>
 
@@ -704,25 +704,25 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div 
                         data-stat-target="sellers-pending" 
                         title="Cliquer pour afficher et modérer les candidatures en attente"
-                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
-                        <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-amber-700 transition-colors">Demandes d'adhésion</span>
-                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-amber-100 transition-colors">
+                        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">Demandes d'adhésion</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs shrink-0 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/60 transition-colors">
                                 <i class="fa-solid fa-hourglass-half"></i>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${m.pendingSellersCount}</span>
+                            <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white tracking-tight">${m.pendingSellersCount}</span>
                             ${m.pendingSellersCount > 0 ? `
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 animate-pulse">
                                     Action
                                 </span>
                             ` : ''}
                         </div>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
                             <span>Candidatures</span>
-                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-amber-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
                     </div>
 
@@ -730,18 +730,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div 
                         data-stat-target="orders-all" 
                         title="Cliquer pour afficher la liste de toutes les commandes"
-                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-primary hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-primary hover:shadow-md transition-all active:scale-[0.99]"
                     >
-                        <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-primary transition-colors">Total Commandes</span>
-                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0 group-hover:bg-blue-100 transition-colors">
+                        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate group-hover:text-primary transition-colors">Total Commandes</span>
+                            <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-primary flex items-center justify-center text-xs shrink-0 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/60 transition-colors">
                                 <i class="fa-solid fa-boxes-packing"></i>
                             </div>
                         </div>
-                        <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${m.totalOrdersCount}</span>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                        <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white tracking-tight">${m.totalOrdersCount}</span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
                             <span>Transactions campus</span>
-                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-primary flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 group-hover:text-primary flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
                     </div>
 
@@ -749,20 +749,20 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div 
                         data-stat-target="orders-delivered" 
                         title="Cliquer pour afficher les commandes livrées générant ce chiffre d'affaires"
-                        class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
-                        <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Volume d'affaires</span>
-                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
+                        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Volume d'affaires</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/60 transition-colors">
                                 <i class="fa-solid fa-coins"></i>
                             </div>
                         </div>
-                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
-                            ${Number(m.totalDeliveredRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 dark:text-emerald-400 tracking-tight tabular-nums">
+                            ${Number(m.totalDeliveredRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500 dark:text-slate-400">FCFA</span>
                         </span>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
                             <span>Commandes livrées</span>
-                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
                     </div>
                 </div>
@@ -772,24 +772,24 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div 
                         data-stat-target="sellers-active" 
                         title="Cliquer pour gérer les marchands et leurs abonnements"
-                        class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-indigo-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-indigo-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-indigo-100 transition-colors">
+                                <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs shrink-0 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/60 transition-colors">
                                     <i class="fa-solid fa-hand-holding-dollar"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-heading font-bold text-sm text-slate-900 group-hover:text-indigo-700 transition-colors">Abonnements Plateforme</h3>
-                                    <p class="text-xs text-slate-500">${m.activePaidSellersCount || 0} payant(s) • ${m.trialSellersCount || 0} en essai gratuit</p>
+                                    <h3 class="font-heading font-bold text-sm text-slate-900 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">Abonnements Plateforme</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">${m.activePaidSellersCount || 0} payant(s) • ${m.trialSellersCount || 0} en essai gratuit</p>
                                 </div>
                             </div>
-                            <span class="font-heading font-extrabold text-lg text-indigo-600 tabular-nums">
+                            <span class="font-heading font-extrabold text-lg text-indigo-600 dark:text-indigo-400 tabular-nums">
                                 ${Number(m.totalSubscriptionRevenue || 0).toLocaleString('fr-FR')} FCFA
                             </span>
                         </div>
-                        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                            <span class="text-[11px] text-slate-400">Recettes réelles (${m.activePaidSellersCount || 0} abonnement${(m.activePaidSellersCount || 0) > 1 ? 's' : ''} actif${(m.activePaidSellersCount || 0) > 1 ? 's' : ''})</span>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <span class="text-[11px] text-slate-400 dark:text-slate-500">Recettes réelles (${m.activePaidSellersCount || 0} abonnement${(m.activePaidSellersCount || 0) > 1 ? 's' : ''} actif${(m.activePaidSellersCount || 0) > 1 ? 's' : ''})</span>
                             <span class="text-xs font-bold text-primary group-hover:text-primary-hover flex items-center gap-1">
                                 <span>Gérer</span>
                                 <i class="fa-solid fa-arrow-right text-[10px]"></i>
@@ -800,24 +800,24 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div 
                         data-stat-target="orders-delivered" 
                         title="Cliquer pour analyser les transactions livrées"
-                        class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
+                                <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/60 transition-colors">
                                     <i class="fa-solid fa-chart-line"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-heading font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">Volume d'Affaires Brut (GMV)</h3>
-                                    <p class="text-xs text-slate-500">${deliveredOrdersCount} commande${deliveredOrdersCount > 1 ? 's' : ''} livrée${deliveredOrdersCount > 1 ? 's' : ''}</p>
+                                    <h3 class="font-heading font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Volume d'Affaires Brut (GMV)</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">${deliveredOrdersCount} commande${deliveredOrdersCount > 1 ? 's' : ''} livrée${deliveredOrdersCount > 1 ? 's' : ''}</p>
                                 </div>
                             </div>
-                            <span class="font-heading font-extrabold text-lg text-emerald-600 tabular-nums">
+                            <span class="font-heading font-extrabold text-lg text-emerald-600 dark:text-emerald-400 tabular-nums">
                                 ${Number(m.totalDeliveredRevenue).toLocaleString('fr-FR')} FCFA
                             </span>
                         </div>
-                        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                            <span class="text-[11px] text-slate-400">Transactions Pavillon-à-Pavillon</span>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <span class="text-[11px] text-slate-400 dark:text-slate-500">Transactions Pavillon-à-Pavillon</span>
                             <span class="text-xs font-bold text-primary group-hover:text-primary-hover flex items-center gap-1">
                                 <span>Consulter</span>
                                 <i class="fa-solid fa-arrow-right text-[10px]"></i>
@@ -827,15 +827,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 </div>
 
                 <!-- Répartition Géographique des Commandes (Pavillons & Campus UIDT) -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col gap-4">
-                    <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs flex flex-col gap-4">
+                    <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-xs shrink-0">
+                            <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-primary flex items-center justify-center text-xs shrink-0">
                                 <i class="fa-solid fa-chart-column"></i>
                             </div>
                             <div>
-                                <h3 class="font-heading font-bold text-sm text-slate-900">Répartition Logistique par Pavillon / Zone</h3>
-                                <p class="text-xs text-slate-500">Volume de commandes par destination sur le campus UIDT (Cliquer pour filtrer)</p>
+                                <h3 class="font-heading font-bold text-sm text-slate-900 dark:text-white">Répartition Logistique par Pavillon / Zone</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Volume de commandes par destination sur le campus UIDT (Cliquer pour filtrer)</p>
                             </div>
                         </div>
                         <span class="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
@@ -844,8 +844,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     </div>
 
                     ${sortedLocations.length === 0 ? `
-                        <div class="py-8 text-center text-slate-400 text-xs">
-                            <i class="fa-solid fa-map-location-dot text-2xl text-slate-300 mb-1.5 block"></i>
+                        <div class="py-8 text-center text-slate-400 dark:text-slate-500 text-xs">
+                            <i class="fa-solid fa-map-location-dot text-2xl text-slate-300 dark:text-slate-600 mb-1.5 block"></i>
                             Aucune commande enregistrée pour établir la répartition géographique.
                         </div>
                     ` : `
@@ -859,21 +859,21 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <div 
                                         data-stat-pavillon="${escapeHTML(locName)}" 
                                         title="Cliquer pour afficher les commandes expédiées à ${escapeHTML(locName)}"
-                                        class="flex flex-col gap-1.5 p-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-all group active:scale-[0.99]"
+                                        class="flex flex-col gap-1.5 p-2 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group active:scale-[0.99]"
                                     >
                                         <div class="flex items-center justify-between text-xs">
-                                            <span class="font-semibold text-slate-800 flex items-center gap-2 truncate max-w-[70%] group-hover:text-primary transition-colors">
+                                            <span class="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 truncate max-w-[70%] group-hover:text-primary transition-colors">
                                                 <i class="fa-solid fa-location-dot text-[11px] ${isTop ? 'text-primary' : 'text-slate-400 group-hover:text-primary'}"></i>
                                                 <span class="truncate">${escapeHTML(locName)}</span>
                                             </span>
                                             <div class="flex items-center gap-2 shrink-0">
-                                                <span class="font-bold text-slate-900 tabular-nums">${count} cmd</span>
-                                                <span class="text-[11px] font-bold ${isTop ? 'text-primary bg-primary/10' : 'text-slate-500 bg-slate-100 group-hover:bg-primary/10 group-hover:text-primary'} tabular-nums px-2 py-0.5 rounded-md transition-colors">(${percent}%)</span>
-                                                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 group-hover:text-primary transition-colors"></i>
+                                                <span class="font-bold text-slate-900 dark:text-white tabular-nums">${count} cmd</span>
+                                                <span class="text-[11px] font-bold ${isTop ? 'text-primary bg-primary/10' : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 group-hover:text-primary'} tabular-nums px-2 py-0.5 rounded-md transition-colors">(${percent}%)</span>
+                                                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors"></i>
                                             </div>
                                         </div>
-                                        <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                            <div class="h-full rounded-full transition-all duration-500 ${isTop ? 'bg-primary' : 'bg-slate-300 group-hover:bg-primary/70'}" style="width: ${barPercent}%"></div>
+                                        <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                                            <div class="h-full rounded-full transition-all duration-500 ${isTop ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-primary/70'}" style="width: ${barPercent}%"></div>
                                         </div>
                                     </div>
                                 `;
@@ -884,37 +884,37 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                 <!-- Raccourcis Opérationnels et Actions Rapides -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <button data-jump-tab="sellers" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
-                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
+                    <button data-jump-tab="sellers" class="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
                             <i class="fa-solid fa-user-plus"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate group-hover:text-primary transition-colors">Candidatures</span>
-                            <span class="text-[11px] text-slate-500 block truncate">${m.pendingSellersCount} en attente</span>
+                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 dark:text-white block truncate group-hover:text-primary transition-colors">Candidatures</span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 block truncate">${m.pendingSellersCount} en attente</span>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-primary transition-colors"></i>
+                        <i class="fa-solid fa-chevron-right text-slate-300 dark:text-slate-600 text-xs group-hover:text-primary transition-colors"></i>
                     </button>
 
-                    <button data-jump-tab="accounts" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
+                    <button data-jump-tab="accounts" class="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
                         <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
                             <i class="fa-solid fa-id-card-clip"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate group-hover:text-primary transition-colors">Gestion Comptes</span>
-                            <span class="text-[11px] text-slate-500 block truncate">${allProfiles.length || 0} profils</span>
+                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 dark:text-white block truncate group-hover:text-primary transition-colors">Gestion Comptes</span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 block truncate">${allProfiles.length || 0} profils</span>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-primary transition-colors"></i>
+                        <i class="fa-solid fa-chevron-right text-slate-300 dark:text-slate-600 text-xs group-hover:text-primary transition-colors"></i>
                     </button>
 
-                    <button data-jump-tab="locations" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
-                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
+                    <button data-jump-tab="locations" class="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
                             <i class="fa-solid fa-map-location-dot"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate group-hover:text-primary transition-colors">Zones Livraison</span>
-                            <span class="text-[11px] text-slate-500 block truncate">${deliveryLocations.length} lieux</span>
+                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 dark:text-white block truncate group-hover:text-primary transition-colors">Zones Livraison</span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 block truncate">${deliveryLocations.length} lieux</span>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-primary transition-colors"></i>
+                        <i class="fa-solid fa-chevron-right text-slate-300 dark:text-slate-600 text-xs group-hover:text-primary transition-colors"></i>
                     </button>
                 </div>
             </div>
@@ -947,7 +947,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         return `
             <div class="flex flex-col gap-5">
                 <!-- Barre d'outils comptes -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div class="relative flex-1 max-w-md">
                         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                         <input 
@@ -955,10 +955,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             id="admin-account-search" 
                             placeholder="Rechercher par nom, téléphone, email..." 
                             value="${escapeHTML(accountSearchQuery)}"
-                            class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[40px]"
+                            class="w-full pl-9 pr-8 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[40px]"
                         >
                         ${accountSearchQuery ? `
-                            <button id="btn-clear-account-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                            <button id="btn-clear-account-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
                                 <i class="fa-solid fa-circle-xmark text-xs"></i>
                             </button>
                         ` : ''}
@@ -967,25 +967,25 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div class="flex items-center gap-2 flex-wrap">
                         <!-- Filtres rôles -->
                         <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                            <button type="button" data-account-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-account-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 Tous (${allProfiles.length})
                             </button>
-                            <button type="button" data-account-filter="acheteur" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'acheteur' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-account-filter="acheteur" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'acheteur' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 Acheteurs
                             </button>
-                            <button type="button" data-account-filter="vendeur" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'vendeur' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-account-filter="vendeur" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'vendeur' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 Vendeurs
                             </button>
-                            <button type="button" data-account-filter="suspendu" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'suspendu' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-account-filter="suspendu" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'suspendu' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 Suspendus
                             </button>
-                            <button type="button" data-account-filter="superadmin" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'superadmin' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-account-filter="superadmin" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${accountRoleFilter === 'superadmin' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 SuperAdmin
                             </button>
                         </div>
 
                         <!-- Export CSV -->
-                        <button type="button" id="btn-export-accounts-csv" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80 flex items-center gap-1.5 shrink-0">
+                        <button type="button" id="btn-export-accounts-csv" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 flex items-center gap-1.5 shrink-0">
                             <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
                             <span class="hidden sm:inline">Exporter CSV</span>
                             <span class="sm:hidden">CSV</span>
@@ -994,22 +994,22 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 </div>
 
                 <!-- Liste des comptes -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+                    <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <div>
-                            <h2 class="font-heading font-extrabold text-base text-slate-900">Comptes Utilisateurs</h2>
-                            <p class="text-xs text-slate-500">Supervision des rôles et statuts d'accès de la plateforme</p>
+                            <h2 class="font-heading font-extrabold text-base text-slate-900 dark:text-white">Comptes Utilisateurs</h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Supervision des rôles et statuts d'accès de la plateforme</p>
                         </div>
-                        <span class="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-full">${filtered.length} compte${filtered.length > 1 ? 's' : ''}</span>
+                        <span class="text-xs text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">${filtered.length} compte${filtered.length > 1 ? 's' : ''}</span>
                     </div>
 
                     ${filtered.length === 0 ? `
-                        <div class="text-center py-12 text-slate-400 text-xs">Aucun compte ne correspond à votre filtre.</div>
+                        <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">Aucun compte ne correspond à votre filtre.</div>
                     ` : `
                         <!-- Version Desktop (Tableau HTML stylisé) -->
                         <div class="hidden md:block overflow-x-auto">
                             <table class="w-full text-left text-xs border-collapse">
-                                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
+                                <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase font-semibold text-[11px] border-b border-slate-200/80 dark:border-slate-800">
                                     <tr>
                                         <th class="py-3 px-4">Utilisateur</th>
                                         <th class="py-3 px-4">Rôle</th>
@@ -1018,49 +1018,49 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         <th class="py-3 px-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                     ${filtered.map((prof) => {
                                         const suspended = isSellerSuspended(prof);
                                         const isSelf = currentAdmin?.id === prof.id;
 
                                         return `
-                                            <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
+                                            <tr class="even:bg-slate-50/40 dark:even:bg-slate-800/30 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors">
                                                 <td class="py-3 px-4">
                                                     <div class="flex items-center gap-3">
                                                         <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                                            suspended ? 'bg-rose-100 text-rose-700' : prof.role === 'superadmin' ? 'bg-primary text-white shadow-xs' : prof.role === 'vendeur' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
+                                                            suspended ? 'bg-rose-100 text-rose-700' : prof.role === 'superadmin' ? 'bg-primary text-white shadow-xs' : prof.role === 'vendeur' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                                                         }">
                                                             ${((prof.prenom?.[0] || '') + (prof.nom?.[0] || '')).toUpperCase() || 'U'}
                                                         </div>
                                                         <div class="min-w-0">
                                                             <div class="flex items-center gap-1.5">
-                                                                <span class="font-bold text-slate-900 block truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
+                                                                <span class="font-bold text-slate-900 dark:text-white block truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
                                                                 ${isSelf ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-primary/10 text-primary">Vous</span>` : ''}
                                                             </div>
-                                                            ${prof.email ? `<span class="text-[11px] text-slate-400 block truncate">${escapeHTML(prof.email)}</span>` : ''}
+                                                            ${prof.email ? `<span class="text-[11px] text-slate-400 dark:text-slate-500 block truncate">${escapeHTML(prof.email)}</span>` : ''}
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td class="py-3 px-4">
                                                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                                        suspended ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                                        suspended ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800' :
                                                         prof.role === 'superadmin' ? 'bg-primary text-white font-extrabold shadow-xs' :
-                                                        prof.role === 'vendeur' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
-                                                        prof.role === 'vendeur_pending' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+                                                        prof.role === 'vendeur' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' :
+                                                        prof.role === 'vendeur_pending' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800' :
                                                         'bg-primary/10 text-primary border border-primary/20'
                                                     }">
                                                         ${suspended ? 'Suspendu' : prof.role === 'superadmin' ? 'SuperAdmin' : prof.role === 'vendeur' ? 'Vendeur' : prof.role === 'vendeur_pending' ? 'Candidat' : 'Acheteur'}
                                                     </span>
                                                 </td>
-                                                <td class="py-3 px-4 text-slate-600">
+                                                <td class="py-3 px-4 text-slate-600 dark:text-slate-300">
                                                     ${escapeHTML(prof.telephone || 'Non renseigné')}
                                                 </td>
-                                                <td class="py-3 px-4 text-slate-400 text-[11px]">
+                                                <td class="py-3 px-4 text-slate-400 dark:text-slate-500 text-[11px]">
                                                     ${prof.created_at ? new Date(prof.created_at).toLocaleDateString('fr-FR') : '-'}
                                                 </td>
                                                 <td class="py-3 px-4 text-right">
                                                     ${prof.role === 'superadmin' ? `
-                                                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs select-none">
+                                                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200/90 dark:border-blue-800 shadow-xs select-none">
                                                             <i class="fa-solid fa-shield-halved text-primary"></i> SuperAdmin Protégé
                                                         </span>
                                                     ` : (!isSelf ? `
@@ -1071,7 +1071,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                                 data-id="${prof.id}" 
                                                                 data-suspended="${suspended ? 'true' : 'false'}"
                                                                 class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-                                                                    suspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 text-rose-600 hover:bg-rose-50'
+                                                                    suspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
                                                                 }"
                                                             >
                                                                 ${suspended ? 'Réactiver' : 'Suspendre'}
@@ -1082,7 +1082,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                                 data-id="${prof.id}" 
                                                                 data-current-role="${prof.role}" 
                                                                 data-name="${escapeHTML(prof.prenom)} ${escapeHTML(prof.nom)}"
-                                                                class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer"
+                                                                class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
                                                             >
                                                                 Rôle
                                                             </button>
@@ -1091,7 +1091,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                                 data-action="delete-account" 
                                                                 data-id="${prof.id}" 
                                                                 data-name="${escapeHTML(prof.prenom)} ${escapeHTML(prof.nom)}"
-                                                                class="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors flex items-center justify-center cursor-pointer"
+                                                                class="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-200 dark:hover:border-rose-800 transition-colors flex items-center justify-center cursor-pointer"
                                                                 title="Supprimer définitivement"
                                                             >
                                                                 <i class="fa-solid fa-trash-can text-xs"></i>
@@ -1107,7 +1107,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         </div>
 
                         <!-- Version Mobile (< md) : Cartes compactes avec zones tactiles confortables -->
-                        <div class="md:hidden flex flex-col divide-y divide-slate-100 p-3">
+                        <div class="md:hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800 p-3">
                             ${filtered.map((prof) => {
                                 const suspended = isSellerSuspended(prof);
                                 const isSelf = currentAdmin?.id === prof.id;
@@ -1116,24 +1116,24 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <div class="py-3 flex flex-col gap-2.5">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                                suspended ? 'bg-rose-100 text-rose-700' : prof.role === 'superadmin' ? 'bg-primary text-white shadow-xs' : prof.role === 'vendeur' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
+                                                suspended ? 'bg-rose-100 text-rose-700' : prof.role === 'superadmin' ? 'bg-primary text-white shadow-xs' : prof.role === 'vendeur' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                                             }">
                                                 ${((prof.prenom?.[0] || '') + (prof.nom?.[0] || '')).toUpperCase() || 'U'}
                                             </div>
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                                    <span class="font-bold text-slate-900 text-sm truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
+                                                    <span class="font-bold text-slate-900 dark:text-white text-sm truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
                                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                                        suspended ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                                        suspended ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800' :
                                                         prof.role === 'superadmin' ? 'bg-primary text-white font-extrabold shadow-xs' :
-                                                        prof.role === 'vendeur' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
+                                                        prof.role === 'vendeur' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' :
                                                         'bg-primary/10 text-primary border border-primary/20'
                                                     }">
                                                         ${suspended ? 'Suspendu' : prof.role === 'superadmin' ? 'SuperAdmin' : prof.role === 'vendeur' ? 'Vendeur' : 'Acheteur'}
                                                     </span>
                                                     ${isSelf ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-primary/10 text-primary">Vous</span>` : ''}
                                                 </div>
-                                                <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                                                <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
                                                     <span><i class="fa-solid fa-phone text-[9px] mr-1"></i>${escapeHTML(prof.telephone || 'Non renseigné')}</span>
                                                     ${prof.email ? `<span>•</span><span class="truncate">${escapeHTML(prof.email)}</span>` : ''}
                                                 </div>
@@ -1141,7 +1141,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         </div>
 
                                         ${prof.role === 'superadmin' ? `
-                                            <div class="pt-1 flex items-center justify-center py-2 px-3 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs select-none">
+                                            <div class="pt-1 flex items-center justify-center py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200/90 dark:border-blue-800 shadow-xs select-none">
                                                 <i class="fa-solid fa-shield-halved text-primary mr-1.5"></i> Compte SuperAdmin Protégé
                                             </div>
                                         ` : (!isSelf ? `
@@ -1152,7 +1152,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     data-id="${prof.id}" 
                                                     data-suspended="${suspended ? 'true' : 'false'}"
                                                     class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all min-h-[44px] active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 ${
-                                                        suspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 text-rose-600 bg-rose-50/50'
+                                                        suspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-950/30'
                                                     }"
                                                 >
                                                     <i class="fa-solid ${suspended ? 'fa-rotate-left' : 'fa-ban'} text-[11px]"></i>
@@ -1164,7 +1164,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     data-id="${prof.id}" 
                                                     data-current-role="${prof.role}" 
                                                     data-name="${escapeHTML(prof.prenom)} ${escapeHTML(prof.nom)}"
-                                                    class="py-2 px-3.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold min-h-[44px] cursor-pointer"
+                                                    class="py-2 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold min-h-[44px] cursor-pointer"
                                                 >
                                                     Rôle
                                                 </button>
@@ -1173,7 +1173,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     data-action="delete-account" 
                                                     data-id="${prof.id}" 
                                                     data-name="${escapeHTML(prof.prenom)} ${escapeHTML(prof.nom)}"
-                                                    class="w-11 h-11 rounded-xl border border-slate-200 text-slate-400 hover:text-rose-600 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+                                                    class="w-11 h-11 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
                                                     title="Supprimer"
                                                 >
                                                     <i class="fa-solid fa-trash-can text-xs"></i>
@@ -1236,7 +1236,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         return `
             <div class="flex flex-col gap-5">
                 <!-- Barre d'outils marchands -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div class="relative flex-1 max-w-md">
                         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                         <input 
@@ -1244,10 +1244,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             id="admin-seller-search" 
                             placeholder="Rechercher nom, boutique, référence, téléphone..." 
                             value="${escapeHTML(sellerSearchQuery)}"
-                            class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[40px]"
+                            class="w-full pl-9 pr-8 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[40px]"
                         >
                         ${sellerSearchQuery ? `
-                            <button id="btn-clear-seller-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                            <button id="btn-clear-seller-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
                                 <i class="fa-solid fa-circle-xmark text-xs"></i>
                             </button>
                         ` : ''}
@@ -1256,32 +1256,32 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div class="flex items-center gap-2 flex-wrap">
                         <!-- Filtres statut -->
                         <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                            <button type="button" data-seller-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${sellerFilterTab === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-seller-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${sellerFilterTab === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 Tous (${totalAccounts})
                             </button>
-                            <button type="button" data-seller-filter="payments" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'payments' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-seller-filter="payments" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'payments' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 <i class="fa-solid fa-receipt text-[11px] ${sellerFilterTab === 'payments' ? 'text-white' : 'text-emerald-600'}"></i>
                                 <span>Paiements</span>
                                 ${totalPendingPayments > 0 ? `
                                     <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'payments' ? 'bg-white/20 text-white' : 'bg-amber-400 text-slate-950 animate-pulse'}">${totalPendingPayments}</span>
                                 ` : ''}
                             </button>
-                            <button type="button" data-seller-filter="pending" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'pending' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-seller-filter="pending" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'pending' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 <span>En attente</span>
                                 <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'}">${totalPending}</span>
                             </button>
-                            <button type="button" data-seller-filter="active" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'active' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-seller-filter="active" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'active' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 <span>Actifs</span>
-                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'active' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}">${activeCount}</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'active' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}">${activeCount}</span>
                             </button>
-                            <button type="button" data-seller-filter="suspended" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'suspended' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            <button type="button" data-seller-filter="suspended" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'suspended' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
                                 <span>Suspendus</span>
-                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'suspended' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}">${suspendedCount}</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'suspended' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}">${suspendedCount}</span>
                             </button>
                         </div>
 
                         <!-- Export CSV -->
-                        <button type="button" id="btn-export-sellers-csv" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80 flex items-center gap-1.5 shrink-0">
+                        <button type="button" id="btn-export-sellers-csv" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 flex items-center gap-1.5 shrink-0">
                             <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
                             <span class="hidden sm:inline">Exporter CSV</span>
                             <span class="sm:hidden">CSV</span>
@@ -1291,16 +1291,16 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                 ${totalPendingPayments > 0 && sellerFilterTab !== 'payments' ? `
                     <!-- Bannière alerte paiements en attente -->
-                    <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200/90 dark:border-amber-800/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                         <div class="flex items-start sm:items-center gap-3">
                             <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-sm font-black shrink-0 animate-pulse">
                                 <i class="fa-solid fa-receipt"></i>
                             </div>
                             <div>
-                                <h4 class="font-heading font-extrabold text-xs sm:text-sm text-slate-900">
+                                <h4 class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
                                     ${totalPendingPayments} preuve${totalPendingPayments > 1 ? 's' : ''} de paiement SasPay en attente de vérification
                                 </h4>
-                                <p class="text-[11px] text-slate-600">
+                                <p class="text-[11px] text-slate-600 dark:text-slate-300">
                                     Des marchands ont soumis leur référence de transaction pour activer leur abonnement 30 jours.
                                 </p>
                             </div>
@@ -1317,18 +1317,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                 ${showPaymentsSection ? `
                     <!-- Paiements SasPay en attente -->
-                    <div class="bg-white rounded-2xl border border-amber-200/90 shadow-xs p-4 sm:p-5 flex flex-col gap-3.5">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-amber-200/90 dark:border-amber-800/80 shadow-xs p-4 sm:p-5 flex flex-col gap-3.5">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center text-xs">
+                                <div class="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 flex items-center justify-center text-xs">
                                     <i class="fa-solid fa-receipt"></i>
                                 </div>
                                 <div>
-                                    <h2 class="font-heading font-extrabold text-base text-slate-900">Paiements d'Abonnement en Attente</h2>
-                                    <p class="text-xs text-slate-500">Validation manuelle des preuves de règlement SasPay / Mobile Money</p>
+                                    <h2 class="font-heading font-extrabold text-base text-slate-900 dark:text-white">Paiements d'Abonnement en Attente</h2>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Validation manuelle des preuves de règlement SasPay / Mobile Money</p>
                                 </div>
                             </div>
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${filteredPendingPayments.length > 0 ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 text-slate-600'}">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${filteredPendingPayments.length > 0 ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}">
                                 ${filteredPendingPayments.length}
                             </span>
                         </div>
@@ -1339,11 +1339,11 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                 ${showPendingSection ? `
                     <!-- Demandes en attente -->
-                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col gap-3.5">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-4 sm:p-5 flex flex-col gap-3.5">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <h2 class="font-heading font-extrabold text-base text-slate-900">Demandes d'adhésion Vendeurs</h2>
-                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${filteredPending.length > 0 ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 text-slate-600'}">
+                                <h2 class="font-heading font-extrabold text-base text-slate-900 dark:text-white">Demandes d'adhésion Vendeurs</h2>
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${filteredPending.length > 0 ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}">
                                     ${filteredPending.length}
                                 </span>
                             </div>
@@ -1355,15 +1355,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                 ${showActiveSection ? `
                     <!-- Marchands enregistrés -->
-                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                        <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+                        <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
                             <div>
-                                <h2 class="font-heading font-extrabold text-base text-slate-900">
+                                <h2 class="font-heading font-extrabold text-base text-slate-900 dark:text-white">
                                     ${sellerFilterTab === 'suspended' ? 'Marchands Suspendus' : sellerFilterTab === 'active' ? 'Marchands Actifs' : 'Marchands Enregistrés'}
                                 </h2>
-                                <p class="text-xs text-slate-500">Supervision, disponibilité de boutique et modération</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Supervision, disponibilité de boutique et modération</p>
                             </div>
-                            <span class="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-full">${filteredActive.length} compte${filteredActive.length > 1 ? 's' : ''}</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">${filteredActive.length} compte${filteredActive.length > 1 ? 's' : ''}</span>
                         </div>
 
                         ${renderActiveSellersList(filteredActive)}
@@ -1376,7 +1376,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     function renderPendingPaymentsList(list = pendingSubscriptionPayments) {
         if (list.length === 0) {
             return `
-                <div class="text-center py-8 text-slate-400">
+                <div class="text-center py-8 text-slate-400 dark:text-slate-500">
                     <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-1 block"></i>
                     <p class="text-xs font-semibold">Aucun paiement d'abonnement en attente de validation.</p>
                 </div>
@@ -1387,7 +1387,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             <!-- Version Desktop (Tableau) -->
             <div class="hidden md:block overflow-x-auto">
                 <table class="w-full text-left text-xs border-collapse">
-                    <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
+                    <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase font-semibold text-[11px] border-b border-slate-200/80 dark:border-slate-800">
                         <tr>
                             <th class="py-3 px-4">Marchand</th>
                             <th class="py-3 px-4">Montant & Formule</th>
@@ -1397,7 +1397,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         ${list.map((pay) => {
                             const prof = pay.profiles || {};
                             const planLabel = pay.amount >= 2500 ? 'Pack Pro (10 arts)' : 'Pack Starter (5 arts)';
@@ -1409,40 +1409,40 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             }) : 'Récemment';
 
                             return `
-                                <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
+                                <tr class="even:bg-slate-50/40 dark:even:bg-slate-800/30 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors">
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-3">
                                             <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs shrink-0">
                                                 ${((prof.prenom?.[0] || '') + (prof.nom?.[0] || '')).toUpperCase() || 'V'}
                                             </div>
                                             <div class="min-w-0">
-                                                <span class="font-bold text-slate-900 block truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
-                                                <span class="text-[10px] text-slate-400 block">${escapeHTML(prof.shop_name || 'Boutique')}</span>
+                                                <span class="font-bold text-slate-900 dark:text-white block truncate">${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}</span>
+                                                <span class="text-[10px] text-slate-400 dark:text-slate-500 block">${escapeHTML(prof.shop_name || 'Boutique')}</span>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex flex-col">
-                                            <span class="font-extrabold text-slate-900">${(pay.amount || 0).toLocaleString('fr-FR')} ${pay.currency || 'FCFA'}</span>
+                                            <span class="font-extrabold text-slate-900 dark:text-white">${(pay.amount || 0).toLocaleString('fr-FR')} ${pay.currency || 'FCFA'}</span>
                                             <span class="text-[10px] font-semibold text-primary">${planLabel}</span>
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex flex-col">
-                                            <span class="font-bold text-slate-800 uppercase text-[11px] flex items-center gap-1">
+                                            <span class="font-bold text-slate-800 dark:text-slate-200 uppercase text-[11px] flex items-center gap-1">
                                                 <i class="fa-solid fa-mobile-screen text-[10px] text-slate-400"></i>
                                                 ${escapeHTML(pay.operator || 'SasPay')}
                                             </span>
-                                            <span class="font-mono text-[10px] text-slate-500 select-all">${escapeHTML(pay.transaction_reference || 'N/A')}</span>
+                                            <span class="font-mono text-[10px] text-slate-500 dark:text-slate-400 select-all">${escapeHTML(pay.transaction_reference || 'N/A')}</span>
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex flex-col text-[11px]">
-                                            <span class="text-slate-700">${escapeHTML(pay.customer_phone || prof.telephone || 'Non renseigné')}</span>
-                                            ${prof.email ? `<span class="text-slate-400 text-[10px] truncate">${escapeHTML(prof.email)}</span>` : ''}
+                                            <span class="text-slate-700 dark:text-slate-300">${escapeHTML(pay.customer_phone || prof.telephone || 'Non renseigné')}</span>
+                                            ${prof.email ? `<span class="text-slate-400 dark:text-slate-500 text-[10px] truncate">${escapeHTML(prof.email)}</span>` : ''}
                                         </div>
                                     </td>
-                                    <td class="py-3 px-4 text-slate-500 text-[11px]">
+                                    <td class="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
                                         ${dateStr}
                                     </td>
                                     <td class="py-3 px-4 text-right">
@@ -1464,7 +1464,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                 data-action="reject-sub-payment" 
                                                 data-id="${pay.id}" 
                                                 data-shop="${escapeHTML(prof.shop_name || `${prof.prenom || ''} ${prof.nom || ''}`)}"
-                                                class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-xs border border-rose-200 transition-all min-h-[34px] cursor-pointer"
+                                                class="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 active:scale-95 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-200 dark:border-rose-800 transition-all min-h-[34px] cursor-pointer"
                                                 title="Rejeter"
                                             >
                                                 <i class="fa-solid fa-xmark text-xs"></i>
@@ -1491,40 +1491,40 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     }) : 'Récemment';
 
                     return `
-                        <div class="p-4 rounded-2xl border border-amber-200/90 bg-amber-50/40 flex flex-col gap-3 shadow-2xs">
+                        <div class="p-4 rounded-2xl border border-amber-200/90 dark:border-amber-800/80 bg-amber-50/40 dark:bg-amber-950/20 flex flex-col gap-3 shadow-2xs">
                             <div class="flex items-center justify-between gap-2">
                                 <div>
-                                    <h3 class="font-heading font-extrabold text-slate-900 text-sm truncate">
+                                    <h3 class="font-heading font-extrabold text-slate-900 dark:text-white text-sm truncate">
                                         ${escapeHTML(prof.prenom || '')} ${escapeHTML(prof.nom || '')}
                                     </h3>
-                                    <span class="text-xs text-slate-500">${escapeHTML(prof.shop_name || 'Boutique')}</span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400">${escapeHTML(prof.shop_name || 'Boutique')}</span>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <span class="font-extrabold text-slate-900 text-sm block">${(pay.amount || 0).toLocaleString('fr-FR')} ${pay.currency || 'FCFA'}</span>
+                                    <span class="font-extrabold text-slate-900 dark:text-white text-sm block">${(pay.amount || 0).toLocaleString('fr-FR')} ${pay.currency || 'FCFA'}</span>
                                     <span class="text-[10px] font-bold text-primary block">${planLabel}</span>
                                 </div>
                             </div>
 
-                            <div class="bg-white/80 p-2.5 rounded-xl border border-amber-100 flex flex-col gap-1 text-xs">
+                            <div class="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-xl border border-amber-100 dark:border-amber-900/40 flex flex-col gap-1 text-xs">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-slate-500">Opérateur :</span>
-                                    <span class="font-bold text-slate-800 uppercase">${escapeHTML(pay.operator || 'SasPay')}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">Opérateur :</span>
+                                    <span class="font-bold text-slate-800 dark:text-slate-200 uppercase">${escapeHTML(pay.operator || 'SasPay')}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-slate-500">Réf / Trans ID :</span>
-                                    <span class="font-mono text-[11px] font-bold text-slate-900 select-all">${escapeHTML(pay.transaction_reference || 'N/A')}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">Réf / Trans ID :</span>
+                                    <span class="font-mono text-[11px] font-bold text-slate-900 dark:text-white select-all">${escapeHTML(pay.transaction_reference || 'N/A')}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-slate-500">Téléphone :</span>
-                                    <span class="font-semibold text-slate-700">${escapeHTML(pay.customer_phone || prof.telephone || 'Non renseigné')}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">Téléphone :</span>
+                                    <span class="font-semibold text-slate-700 dark:text-slate-300">${escapeHTML(pay.customer_phone || prof.telephone || 'Non renseigné')}</span>
                                 </div>
-                                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                                <div class="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
                                     <span>Date :</span>
                                     <span>${dateStr}</span>
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-2 pt-1 border-t border-amber-200/60">
+                            <div class="flex items-center gap-2 pt-1 border-t border-amber-200/60 dark:border-amber-800/60">
                                 <button 
                                     type="button" 
                                     data-action="approve-sub-payment" 
@@ -1541,7 +1541,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     data-action="reject-sub-payment" 
                                     data-id="${pay.id}" 
                                     data-shop="${escapeHTML(prof.shop_name || `${prof.prenom || ''} ${prof.nom || ''}`)}"
-                                    class="py-2.5 px-4 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 transition-all min-h-[44px] cursor-pointer"
+                                    class="py-2.5 px-4 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 active:scale-95 text-rose-600 dark:text-rose-400 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-800 transition-all min-h-[44px] cursor-pointer"
                                 >
                                     Rejeter
                                 </button>
@@ -1556,7 +1556,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     function renderPendingSellersList(list = pendingSellers) {
         if (list.length === 0) {
             return `
-                <div class="text-center py-6 text-slate-400">
+                <div class="text-center py-6 text-slate-400 dark:text-slate-500">
                     <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-1 block"></i>
                     <p class="text-xs font-semibold">Toutes les candidatures de vendeurs sont à jour.</p>
                 </div>
@@ -1566,13 +1566,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         return `
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 ${list.map((s) => `
-                    <div class="p-4 rounded-2xl border border-amber-200/80 bg-amber-50/40 flex flex-col justify-between gap-3 shadow-2xs">
+                    <div class="p-4 rounded-2xl border border-amber-200/80 dark:border-amber-800/70 bg-amber-50/40 dark:bg-amber-950/20 flex flex-col justify-between gap-3 shadow-2xs">
                         <div>
                             <div class="flex items-center justify-between gap-2 mb-1.5">
-                                <h3 class="font-heading font-extrabold text-slate-900 text-sm truncate">
+                                <h3 class="font-heading font-extrabold text-slate-900 dark:text-white text-sm truncate">
                                     ${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}
                                 </h3>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 shrink-0">En attente</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">En attente</span>
                             </div>
 
                             <!-- Badge Formule Choisie -->
@@ -1588,35 +1588,35 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         <span>Pack Starter • 5 produits (1 500 F/mois)</span>
                                     </span>
                                 `}
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                                     <i class="fa-solid fa-gift text-[9px]"></i> Essai 7j
                                 </span>
                             </div>
 
                             <!-- Informations Boutique et Contact -->
-                            <div class="flex flex-col gap-1 text-xs text-slate-600 bg-white/70 p-2.5 rounded-xl border border-amber-100">
+                            <div class="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-900/70 p-2.5 rounded-xl border border-amber-100 dark:border-amber-900/40">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-bold text-slate-800 flex items-center gap-1.5 truncate">
+                                    <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 truncate">
                                         <i class="fa-solid fa-store text-slate-400 text-[10px]"></i>
                                         <span class="truncate">${escapeHTML(s.shop_name || 'Boutique Étudiante')}</span>
                                     </span>
-                                    <span class="text-[10px] text-slate-400 uppercase font-semibold shrink-0">
+                                    <span class="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold shrink-0">
                                         ${escapeHTML(s.shop_category || 'autres')}
                                     </span>
                                 </div>
-                                <div class="flex items-center gap-1.5 text-slate-500">
+                                <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
                                     <i class="fa-solid fa-phone text-slate-400 text-[10px]"></i>
                                     <span>${escapeHTML(s.telephone || 'Non renseigné')}</span>
-                                    ${s.email ? `<span class="text-slate-300">•</span><span class="truncate text-[11px]">${escapeHTML(s.email)}</span>` : ''}
+                                    ${s.email ? `<span class="text-slate-300 dark:text-slate-600">•</span><span class="truncate text-[11px]">${escapeHTML(s.email)}</span>` : ''}
                                 </div>
                             </div>
 
-                            <p class="text-[10px] text-slate-400 mt-1.5">
+                            <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">
                                 Candidature reçue le ${s.created_at ? new Date(s.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Récemment'}
                             </p>
                         </div>
 
-                        <div class="flex items-center gap-2 pt-2 border-t border-amber-200/60">
+                        <div class="flex items-center gap-2 pt-2 border-t border-amber-200/60 dark:border-amber-800/60">
                             <button 
                                 data-action="approve" 
                                 data-id="${s.id}" 
@@ -1628,7 +1628,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             <button 
                                 data-action="reject" 
                                 data-id="${s.id}" 
-                                class="py-2.5 px-4 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 transition-all min-h-[44px] cursor-pointer"
+                                class="py-2.5 px-4 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 active:scale-95 text-rose-600 dark:text-rose-400 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-800 transition-all min-h-[44px] cursor-pointer"
                             >
                                 Rejeter
                             </button>
@@ -1656,31 +1656,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             if (plan === 'pro') {
                 return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Pro</span>';
             }
-            return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Starter</span>';
+            return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">Starter</span>';
         };
 
         const getSubscriptionBadgeHTML = (seller) => {
             const subCalc = computeSubscriptionStatus(seller);
             if (subCalc.status === 'superadmin') {
-                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">Pack Pro Admin</span>';
+                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">Pack Pro Admin</span>';
             }
             if (subCalc.status === 'trial_active') {
-                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Fin essai : ${seller.trial_ends_at ? new Date(seller.trial_ends_at).toLocaleDateString('fr-FR') : ''}">Essai (${subCalc.daysRemaining}j)</span>`;
+                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800" title="Fin essai : ${seller.trial_ends_at ? new Date(seller.trial_ends_at).toLocaleDateString('fr-FR') : ''}">Essai (${subCalc.daysRemaining}j)</span>`;
             }
             if (subCalc.status === 'trial_expiring') {
-                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Fin essai : ${seller.trial_ends_at ? new Date(seller.trial_ends_at).toLocaleDateString('fr-FR') : ''}">Essai J-${subCalc.daysRemaining}</span>`;
+                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800" title="Fin essai : ${seller.trial_ends_at ? new Date(seller.trial_ends_at).toLocaleDateString('fr-FR') : ''}">Essai J-${subCalc.daysRemaining}</span>`;
             }
             if (subCalc.status === 'active') {
-                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Expire le : ${seller.subscription_expires_at ? new Date(seller.subscription_expires_at).toLocaleDateString('fr-FR') : ''}">Actif (${subCalc.daysRemaining}j)</span>`;
+                return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800" title="Expire le : ${seller.subscription_expires_at ? new Date(seller.subscription_expires_at).toLocaleDateString('fr-FR') : ''}">Actif (${subCalc.daysRemaining}j)</span>`;
             }
-            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expiré</span>';
+            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">Expiré</span>';
         };
 
         return `
             <!-- Version Desktop (Tableau HTML stylisé) -->
             <div class="hidden md:block overflow-x-auto">
                 <table class="w-full text-left text-xs border-collapse">
-                    <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
+                    <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase font-semibold text-[11px] border-b border-slate-200/80 dark:border-slate-800">
                         <tr>
                             <th class="py-3 px-4">Marchand</th>
                             <th class="py-3 px-4">Articles & Pack</th>
@@ -1691,7 +1691,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         ${list.map((s) => {
                             const isSuspended = isSellerSuspended(s);
                             const isSuperAdmin = s.role === 'superadmin';
@@ -1702,23 +1702,23 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
 
                             return `
-                                <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
+                                <tr class="even:bg-slate-50/40 dark:even:bg-slate-800/30 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors">
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-3">
                                             <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                                isSuspended ? 'bg-slate-200 text-slate-500' : (isSuperAdmin ? 'bg-primary text-white shadow-2xs' : 'bg-primary/10 text-primary')
+                                                isSuspended ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400' : (isSuperAdmin ? 'bg-primary text-white shadow-2xs' : 'bg-primary/10 text-primary')
                                             }">
                                                 ${((s.prenom?.[0] || '') + (s.nom?.[0] || '')).toUpperCase() || 'V'}
                                             </div>
                                             <div class="min-w-0">
-                                                <span class="font-bold text-slate-900 block truncate">${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}</span>
-                                                <span class="text-[10px] text-slate-400 block">${escapeHTML(s.shop_name || 'Boutique')}</span>
+                                                <span class="font-bold text-slate-900 dark:text-white block truncate">${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}</span>
+                                                <span class="text-[10px] text-slate-400 dark:text-slate-500 block">${escapeHTML(s.shop_name || 'Boutique')}</span>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
-                                            <span class="font-bold text-slate-800">${prodCount} / ${maxQuota}</span>
+                                            <span class="font-bold text-slate-800 dark:text-slate-200">${prodCount} / ${maxQuota}</span>
                                             ${getPlanBadgeHTML(s.subscription_plan, isSuperAdmin)}
                                         </div>
                                     </td>
@@ -1727,7 +1727,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-2">
-                                            <span class="text-slate-700">${escapeHTML(s.telephone || 'Non renseigné')}</span>
+                                            <span class="text-slate-700 dark:text-slate-300">${escapeHTML(s.telephone || 'Non renseigné')}</span>
                                             ${waUrl ? `
                                                 <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="text-emerald-600 hover:text-emerald-700" title="WhatsApp">
                                                     <i class="fa-brands fa-whatsapp"></i>
@@ -1736,13 +1736,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
-                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${s.is_open !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${s.is_open !== false ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}">
                                             ${s.is_open !== false ? 'Ouverte' : 'En pause'}
                                         </span>
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex flex-col gap-1">
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-center ${isSuspended ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-center ${isSuspended ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'}">
                                                 ${isSuspended ? 'Suspendu' : 'Actif'}
                                             </span>
                                             ${s.must_change_password ? `
@@ -1755,7 +1755,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <td class="py-3 px-4 text-right">
                                         <div class="flex items-center justify-end gap-1.5 flex-wrap">
                                             ${isSuperAdmin ? `
-                                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs select-none">
+                                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200/90 dark:border-blue-800 shadow-xs select-none">
                                                     <i class="fa-solid fa-shield-halved text-primary"></i> SuperAdmin Protégé (Illimité)
                                                 </span>
                                             ` : `
@@ -1763,7 +1763,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     type="button" 
                                                     data-action="extend-trial" 
                                                     data-id="${s.id}" 
-                                                    class="px-2 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-[11px] font-semibold cursor-pointer"
+                                                    class="px-2 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-[11px] font-semibold cursor-pointer"
                                                     title="Prolonger l'essai gratuit de 7 jours"
                                                 >
                                                     +7j Essai
@@ -1773,7 +1773,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     data-action="activate-sub" 
                                                     data-id="${s.id}" 
                                                     data-plan="${s.subscription_plan || 'starter'}"
-                                                    class="px-2 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-[11px] font-semibold cursor-pointer"
+                                                    class="px-2 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-[11px] font-semibold cursor-pointer"
                                                     title="Activer manuellement 30 jours (règlement cash sur campus)"
                                                 >
                                                     Activer 30j
@@ -1783,7 +1783,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     data-action="reset-password" 
                                                     data-id="${s.id}" 
                                                     data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                                    class="px-2 py-1.5 rounded-lg border border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 text-[11px] font-semibold cursor-pointer flex items-center gap-1 shadow-2xs"
+                                                    class="px-2 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-[11px] font-semibold cursor-pointer flex items-center gap-1 shadow-2xs"
                                                     title="Réinitialiser le mot de passe à campus1234!"
                                                 >
                                                     <i class="fa-solid fa-key text-[10px]"></i>
@@ -1795,7 +1795,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     data-id="${s.id}" 
                                                     data-suspended="${isSuspended ? 'true' : 'false'}"
                                                     class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-                                                        isSuspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 text-rose-600 hover:bg-rose-50'
+                                                        isSuspended ? 'bg-emerald-600 text-white' : 'border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
                                                     }"
                                                 >
                                                     ${isSuspended ? 'Réactiver' : 'Suspendre'}
@@ -1805,7 +1805,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     data-action="revoke-seller" 
                                                     data-id="${s.id}" 
                                                     data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                                    class="px-2 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 text-xs font-semibold cursor-pointer"
+                                                    class="px-2 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-semibold cursor-pointer"
                                                     title="Rétrograder en simple acheteur"
                                                 >
                                                     Rétrograder
@@ -1815,7 +1815,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     data-action="delete-seller" 
                                                     data-id="${s.id}" 
                                                     data-name="${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}"
-                                                    class="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors flex items-center justify-center cursor-pointer"
+                                                    class="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-200 dark:hover:border-rose-800 transition-colors flex items-center justify-center cursor-pointer"
                                                     title="Supprimer"
                                                 >
                                                     <i class="fa-solid fa-trash-can text-xs"></i>
