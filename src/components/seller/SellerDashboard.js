@@ -27,6 +27,8 @@ import { createSubscriptionModal } from './SubscriptionModal.js';
 import { createSellerProfileView } from './SellerProfileView.js';
 import { computeSubscriptionStatus, SUBSCRIPTION_PLANS } from '../../config/subscription.js';
 import logoUrl from '../../assets/logo.webp';
+import logoDarkUrl from '../../assets/logo-dark.webp';
+import { toggleTheme } from '../../utils/theme.js';
 
 /**
  * Crée le tableau de bord marchand moderne et fluide.
@@ -53,7 +55,7 @@ export function createSellerDashboard({
     onShowToast,
 } = {}) {
     const containerEl = document.createElement('div');
-    containerEl.className = 'w-full flex flex-col bg-slate-50 min-h-[100dvh] text-slate-900';
+    containerEl.className = 'w-full flex flex-col bg-slate-50 dark:bg-slate-950 min-h-[100dvh] text-slate-900 dark:text-slate-100';
 
     const sellerId = seller.id;
     let dashboardData = null;
@@ -455,18 +457,19 @@ export function createSellerDashboard({
 
         containerEl.innerHTML = `
             <!-- 1. SIDEBAR VENDEUR DESKTOP : Collée TOUT À GAUCHE de l'écran (w-64 fixed h-screen) -->
-            <aside id="seller-desktop-sidebar" aria-label="Navigation vendeur desktop" class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white border-r border-slate-200/80 z-40 flex-col justify-between p-5 select-none shadow-xs">
+            <aside id="seller-desktop-sidebar" aria-label="Navigation vendeur desktop" class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 z-40 flex-col justify-between p-5 select-none shadow-xs">
                 <div class="flex flex-col gap-6">
                     <!-- Logo & Titre Vendeur -->
                     <div class="flex flex-col items-start gap-1.5 px-1 py-1">
-                        <img src="${logoUrl}" alt="Campus Market" class="h-11 w-auto max-w-[190px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-11 w-auto max-w-[190px] object-contain shrink-0 dark:hidden" onerror="this.src='/assets/logo.webp'">
+                        <img src="${logoDarkUrl}" alt="Campus Market" class="h-11 w-auto max-w-[190px] object-contain shrink-0 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
                         <span class="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">Espace Marchand</span>
                     </div>
 
                     <!-- Marchand certifié -->
-                    <div class="px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <div class="px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700">
                         <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Marchand certifié</span>
-                        <span class="text-xs font-extrabold text-slate-900 block truncate mt-0.5">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
+                        <span class="text-xs font-extrabold text-slate-900 dark:text-white block truncate mt-0.5">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
                     </div>
 
                     <!-- Statut Boutique interactif -->
@@ -477,8 +480,8 @@ export function createSellerDashboard({
                             title="${isOpen ? 'Mettre la boutique en pause' : 'Ouvrir la boutique aux commandes'}"
                             class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${
                                 isOpen 
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' 
-                                    : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50' 
+                                    : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50'
                             }"
                         >
                             <div class="flex items-center gap-2">
@@ -488,8 +491,8 @@ export function createSellerDashboard({
                             <i class="fa-solid ${isOpen ? 'fa-toggle-on text-emerald-600' : 'fa-toggle-off text-amber-600'} text-base"></i>
                         </button>
                     ` : `
-                        <div class="px-3.5 py-2.5 rounded-2xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200 flex items-center gap-2">
-                            <i class="fa-solid fa-ban text-rose-600"></i>
+                        <div class="px-3.5 py-2.5 rounded-2xl text-xs font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-2">
+                            <i class="fa-solid fa-ban text-rose-600 dark:text-rose-400"></i>
                             <span>Compte Suspendu</span>
                         </div>
                     `}
@@ -507,7 +510,7 @@ export function createSellerDashboard({
                             class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                 activeSubTab === 'dashboard'
                                     ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold'
                             }"
                         >
                             <div class="flex items-center gap-3">
@@ -523,7 +526,7 @@ export function createSellerDashboard({
                             class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                 activeSubTab === 'orders'
                                     ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold'
                             }"
                         >
                             <div class="flex items-center gap-3">
@@ -533,7 +536,7 @@ export function createSellerDashboard({
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
                                 activeSubTab === 'orders' 
                                     ? 'bg-white/20 text-white' 
-                                    : (pendingCount > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 text-slate-600')
+                                    : (pendingCount > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300')
                             }">
                                 ${allOrders.length}
                             </span>
@@ -546,7 +549,7 @@ export function createSellerDashboard({
                             class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                 activeSubTab === 'products'
                                     ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold'
                             }"
                         >
                             <div class="flex items-center gap-3">
@@ -554,7 +557,7 @@ export function createSellerDashboard({
                                 <span>Mes Articles</span>
                             </div>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
-                                activeSubTab === 'products' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                                activeSubTab === 'products' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                             }">
                                 ${data.totalProductsCount || 0}
                             </span>
@@ -568,7 +571,7 @@ export function createSellerDashboard({
                                 class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                     activeSubTab === 'add-product'
                                         ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
-                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold'
                                 }"
                             >
                                 <i class="fa-solid fa-plus text-xs w-4 text-center ${activeSubTab === 'add-product' ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
@@ -583,7 +586,7 @@ export function createSellerDashboard({
                             class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                 activeSubTab === 'profile'
                                     ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold'
                             }"
                         >
                             <i class="fa-solid fa-circle-user text-xs w-4 text-center ${activeSubTab === 'profile' ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
@@ -593,13 +596,13 @@ export function createSellerDashboard({
                 </div>
 
                 <!-- Bas de Sidebar : Actions Vendeur Desktop -->
-                <div class="flex flex-col gap-2 pt-4 border-t border-slate-100">
+                <div class="flex flex-col gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <div class="grid grid-cols-2 gap-2">
                         <button 
                             type="button"
                             id="hdr-btn-refresh-orders" 
                             title="Actualiser les données"
-                            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                         >
                             <i class="fa-solid fa-arrows-rotate text-xs"></i>
                             <span>Actualiser</span>
@@ -611,8 +614,8 @@ export function createSellerDashboard({
                             title="Activer/Désactiver les alertes sonores"
                             class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                                 audioAlert.isEnabled 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' 
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
                             }"
                         >
                             <i class="fa-solid ${audioAlert.isEnabled ? 'fa-volume-high text-emerald-600' : 'fa-volume-xmark'} text-xs"></i>
@@ -620,11 +623,24 @@ export function createSellerDashboard({
                         </button>
                     </div>
 
+                    <!-- Bascule Thème Sombre Sidebar -->
+                    <button 
+                        type="button"
+                        id="sidebar-btn-seller-theme-toggle" 
+                        title="Basculer le mode sombre / clair"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                    >
+                        <i class="fa-solid fa-moon dark:hidden text-amber-500 text-xs"></i>
+                        <i class="fa-solid fa-sun hidden dark:inline text-amber-400 text-xs"></i>
+                        <span class="dark:hidden">Mode Sombre</span>
+                        <span class="hidden dark:inline">Mode Clair</span>
+                    </button>
+
                     <button 
                         type="button"
                         id="sidebar-btn-seller-share-shop" 
                         title="Partager le lien de ma boutique (Lien & WhatsApp)"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors cursor-pointer"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer"
                     >
                         <i class="fa-solid fa-share-nodes text-xs text-emerald-600"></i>
                         <span>Partager ma boutique</span>
@@ -634,7 +650,7 @@ export function createSellerDashboard({
                         type="button"
                         id="sidebar-btn-seller-profile" 
                         title="Gérer mes coordonnées, pavillon, chambre et mot de passe"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors cursor-pointer"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
                     >
                         <i class="fa-solid fa-circle-user text-xs text-amber-700"></i>
                         <span>Mon Profil</span>
@@ -644,7 +660,7 @@ export function createSellerDashboard({
                         type="button"
                         id="sidebar-btn-subscription" 
                         title="Gérer mon abonnement et mes formules"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors cursor-pointer"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
                     >
                         <i class="fa-solid fa-crown text-xs text-amber-600"></i>
                         <span>Mon Abonnement</span>
@@ -665,7 +681,7 @@ export function createSellerDashboard({
                             type="button"
                             id="sidebar-btn-seller-back-admin" 
                             title="Retourner au portail SuperAdmin"
-                            class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors cursor-pointer active:scale-95 shadow-xs"
+                            class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer active:scale-95 shadow-xs"
                         >
                             <i class="fa-solid fa-shield-halved text-xs text-indigo-600"></i>
                             <span>Supervision SuperAdmin</span>
@@ -676,7 +692,7 @@ export function createSellerDashboard({
                         type="button"
                         id="hdr-btn-seller-logout" 
                         title="Se déconnecter de l'espace marchand"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/60 transition-colors cursor-pointer"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800 transition-colors cursor-pointer"
                     >
                         <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
                         <span>Déconnexion</span>
@@ -685,16 +701,17 @@ export function createSellerDashboard({
             </aside>
 
             <!-- 2. HEADER MOBILE VENDEUR : Épuré avec Titre + Badge statut + Menu ⋮ unique (lg:hidden) -->
-            <header class="lg:hidden sticky-gpu-top z-40 bg-white border-b border-slate-200/80 shadow-xs w-full pt-safe">
+            <header class="lg:hidden sticky-gpu-top z-40 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 shadow-xs w-full pt-safe">
                 <div class="w-full px-4 py-2.5 flex items-center justify-between gap-3">
                     <!-- Logo & Titre Vendeur -->
                     <div class="flex items-center gap-2.5 min-w-0">
-                        <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0 dark:hidden" onerror="this.src='/assets/logo.webp'">
+                        <img src="${logoDarkUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
                         <div class="min-w-0">
                             <div class="flex items-center gap-1.5">
-                                <span class="font-heading font-extrabold text-slate-900 text-sm leading-tight block truncate">Espace Vendeur</span>
+                                <span class="font-heading font-extrabold text-slate-900 dark:text-white text-sm leading-tight block truncate">Espace Vendeur</span>
                             </div>
-                            <span class="text-[10px] text-slate-500 font-medium truncate block">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate block">${escapeHTML(seller.prenom)} ${escapeHTML(seller.nom)}</span>
                         </div>
                     </div>
 
@@ -707,8 +724,8 @@ export function createSellerDashboard({
                                 title="${isOpen ? 'Mettre en pause' : 'Ouvrir la boutique'}"
                                 class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all active:scale-95 cursor-pointer ${
                                     isOpen 
-                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
-                                        : 'bg-amber-50 text-amber-800 border-amber-300'
+                                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800' 
+                                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
                                 }"
                             >
                                 <span class="w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
@@ -716,12 +733,24 @@ export function createSellerDashboard({
                             </button>
                         ` : ''}
 
+                        <!-- Bouton Thème Mobile -->
+                        <button 
+                            type="button" 
+                            id="hdr-btn-seller-theme-mobile" 
+                            title="Basculer le mode sombre"
+                            aria-label="Basculer le mode sombre"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all active:scale-95 cursor-pointer"
+                        >
+                            <i class="fa-solid fa-moon dark:hidden text-amber-500 text-xs"></i>
+                            <i class="fa-solid fa-sun hidden dark:inline text-amber-400 text-xs"></i>
+                        </button>
+
                         <!-- Bouton Partager Boutique Mobile -->
                         <button 
                             type="button" 
                             id="hdr-btn-seller-share-mobile" 
                             title="Partager ma boutique"
-                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 transition-all active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 transition-all active:scale-95 cursor-pointer"
                         >
                             <i class="fa-solid fa-share-nodes text-xs"></i>
                         </button>
@@ -731,7 +760,7 @@ export function createSellerDashboard({
                             type="button" 
                             id="hdr-btn-seller-logout-mobile" 
                             title="Se déconnecter de l'espace marchand"
-                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 transition-all active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800 transition-all active:scale-95 cursor-pointer"
                         >
                             <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
                         </button>
@@ -741,7 +770,7 @@ export function createSellerDashboard({
                             type="button" 
                             id="hdr-btn-seller-menu-mobile" 
                             title="Menu des actions marchand"
-                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all active:scale-95 cursor-pointer"
                         >
                             <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
                         </button>
@@ -752,72 +781,85 @@ export function createSellerDashboard({
             <!-- 3. TIROIR MOBILE (Bottom Sheet) pour actions essentielles (z-[60] au-dessus de la barre fixe) -->
             <div id="seller-mobile-drawer" class="hidden fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300 select-none">
                 <div class="flex-1 w-full" id="seller-drawer-backdrop"></div>
-                <div class="bg-white rounded-t-3xl border-t border-slate-200/80 p-5 pb-28 sm:pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full max-h-[85vh] overflow-y-auto">
-                    <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1"></div>
+                <div class="bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200/80 dark:border-slate-800 p-5 pb-28 sm:pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full max-h-[85vh] overflow-y-auto">
+                    <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-1"></div>
                     
-                    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                         <div class="flex items-center gap-2.5">
-                            <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                            <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0 dark:hidden" onerror="this.src='/assets/logo.webp'">
+                            <img src="${logoDarkUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
                             <div>
-                                <h4 class="font-heading font-extrabold text-sm text-slate-900">Boutique ${escapeHTML(seller.prenom)}</h4>
+                                <h4 class="font-heading font-extrabold text-sm text-slate-900 dark:text-white">Boutique ${escapeHTML(seller.prenom)}</h4>
                                 <p class="text-[11px] text-slate-400">Actions et paramètres du compte</p>
                             </div>
                         </div>
-                        <button type="button" id="btn-close-seller-drawer" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs cursor-pointer">
+                        <button type="button" id="btn-close-seller-drawer" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
 
                     <div class="flex flex-col gap-2">
                         <!-- Mon Profil Vendeur -->
-                        <button type="button" id="drawer-btn-profile" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer border border-amber-200">
+                        <button type="button" id="drawer-btn-profile" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-300 font-bold text-xs transition-colors cursor-pointer border border-amber-200 dark:border-amber-800">
                             <i class="fa-solid fa-circle-user text-sm text-amber-700 w-5 text-center"></i>
                             <span>Mon Profil (Coordonnées, Pavillon, Chambre)</span>
                         </button>
 
                         <!-- Partager ma boutique -->
-                        <button type="button" id="drawer-btn-share-shop" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors cursor-pointer border border-emerald-200">
+                        <button type="button" id="drawer-btn-share-shop" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800">
                             <i class="fa-solid fa-share-nodes text-sm text-emerald-600 w-5 text-center"></i>
                             <span>Partager ma boutique (Lien & WhatsApp)</span>
                         </button>
 
                         <!-- Mon Abonnement -->
-                        <button type="button" id="drawer-btn-subscription" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer border border-amber-200">
+                        <button type="button" id="drawer-btn-subscription" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-300 font-bold text-xs transition-colors cursor-pointer border border-amber-200 dark:border-amber-800">
                             <i class="fa-solid fa-crown text-sm text-amber-600 w-5 text-center"></i>
                             <span>Mon Abonnement (3 Formules)</span>
                         </button>
 
                         <!-- Actualiser -->
-                        <button type="button" id="drawer-btn-refresh-orders" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer">
+                        <button type="button" id="drawer-btn-refresh-orders" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-arrows-rotate text-sm text-slate-500 w-5 text-center"></i>
                             <span>Actualiser les commandes</span>
                         </button>
 
                         <!-- Alerte sonore -->
-                        <button type="button" id="drawer-btn-toggle-audio" class="flex items-center justify-between px-4 py-3 rounded-2xl ${audioAlert.isEnabled ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-50 text-slate-700'} font-bold text-xs transition-colors cursor-pointer">
+                        <button type="button" id="drawer-btn-toggle-audio" class="flex items-center justify-between px-4 py-3 rounded-2xl ${audioAlert.isEnabled ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200'} font-bold text-xs transition-colors cursor-pointer">
                             <div class="flex items-center gap-3">
                                 <i class="fa-solid ${audioAlert.isEnabled ? 'fa-volume-high text-emerald-600' : 'fa-volume-xmark text-slate-500'} text-sm w-5 text-center"></i>
                                 <span>Alerte sonore de commande</span>
                             </div>
-                            <span class="text-[10px] font-extrabold ${audioAlert.isEnabled ? 'text-emerald-700' : 'text-slate-400'}">${audioAlert.isEnabled ? 'Activé' : 'Désactivé'}</span>
+                            <span class="text-[10px] font-extrabold ${audioAlert.isEnabled ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-400'}">${audioAlert.isEnabled ? 'Activé' : 'Désactivé'}</span>
+                        </button>
+
+                        <!-- Bascule Thème Sombre Drawer Mobile -->
+                        <button type="button" id="drawer-btn-theme-toggle" class="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-moon dark:hidden text-amber-500 text-sm w-5 text-center"></i>
+                                <i class="fa-solid fa-sun hidden dark:inline text-amber-400 text-sm w-5 text-center"></i>
+                                <span class="dark:hidden">Passer en Mode Sombre</span>
+                                <span class="hidden dark:inline">Passer en Mode Clair</span>
+                            </div>
+                            <span class="text-[10px] font-extrabold text-slate-400 dark:hidden">Clair</span>
+                            <span class="text-[10px] font-extrabold text-amber-400 hidden dark:inline">Sombre</span>
                         </button>
 
                         <!-- Voir boutique publique -->
-                        <button type="button" id="drawer-btn-back-shop" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs transition-colors cursor-pointer">
+                        <button type="button" id="drawer-btn-back-shop" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-store text-sm w-5 text-center"></i>
                             <span>Voir la marketplace publique</span>
                         </button>
 
                         ${seller.role === 'superadmin' ? `
                             <!-- Supervision SuperAdmin -->
-                            <button type="button" id="drawer-btn-seller-back-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors cursor-pointer border border-indigo-200">
+                            <button type="button" id="drawer-btn-seller-back-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-bold text-xs transition-colors cursor-pointer border border-indigo-200 dark:border-indigo-800">
                                 <i class="fa-solid fa-shield-halved text-sm text-indigo-600 w-5 text-center"></i>
                                 <span>Supervision SuperAdmin</span>
                             </button>
                         ` : ''}
 
                         <!-- Déconnexion -->
-                        <button type="button" id="drawer-btn-logout" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition-colors cursor-pointer">
+                        <button type="button" id="drawer-btn-logout" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-arrow-right-from-bracket text-sm w-5 text-center"></i>
                             <span>Se déconnecter de l'espace marchand</span>
                         </button>
@@ -826,15 +868,16 @@ export function createSellerDashboard({
             </div>
 
             <!-- 4. CONTENU PRINCIPAL PLEIN ÉCRAN (w-full lg:ml-64 lg:w-[calc(100%-16rem)]) -->
-            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-[100dvh] bg-[#F8FAFC] flex flex-col flex-1 pb-safe-content sm:pb-8">
+            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-[100dvh] bg-[#F8FAFC] dark:bg-slate-950 flex flex-col flex-1 pb-safe-content sm:pb-8">
                 <!-- TOP HEADER VENDEUR DESKTOP (hidden lg:flex, sticky top-0, z-30) -->
-                <header class="hidden lg:flex sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 w-full px-8 py-3.5 items-center justify-between select-none shadow-xs">
+                <header class="hidden lg:flex sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 w-full px-8 py-3.5 items-center justify-between select-none shadow-xs">
                     <!-- Gauche : Fil d'Ariane & Titre de section -->
                     <div class="flex items-center gap-3">
-                        <img src="${logoUrl}" alt="Campus Market" class="h-7.5 w-auto max-w-[140px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
-                        <div class="flex items-center gap-2 text-xs text-slate-400 font-semibold">
-                            <span class="hover:text-slate-600 transition-colors">Espace Marchand</span>
-                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                        <img src="${logoUrl}" alt="Campus Market" class="h-7.5 w-auto max-w-[140px] object-contain shrink-0 dark:hidden" onerror="this.src='/assets/logo.webp'">
+                        <img src="${logoDarkUrl}" alt="Campus Market" class="h-7.5 w-auto max-w-[140px] object-contain shrink-0 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
+                        <div class="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-semibold">
+                            <span class="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Espace Marchand</span>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 dark:text-slate-600"></i>
                             <span class="text-primary font-bold">
                                 ${activeSubTab === 'dashboard' ? 'Tableau de bord' : activeSubTab === 'orders' ? 'Commandes en direct' : activeSubTab === 'products' ? 'Mes Articles' : activeSubTab === 'profile' ? 'Mon Profil' : 'Ajouter un produit'}
                             </span>
@@ -851,21 +894,33 @@ export function createSellerDashboard({
                                 title="${isOpen ? 'Mettre la boutique en pause' : 'Ouvrir la boutique'}"
                                 class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 cursor-pointer ${
                                     isOpen 
-                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' 
-                                        : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50' 
+                                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50'
                                 }"
                             >
                                 <span class="w-2 h-2 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
                                 <span>${isOpen ? 'Boutique Ouverte' : 'Boutique en Pause'}</span>
                             </button>
                         ` : `
-                            <div class="px-3 py-1.5 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200 flex items-center gap-1.5">
-                                <i class="fa-solid fa-ban text-rose-600 text-xs"></i>
+                            <div class="px-3 py-1.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-ban text-rose-600 dark:text-rose-400 text-xs"></i>
                                 <span>Compte Suspendu</span>
                             </div>
                         `}
 
-                        <div class="h-4 w-px bg-slate-200"></div>
+                        <div class="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                        <!-- Bouton Bascule Thème Sombre Top -->
+                        <button 
+                            type="button" 
+                            id="top-hdr-btn-toggle-theme" 
+                            title="Basculer le mode sombre / clair"
+                            aria-label="Basculer le mode sombre"
+                            class="flex items-center justify-center w-9 h-9 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                        >
+                            <i class="fa-solid fa-moon dark:hidden text-amber-500 text-sm"></i>
+                            <i class="fa-solid fa-sun hidden dark:inline text-amber-400 text-sm"></i>
+                        </button>
 
                         <!-- Bouton Alerte Sonore Top -->
                         <button 
@@ -874,8 +929,8 @@ export function createSellerDashboard({
                             title="Activer/Désactiver les alertes sonores"
                             class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer min-h-[36px] ${
                                 audioAlert.isEnabled 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' 
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
                             }"
                         >
                             <i class="fa-solid ${audioAlert.isEnabled ? 'fa-volume-high text-emerald-600' : 'fa-volume-xmark'} text-xs"></i>
@@ -887,7 +942,7 @@ export function createSellerDashboard({
                             type="button" 
                             id="top-hdr-btn-refresh-orders" 
                             title="Actualiser les commandes"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer min-h-[36px]"
                         >
                             <i class="fa-solid fa-arrows-rotate text-xs"></i>
                             <span>Actualiser</span>
@@ -898,7 +953,7 @@ export function createSellerDashboard({
                             type="button" 
                             id="top-hdr-btn-seller-share-shop" 
                             title="Partager le lien de ma boutique (Lien & WhatsApp)"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 active:scale-95 transition-all cursor-pointer min-h-[36px]"
                         >
                             <i class="fa-solid fa-share-nodes text-xs text-emerald-600"></i>
                             <span>Partager boutique</span>
@@ -1964,6 +2019,18 @@ export function createSellerDashboard({
         containerEl.querySelector('#drawer-btn-share-shop')?.addEventListener('click', () => {
             closeDrawer();
             shareShopHandler();
+        });
+
+        // Bascule de Thème Sombre / Clair
+        const handleThemeToggle = () => {
+            toggleTheme();
+        };
+        containerEl.querySelector('#sidebar-btn-seller-theme-toggle')?.addEventListener('click', handleThemeToggle);
+        containerEl.querySelector('#top-hdr-btn-toggle-theme')?.addEventListener('click', handleThemeToggle);
+        containerEl.querySelector('#hdr-btn-seller-theme-mobile')?.addEventListener('click', handleThemeToggle);
+        containerEl.querySelector('#drawer-btn-theme-toggle')?.addEventListener('click', () => {
+            closeDrawer();
+            handleThemeToggle();
         });
 
         // Déconnexion

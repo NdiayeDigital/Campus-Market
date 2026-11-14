@@ -83,19 +83,19 @@ export function createSellerShowcase({
     function renderLoading() {
         containerEl.innerHTML = `
             <div class="w-full flex flex-col gap-6 animate-pulse">
-                <div class="h-10 w-44 bg-slate-200 rounded-xl"></div>
-                <div class="h-48 bg-white border border-slate-200/80 rounded-3xl p-6 flex flex-col gap-4">
+                <div class="h-10 w-44 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+                <div class="h-48 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 flex flex-col gap-4">
                     <div class="flex items-center gap-4">
-                        <div class="w-16 h-16 rounded-2xl bg-slate-200"></div>
+                        <div class="w-16 h-16 rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
                         <div class="flex flex-col gap-2 flex-1">
-                            <div class="h-6 w-48 bg-slate-200 rounded-lg"></div>
-                            <div class="h-4 w-32 bg-slate-200 rounded-lg"></div>
+                            <div class="h-6 w-48 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+                            <div class="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
                         </div>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     ${[1, 2, 3, 4, 5, 6].map(() => `
-                        <div class="aspect-3/4 bg-white border border-slate-200/80 rounded-3xl"></div>
+                        <div class="aspect-3/4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl"></div>
                     `).join('')}
                 </div>
             </div>
@@ -106,17 +106,17 @@ export function createSellerShowcase({
         if (!seller) {
             containerEl.innerHTML = `
                 <div class="w-full py-16 flex flex-col items-center justify-center text-center gap-4">
-                    <div class="w-16 h-16 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-2xl">
+                    <div class="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-500 flex items-center justify-center text-2xl">
                         <i class="fa-solid fa-store-slash"></i>
                     </div>
                     <div>
-                        <h3 class="font-heading font-extrabold text-lg text-slate-900">Boutique introuvable</h3>
-                        <p class="text-xs text-slate-500 mt-1">Ce marchand n'est plus actif ou le lien est invalide.</p>
+                        <h3 class="font-heading font-extrabold text-lg text-slate-900 dark:text-white">Boutique introuvable</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Ce marchand n'est plus actif ou le lien est invalide.</p>
                     </div>
                     <button 
                         type="button" 
                         id="btn-back-not-found"
-                        class="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all cursor-pointer active:scale-95"
+                        class="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold hover:bg-slate-800 dark:hover:bg-slate-700 transition-all cursor-pointer active:scale-95"
                     >
                         ← Revenir au catalogue
                     </button>
@@ -156,7 +156,7 @@ export function createSellerShowcase({
                 <button 
                     type="button" 
                     id="btn-showcase-back" 
-                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200/80 text-xs font-bold text-slate-700 shadow-xs transition-all active:scale-95 cursor-pointer min-h-[42px]"
+                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-xs transition-all active:scale-95 cursor-pointer min-h-[42px]"
                 >
                     <i class="fa-solid fa-arrow-left text-xs text-primary"></i>
                     <span>Toutes les offres du campus</span>
@@ -169,7 +169,7 @@ export function createSellerShowcase({
             </div>
 
             <!-- 2. HERO CARD MARCHAND IMMERSIF -->
-            <div class="bg-gradient-to-br from-white via-slate-50/70 to-blue-50/40 rounded-3xl border border-slate-200/80 shadow-card p-5 sm:p-7 relative overflow-hidden flex flex-col gap-6">
+            <div class="bg-gradient-to-br from-white via-slate-50/70 to-blue-50/40 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-800/60 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-card p-5 sm:p-7 relative overflow-hidden flex flex-col gap-6">
                 <!-- Motif décoratif campus en arrière plan -->
                 <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-primary/5 pointer-events-none blur-xl"></div>
 
@@ -177,54 +177,54 @@ export function createSellerShowcase({
                     <!-- Identité Vendeur -->
                     <div class="flex items-start sm:items-center gap-4">
                         <div class="relative">
-                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white font-heading font-extrabold text-xl sm:text-2xl flex items-center justify-center shadow-md shadow-primary/20 shrink-0 overflow-hidden border-2 border-white">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white font-heading font-extrabold text-xl sm:text-2xl flex items-center justify-center shadow-md shadow-primary/20 shrink-0 overflow-hidden border-2 border-white dark:border-slate-800">
                                 ${seller.avatar_url 
                                     ? `<img src="${escapeHTML(seller.avatar_url)}" alt="${escapeHTML(shopTitle)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='${initials}';">`
                                     : initials
                                 }
                             </div>
-                            <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-white flex items-center justify-center shadow-xs">
+                            <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-slate-900 border-2 border-white dark:border-slate-800 flex items-center justify-center shadow-xs">
                                 <i class="fa-solid fa-shield-halved text-xs text-emerald-600"></i>
                             </span>
                         </div>
 
                         <div class="flex flex-col min-w-0">
                             <div class="flex items-center gap-2 flex-wrap">
-                                <h1 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 leading-tight">
+                                <h1 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white leading-tight">
                                     ${escapeHTML(shopTitle)}
                                 </h1>
                                 ${!isSuspended ? `
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
                                         isOpen 
-                                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
-                                            : 'bg-amber-50 text-amber-800 border-amber-300'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800' 
+                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
                                     }">
                                         <span class="w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
                                         <span>${isOpen ? 'Boutique Ouverte' : 'En Pause'}</span>
                                     </span>
                                 ` : `
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
                                         <i class="fa-solid fa-ban text-[10px]"></i> Suspendue
                                     </span>
                                 `}
                             </div>
 
-                            <p class="text-xs text-slate-500 font-medium mt-1">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
                                 Marchand étudiant • ${escapeHTML(sellerName)}
                             </p>
 
                             <!-- Note et résumé avis -->
                             <div class="flex items-center gap-3 mt-2 flex-wrap">
-                                <div class="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl">
+                                <div class="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 px-2.5 py-1 rounded-xl">
                                     <i class="fa-solid fa-star text-amber-500 text-xs"></i>
                                     <span>${stats.avgRating.toFixed(1)}</span>
                                     <span class="text-slate-400 font-normal">/ 5</span>
                                 </div>
-                                <span class="text-xs text-slate-500 font-medium">
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
                                     ${stats.totalReviews} avis client${stats.totalReviews > 1 ? 's' : ''}
                                 </span>
-                                <span class="text-slate-300">•</span>
-                                <span class="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                                <span class="text-slate-300 dark:text-slate-600">•</span>
+                                <span class="text-xs text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
                                     <i class="fa-solid fa-thumbs-up text-[10px]"></i>
                                     ${stats.recommendationRate}% de satisfaction
                                 </span>
@@ -238,7 +238,7 @@ export function createSellerShowcase({
                             <a 
                                 href="tel:${cleanPhone}" 
                                 title="Appeler le marchand" 
-                                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all active:scale-95 cursor-pointer min-h-[42px]"
+                                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all active:scale-95 cursor-pointer min-h-[42px]"
                             >
                                 <i class="fa-solid fa-phone text-xs text-emerald-600"></i>
                                 <span>Appeler</span>
@@ -259,7 +259,7 @@ export function createSellerShowcase({
                             type="button" 
                             id="btn-showcase-share"
                             title="Partager cette boutique (Lien & WhatsApp)"
-                            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-800 font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer min-h-[42px]"
+                            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/90 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer min-h-[42px]"
                         >
                             <i class="fa-solid fa-share-nodes text-xs text-primary"></i>
                             <span>Partager</span>
@@ -278,21 +278,21 @@ export function createSellerShowcase({
             </div>
 
             <!-- 3. SOUS-ONGLETS DE NAVIGATION (Articles vs Avis) -->
-            <div class="flex items-center justify-between border-b border-slate-200/80 pb-3 gap-4 flex-wrap">
+            <div class="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3 gap-4 flex-wrap">
                 <div class="flex items-center gap-2">
                     <button 
                         type="button" 
                         id="tab-btn-showcase-products"
                         class="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer active:scale-95 ${
                             activeTab === 'products'
-                                ? 'bg-slate-900 text-white shadow-xs'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                                ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-xs'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'
                         }"
                     >
                         <i class="fa-solid fa-boxes-stacked text-xs"></i>
                         <span>Articles en vente</span>
                         <span class="px-2 py-0.2 rounded-full text-[10px] font-extrabold ${
-                            activeTab === 'products' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                            activeTab === 'products' ? 'bg-slate-800 dark:bg-slate-700 text-slate-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                         }">
                             ${products.length}
                         </span>
@@ -303,14 +303,14 @@ export function createSellerShowcase({
                         id="tab-btn-showcase-reviews"
                         class="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer active:scale-95 ${
                             activeTab === 'reviews'
-                                ? 'bg-slate-900 text-white shadow-xs'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                                ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-xs'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'
                         }"
                     >
                         <i class="fa-solid fa-star text-xs text-amber-500"></i>
                         <span>Avis clients</span>
                         <span class="px-2 py-0.2 rounded-full text-[10px] font-extrabold ${
-                            activeTab === 'reviews' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                            activeTab === 'reviews' ? 'bg-slate-800 dark:bg-slate-700 text-slate-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                         }">
                             ${reviews.length}
                         </span>
@@ -326,7 +326,7 @@ export function createSellerShowcase({
                             id="showcase-search-input" 
                             placeholder="Chercher chez ${escapeHTML(seller.prenom)}..." 
                             value="${escapeHTML(searchQuery)}"
-                            class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200/80 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-xs"
+                            class="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-xs"
                         >
                     </div>
                 ` : ''}
@@ -344,20 +344,20 @@ export function createSellerShowcase({
     function renderProductsTab(items, categories) {
         if (items.length === 0) {
             return `
-                <div class="bg-white rounded-3xl border border-slate-200/80 p-12 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
-                    <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-xl">
+                <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-12 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-xl">
                         <i class="fa-solid fa-box-open"></i>
                     </div>
                     <div>
-                        <h4 class="font-heading font-extrabold text-base text-slate-900">
+                        <h4 class="font-heading font-extrabold text-base text-slate-900 dark:text-white">
                             ${searchQuery ? 'Aucun article correspondant' : 'Aucun article en vente'}
                         </h4>
-                        <p class="text-xs text-slate-500 mt-0.5">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                             ${searchQuery ? `Aucun résultat pour "${escapeHTML(searchQuery)}"` : 'Ce marchand n\'a pas encore publié d\'articles disponibles.'}
                         </p>
                     </div>
                     ${searchQuery ? `
-                        <button type="button" id="btn-reset-showcase-search" class="mt-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer">
+                        <button type="button" id="btn-reset-showcase-search" class="mt-2 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer">
                             Réinitialiser la recherche
                         </button>
                     ` : ''}
@@ -377,7 +377,7 @@ export function createSellerShowcase({
                                 class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer active:scale-95 ${
                                     selectedCategory === cat 
                                         ? 'bg-primary text-white shadow-xs' 
-                                        : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                                 }"
                             >
                                 ${cat === 'all' ? 'Tous les articles' : escapeHTML(cat)}
@@ -396,18 +396,18 @@ export function createSellerShowcase({
         return `
             <div class="flex flex-col gap-6">
                 <!-- Bento Card Récapitulatif Notes -->
-                <div class="bg-white rounded-3xl border border-slate-200/80 shadow-card p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-card p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-6">
                     <!-- Colonne 1 : Grande Note -->
                     <div class="flex flex-col items-center text-center p-3">
-                        <span class="font-heading font-black text-4xl sm:text-5xl text-slate-900 tracking-tight">
+                        <span class="font-heading font-black text-4xl sm:text-5xl text-slate-900 dark:text-white tracking-tight">
                             ${stats.avgRating.toFixed(1)}
                         </span>
                         <div class="flex items-center gap-1 text-amber-400 text-sm mt-1">
                             ${[1, 2, 3, 4, 5].map((s) => `
-                                <i class="fa-solid fa-star ${s <= Math.round(stats.avgRating) ? 'text-amber-400' : 'text-slate-200'}"></i>
+                                <i class="fa-solid fa-star ${s <= Math.round(stats.avgRating) ? 'text-amber-400' : 'text-slate-200 dark:text-slate-700'}"></i>
                             `).join('')}
                         </div>
-                        <span class="text-xs text-slate-500 font-semibold mt-1.5">
+                        <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-1.5">
                             Basé sur ${stats.totalReviews} avis
                         </span>
                     </div>
@@ -418,9 +418,9 @@ export function createSellerShowcase({
                             const count = stats.distribution[level] || 0;
                             const pct = stats.totalReviews > 0 ? Math.round((count / stats.totalReviews) * 100) : 0;
                             return `
-                                <div class="flex items-center gap-2.5 text-xs text-slate-600">
+                                <div class="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
                                     <span class="w-7 font-bold text-right">${level} ★</span>
-                                    <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                    <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                                         <div class="h-full bg-amber-400 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
                                     </div>
                                     <span class="w-8 text-[11px] text-slate-400 text-right">${count}</span>
@@ -430,7 +430,7 @@ export function createSellerShowcase({
                     </div>
 
                     <!-- Colonne 3 : Bouton d'action Déposer avis -->
-                    <div class="flex flex-col items-center justify-center p-3 text-center border-t md:border-t-0 md:border-l border-slate-100 w-full md:w-auto">
+                    <div class="flex flex-col items-center justify-center p-3 text-center border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 w-full md:w-auto">
                         <button 
                             type="button" 
                             id="btn-reviews-cta"
@@ -445,19 +445,19 @@ export function createSellerShowcase({
 
                 <!-- Liste des avis étudiants -->
                 <div class="flex flex-col gap-3">
-                    <h3 class="font-heading font-extrabold text-base text-slate-900 flex items-center gap-2">
+                    <h3 class="font-heading font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
                         <span>Commentaires des étudiants</span>
                         <span class="text-xs text-slate-400 font-semibold">(${reviews.length})</span>
                     </h3>
 
                     ${reviews.length === 0 ? `
-                        <div class="bg-white rounded-3xl border border-slate-200/80 p-8 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
-                            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-lg">
+                        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center text-lg">
                                 <i class="fa-solid fa-star"></i>
                             </div>
                             <div>
-                                <h4 class="font-heading font-bold text-sm text-slate-900">Aucun avis pour le moment</h4>
-                                <p class="text-xs text-slate-500 mt-0.5">Soyez le premier étudiant à évaluer cette boutique !</p>
+                                <h4 class="font-heading font-bold text-sm text-slate-900 dark:text-white">Aucun avis pour le moment</h4>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Soyez le premier étudiant à évaluer cette boutique !</p>
                             </div>
                         </div>
                     ` : `
@@ -472,17 +472,17 @@ export function createSellerShowcase({
                                     : 'Récemment';
 
                                 return `
-                                    <div class="bg-white rounded-2xl border border-slate-200/80 p-4 flex flex-col justify-between gap-3 shadow-xs hover:border-slate-300 transition-colors">
+                                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 flex flex-col justify-between gap-3 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
                                         <div class="flex items-start justify-between gap-3">
                                             <div class="flex items-center gap-2.5">
-                                                <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 font-heading font-extrabold text-xs flex items-center justify-center">
+                                                <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-heading font-extrabold text-xs flex items-center justify-center">
                                                     ${buyerInitials}
                                                 </div>
                                                 <div>
                                                     <div class="flex items-center gap-1.5">
-                                                        <span class="font-heading font-bold text-xs text-slate-900">${escapeHTML(buyerName)}</span>
+                                                        <span class="font-heading font-bold text-xs text-slate-900 dark:text-white">${escapeHTML(buyerName)}</span>
                                                         ${rev.order_id ? `
-                                                            <span class="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                                                            <span class="px-1.5 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
                                                                 <i class="fa-solid fa-check text-[8px]"></i> Achat vérifié
                                                             </span>
                                                         ` : ''}
@@ -494,12 +494,12 @@ export function createSellerShowcase({
                                             <!-- Étoiles -->
                                             <div class="flex items-center gap-0.5 text-amber-400 text-xs">
                                                 ${[1, 2, 3, 4, 5].map((s) => `
-                                                    <i class="fa-solid fa-star ${s <= note ? 'text-amber-400' : 'text-slate-200'}"></i>
+                                                    <i class="fa-solid fa-star ${s <= note ? 'text-amber-400' : 'text-slate-200 dark:text-slate-700'}"></i>
                                                 `).join('')}
                                             </div>
                                         </div>
 
-                                        <p class="text-xs text-slate-700 leading-relaxed font-normal ${!rev.comment ? 'italic text-slate-400' : ''}">
+                                        <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal ${!rev.comment ? 'italic text-slate-400' : ''}">
                                             ${rev.comment ? escapeHTML(rev.comment) : 'A laissé une évaluation sans commentaire écrit.'}
                                         </p>
                                     </div>

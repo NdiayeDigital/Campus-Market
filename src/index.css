@@ -14,8 +14,16 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-background text-slate-900 font-sans antialiased;
+    @apply bg-background text-slate-900 font-sans antialiased transition-colors duration-200;
+  }
+
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -88,6 +96,23 @@
     background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
     background-size: 200% 100%;
     animation: shimmer 1.8s infinite linear;
+  }
+
+  html.dark .shimmer-placeholder {
+    background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+    background-size: 200% 100%;
+  }
+
+  /* Barres de défilement adaptées */
+  html.dark ::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+  html.dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 9999px;
+  }
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
   }
 
   /* Animation de transition d'écran douce sans altération spatiale (stabilise l'ancrage fixe sur Safari iOS & Android) */

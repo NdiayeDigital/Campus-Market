@@ -7,7 +7,9 @@
 import { subscribeCart } from '../services/cart-store.js';
 import { SUPPORT_CONFIG } from '../config/support.js';
 import { escapeHTML } from '../utils/security.js';
+import { toggleTheme } from '../utils/theme.js';
 import logoUrl from '../assets/logo.webp';
+import logoDarkUrl from '../assets/logo-dark.webp';
 
 /**
  * Crée la navigation multi-format (BottomNav mobile fixe + Sidebar desktop collée à gauche).
@@ -49,7 +51,7 @@ export function createBottomNav({
             <nav 
                 id="mobile-bottom-nav" 
                 aria-label="Navigation mobile"
-                class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white border-t border-slate-200/80 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none"
+                class="lg:hidden fixed-gpu-bottom z-50 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] select-none transition-colors duration-200"
             >
                 <div class="w-full px-2 py-1.5 flex items-center justify-around max-w-md mx-auto">
                     <!-- Onglet 1 : Offres / Accueil -->
@@ -58,8 +60,8 @@ export function createBottomNav({
                         id="bnav-tab-catalog" 
                         class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] active:scale-95 cursor-pointer ${
                             currentTab === 'catalog' 
-                                ? 'text-primary font-bold' 
-                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                                ? 'text-primary dark:text-blue-400 font-bold' 
+                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-medium'
                         }"
                     >
                         ${currentTab === 'catalog' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
@@ -71,7 +73,7 @@ export function createBottomNav({
                     <button 
                         type="button" 
                         id="bnav-tab-search" 
-                        class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-slate-500 hover:text-slate-800 font-medium transition-all duration-200 min-h-[48px] min-w-[56px] active:scale-95 cursor-pointer"
+                        class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-all duration-200 min-h-[48px] min-w-[56px] active:scale-95 cursor-pointer"
                     >
                         <i class="fa-solid fa-magnifying-glass text-lg mb-0.5"></i>
                         <span class="text-[10px] leading-tight">Recherche</span>
@@ -81,11 +83,11 @@ export function createBottomNav({
                     <button 
                         type="button" 
                         id="bnav-tab-cart" 
-                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-slate-700 hover:text-primary transition-all duration-200 min-h-[48px] min-w-[56px] active:scale-95 cursor-pointer"
+                        class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-slate-700 hover:text-primary dark:text-slate-300 dark:hover:text-blue-400 transition-all duration-200 min-h-[48px] min-w-[56px] active:scale-95 cursor-pointer"
                     >
                         <div class="relative">
                             <i class="fa-solid fa-bag-shopping text-xl mb-0.5"></i>
-                            <span id="bnav-cart-badge" class="${latestCartCount > 0 ? '' : 'hidden'} absolute -top-1.5 -right-2.5 bg-accent text-slate-900 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full border-2 border-white shadow-sm min-w-[18px] text-center transform scale-100 transition-transform">
+                            <span id="bnav-cart-badge" class="${latestCartCount > 0 ? '' : 'hidden'} absolute -top-1.5 -right-2.5 bg-accent text-slate-900 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full border-2 border-white dark:border-slate-900 shadow-sm min-w-[18px] text-center transform scale-100 transition-transform">
                                 ${latestCartCount > 99 ? '99+' : latestCartCount}
                             </span>
                         </div>
@@ -98,8 +100,8 @@ export function createBottomNav({
                         id="bnav-tab-orders" 
                         class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] active:scale-95 cursor-pointer ${
                             currentTab === 'orders' 
-                                ? 'text-primary font-bold' 
-                                : 'text-slate-500 hover:text-slate-800 font-medium'
+                                ? 'text-primary dark:text-blue-400 font-bold' 
+                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-medium'
                         }"
                     >
                         ${currentTab === 'orders' ? '<span class="absolute top-0 w-8 h-1 bg-primary rounded-full"></span>' : ''}
@@ -113,8 +115,8 @@ export function createBottomNav({
                         id="bnav-tab-seller" 
                         class="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 min-h-[48px] min-w-[56px] active:scale-95 cursor-pointer ${
                             isSellerTabActive 
-                                ? 'text-amber-800 font-bold' 
-                                : 'text-amber-700 hover:text-amber-900 font-medium'
+                                ? 'text-amber-800 dark:text-amber-300 font-bold' 
+                                : 'text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 font-medium'
                         }"
                     >
                         ${isSellerTabActive ? '<span class="absolute top-0 w-8 h-1 bg-amber-600 rounded-full"></span>' : ''}
@@ -131,18 +133,19 @@ export function createBottomNav({
             <aside 
                 id="desktop-sidebar-nav" 
                 aria-label="Navigation latérale desktop"
-                class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white border-r border-slate-200/80 z-40 flex-col justify-between p-5 select-none shadow-xs"
+                class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 z-40 flex-col justify-between p-5 select-none shadow-xs transition-colors duration-200"
             >
                 <!-- Haut : Logo officiel UIDT & Marque -->
                 <div class="flex flex-col gap-6">
                     <div class="flex flex-col items-start gap-1.5 cursor-pointer group px-2 py-1" id="sidebar-logo-btn">
-                        <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-11 w-auto max-w-[195px] object-contain transition-transform group-hover:scale-105" onerror="this.src='/assets/logo.webp'">
-                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest pl-1">Université Iba Der Thiam</span>
+                        <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-11 w-auto max-w-[195px] object-contain transition-transform group-hover:scale-105 dark:hidden" onerror="this.src='/assets/logo.webp'">
+                        <img src="${logoDarkUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-11 w-auto max-w-[195px] object-contain transition-transform group-hover:scale-105 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
+                        <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Université Iba Der Thiam</span>
                     </div>
 
                     <!-- Navigation verticale avec liens aérés -->
                     <div class="flex flex-col gap-1.5">
-                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 py-1">
                             Navigation
                         </span>
 
@@ -153,10 +156,10 @@ export function createBottomNav({
                             class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer group ${
                                 currentTab === 'catalog'
                                     ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800'
                             }"
                         >
-                            <i class="fa-solid fa-store text-base ${currentTab === 'catalog' ? 'text-accent' : 'text-slate-400 group-hover:text-slate-700'}"></i>
+                            <i class="fa-solid fa-store text-base ${currentTab === 'catalog' ? 'text-accent' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'}"></i>
                             <span>Offres du Campus</span>
                         </button>
 
@@ -164,9 +167,9 @@ export function createBottomNav({
                         <button 
                             type="button" 
                             id="sidebar-tab-search" 
-                            class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all min-h-[46px] cursor-pointer group"
+                            class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 transition-all min-h-[46px] cursor-pointer group"
                         >
-                            <i class="fa-solid fa-magnifying-glass text-base text-slate-400 group-hover:text-slate-700"></i>
+                            <i class="fa-solid fa-magnifying-glass text-base text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300"></i>
                             <span>Rechercher</span>
                         </button>
 
@@ -174,10 +177,10 @@ export function createBottomNav({
                         <button 
                             type="button" 
                             id="sidebar-tab-cart" 
-                            class="flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all min-h-[46px] cursor-pointer group"
+                            class="flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 transition-all min-h-[46px] cursor-pointer group"
                         >
                             <div class="flex items-center gap-3.5">
-                                <i class="fa-solid fa-bag-shopping text-base text-slate-400 group-hover:text-slate-700"></i>
+                                <i class="fa-solid fa-bag-shopping text-base text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300"></i>
                                 <span>Mon Panier</span>
                             </div>
                             <span id="sidebar-cart-badge" class="${latestCartCount > 0 ? '' : 'hidden'} px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-accent text-slate-900 shadow-xs">
@@ -192,17 +195,17 @@ export function createBottomNav({
                             class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer group ${
                                 currentTab === 'orders'
                                     ? 'bg-primary text-white shadow-md shadow-primary/20'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800'
                             }"
                         >
-                            <i class="fa-solid fa-box text-base ${currentTab === 'orders' ? 'text-accent' : 'text-slate-400 group-hover:text-slate-700'}"></i>
+                            <i class="fa-solid fa-box text-base ${currentTab === 'orders' ? 'text-accent' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'}"></i>
                             <span>Mes Commandes</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Bas de Sidebar : Espace Vendeur & Support WhatsApp -->
-                <div class="flex flex-col gap-3 pt-4 border-t border-slate-100">
+                <!-- Bas de Sidebar : Espace Vendeur, Support WhatsApp & Toggle Thème -->
+                <div class="flex flex-col gap-2.5 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <!-- Bouton Accès Vendeur / Profil Desktop -->
                     <button 
                         type="button" 
@@ -210,14 +213,30 @@ export function createBottomNav({
                         class="flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all min-h-[46px] cursor-pointer active:scale-95 ${
                             isSellerTabActive
                                 ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
-                                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80'
+                                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-200 border border-amber-200/80 dark:border-amber-700/50'
                         }"
                     >
                         <div class="flex items-center gap-2.5">
-                            <i class="${sellerDesktopIcon} text-sm ${isSellerTabActive ? 'text-white' : 'text-amber-700'}"></i>
+                            <i class="${sellerDesktopIcon} text-sm ${isSellerTabActive ? 'text-white' : 'text-amber-700 dark:text-amber-400'}"></i>
                             <span id="sidebar-seller-label">${escapeHTML(sellerDesktopLabel)}</span>
                         </div>
                         <span id="sidebar-seller-dot" class="${cachedSeller ? '' : 'hidden'} w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    </button>
+
+                    <!-- Bouton Bascule Thème Desktop Sidebar -->
+                    <button 
+                        type="button" 
+                        id="sidebar-theme-toggle" 
+                        class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer min-h-[42px]"
+                        title="Basculer Mode Sombre / Mode Clair"
+                    >
+                        <div class="flex items-center gap-2.5">
+                            <i class="fa-solid fa-moon text-sm dark:hidden text-slate-500"></i>
+                            <i class="fa-solid fa-sun text-sm hidden dark:inline-block text-amber-400"></i>
+                            <span class="dark:hidden">Mode Sombre</span>
+                            <span class="hidden dark:inline">Mode Clair</span>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">Auto</span>
                     </button>
 
                     <!-- Support WhatsApp Campus -->
@@ -226,24 +245,24 @@ export function createBottomNav({
                         target="_blank" 
                         rel="noopener" 
                         title="Assistance WhatsApp ${SUPPORT_CONFIG.phoneDisplay}"
-                        class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold transition-all cursor-pointer"
+                        class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-700/50 text-xs font-bold transition-all cursor-pointer"
                     >
-                        <i class="fa-brands fa-whatsapp text-emerald-600 text-base"></i>
+                        <i class="fa-brands fa-whatsapp text-emerald-600 dark:text-emerald-400 text-base"></i>
                         <div class="flex flex-col text-left">
                             <span>Support WhatsApp</span>
-                            <span class="text-[10px] text-emerald-600 font-semibold leading-none">${SUPPORT_CONFIG.phoneDisplay}</span>
+                            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold leading-none">${SUPPORT_CONFIG.phoneDisplay}</span>
                         </div>
                     </a>
 
                     <!-- Liens Légaux & À propos Sidebar -->
-                    <div class="px-2 pt-1 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                        <button type="button" id="sidebar-link-about" class="hover:text-primary transition-colors cursor-pointer">À propos</button>
+                    <div class="px-2 pt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        <button type="button" id="sidebar-link-about" class="hover:text-primary dark:hover:text-primary-light transition-colors cursor-pointer">À propos</button>
                         <span>•</span>
-                        <button type="button" id="sidebar-link-terms" class="hover:text-primary transition-colors cursor-pointer">Règles & CGU</button>
+                        <button type="button" id="sidebar-link-terms" class="hover:text-primary dark:hover:text-primary-light transition-colors cursor-pointer">Règles & CGU</button>
                     </div>
 
                     <!-- Indicateur Réseau & Version -->
-                    <div class="px-2 pt-1 flex items-center justify-between text-[10px] text-slate-400">
+                    <div class="px-2 pt-0.5 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500">
                         <span class="flex items-center gap-1.5 font-medium">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                             Campus Connecté
@@ -317,6 +336,10 @@ export function createBottomNav({
             if (typeof onNavigate === 'function') {
                 onNavigate('seller');
             }
+        });
+
+        navContainer.querySelector('#sidebar-theme-toggle')?.addEventListener('click', () => {
+            toggleTheme();
         });
 
         navContainer.querySelector('#sidebar-link-about')?.addEventListener('click', () => {

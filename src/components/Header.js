@@ -4,7 +4,9 @@
  */
 
 import { subscribeCart } from '../services/cart-store.js';
+import { toggleTheme } from '../utils/theme.js';
 import logoUrl from '../assets/logo.webp';
+import logoDarkUrl from '../assets/logo-dark.webp';
 
 /**
  * Crée le composant Header.
@@ -19,42 +21,55 @@ import logoUrl from '../assets/logo.webp';
  */
 export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller, onOpenProfile, onLogoClick, onOpenCatalog } = {}) {
     const headerEl = document.createElement('header');
-    headerEl.className = 'sticky-gpu-top z-30 bg-white border-b border-slate-200/70 shadow-xs lg:ml-64 lg:w-[calc(100%-16rem)] w-full pt-safe';
+    headerEl.className = 'sticky-gpu-top z-30 bg-white dark:bg-slate-900 border-b border-slate-200/70 dark:border-slate-800 shadow-xs lg:ml-64 lg:w-[calc(100%-16rem)] w-full pt-safe transition-colors duration-200';
 
     headerEl.innerHTML = `
         <div class="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-2.5 sm:py-3 flex flex-col gap-2.5">
             <!-- Ligne supérieure : Logo & Actions rapides -->
             <div class="flex items-center justify-between gap-4">
                 <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer group" id="header-logo-btn">
-                    <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-9 sm:h-10.5 w-auto max-w-[170px] sm:max-w-[210px] object-contain transition-transform group-hover:scale-105" onerror="this.src='/assets/logo.webp'">
-                    <span class="hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">UIDT Thiès</span>
+                    <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-9 sm:h-10.5 w-auto max-w-[170px] sm:max-w-[210px] object-contain transition-transform group-hover:scale-105 dark:hidden" onerror="this.src='/assets/logo.webp'">
+                    <img src="${logoDarkUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-9 sm:h-10.5 w-auto max-w-[170px] sm:max-w-[210px] object-contain transition-transform group-hover:scale-105 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
+                    <span class="hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 border border-primary/20 dark:border-primary/40">UIDT Thiès</span>
                 </div>
 
                 <!-- Groupe de navigation rapide & Panier -->
                 <div id="header-nav-group" class="flex items-center gap-2">
+                    <!-- Bouton Bascule Thème Sombre / Clair -->
+                    <button 
+                        id="header-theme-btn" 
+                        type="button" 
+                        aria-label="Changer de thème" 
+                        title="Basculer Mode Sombre / Mode Clair" 
+                        class="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-amber-400 transition-all min-h-[44px] min-w-[44px] cursor-pointer active:scale-95 shadow-xs"
+                    >
+                        <i class="fa-solid fa-moon text-sm sm:text-base dark:hidden"></i>
+                        <i class="fa-solid fa-sun text-sm sm:text-base hidden dark:inline-block"></i>
+                    </button>
+
                     <!-- Bouton 1 : Offres (Accueil) - Masqué sur desktop car déjà dans la sidebar gauche -->
-                    <button id="header-catalog-btn" type="button" title="Voir toutes les offres" class="hidden sm:flex lg:hidden items-center gap-1.5 px-3 py-2 text-xs font-bold text-primary bg-primary/10 border border-primary/20 rounded-full transition-colors min-h-[44px]">
-                        <i class="fa-solid fa-store text-primary text-sm"></i>
+                    <button id="header-catalog-btn" type="button" title="Voir toutes les offres" class="hidden sm:flex lg:hidden items-center gap-1.5 px-3 py-2 text-xs font-bold text-primary dark:text-blue-300 bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/40 rounded-full transition-colors min-h-[44px]">
+                        <i class="fa-solid fa-store text-primary dark:text-blue-400 text-sm"></i>
                         <span>Offres</span>
                     </button>
 
                     <!-- Bouton 2 : Mes Commandes - Masqué sur desktop car dans la sidebar gauche -->
-                    <button id="header-orders-btn" type="button" title="Suivi de mes commandes" class="hidden sm:flex lg:hidden items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors min-h-[44px]">
-                        <i class="fa-solid fa-box text-slate-500 text-sm"></i>
+                    <button id="header-orders-btn" type="button" title="Suivi de mes commandes" class="hidden sm:flex lg:hidden items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors min-h-[44px]">
+                        <i class="fa-solid fa-box text-slate-500 dark:text-slate-400 text-sm"></i>
                         <span>Commandes</span>
                     </button>
 
                     <!-- Bouton 3 : Espace Vendeur Desktop & Tablette (masqué sur mobile car dans la barre inférieure fixe) -->
-                    <button id="header-seller-btn" type="button" title="Accéder à l'espace vendeur" class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-amber-950 bg-amber-100/80 hover:bg-amber-200/90 rounded-full transition-colors min-h-[44px] cursor-pointer">
-                        <i id="header-seller-icon" class="fa-solid fa-shop text-amber-700 text-sm"></i>
+                    <button id="header-seller-btn" type="button" title="Accéder à l'espace vendeur" class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-amber-950 dark:text-amber-200 bg-amber-100/80 hover:bg-amber-200/90 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 border border-amber-300/40 dark:border-amber-700/50 rounded-full transition-colors min-h-[44px] cursor-pointer">
+                        <i id="header-seller-icon" class="fa-solid fa-shop text-amber-700 dark:text-amber-400 text-sm"></i>
                         <span id="header-seller-btn-text">Espace Vendeur</span>
                         <span id="header-seller-dot-desktop" class="hidden w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>
                     </button>
 
                     <!-- Bouton 4 : Panier avec Badge dynamique -->
-                    <button id="header-cart-btn" type="button" aria-label="Voir le panier" class="relative flex items-center justify-center w-11 h-11 bg-primary-light hover:bg-primary text-primary hover:text-white rounded-full transition-all duration-200 shadow-xs active:scale-95 min-h-[44px] min-w-[44px] cursor-pointer">
+                    <button id="header-cart-btn" type="button" aria-label="Voir le panier" class="relative flex items-center justify-center w-11 h-11 bg-primary-light hover:bg-primary dark:bg-primary/20 dark:hover:bg-primary text-primary hover:text-white dark:text-blue-300 rounded-full transition-all duration-200 shadow-xs active:scale-95 min-h-[44px] min-w-[44px] cursor-pointer">
                         <i class="fa-solid fa-bag-shopping text-base"></i>
-                        <span id="cart-badge-count" class="hidden absolute -top-1 -right-1 bg-accent text-slate-900 font-extrabold text-[11px] px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm min-w-[20px] text-center transform scale-100 transition-transform">
+                        <span id="cart-badge-count" class="hidden absolute -top-1 -right-1 bg-accent text-slate-900 font-extrabold text-[11px] px-1.5 py-0.5 rounded-full border-2 border-white dark:border-slate-900 shadow-sm min-w-[20px] text-center transform scale-100 transition-transform">
                             0
                         </span>
                     </button>
@@ -63,16 +78,16 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
 
             <!-- Ligne inférieure : Champ de recherche avec icône loupe (Plein écran fluide) -->
             <div id="header-search-row" class="relative w-full">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                     <i class="fa-solid fa-magnifying-glass text-sm"></i>
                 </div>
                 <input 
                     type="text" 
                     id="header-search-input" 
                     placeholder="Rechercher un plat, vêtement, cours, article..." 
-                    class="w-full pl-10 pr-10 py-2.5 sm:py-2.5 min-h-[44px] bg-slate-100/80 border border-slate-200/80 rounded-full text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white transition-all shadow-inner"
+                    class="w-full pl-10 pr-10 py-2.5 sm:py-2.5 min-h-[44px] bg-slate-100/80 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 rounded-full text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner"
                 >
-                <button id="header-search-clear" aria-label="Effacer la recherche" class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] justify-center">
+                <button id="header-search-clear" aria-label="Effacer la recherche" class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 min-h-[44px] min-w-[44px] justify-center">
                     <i class="fa-solid fa-circle-xmark text-sm"></i>
                 </button>
             </div>
@@ -120,6 +135,10 @@ export function createHeader({ onSearch, onOpenCart, onOpenOrders, onOpenSeller,
         } else if (typeof onSearch === 'function') {
             onSearch('');
         }
+    });
+
+    headerEl.querySelector('#header-theme-btn')?.addEventListener('click', () => {
+        toggleTheme();
     });
 
     headerEl.querySelector('#header-cart-btn')?.addEventListener('click', () => {
