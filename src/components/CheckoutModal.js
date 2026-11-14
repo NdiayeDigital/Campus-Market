@@ -33,63 +33,63 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
     }
 
     modalEl.innerHTML = `
-        <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] my-auto text-slate-900 dark:text-slate-100 border border-transparent dark:border-slate-800">
+        <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] my-auto">
             <!-- Modal Header -->
-            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/90">
+            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400 flex items-center justify-center font-bold text-sm">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
                         <i class="fa-solid fa-truck-fast"></i>
                     </div>
-                    <h2 class="font-heading font-bold text-slate-900 dark:text-white text-lg">Finaliser ma commande</h2>
+                    <h2 class="font-heading font-bold text-slate-900 text-lg">Finaliser ma commande</h2>
                 </div>
-                <button id="btn-close-checkout" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors min-h-[44px] min-w-[44px]">
+                <button id="btn-close-checkout" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors min-h-[44px] min-w-[44px]">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
             <!-- Corps du formulaire scrollable -->
             <form id="checkout-form" class="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-                <div class="bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 rounded-xl p-3 flex items-start gap-2.5 text-xs text-blue-900 dark:text-blue-200">
-                    <i class="fa-solid fa-circle-check text-primary dark:text-blue-400 text-sm mt-0.5"></i>
+                <div class="bg-blue-50/70 border border-blue-100 rounded-xl p-3 flex items-start gap-2.5 text-xs text-blue-900">
+                    <i class="fa-solid fa-circle-check text-primary text-sm mt-0.5"></i>
                     <span><strong>Achat direct sans compte requis :</strong> indiquez simplement votre localisation pour une livraison rapide pavillon-à-pavillon !</span>
                 </div>
 
                 <!-- SECTION 1 : Coordonnées -->
                 <div class="flex flex-col gap-3">
-                    <h3 class="font-heading font-bold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <h3 class="font-heading font-bold text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
                         <span class="w-5 h-5 rounded-full bg-primary text-white text-[11px] flex items-center justify-center">1</span>
                         Vos coordonnées
                     </h3>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1" for="buyer-prenom">Prénom *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" for="buyer-prenom">Prénom *</label>
                             <input 
                                 type="text" 
                                 id="buyer-prenom" 
                                 required 
                                 value="${escapeHTML(savedBuyer.prenom || '')}"
                                 placeholder="Ex: Moussa" 
-                                class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1" for="buyer-nom">Nom *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" for="buyer-nom">Nom *</label>
                             <input 
                                 type="text" 
                                 id="buyer-nom" 
                                 required 
                                 value="${escapeHTML(savedBuyer.nom || '')}"
                                 placeholder="Ex: Diallo" 
-                                class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
                         </div>
                     </div>
 
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300" for="buyer-phone">Numéro de téléphone *</label>
-                            <span class="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 px-2 py-0.5 rounded-full text-[10px] text-slate-600 dark:text-slate-300 font-medium">
+                            <label class="block text-xs font-semibold text-slate-600" for="buyer-phone">Numéro de téléphone *</label>
+                            <span class="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200/60 px-2 py-0.5 rounded-full text-[10px] text-slate-600 font-medium">
                                 <img src="${waveLogo}" alt="Wave" class="w-3.5 h-3.5 rounded-full object-cover" onerror="this.onerror=null; this.src='/assets/wave.jpg';">
                                 <img src="${omLogo}" alt="OM" class="w-3.5 h-3.5 rounded-[3px] object-contain bg-white" onerror="this.onerror=null; this.src='/assets/orange-money.jpg';">
                                 <span>Wave / OM / Appel</span>
@@ -102,33 +102,33 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                                 required 
                                 value="${escapeHTML(savedBuyer.telephone || '')}"
                                 placeholder="Ex: 77 123 45 67" 
-                                class="w-full pl-3 pr-16 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                                class="w-full pl-3 pr-16 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
                             <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
                                 <img src="${waveLogo}" alt="Wave" class="w-5 h-5 rounded-full object-cover shadow-xs border border-sky-200">
                                 <img src="${omLogo}" alt="OM" class="w-5 h-5 rounded object-contain bg-white shadow-xs border border-slate-200">
                             </div>
                         </div>
-                        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Numéro sénégalais à 9 chiffres (77, 78, 76, 70 ou 75)</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Numéro sénégalais à 9 chiffres (77, 78, 76, 70 ou 75)</p>
                     </div>
                 </div>
 
                 <!-- SECTION 2 : Livraison Pavillon-à-Pavillon -->
-                <div class="flex flex-col gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <h3 class="font-heading font-bold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <div class="flex flex-col gap-3 pt-2 border-t border-slate-100">
+                    <h3 class="font-heading font-bold text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
                         <span class="w-5 h-5 rounded-full bg-primary text-white text-[11px] flex items-center justify-center font-extrabold">2</span>
                         Lieu de livraison (Campus UIDT)
                     </h3>
 
                     <!-- Puces de sélection rapide des pavillons fréquents -->
                     <div class="flex flex-col gap-1.5">
-                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Accès rapide aux résidences :</span>
+                        <span class="text-[11px] text-slate-500 font-medium">Accès rapide aux résidences :</span>
                         <div class="flex items-center gap-1.5 flex-wrap" id="quick-pavillon-chips">
                             ${['Pavillon A', 'Pavillon B', '1000 lits', 'Jardin Social'].map((pavName) => `
                                 <button 
                                     type="button" 
                                     data-pav="${pavName}" 
-                                    class="quick-pav-chip px-2.5 py-1 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary hover:text-primary dark:hover:text-blue-400 text-slate-700 dark:text-slate-300 font-medium transition-all active:scale-95 cursor-pointer"
+                                    class="quick-pav-chip px-2.5 py-1 text-xs rounded-xl border border-slate-200 bg-white hover:border-primary hover:text-primary text-slate-700 font-medium transition-all active:scale-95 cursor-pointer"
                                 >
                                     ${pavName}
                                 </button>
@@ -138,11 +138,11 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1" for="delivery-pavillon">Pavillon ou Site sélectionné *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" for="delivery-pavillon">Pavillon ou Site sélectionné *</label>
                             <select 
                                 id="delivery-pavillon" 
                                 required 
-                                class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
                                 <option value="" disabled ${!savedBuyer.pavillon ? 'selected' : ''}>Sélectionnez...</option>
                                 ${DEFAULT_DELIVERY_LOCATIONS.map((p) => `
@@ -151,22 +151,22 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1" for="delivery-chambre">Numéro de chambre / Précision *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" for="delivery-chambre">Numéro de chambre / Précision *</label>
                             <input 
                                 type="text" 
                                 id="delivery-chambre" 
                                 required 
                                 value="${escapeHTML(savedBuyer.chambre || '')}"
                                 placeholder="Ex: Chambre 14, 2e étage" 
-                                class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                             >
                         </div>
                     </div>
                 </div>
 
                 <!-- SECTION 3 : Mode de paiement -->
-                <div class="flex flex-col gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <h3 class="font-heading font-bold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <div class="flex flex-col gap-3 pt-2 border-t border-slate-100">
+                    <h3 class="font-heading font-bold text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
                         <span class="w-5 h-5 rounded-full bg-primary text-white text-[11px] flex items-center justify-center font-extrabold">3</span>
                         Mode de règlement
                     </h3>
@@ -175,46 +175,46 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                         <!-- Wave -->
                         <label class="cursor-pointer group">
                             <input type="radio" name="payment-method" value="wave" checked class="peer sr-only">
-                            <div class="p-3 sm:p-4 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-[#1DA1F2] peer-checked:bg-sky-50/80 dark:peer-checked:bg-sky-950/40 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-[#1DA1F2]/20 hover:border-slate-300 dark:hover:border-slate-600 min-h-[96px]">
+                            <div class="p-3 sm:p-4 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-[#1DA1F2] peer-checked:bg-sky-50/80 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-[#1DA1F2]/20 hover:border-slate-300 min-h-[96px]">
                                 <div class="h-12 sm:h-14 w-full flex items-center justify-center">
                                     <img src="${waveLogo}" alt="Wave" class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover shadow-sm transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='/assets/wave.jpg';">
                                 </div>
-                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Wave</span>
+                                <span class="text-xs font-bold text-slate-800">Wave</span>
                             </div>
                         </label>
 
                         <!-- Orange Money -->
                         <label class="cursor-pointer group">
                             <input type="radio" name="payment-method" value="om" class="peer sr-only">
-                            <div class="p-3 sm:p-4 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-[#FF7900] peer-checked:bg-orange-50/80 dark:peer-checked:bg-orange-950/40 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-[#FF7900]/20 hover:border-slate-300 dark:hover:border-slate-600 min-h-[96px]">
+                            <div class="p-3 sm:p-4 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-[#FF7900] peer-checked:bg-orange-50/80 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-[#FF7900]/20 hover:border-slate-300 min-h-[96px]">
                                 <div class="h-12 sm:h-14 w-full flex items-center justify-center">
                                     <img src="${omLogo}" alt="Orange Money" class="h-11 sm:h-12 w-auto max-w-[95%] rounded-xl object-contain bg-white border border-slate-200/90 shadow-sm p-1 transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='/assets/orange-money.jpg';">
                                 </div>
-                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Orange Money</span>
+                                <span class="text-xs font-bold text-slate-800">Orange Money</span>
                             </div>
                         </label>
 
                         <!-- Espèces -->
                         <label class="cursor-pointer group">
                             <input type="radio" name="payment-method" value="cash" class="peer sr-only">
-                            <div class="p-3 sm:p-4 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50/80 dark:peer-checked:bg-emerald-950/40 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-emerald-500/20 hover:border-slate-300 dark:hover:border-slate-600 min-h-[96px]">
+                            <div class="p-3 sm:p-4 border-2 border-slate-200 rounded-2xl text-center flex flex-col items-center justify-between gap-2 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50/80 peer-checked:shadow-md peer-checked:ring-2 peer-checked:ring-emerald-500/20 hover:border-slate-300 min-h-[96px]">
                                 <div class="h-12 sm:h-14 w-full flex items-center justify-center">
-                                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl shadow-sm transition-transform group-hover:scale-105">
+                                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl shadow-sm transition-transform group-hover:scale-105">
                                         <i class="fa-solid fa-money-bill-wave"></i>
                                     </div>
                                 </div>
-                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Espèces</span>
+                                <span class="text-xs font-bold text-slate-800">Espèces</span>
                             </div>
                         </label>
                     </div>
 
-                    <div id="payment-notice" class="bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl p-3 text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                        <i class="fa-solid fa-info-circle text-primary dark:text-blue-400 text-xs"></i>
+                    <div id="payment-notice" class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-[11px] text-slate-600 flex items-center gap-2">
+                        <i class="fa-solid fa-info-circle text-primary text-xs"></i>
                         <span id="payment-notice-text">Règlement Wave direct au vendeur ou lors de la remise en main propre en chambre.</span>
                     </div>
 
-                    <div id="multi-vendor-notice" class="hidden bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 rounded-xl p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
-                        <i class="fa-solid fa-triangle-exclamation text-amber-600 dark:text-amber-400 text-sm mt-0.5"></i>
+                    <div id="multi-vendor-notice" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5"></i>
                         <span><strong>Panier multi-vendeurs :</strong> Vos articles proviennent de plusieurs marchands étudiants. Ils vous contacteront individuellement.</span>
                     </div>
                 </div>

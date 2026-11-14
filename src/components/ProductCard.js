@@ -19,7 +19,7 @@ import { showToast } from '../utils/notifications.js';
 export function createProductCard({ product, onAddToCart, onClickCard, onOpenSeller } = {}) {
     const cardEl = document.createElement('article');
     cardEl.dataset.productId = product.id;
-    cardEl.className = 'group relative flex flex-col bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/70 dark:border-slate-800 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 overflow-hidden';
+    cardEl.className = 'group relative flex flex-col bg-white rounded-3xl border border-slate-200/70 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 overflow-hidden';
 
     const isSuspended = product.seller 
         ? (product.seller.is_suspended === true || product.seller.role === 'vendeur_desactive' || product.seller.role === 'suspendu') 
@@ -83,7 +83,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
 
     cardEl.innerHTML = `
         <!-- Image Container -->
-        <div class="relative w-full aspect-square bg-slate-100/80 dark:bg-slate-800/80 overflow-hidden">
+        <div class="relative w-full aspect-square bg-slate-100/80 overflow-hidden">
             ${statusBadge}
             ${imageContent}
             ${photoCount > 1 ? `
@@ -99,7 +99,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                 id="btn-card-share" 
                 title="Partager cet article (Lien & WhatsApp)" 
                 aria-label="Partager cet article" 
-                class="absolute top-2 right-2 w-9 h-9 min-h-[44px] min-w-[44px] rounded-full bg-white/90 hover:bg-white dark:bg-slate-800/90 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 shadow-xs flex items-center justify-center transition-all opacity-90 hover:opacity-100 active:scale-90 z-10 cursor-pointer"
+                class="absolute top-2 right-2 w-9 h-9 min-h-[44px] min-w-[44px] rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-emerald-700 shadow-xs flex items-center justify-center transition-all opacity-90 hover:opacity-100 active:scale-90 z-10 cursor-pointer"
             >
                 <i class="fa-solid fa-share-nodes text-xs"></i>
             </button>
@@ -114,7 +114,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                     type="button" 
                     id="card-seller-btn"
                     title="Voir la vitrine de ${escapeHTML(sellerName)}"
-                    class="text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 line-clamp-1 flex items-center gap-1.5 transition-colors cursor-pointer text-left focus:outline-none w-fit"
+                    class="text-[11px] font-medium text-slate-500 hover:text-primary line-clamp-1 flex items-center gap-1.5 transition-colors cursor-pointer text-left focus:outline-none w-fit"
                 >
                     <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold overflow-hidden shrink-0">
                         ${sellerAvatar 
@@ -124,18 +124,18 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                     </span>
                     <span class="truncate hover:underline">${escapeHTML(sellerName)}</span>
                 </button>
-                <h3 class="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug line-clamp-2 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors">
+                <h3 class="font-heading font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                     ${escapeHTML(product.title)}
                 </h3>
             </div>
 
             <!-- Prix et Bouton d'action -->
-            <div class="relative flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 mt-auto">
+            <div class="relative flex items-center justify-between gap-2 pt-2 border-t border-slate-100 mt-auto">
                 <div class="flex flex-col">
-                    <span class="font-heading font-extrabold text-slate-900 dark:text-white text-base leading-none">
-                        ${Number(product.price).toLocaleString('fr-FR')} <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">FCFA</span>
+                    <span class="font-heading font-extrabold text-slate-900 text-base leading-none">
+                        ${Number(product.price).toLocaleString('fr-FR')} <span class="text-xs font-semibold text-slate-500">FCFA</span>
                     </span>
-                    ${product.old_price ? `<span class="text-[11px] text-slate-500 dark:text-slate-400 line-through mt-0.5">${Number(product.old_price).toLocaleString('fr-FR')} F</span>` : ''}
+                    ${product.old_price ? `<span class="text-[11px] text-slate-500 line-through mt-0.5">${Number(product.old_price).toLocaleString('fr-FR')} F</span>` : ''}
                 </div>
 
                 <!-- Bouton tactile min 44x44px avec feedback haptique visuel -->
@@ -147,7 +147,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                     ${isUnavailable ? 'disabled' : ''}
                     class="relative flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full transition-all duration-200 shadow-sm active:scale-90 ${
                         isUnavailable 
-                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
                             : 'bg-primary hover:bg-primary-dark text-white shadow-primary/25 hover:shadow-primary/40'
                     }"
                 >

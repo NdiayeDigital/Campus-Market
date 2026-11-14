@@ -37,12 +37,7 @@ import { updateSEO, setCatalogSEO, setOrdersSEO, setSellerSEO, resetDefaultSEO }
 import { resolveRoute } from './utils/router.js';
 import { initPwaInstallPrompt } from './utils/pwa-install.js';
 import { initPushNotificationPrompt } from './utils/push-prompt.js';
-import { initTheme } from './utils/theme.js';
 import logoUrl from './assets/logo.webp';
-import logoDarkUrl from './assets/logo-dark.webp';
-
-// Initialisation immédiate du moteur de thème (Clair / Sombre)
-initTheme();
 
 export { showToast };
 
@@ -76,7 +71,7 @@ async function initApp() {
     appEl.innerHTML = ''; // Nettoyage initial
 
     const rootWrapper = document.createElement('div');
-    rootWrapper.className = 'min-h-[100dvh] bg-background dark:bg-slate-950 flex flex-col antialiased text-slate-900 dark:text-slate-100 selection:bg-primary selection:text-white overflow-x-hidden w-full transition-colors duration-200';
+    rootWrapper.className = 'min-h-[100dvh] bg-background flex flex-col antialiased text-slate-900 selection:bg-primary selection:text-white overflow-x-hidden w-full';
 
     let headerComponent = null;
     let categoryChipsComponent = null;
@@ -362,26 +357,25 @@ async function initApp() {
 
     // 7. Footer (Plein écran fluide aligné avec la sidebar)
     const footerEl = document.createElement('footer');
-    footerEl.className = 'bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 py-8 px-4 sm:px-6 lg:px-8 xl:px-10 text-center mt-auto pb-safe-content sm:pb-8 lg:ml-64 lg:w-[calc(100%-16rem)] w-full text-slate-500 dark:text-slate-400 transition-colors duration-200';
+    footerEl.className = 'bg-white border-t border-slate-200/80 py-8 px-4 sm:px-6 lg:px-8 xl:px-10 text-center mt-auto pb-safe-content sm:pb-8 lg:ml-64 lg:w-[calc(100%-16rem)] w-full';
     footerEl.innerHTML = `
-        <div class="w-full flex flex-col gap-6 text-xs text-slate-500 dark:text-slate-400">
+        <div class="w-full flex flex-col gap-6 text-xs text-slate-500">
             <!-- Haut du footer : Identité, Liens Rapides & Support -->
             <div class="w-full flex flex-col sm:flex-row items-center justify-between gap-5">
                 <!-- Marque & Identité UIDT -->
                 <div class="flex flex-col sm:flex-row items-center gap-3">
-                    <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-10 sm:h-12 w-auto max-w-[200px] object-contain dark:hidden" onerror="this.src='/assets/logo.webp'">
-                    <img src="${logoDarkUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-10 sm:h-12 w-auto max-w-[200px] object-contain hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
+                    <img src="${logoUrl}" alt="Campus Market — Marketplace des Étudiants de l'UIDT Thiès" class="h-10 sm:h-12 w-auto max-w-[200px] object-contain" onerror="this.src='/assets/logo.webp'">
                     <div class="text-left hidden sm:block">
-                        <span class="text-[11px] text-slate-400 dark:text-slate-500 block font-medium">Université Iba Der Thiam de Thiès</span>
+                        <span class="text-[11px] text-slate-400 block font-medium">Université Iba Der Thiam de Thiès</span>
                     </div>
                 </div>
 
                 <!-- Liens de navigation Desktop & Tablette -->
-                <div class="hidden sm:flex items-center gap-5 text-slate-600 dark:text-slate-300 font-medium flex-wrap justify-center">
-                    <button id="footer-link-catalog" class="hover:text-primary dark:hover:text-primary-light transition-colors cursor-pointer">Offres</button>
-                    <button id="footer-link-orders" class="hover:text-primary dark:hover:text-primary-light transition-colors cursor-pointer">Mes commandes</button>
-                    <button id="footer-link-seller" class="hover:text-amber-700 dark:hover:text-amber-400 text-amber-900 dark:text-amber-300 font-semibold transition-colors cursor-pointer">Espace Vendeur</button>
-                    <a href="${SUPPORT_CONFIG.whatsappUrl}" target="_blank" rel="noopener" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-1 cursor-pointer">
+                <div class="hidden sm:flex items-center gap-5 text-slate-600 font-medium flex-wrap justify-center">
+                    <button id="footer-link-catalog" class="hover:text-primary transition-colors cursor-pointer">Offres</button>
+                    <button id="footer-link-orders" class="hover:text-primary transition-colors cursor-pointer">Mes commandes</button>
+                    <button id="footer-link-seller" class="hover:text-amber-700 text-amber-900 font-semibold transition-colors cursor-pointer">Espace Vendeur</button>
+                    <a href="${SUPPORT_CONFIG.whatsappUrl}" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1 cursor-pointer">
                         <i class="fa-brands fa-whatsapp text-sm"></i> Aide & Support (${SUPPORT_CONFIG.phoneDisplay})
                     </a>
                 </div>

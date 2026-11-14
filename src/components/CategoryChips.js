@@ -14,7 +14,7 @@ import { CATEGORIES } from '../services/catalog-service.js';
  */
 export function createCategoryChips({ activeCategory = 'all', onSelectCategory } = {}) {
     const containerEl = document.createElement('div');
-    containerEl.className = 'w-full lg:ml-64 lg:w-[calc(100%-16rem)] py-2.5 px-4 sm:px-6 lg:px-8 xl:px-10 bg-background/90 dark:bg-slate-950/90 backdrop-blur-sm border-b border-slate-200/60 dark:border-slate-800/80 overflow-hidden transition-colors duration-200';
+    containerEl.className = 'w-full lg:ml-64 lg:w-[calc(100%-16rem)] py-2.5 px-4 sm:px-6 lg:px-8 xl:px-10 bg-background/90 backdrop-blur-sm border-b border-slate-200/60 overflow-hidden';
 
     let currentActive = activeCategory;
     let countsMap = {};
@@ -26,7 +26,7 @@ export function createCategoryChips({ activeCategory = 'all', onSelectCategory }
                     const isActive = cat.id === currentActive;
                     const count = countsMap[cat.id];
                     const activeClasses = 'bg-gradient-to-r from-primary to-blue-600 text-white shadow-md shadow-primary/25 border-transparent font-bold ring-2 ring-primary/20';
-                    const inactiveClasses = 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border-slate-200/80 dark:border-slate-800 font-medium hover:border-slate-300 dark:hover:border-slate-700';
+                    const inactiveClasses = 'bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 border-slate-200/80 font-medium hover:border-slate-300';
 
                     return `
                         <button 
@@ -34,10 +34,10 @@ export function createCategoryChips({ activeCategory = 'all', onSelectCategory }
                             data-category-id="${cat.id}"
                             class="category-chip flex-shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs border transition-all duration-200 min-h-[44px] cursor-pointer active:scale-95 ${isActive ? activeClasses : inactiveClasses}"
                         >
-                            <i class="fa-solid ${cat.icon} text-xs ${isActive ? 'text-accent' : 'text-slate-400 dark:text-slate-500'}"></i>
+                            <i class="fa-solid ${cat.icon} text-xs ${isActive ? 'text-accent' : 'text-slate-400'}"></i>
                             <span>${cat.label}</span>
                             ${typeof count === 'number' && count > 0 ? `
-                                <span class="px-1.5 py-0.2 text-[10px] rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}">
+                                <span class="px-1.5 py-0.2 text-[10px] rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}">
                                     ${count}
                                 </span>
                             ` : ''}

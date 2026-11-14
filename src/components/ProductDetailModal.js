@@ -67,14 +67,14 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
         const safeActiveImage = productImages[activeImageIndex] || productImages[0] || null;
 
         modalEl.innerHTML = `
-            <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 text-slate-900 dark:text-slate-100 border border-transparent dark:border-slate-800">
+            <div class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
                 <!-- Poignée tactile mobile (Grab handle) -->
                 <div class="sm:hidden pt-3 pb-1 flex justify-center cursor-pointer" id="detail-grab-handle">
-                    <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+                    <div class="w-12 h-1.5 bg-slate-300 rounded-full"></div>
                 </div>
 
                 <!-- En-tête / Image principale -->
-                <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 group">
+                <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-100 overflow-hidden shrink-0 group">
                     ${safeActiveImage 
                         ? `<img src="${escapeHTML(safeActiveImage)}" alt="${escapeHTML(p.title)}" id="detail-active-image" class="w-full h-full object-cover transition-all duration-300" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
                         : `<div class="w-full h-full flex items-center justify-center bg-primary/5 text-primary text-5xl">
@@ -129,15 +129,15 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
 
                 <!-- Barre de vignettes miniatures cliquables (si multi-photos) -->
                 ${hasMultipleImages ? `
-                    <div class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 shrink-0 overflow-x-auto">
-                        <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mr-1 hidden sm:inline">Photos :</span>
+                    <div class="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-200/80 shrink-0 overflow-x-auto">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 hidden sm:inline">Photos :</span>
                         ${productImages.map((img, idx) => `
                             <button 
                                 type="button" 
                                 class="btn-detail-thumbnail w-12 h-12 rounded-xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
                                     idx === activeImageIndex 
                                         ? 'border-primary ring-2 ring-primary/30 scale-105 shadow-xs' 
-                                        : 'border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100 hover:border-slate-300 dark:hover:border-slate-600'
+                                        : 'border-slate-200 opacity-60 hover:opacity-100 hover:border-slate-300'
                                 }"
                                 data-photo-index="${idx}"
                                 title="Voir photo ${idx + 1}"
@@ -152,26 +152,26 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                 <div class="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 min-h-0 flex flex-col gap-4" style="-webkit-overflow-scrolling: touch;">
                     <!-- Catégorie & Titre -->
                     <div>
-                        <span class="text-xs font-bold uppercase tracking-wider text-primary dark:text-blue-400">
+                        <span class="text-xs font-bold uppercase tracking-wider text-primary">
                             ${escapeHTML(p.category || 'Article')}
                         </span>
-                        <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white mt-1 leading-tight">
+                        <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-slate-900 mt-1 leading-tight">
                             ${escapeHTML(p.title)}
                         </h2>
                     </div>
 
                     <!-- Prix -->
                     <div class="flex items-baseline gap-3">
-                        <span class="font-heading font-extrabold text-2xl text-slate-900 dark:text-white">
-                            ${Number(p.price).toLocaleString('fr-FR')} <span class="text-sm font-semibold text-slate-500 dark:text-slate-400">FCFA</span>
+                        <span class="font-heading font-extrabold text-2xl text-slate-900">
+                            ${Number(p.price).toLocaleString('fr-FR')} <span class="text-sm font-semibold text-slate-500">FCFA</span>
                         </span>
-                        ${p.old_price ? `<span class="text-sm text-slate-400 dark:text-slate-500 line-through">${Number(p.old_price).toLocaleString('fr-FR')} FCFA</span>` : ''}
+                        ${p.old_price ? `<span class="text-sm text-slate-400 line-through">${Number(p.old_price).toLocaleString('fr-FR')} FCFA</span>` : ''}
                     </div>
 
                     <!-- Description -->
-                    <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        <h4 class="font-heading font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                            <i class="fa-solid fa-align-left text-primary dark:text-blue-400"></i> Description
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        <h4 class="font-heading font-bold text-slate-800 text-xs uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                            <i class="fa-solid fa-align-left text-primary"></i> Description
                         </h4>
                         <p class="whitespace-pre-line">
                             ${p.description ? escapeHTML(p.description) : "Article disponible à la livraison pavillon-à-pavillon sur le campus de l'UIDT."}
@@ -179,22 +179,22 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                     </div>
 
                     <!-- Info Vendeur & Contact direct -->
-                    <div class="border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 flex items-center justify-between gap-3 bg-white dark:bg-slate-900">
+                    <div class="border border-slate-200/80 rounded-2xl p-3.5 flex items-center justify-between gap-3 bg-white">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400 font-heading font-extrabold flex items-center justify-center text-sm overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
+                            <div class="w-10 h-10 rounded-full bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm overflow-hidden shrink-0 border border-slate-200">
                                 ${p.seller?.avatar_url 
                                     ? `<img src="${escapeHTML(p.seller.avatar_url)}" alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.textContent='${((sellerName[0] || 'V')).toUpperCase()}';">`
                                     : ((sellerName[0] || 'V')).toUpperCase()
                                 }
                             </div>
                             <div class="flex flex-col">
-                                <span class="text-[11px] text-slate-400 dark:text-slate-500 block">Vendu par</span>
-                                <span class="font-heading font-bold text-slate-900 dark:text-white text-xs sm:text-sm leading-tight">${escapeHTML(sellerName)}</span>
+                                <span class="text-[11px] text-slate-400 block">Vendu par</span>
+                                <span class="font-heading font-bold text-slate-900 text-xs sm:text-sm leading-tight">${escapeHTML(sellerName)}</span>
                                 ${p.seller ? `
                                     <button 
                                         type="button" 
                                         id="btn-detail-view-shop" 
-                                        class="text-[11px] font-bold text-primary dark:text-blue-400 hover:text-primary-hover flex items-center gap-1 transition-colors cursor-pointer mt-1 w-fit"
+                                        class="text-[11px] font-bold text-primary hover:text-primary-hover flex items-center gap-1 transition-colors cursor-pointer mt-1 w-fit"
                                     >
                                         <i class="fa-solid fa-store text-[10px]"></i>
                                         <span>Visiter la boutique</span>
@@ -205,14 +205,14 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <button type="button" id="btn-detail-share-product" title="Partager ce produit (Lien & WhatsApp)" aria-label="Partager ce produit" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-90 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all min-h-[44px] min-w-[44px] cursor-pointer">
-                                <i class="fa-solid fa-share-nodes text-xs text-primary dark:text-blue-400"></i>
+                            <button type="button" id="btn-detail-share-product" title="Partager ce produit (Lien & WhatsApp)" aria-label="Partager ce produit" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-90 text-slate-700 flex items-center justify-center transition-all min-h-[44px] min-w-[44px] cursor-pointer">
+                                <i class="fa-solid fa-share-nodes text-xs text-primary"></i>
                             </button>
                             ${cleanPhone ? `
-                                <a href="tel:${cleanPhone}" title="Appeler le vendeur" aria-label="Appeler le vendeur" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-90 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all min-h-[44px] min-w-[44px]">
-                                    <i class="fa-solid fa-phone text-xs text-emerald-600 dark:text-emerald-400"></i>
+                                <a href="tel:${cleanPhone}" title="Appeler le vendeur" aria-label="Appeler le vendeur" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-90 text-slate-700 flex items-center justify-center transition-all min-h-[44px] min-w-[44px]">
+                                    <i class="fa-solid fa-phone text-xs text-emerald-600"></i>
                                 </a>
-                                <a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Bonjour ! Je vous contacte au sujet de votre article "${p.title}" sur Campus Market.`)}" target="_blank" rel="noopener" title="Discuter sur WhatsApp" aria-label="Discuter sur WhatsApp" class="w-10 h-10 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 active:scale-90 text-[#25D366] flex items-center justify-center transition-all min-h-[44px] min-w-[44px]">
+                                <a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Bonjour ! Je vous contacte au sujet de votre article "${p.title}" sur Campus Market.`)}" target="_blank" rel="noopener" title="Discuter sur WhatsApp" aria-label="Discuter sur WhatsApp" class="w-10 h-10 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-90 text-[#25D366] flex items-center justify-center transition-all min-h-[44px] min-w-[44px]">
                                     <i class="fa-brands fa-whatsapp text-lg"></i>
                                 </a>
                             ` : ''}
@@ -221,16 +221,16 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                 </div>
 
                 <!-- Barre d'action basse FIXE (Pinned Action Footer avec pb-safe) -->
-                <div class="shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 pb-safe flex flex-col sm:flex-row items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
+                <div class="shrink-0 bg-white border-t border-slate-200/80 p-3.5 sm:p-4 pb-safe flex flex-col sm:flex-row items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
                     <!-- Sélecteur quantité -->
-                    <div class="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-full sm:w-auto justify-between sm:justify-start">
-                        <button id="btn-detail-qty-minus" aria-label="Diminuer" class="w-11 h-11 bg-white dark:bg-slate-700 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px] cursor-pointer">
+                    <div class="flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto justify-between sm:justify-start">
+                        <button id="btn-detail-qty-minus" aria-label="Diminuer" class="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px] cursor-pointer">
                             <i class="fa-solid fa-minus text-xs"></i>
                         </button>
-                        <span id="detail-qty-display" class="font-heading font-extrabold text-sm text-slate-900 dark:text-white w-8 text-center select-none">
+                        <span id="detail-qty-display" class="font-heading font-extrabold text-sm text-slate-900 w-8 text-center select-none">
                             ${selectedQuantity}
                         </span>
-                        <button id="btn-detail-qty-plus" aria-label="Augmenter" class="w-11 h-11 bg-white dark:bg-slate-700 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px] cursor-pointer">
+                        <button id="btn-detail-qty-plus" aria-label="Augmenter" class="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 transition-all font-bold text-sm min-h-[44px] min-w-[44px] cursor-pointer">
                             <i class="fa-solid fa-plus text-xs"></i>
                         </button>
                     </div>

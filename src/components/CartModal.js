@@ -20,24 +20,24 @@ export function createCartModal({ onProceedToCheckout } = {}) {
     modalOverlay.className = 'fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-stretch justify-center sm:justify-end opacity-0 pointer-events-none transition-opacity duration-300';
 
     modalOverlay.innerHTML = `
-        <div id="cart-drawer" class="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-none sm:rounded-l-3xl h-[90vh] sm:h-full flex flex-col shadow-2xl transform translate-y-full sm:translate-y-0 sm:translate-x-full transition-transform duration-300 overflow-hidden text-slate-900 dark:text-slate-100 border-l border-transparent dark:border-slate-800">
+        <div id="cart-drawer" class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-none sm:rounded-l-3xl h-[90vh] sm:h-full flex flex-col shadow-2xl transform translate-y-full sm:translate-y-0 sm:translate-x-full transition-transform duration-300 overflow-hidden">
             <!-- Poignée tactile mobile (Grab handle) -->
             <div class="sm:hidden pt-2.5 pb-1 flex justify-center cursor-pointer" id="cart-grab-handle">
-                <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+                <div class="w-12 h-1.5 bg-slate-300 rounded-full"></div>
             </div>
 
             <!-- Header du Panier -->
-            <div class="px-5 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/90">
+            <div class="px-5 py-3.5 sm:py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/80">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-2xl bg-primary-light dark:bg-primary/20 flex items-center justify-center text-primary dark:text-blue-400 shadow-sm">
+                    <div class="w-9 h-9 rounded-2xl bg-primary-light flex items-center justify-center text-primary shadow-sm">
                         <i class="fa-solid fa-bag-shopping text-sm"></i>
                     </div>
                     <div>
-                        <h2 class="font-heading font-extrabold text-slate-900 dark:text-white text-base sm:text-lg leading-tight">Mon Panier</h2>
-                        <span id="cart-items-count-subtitle" class="text-xs text-slate-500 dark:text-slate-400 font-medium">0 article</span>
+                        <h2 class="font-heading font-extrabold text-slate-900 text-base sm:text-lg leading-tight">Mon Panier</h2>
+                        <span id="cart-items-count-subtitle" class="text-xs text-slate-500 font-medium">0 article</span>
                     </div>
                 </div>
-                <button id="btn-close-cart" aria-label="Fermer le panier" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors min-h-[44px] min-w-[44px]">
+                <button id="btn-close-cart" aria-label="Fermer le panier" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors min-h-[44px] min-w-[44px]">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -48,21 +48,21 @@ export function createCartModal({ onProceedToCheckout } = {}) {
             </div>
 
             <!-- Footer avec récapitulatif & Bouton de commande -->
-            <div id="cart-footer" class="border-t border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 bg-slate-50/90 dark:bg-slate-900/95 pb-safe flex flex-col gap-3.5">
+            <div id="cart-footer" class="border-t border-slate-200/80 p-4 sm:p-5 bg-slate-50/90 pb-safe flex flex-col gap-3.5">
                 <div class="flex flex-col gap-2 text-xs sm:text-sm">
-                    <div class="flex justify-between text-slate-600 dark:text-slate-400">
+                    <div class="flex justify-between text-slate-600">
                         <span>Sous-total</span>
-                        <span id="cart-subtotal" class="font-semibold text-slate-900 dark:text-white">0 FCFA</span>
+                        <span id="cart-subtotal" class="font-semibold text-slate-900">0 FCFA</span>
                     </div>
-                    <div class="flex justify-between text-slate-600 dark:text-slate-400 items-center">
+                    <div class="flex justify-between text-slate-600 items-center">
                         <span class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-motorcycle text-primary dark:text-blue-400 text-xs"></i> Livraison pavillon
+                            <i class="fa-solid fa-motorcycle text-primary text-xs"></i> Livraison pavillon
                         </span>
-                        <span class="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-700/50 px-2 py-0.5 rounded-full text-xs">Gratuit</span>
+                        <span class="font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full text-xs">Gratuit</span>
                     </div>
-                    <div class="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-baseline">
-                        <span class="font-heading font-bold text-sm sm:text-base text-slate-900 dark:text-white">Total à payer</span>
-                        <span id="cart-total-price" class="font-heading font-extrabold text-xl text-primary dark:text-blue-400 leading-none">0 FCFA</span>
+                    <div class="pt-2 border-t border-slate-200 flex justify-between items-baseline">
+                        <span class="font-heading font-bold text-sm sm:text-base text-slate-900">Total à payer</span>
+                        <span id="cart-total-price" class="font-heading font-extrabold text-xl text-primary leading-none">0 FCFA</span>
                     </div>
                 </div>
 
@@ -141,28 +141,28 @@ export function createCartModal({ onProceedToCheckout } = {}) {
         footerEl.classList.remove('hidden');
 
         itemsContainer.innerHTML = cart.map((item) => `
-            <div class="flex items-center gap-3 bg-white dark:bg-slate-800/90 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
+            <div class="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
                 <!-- Image / Icone -->
-                <div class="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                <div class="w-16 h-16 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
                     ${item.image_url 
                         ? `<img src="${escapeHTML(item.image_url)}" alt="${escapeHTML(item.title)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
-                        : `<i class="fa-solid ${escapeHTML(item.icon || 'fa-box')} text-xl text-primary dark:text-blue-400"></i>`
+                        : `<i class="fa-solid ${escapeHTML(item.icon || 'fa-box')} text-xl text-primary"></i>`
                     }
                 </div>
 
                 <!-- Info produit -->
                 <div class="flex-1 min-w-0">
-                    <h4 class="font-heading font-bold text-slate-900 dark:text-white text-sm truncate leading-tight">${escapeHTML(item.title)}</h4>
-                    <span class="text-xs font-extrabold text-primary dark:text-blue-400 mt-0.5 block">${Number(item.price).toLocaleString('fr-FR')} FCFA</span>
+                    <h4 class="font-heading font-bold text-slate-900 text-sm truncate leading-tight">${escapeHTML(item.title)}</h4>
+                    <span class="text-xs font-extrabold text-primary mt-0.5 block">${Number(item.price).toLocaleString('fr-FR')} FCFA</span>
                 </div>
 
                 <!-- Sélecteur quantité tactile ergonomique (min 44x44px conforme WCAG) -->
-                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl">
-                    <button data-action="decrement" data-id="${item.id}" aria-label="Diminuer la quantité" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 active:scale-90 transition-all min-h-[44px] min-w-[44px]">
+                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                    <button data-action="decrement" data-id="${item.id}" aria-label="Diminuer la quantité" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 text-slate-700 active:scale-90 transition-all min-h-[44px] min-w-[44px]">
                         <i class="fa-solid fa-minus text-xs"></i>
                     </button>
-                    <span class="w-6 text-center text-xs font-extrabold text-slate-900 dark:text-white">${item.quantity}</span>
-                    <button data-action="increment" data-id="${item.id}" aria-label="Augmenter la quantité" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 active:scale-90 transition-all min-h-[44px] min-w-[44px]">
+                    <span class="w-6 text-center text-xs font-extrabold text-slate-900">${item.quantity}</span>
+                    <button data-action="increment" data-id="${item.id}" aria-label="Augmenter la quantité" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 text-slate-700 active:scale-90 transition-all min-h-[44px] min-w-[44px]">
                         <i class="fa-solid fa-plus text-xs"></i>
                     </button>
                 </div>

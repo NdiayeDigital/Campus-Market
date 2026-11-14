@@ -56,8 +56,6 @@ import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
 import { exportOrdersToCSV, exportSellersToCSV, exportAccountsToCSV } from '../../utils/export-csv.js';
 import logoUrl from '../../assets/logo.webp';
-import logoDarkUrl from '../../assets/logo-dark.webp';
-import { toggleTheme } from '../../utils/theme.js';
 
 /**
  * Crée le tableau de bord SuperAdmin.
@@ -71,7 +69,7 @@ import { toggleTheme } from '../../utils/theme.js';
  */
 export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSellerDashboard, onShowToast, admin } = {}) {
     const containerEl = document.createElement('div');
-    containerEl.className = 'w-full flex flex-col min-h-[100dvh] text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-950';
+    containerEl.className = 'w-full flex flex-col min-h-[100dvh] text-slate-900';
 
     let currentAdmin = null;
     let metrics = null;
@@ -263,19 +261,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
         containerEl.innerHTML = `
             <!-- 1. SIDEBAR SUPERADMIN DESKTOP : Collée TOUT À GAUCHE de l'écran (w-64 fixed h-screen) -->
-            <aside id="admin-desktop-sidebar" aria-label="Navigation SuperAdmin desktop" class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 z-40 flex-col justify-between p-5 select-none shadow-xs">
+            <aside id="admin-desktop-sidebar" aria-label="Navigation SuperAdmin desktop" class="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 h-screen bg-white border-r border-slate-200/80 text-slate-900 z-40 flex-col justify-between p-5 select-none shadow-xs">
                 <!-- Haut : Identité SuperAdmin & Marque Campus Market -->
                 <div class="flex flex-col gap-6">
                     <div class="flex flex-col items-start gap-1.5 px-1 py-1">
-                        <img src="${logoUrl}" alt="Campus Market" class="h-11 w-auto max-w-[190px] object-contain shrink-0 dark:hidden" onerror="this.src='/assets/logo.webp'">
-                        <img src="${logoDarkUrl}" alt="Campus Market" class="h-11 w-auto max-w-[190px] object-contain shrink-0 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-11 w-auto max-w-[190px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
                         <span class="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">Supervision Centrale</span>
                     </div>
 
                     <!-- Superviseur actif -->
-                    <div class="px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700">
+                    <div class="px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
                         <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Superviseur actif</span>
-                        <span class="text-xs font-extrabold text-slate-900 dark:text-white block truncate mt-0.5">${escapeHTML(currentAdmin?.prenom || '')} ${escapeHTML(currentAdmin?.nom || 'Admin')}</span>
+                        <span class="text-xs font-extrabold text-slate-900 block truncate mt-0.5">${escapeHTML(currentAdmin?.prenom || '')} ${escapeHTML(currentAdmin?.nom || 'Admin')}</span>
                     </div>
 
                     <!-- Liens verticaux sidebar desktop -->
@@ -290,7 +287,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
                                     activeTab === tab.id
                                         ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
-                                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold'
+                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
                                 }"
                             >
                                 <div class="flex items-center gap-3">
@@ -301,7 +298,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
                                         activeTab === tab.id 
                                             ? 'bg-white/20 text-white' 
-                                            : (tab.badgeAlert ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')
+                                            : (tab.badgeAlert ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 text-slate-700')
                                     }">
                                         ${tab.badge}
                                     </span>
@@ -312,12 +309,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 </div>
 
                 <!-- Bas de Sidebar : Actions SuperAdmin Desktop -->
-                <div class="flex flex-col gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div class="flex flex-col gap-2 pt-4 border-t border-slate-100">
                     <div class="grid grid-cols-2 gap-2">
                         <button 
                             id="hdr-btn-refresh-admin" 
                             title="Actualiser toutes les données"
-                            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer"
+                            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition-all cursor-pointer"
                         >
                             <i class="fa-solid fa-arrows-rotate text-xs"></i>
                             <span>Actualiser</span>
@@ -333,25 +330,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         </button>
                     </div>
 
-                    <!-- Bascule Thème Sombre Sidebar -->
-                    <button 
-                        type="button"
-                        id="sidebar-btn-admin-theme-toggle" 
-                        title="Basculer le mode sombre / clair"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
-                    >
-                        <i class="fa-solid fa-moon dark:hidden text-amber-500 text-xs"></i>
-                        <i class="fa-solid fa-sun hidden dark:inline text-amber-400 text-xs"></i>
-                        <span class="dark:hidden">Mode Sombre</span>
-                        <span class="hidden dark:inline">Mode Clair</span>
-                    </button>
-
                     <!-- Mon Profil Vendeur -->
                     <button 
                         type="button"
                         id="sidebar-btn-switch-to-seller" 
                         title="Gérer mes articles et ma boutique en tant que vendeur"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 transition-all cursor-pointer active:scale-95 shadow-xs"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all cursor-pointer active:scale-95 shadow-xs"
                     >
                         <i class="fa-solid fa-shop text-xs text-emerald-600"></i>
                         <span>Mon Profil Vendeur</span>
@@ -360,50 +344,37 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <button 
                         id="hdr-btn-exit-admin" 
                         title="Quitter l'administration"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800 transition-all cursor-pointer"
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 transition-all cursor-pointer"
                     >
                         <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
                         <span>Quitter l'administration</span>
                     </button>
 
-                    <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 flex items-center gap-2 mt-1">
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 mt-1">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Système UIDT Actif • v2.1</span>
+                        <span class="text-[10px] text-slate-500 font-medium truncate">Système UIDT Actif • v2.1</span>
                     </div>
                 </div>
             </aside>
 
-            <!-- 2. HEADER MOBILE SUPERADMIN : Épuré avec Logo + Titre + Menu ⋮ unique (lg:hidden) -->
-            <header class="lg:hidden sticky-gpu-top z-40 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 shadow-xs w-full pt-safe">
+            <!-- 2. HEADER MOBILE SUPERADMIN : Épuré blanc avec Logo + Titre + Menu ⋮ unique (lg:hidden) -->
+            <header class="lg:hidden sticky-gpu-top z-40 bg-white border-b border-slate-200/80 text-slate-900 shadow-xs w-full pt-safe">
                 <div class="w-full px-4 py-2.5 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2.5 min-w-0">
-                        <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0 dark:hidden" onerror="this.src='/assets/logo.webp'">
-                        <img src="${logoDarkUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
+                        <img src="${logoUrl}" alt="Campus Market" class="h-8 w-auto max-w-[130px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
                         <div class="min-w-0">
                             <span class="font-heading font-extrabold text-primary text-sm leading-none block truncate">CAMPUS MARKET</span>
-                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-tight mt-0.5 block truncate">Administration UIDT • ${escapeHTML(currentAdmin?.prenom || 'Admin')}</span>
+                            <span class="text-[10px] text-slate-500 font-medium leading-tight mt-0.5 block truncate">Administration UIDT • ${escapeHTML(currentAdmin?.prenom || 'Admin')}</span>
                         </div>
                     </div>
 
                     <!-- Droite : Sortie Directe & Bouton Menu Unique Mobile ⋮ -->
                     <div class="flex items-center gap-1.5 shrink-0">
-                        <!-- Bascule Thème Mobile -->
-                        <button 
-                            type="button" 
-                            id="hdr-btn-admin-theme-mobile" 
-                            title="Basculer le mode sombre"
-                            aria-label="Basculer le mode sombre"
-                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all active:scale-95 cursor-pointer"
-                        >
-                            <i class="fa-solid fa-moon dark:hidden text-amber-500 text-xs"></i>
-                            <i class="fa-solid fa-sun hidden dark:inline text-amber-400 text-xs"></i>
-                        </button>
-
                         <button 
                             type="button" 
                             id="top-hdr-btn-switch-to-seller-mobile" 
                             title="Mon Profil Vendeur"
-                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 transition-all active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 transition-all active:scale-95 cursor-pointer"
                         >
                             <i class="fa-solid fa-shop text-xs"></i>
                         </button>
@@ -411,7 +382,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             type="button" 
                             id="top-hdr-btn-exit-admin-mobile" 
                             title="Quitter l'administration"
-                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800 transition-all active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 transition-all active:scale-95 cursor-pointer"
                         >
                             <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
                         </button>
@@ -419,7 +390,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             type="button" 
                             id="hdr-btn-admin-menu-mobile" 
                             title="Menu actions administration"
-                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all active:scale-95 cursor-pointer"
+                            class="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 cursor-pointer"
                         >
                             <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
                         </button>
@@ -430,44 +401,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             <!-- 3. TIROIR MOBILE (Bottom Sheet) pour actions SuperAdmin (z-[60] au-dessus de la barre fixe) -->
             <div id="admin-mobile-drawer" class="hidden fixed inset-0 z-[60] bg-slate-950/40 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300 select-none">
                 <div class="flex-1 w-full" id="admin-drawer-backdrop"></div>
-                <div class="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-t-3xl p-5 pb-28 sm:pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full max-h-[85vh] overflow-y-auto">
-                    <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-1"></div>
+                <div class="bg-white border-t border-slate-200/80 text-slate-900 rounded-t-3xl p-5 pb-28 sm:pb-8 shadow-2xl flex flex-col gap-4 animate-slide-up w-full max-h-[85vh] overflow-y-auto">
+                    <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-1"></div>
                     
-                    <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                         <div class="flex items-center gap-2.5">
-                            <img src="${logoUrl}" alt="Campus Market" class="h-7 w-auto max-w-[120px] object-contain dark:hidden" onerror="this.src='/assets/logo.webp'">
-                            <img src="${logoDarkUrl}" alt="Campus Market" class="h-7 w-auto max-w-[120px] object-contain hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
+                            <img src="${logoUrl}" alt="Campus Market" class="h-7 w-auto max-w-[120px] object-contain" onerror="this.src='/assets/logo.webp'">
                             <div>
-                                <h4 class="font-heading font-extrabold text-sm text-slate-900 dark:text-white">Administration Centrale</h4>
-                                <p class="text-[11px] text-slate-500 dark:text-slate-400">Actions et supervision UIDT</p>
+                                <h4 class="font-heading font-extrabold text-sm text-slate-900">Administration Centrale</h4>
+                                <p class="text-[11px] text-slate-500">Actions et supervision UIDT</p>
                             </div>
                         </div>
-                        <button type="button" id="btn-close-admin-drawer" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-xs cursor-pointer">
+                        <button type="button" id="btn-close-admin-drawer" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center text-xs cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <!-- Bascule Thème Drawer -->
-                        <button type="button" id="drawer-btn-admin-theme-toggle" class="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 font-bold text-xs transition-colors cursor-pointer">
-                            <div class="flex items-center gap-3">
-                                <i class="fa-solid fa-moon dark:hidden text-amber-500 text-sm w-5 text-center"></i>
-                                <i class="fa-solid fa-sun hidden dark:inline text-amber-400 text-sm w-5 text-center"></i>
-                                <span class="dark:hidden">Passer en Mode Sombre</span>
-                                <span class="hidden dark:inline">Passer en Mode Clair</span>
-                            </div>
-                            <span class="text-[10px] font-extrabold text-slate-400 dark:hidden">Clair</span>
-                            <span class="text-[10px] font-extrabold text-amber-400 hidden dark:inline">Sombre</span>
-                        </button>
-
                         <!-- Actualiser -->
-                        <button type="button" id="drawer-btn-refresh-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 font-bold text-xs transition-colors cursor-pointer">
+                        <button type="button" id="drawer-btn-refresh-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-arrows-rotate text-sm text-primary w-5 text-center"></i>
                             <span>Actualiser toutes les données</span>
                         </button>
 
                         <!-- Mon Profil Vendeur -->
-                        <button type="button" id="drawer-btn-switch-to-seller" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 font-bold text-xs transition-colors cursor-pointer">
+                        <button type="button" id="drawer-btn-switch-to-seller" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-shop text-sm text-emerald-600 w-5 text-center"></i>
                             <span>Mon Profil Vendeur (Boutique UIDT)</span>
                         </button>
@@ -479,7 +437,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         </button>
 
                         <!-- Quitter -->
-                        <button type="button" id="drawer-btn-exit-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800 font-bold text-xs transition-colors cursor-pointer">
+                        <button type="button" id="drawer-btn-exit-admin" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-bold text-xs transition-colors cursor-pointer">
                             <i class="fa-solid fa-arrow-right-from-bracket text-sm text-rose-600 w-5 text-center"></i>
                             <span>Quitter l'administration centrale</span>
                         </button>
@@ -488,7 +446,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             </div>
 
             <!-- 4. NAVIGATION TABLETTE (sm à lg) : Barre d'onglets compacte sticky -->
-            <nav class="hidden sm:flex lg:hidden sticky top-[53px] z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-xs w-full">
+            <nav class="hidden sm:flex lg:hidden sticky top-[53px] z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs w-full">
                 <div class="px-3 sm:px-4 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     ${navTabs.map(tab => `
                         <button 
@@ -497,14 +455,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[44px] active:scale-95 cursor-pointer ${
                                 activeTab === tab.id
                                     ? 'bg-primary text-white shadow-xs font-extrabold'
-                                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                             }"
                         >
                             <i class="fa-solid ${tab.icon} text-xs"></i>
                             <span>${tab.label}</span>
                             ${tab.badge !== null ? `
                                 <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
-                                    activeTab === tab.id ? 'bg-white/20 text-white' : (tab.badgeAlert ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')
+                                    activeTab === tab.id ? 'bg-white/20 text-white' : (tab.badgeAlert ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 text-slate-700')
                                 }">
                                     ${tab.badge}
                                 </span>
@@ -515,16 +473,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             </nav>
 
             <!-- 5. CONTENU PRINCIPAL PLEIN ÉCRAN (w-full lg:ml-64 lg:w-[calc(100%-16rem)]) -->
-            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-[100dvh] bg-[#F8FAFC] dark:bg-slate-950 flex flex-col flex-1 pb-safe-content sm:pb-8">
+            <main class="w-full lg:ml-64 lg:w-[calc(100%-16rem)] min-h-[100dvh] bg-[#F8FAFC] flex flex-col flex-1 pb-safe-content sm:pb-8">
                 <!-- TOP HEADER SUPERADMIN DESKTOP (hidden lg:flex, sticky top-0, z-30) -->
-                <header class="hidden lg:flex sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 w-full px-8 py-3.5 items-center justify-between select-none shadow-xs">
+                <header class="hidden lg:flex sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 w-full px-8 py-3.5 items-center justify-between select-none shadow-xs">
                     <!-- Gauche : Fil d'Ariane & Titre de section -->
                     <div class="flex items-center gap-3">
-                        <img src="${logoUrl}" alt="Campus Market" class="h-7.5 w-auto max-w-[140px] object-contain shrink-0 dark:hidden" onerror="this.src='/assets/logo.webp'">
-                        <img src="${logoDarkUrl}" alt="Campus Market" class="h-7.5 w-auto max-w-[140px] object-contain shrink-0 hidden dark:block" onerror="this.src='/assets/logo-dark.webp'">
-                        <div class="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-semibold">
-                            <span class="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Supervision UIDT</span>
-                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 dark:text-slate-600"></i>
+                        <img src="${logoUrl}" alt="Campus Market" class="h-7.5 w-auto max-w-[140px] object-contain shrink-0" onerror="this.src='/assets/logo.webp'">
+                        <div class="flex items-center gap-2 text-xs text-slate-400 font-semibold">
+                            <span class="hover:text-slate-600 transition-colors">Supervision UIDT</span>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
                             <span class="text-primary font-bold">${(navTabs.find(t => t.id === activeTab) || navTabs[0]).label}</span>
                         </div>
                     </div>
@@ -532,31 +489,19 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <!-- Droite : Statut Opérationnel + Actions Rapides + Profil -->
                     <div class="flex items-center gap-3">
                         <!-- Statut Système -->
-                        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 text-xs font-bold shadow-2xs">
+                        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-bold shadow-2xs">
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                             <span>Système Opérationnel</span>
                         </div>
 
-                        <div class="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
-
-                        <!-- Bouton Thème Sombre Top SuperAdmin -->
-                        <button 
-                            type="button" 
-                            id="top-hdr-btn-admin-theme-toggle" 
-                            title="Basculer le mode sombre / clair"
-                            aria-label="Basculer le mode sombre"
-                            class="flex items-center justify-center w-9 h-9 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer min-h-[36px]"
-                        >
-                            <i class="fa-solid fa-moon dark:hidden text-amber-500 text-sm"></i>
-                            <i class="fa-solid fa-sun hidden dark:inline text-amber-400 text-sm"></i>
-                        </button>
+                        <div class="h-4 w-px bg-slate-200"></div>
 
                         <!-- Bouton Actualiser Top -->
                         <button 
                             type="button" 
                             id="top-hdr-btn-refresh-admin" 
                             title="Actualiser les données"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer min-h-[36px]"
                         >
                             <i class="fa-solid fa-arrows-rotate text-xs"></i>
                             <span>Actualiser</span>
@@ -578,13 +523,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             type="button" 
                             id="top-hdr-btn-switch-to-seller" 
                             title="Accéder à mon espace marchand et gérer mes articles"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 active:scale-95 transition-all cursor-pointer min-h-[36px]"
                         >
                             <i class="fa-solid fa-shop text-xs text-emerald-600"></i>
                             <span>Mon Profil Vendeur</span>
                         </button>
 
-                        <div class="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
+                        <div class="h-4 w-px bg-slate-200"></div>
 
                         <!-- Profil Superviseur & Bouton Quitter -->
                         <div class="flex items-center gap-2.5 pl-1">
@@ -592,14 +537,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 ${((currentAdmin?.prenom?.[0] || '') + (currentAdmin?.nom?.[0] || 'A')).toUpperCase()}
                             </div>
                             <div class="flex flex-col text-left">
-                                <span class="text-xs font-extrabold text-slate-900 dark:text-white leading-tight truncate max-w-[120px]">${escapeHTML(currentAdmin?.prenom || '')} ${escapeHTML(currentAdmin?.nom || 'Admin')}</span>
+                                <span class="text-xs font-extrabold text-slate-900 leading-tight truncate max-w-[120px]">${escapeHTML(currentAdmin?.prenom || '')} ${escapeHTML(currentAdmin?.nom || 'Admin')}</span>
                                 <span class="text-[10px] text-slate-400 font-bold uppercase leading-none">SuperAdmin</span>
                             </div>
                             <button 
                                 type="button" 
                                 id="top-hdr-btn-exit-admin" 
                                 title="Quitter la session d'administration"
-                                class="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800 flex items-center justify-center text-xs active:scale-95 transition-all cursor-pointer ml-1"
+                                class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 flex items-center justify-center text-xs active:scale-95 transition-all cursor-pointer ml-1"
                             >
                                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
                             </button>
@@ -3399,18 +3344,6 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         containerEl.querySelector('#drawer-btn-exit-admin')?.addEventListener('click', () => {
             closeDrawer();
             exitAdminHandler();
-        });
-
-        // Bascule de Thème Sombre / Clair (SuperAdmin)
-        const handleAdminThemeToggle = () => {
-            toggleTheme();
-        };
-        containerEl.querySelector('#sidebar-btn-admin-theme-toggle')?.addEventListener('click', handleAdminThemeToggle);
-        containerEl.querySelector('#top-hdr-btn-admin-theme-toggle')?.addEventListener('click', handleAdminThemeToggle);
-        containerEl.querySelector('#hdr-btn-admin-theme-mobile')?.addEventListener('click', handleAdminThemeToggle);
-        containerEl.querySelector('#drawer-btn-admin-theme-toggle')?.addEventListener('click', () => {
-            handleAdminThemeToggle();
-            closeDrawer();
         });
 
         // 1.b. Accès direct au Profil Vendeur de l'Admin
