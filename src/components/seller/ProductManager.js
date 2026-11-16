@@ -53,6 +53,352 @@ export function createProductManager({
     let activeTab = initialTab; // 'list' | 'add'
     let articleFilter = 'all'; // 'all' | 'active' | 'sold' | 'paused'
     let editingProduct = null;
+    let editPhotos = [];
+
+    // =========================================================================
+    // MODALE D'ÉDITION SUR DOCUMENT.BODY (PORTAL Z-[80])
+    // Résout définitivement les conflits de superposition :
+    // - z-[80] au-dessus du header desktop (z-30) : la croix de fermeture est toujours visible
+    // - z-[80] au-dessus de la nav mobile (z-50) : le bouton d'enregistrement n'est jamais masqué
+    // =========================================================================
+    const existingEditModal = typeof document !== 'undefined' ? document.getElementById('edit-product-modal') : null;
+    if (existingEditModal?.parentNode) {
+        existingEditModal.parentNode.removeChild(existingEditModal);
+    }
+
+    const editModal = typeof document !== 'undefined' ? document.createElement('div') : null;
+    if (editModal && document.body) {
+        editModal.id = 'edit-product-modal';
+        editModal.className = 'fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-300';
+        editModal.innerHTML = `
+            <div class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] sm:max-h-[85vh] animate-popIn">
+                <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto sm:hidden mt-2.5"></div>
+
+                <!-- En-tête de la modal sticky au-dessus de tout -->
+                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/95 backdrop-blur-xs shrink-0 sticky top-0 z-10">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid fa-pen"></i>
+                        </div>
+                        <h4 class="font-heading font-bold text-slate-900 text-base">Modifier l'article</h4>
+                    </div>
+                    <button id="btn-close-edit-modal" type="button" aria-label="Fermer" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-900 min-h-[38px] min-w-[38px] transition-colors cursor-pointer shrink-0">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <form id="edit-product-form" class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
+                    <div id="edit-product-error" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600 font-medium"></div>
+
+                    <!-- Titre -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-title">Nom du produit ou plat *</label>
+                        <input type="text" id="edit-prod-title" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                    </div>
+
+                    <!-- Prix avec mention FCFA & Stock -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-price">Prix *</label>
+                            <div class="relative">
+                                <input type="number" id="edit-prod-price" required min="50" step="50" class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                                <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 select-none pointer-events-none">FCFA</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-stock">Stock restant</label>
+                            <input type="number" id="edit-prod-stock" min="-1" placeholder="-1 = illimité" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                        </div>
+                    </div>
+
+                    <!-- Catégorie -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-category">Catégorie *</label>
+                        <select id="edit-prod-category" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                            ${CATEGORIES.filter((c) => c.id !== 'all').map((c) => `
+                                <option value="${c.id}">${c.label}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-desc">Description</label>
+                        <textarea id="edit-prod-desc" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"></textarea>
+                    </div>
+
+                    <!-- Photos de l'article (jusqu'à 3) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold text-slate-700">Photos de l'article (Jusqu'à 3)</label>
+                            <span class="text-[11px] font-semibold text-slate-400" id="edit-photos-count-badge">0 / 3 photos</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2.5" id="edit-photos-slots-container"></div>
+                        <p class="text-[10px] text-slate-400 mt-1.5">
+                            Vous pouvez supprimer une photo ou en ajouter une nouvelle dans les emplacements disponibles.
+                        </p>
+                    </div>
+                </form>
+
+                <!-- Bouton de validation TOUJOURS visible au-dessus de la barre de navigation -->
+                <div class="px-5 py-3.5 sm:py-4 border-t border-slate-200/80 bg-white shrink-0 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+                    <button 
+                        type="submit" 
+                        form="edit-product-form"
+                        id="btn-submit-edit-product" 
+                        class="w-full py-3.5 bg-primary hover:bg-primary-hover active:scale-[0.99] text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 min-h-[46px] cursor-pointer"
+                    >
+                        <i class="fa-solid fa-floppy-disk text-xs"></i>
+                        <span>Enregistrer les modifications</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(editModal);
+    }
+
+    const renderEditPhotosUI = () => {
+        if (!editModal) return;
+        const editSlotsContainer = editModal.querySelector('#edit-photos-slots-container');
+        const editCountBadge = editModal.querySelector('#edit-photos-count-badge');
+        if (!editSlotsContainer) return;
+
+        if (editCountBadge) {
+            editCountBadge.textContent = `${editPhotos.length} / 3 photos`;
+        }
+
+        editSlotsContainer.innerHTML = [0, 1, 2].map((slotIdx) => {
+            const photo = editPhotos[slotIdx];
+            if (photo) {
+                const imgSrc = photo.compressedDataUrl || photo.previewUrl || photo.url || '/assets/placeholder.webp';
+                return `
+                    <div class="relative aspect-square rounded-2xl bg-slate-100 border-2 border-primary/40 overflow-hidden shadow-2xs group">
+                        <img src="${imgSrc}" alt="Photo ${slotIdx + 1}" class="w-full h-full object-cover">
+                        <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-black ${slotIdx === 0 ? 'bg-primary text-white shadow-xs' : 'bg-slate-900/75 text-white backdrop-blur-xs'}">
+                            ${slotIdx === 0 ? '★ Principale' : `Angle ${slotIdx + 1}`}
+                        </span>
+                        <button type="button" class="btn-remove-edit-photo absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white flex items-center justify-center transition-all shadow-md cursor-pointer" data-slot-index="${slotIdx}" title="Supprimer cette photo">
+                            <i class="fa-solid fa-xmark text-[10px]"></i>
+                        </button>
+                    </div>
+                `;
+            } else {
+                return `
+                    <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
+                        <input type="file" class="edit-slot-file-input sr-only" accept="image/*" data-slot-index="${slotIdx}">
+                        <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm mb-1 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-700 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
+                        <span class="text-[9px] text-slate-400 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
+                    </label>
+                `;
+            }
+        }).join('');
+
+        editSlotsContainer.querySelectorAll('.edit-slot-file-input').forEach((input) => {
+            input.addEventListener('change', async (e) => {
+                const file = e.target.files?.[0];
+                const slotIdx = parseInt(e.target.getAttribute('data-slot-index'), 10) || 0;
+                if (file) await processEditFile(file, slotIdx);
+            });
+        });
+
+        editSlotsContainer.querySelectorAll('.btn-remove-edit-photo').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const slotIdx = parseInt(btn.getAttribute('data-slot-index'), 10);
+                removeEditPhoto(slotIdx);
+            });
+        });
+    };
+
+    const processEditFile = async (file, slotIdx) => {
+        if (!file) return;
+
+        const isImageMime = file.type && file.type.startsWith('image/');
+        const isImageExt = /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '');
+        if (!isImageMime && !isImageExt) {
+            showToast('Veuillez sélectionner un fichier image valide (JPEG, PNG, WebP).', 'warning');
+            return;
+        }
+
+        if (file.size > 20 * 1024 * 1024) {
+            showToast("L'image sélectionnée est trop volumineuse (max 20 Mo).", 'warning');
+            return;
+        }
+
+        let instantPreviewUrl = null;
+        try {
+            instantPreviewUrl = URL.createObjectURL(file);
+        } catch {
+            instantPreviewUrl = '/assets/placeholder.webp';
+        }
+
+        const photoObj = {
+            file,
+            url: null,
+            previewUrl: instantPreviewUrl,
+            compressedBlob: null,
+            compressedDataUrl: null,
+            isExisting: false,
+        };
+
+        if (slotIdx >= editPhotos.length) {
+            editPhotos.push(photoObj);
+        } else {
+            editPhotos[slotIdx] = photoObj;
+        }
+        renderEditPhotosUI();
+
+        try {
+            const compressedDataUrl = await compressImage(file, {
+                maxWidth: 800,
+                maxHeight: 800,
+                quality: 0.75,
+            });
+            const blob = dataURLtoBlob(compressedDataUrl);
+            blob._isCompressed = true;
+            photoObj.compressedBlob = blob;
+            photoObj.compressedDataUrl = compressedDataUrl;
+            renderEditPhotosUI();
+        } catch (err) {
+            console.warn('[ProductManager] Erreur compression modif:', err);
+            showToast(err.message || 'Impossible de lire cette photo.', 'warning');
+        }
+    };
+
+    const removeEditPhoto = (slotIdx) => {
+        const photo = editPhotos[slotIdx];
+        if (photo?.previewUrl && photo.previewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(photo.previewUrl);
+        }
+        editPhotos.splice(slotIdx, 1);
+        renderEditPhotosUI();
+    };
+
+    function openEditModal(prod) {
+        editingProduct = prod;
+        if (!editModal) return;
+
+        editModal.querySelector('#edit-prod-title').value = prod.title || '';
+        editModal.querySelector('#edit-prod-price').value = prod.price || '';
+        editModal.querySelector('#edit-prod-stock').value = prod.stock !== undefined ? prod.stock : -1;
+        editModal.querySelector('#edit-prod-category').value = prod.category || 'autres';
+        editModal.querySelector('#edit-prod-desc').value = prod.description || '';
+
+        if (Array.isArray(prod.images) && prod.images.length > 0) {
+            editPhotos = prod.images.slice(0, 3).map((url) => ({
+                url,
+                file: null,
+                previewUrl: url,
+                compressedBlob: null,
+                compressedDataUrl: url,
+                isExisting: true,
+            }));
+        } else if (prod.image_url) {
+            editPhotos = [{
+                url: prod.image_url,
+                file: null,
+                previewUrl: prod.image_url,
+                compressedBlob: null,
+                compressedDataUrl: prod.image_url,
+                isExisting: true,
+            }];
+        } else {
+            editPhotos = [];
+        }
+
+        renderEditPhotosUI();
+
+        if (typeof document !== 'undefined') {
+            document.body.style.overflow = 'hidden';
+        }
+        editModal.classList.remove('hidden');
+        requestAnimationFrame(() => editModal.classList.remove('opacity-0'));
+    }
+
+    function closeEditModal() {
+        if (editModal) {
+            editModal.classList.add('opacity-0');
+            setTimeout(() => editModal.classList.add('hidden'), 300);
+        }
+        if (typeof document !== 'undefined') {
+            document.body.style.overflow = '';
+        }
+        editingProduct = null;
+        editPhotos.forEach((p) => {
+            if (p?.previewUrl && p.previewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(p.previewUrl);
+            }
+        });
+        editPhotos = [];
+    }
+
+    if (editModal) {
+        const closeEditBtn = editModal.querySelector('#btn-close-edit-modal');
+        const editForm = editModal.querySelector('#edit-product-form');
+        const editErrorEl = editModal.querySelector('#edit-product-error');
+        const editSubmitBtn = editModal.querySelector('#btn-submit-edit-product');
+
+        closeEditBtn?.addEventListener('click', closeEditModal);
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) closeEditModal();
+        });
+
+        editForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!editingProduct) return;
+
+            const title = editModal.querySelector('#edit-prod-title').value.trim();
+            const price = editModal.querySelector('#edit-prod-price').value;
+            const stock = editModal.querySelector('#edit-prod-stock').value;
+            const category = editModal.querySelector('#edit-prod-category').value;
+            const description = editModal.querySelector('#edit-prod-desc').value.trim();
+            const imageFiles = editPhotos
+                .map((p) => p.compressedBlob || p.file || p.url)
+                .filter(Boolean);
+
+            editSubmitBtn.disabled = true;
+            editSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> Enregistrement...`;
+            if (editErrorEl) editErrorEl.classList.add('hidden');
+
+            try {
+                await updateProduct({
+                    productId: editingProduct.id,
+                    sellerId,
+                    title,
+                    price,
+                    stock,
+                    category,
+                    description,
+                    imageFiles,
+                });
+                closeEditModal();
+                await loadData();
+                showToast('Article mis à jour avec succès.', 'success');
+                if (typeof onProductChanged === 'function') onProductChanged();
+            } catch (err) {
+                if (editErrorEl) {
+                    editErrorEl.textContent = err.message || 'Erreur de mise à jour.';
+                    editErrorEl.classList.remove('hidden');
+                }
+            } finally {
+                editSubmitBtn.disabled = false;
+                editSubmitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk text-xs"></i><span>Enregistrer les modifications</span>`;
+            }
+        });
+    }
+
+    containerEl.cleanup = () => {
+        if (editModal?.parentNode) {
+            editModal.parentNode.removeChild(editModal);
+        }
+        if (typeof document !== 'undefined') {
+            document.body.style.overflow = '';
+        }
+    };
 
     const changeActiveTab = (tab) => {
         activeTab = tab;
@@ -194,9 +540,6 @@ export function createProductManager({
 
             <!-- Contenu dynamique selon l'onglet actif -->
             ${isLoading ? renderSkeleton() : (activeTab === 'add' ? renderAddProductView() : renderProductsListView(forSaleCount, soldCount, pausedCount))}
-
-            <!-- Modal d'édition de produit existant -->
-            ${renderEditModalMarkup()}
         `;
 
         bindEvents();
@@ -743,96 +1086,7 @@ export function createProductManager({
         `;
     }
 
-    /**
-     * Modal d'édition d'article existant
-     */
-    function renderEditModalMarkup() {
-        return `
-            <div id="edit-product-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-300">
-                <div class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-popIn">
-                    <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto sm:hidden mt-2.5"></div>
 
-                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm">
-                                <i class="fa-solid fa-pen"></i>
-                            </div>
-                            <h4 class="font-heading font-bold text-slate-900 text-base">Modifier l'article</h4>
-                        </div>
-                        <button id="btn-close-edit-modal" aria-label="Fermer" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 min-h-[38px] min-w-[38px] transition-colors cursor-pointer">
-                            <i class="fa-solid fa-xmark text-sm"></i>
-                        </button>
-                    </div>
-
-                    <form id="edit-product-form" class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
-                        <div id="edit-product-error" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600 font-medium"></div>
-
-                        <!-- Titre -->
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-title">Nom du produit ou plat *</label>
-                            <input type="text" id="edit-prod-title" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
-                        </div>
-
-                        <!-- Prix avec mention FCFA & Stock -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-price">Prix *</label>
-                                <div class="relative">
-                                    <input type="number" id="edit-prod-price" required min="50" step="50" class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
-                                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 select-none pointer-events-none">FCFA</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-stock">Stock restant</label>
-                                <input type="number" id="edit-prod-stock" min="-1" placeholder="-1 = illimité" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
-                            </div>
-                        </div>
-
-                        <!-- Catégorie -->
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-category">Catégorie *</label>
-                            <select id="edit-prod-category" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
-                                ${CATEGORIES.filter((c) => c.id !== 'all').map((c) => `
-                                    <option value="${c.id}">${c.label}</option>
-                                `).join('')}
-                            </select>
-                        </div>
-
-                        <!-- Description -->
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-desc">Description</label>
-                            <textarea id="edit-prod-desc" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"></textarea>
-                        </div>
-
-                        <!-- Photos de l'article (jusqu'à 3) -->
-                        <div>
-                            <div class="flex items-center justify-between mb-1.5">
-                                <label class="block text-xs font-bold text-slate-700">Photos de l'article (Jusqu'à 3)</label>
-                                <span class="text-[11px] font-semibold text-slate-400" id="edit-photos-count-badge">0 / 3 photos</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2.5" id="edit-photos-slots-container"></div>
-                            <p class="text-[10px] text-slate-400 mt-1.5">
-                                Vous pouvez supprimer une photo ou en ajouter une nouvelle dans les emplacements disponibles.
-                            </p>
-                        </div>
-                    </form>
-
-                    <!-- Bouton de validation TOUJOURS visible en bas de la modal (sticky footer) -->
-                    <div class="px-5 py-4 border-t border-slate-200/80 bg-white shrink-0">
-                        <button 
-                            type="submit" 
-                            form="edit-product-form"
-                            id="btn-submit-edit-product" 
-                            class="w-full py-3.5 bg-primary hover:bg-primary-hover active:scale-[0.99] text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 min-h-[46px] cursor-pointer"
-                        >
-                            <i class="fa-solid fa-floppy-disk text-xs"></i>
-                            <span>Enregistrer les modifications</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
 
     function bindEvents() {
         // 1. Bascule d'onglets internes (Mes Articles / Ajouter un produit)
@@ -1161,235 +1415,7 @@ export function createProductManager({
             });
         }
 
-        // 4. Modal d'édition
-        const editModal = containerEl.querySelector('#edit-product-modal');
-        const closeEditBtn = containerEl.querySelector('#btn-close-edit-modal');
-        const editForm = containerEl.querySelector('#edit-product-form');
-        const editErrorEl = containerEl.querySelector('#edit-product-error');
-        const editSubmitBtn = containerEl.querySelector('#btn-submit-edit-product');
-        let editPhotos = [];
-
-        const renderEditPhotosUI = () => {
-            const editSlotsContainer = containerEl.querySelector('#edit-photos-slots-container');
-            const editCountBadge = containerEl.querySelector('#edit-photos-count-badge');
-            if (!editSlotsContainer) return;
-
-            if (editCountBadge) {
-                editCountBadge.textContent = `${editPhotos.length} / 3 photos`;
-            }
-
-            editSlotsContainer.innerHTML = [0, 1, 2].map((slotIdx) => {
-                const photo = editPhotos[slotIdx];
-                if (photo) {
-                    const imgSrc = photo.compressedDataUrl || photo.previewUrl || photo.url || '/assets/placeholder.webp';
-                    return `
-                        <div class="relative aspect-square rounded-2xl bg-slate-100 border-2 border-primary/40 overflow-hidden shadow-2xs group">
-                            <img src="${imgSrc}" alt="Photo ${slotIdx + 1}" class="w-full h-full object-cover">
-                            <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-black ${slotIdx === 0 ? 'bg-primary text-white shadow-xs' : 'bg-slate-900/75 text-white backdrop-blur-xs'}">
-                                ${slotIdx === 0 ? '★ Principale' : `Angle ${slotIdx + 1}`}
-                            </span>
-                            <button type="button" class="btn-remove-edit-photo absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white flex items-center justify-center transition-all shadow-md cursor-pointer" data-slot-index="${slotIdx}" title="Supprimer cette photo">
-                                <i class="fa-solid fa-xmark text-[10px]"></i>
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    return `
-                        <label class="relative aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/60 bg-slate-50/70 hover:bg-slate-50 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group">
-                            <input type="file" class="edit-slot-file-input sr-only" accept="image/*" data-slot-index="${slotIdx}">
-                            <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm mb-1 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-camera"></i>
-                            </div>
-                            <span class="text-[10px] font-bold text-slate-700 leading-tight">${slotIdx === 0 ? 'Principale *' : `Angle ${slotIdx + 1}`}</span>
-                            <span class="text-[9px] text-slate-400 mt-0.5">${slotIdx === 0 ? 'Recommandée' : 'Facultatif'}</span>
-                        </label>
-                    `;
-                }
-            }).join('');
-
-            editSlotsContainer.querySelectorAll('.edit-slot-file-input').forEach((input) => {
-                input.addEventListener('change', async (e) => {
-                    const file = e.target.files?.[0];
-                    const slotIdx = parseInt(e.target.getAttribute('data-slot-index'), 10) || 0;
-                    if (file) await processEditFile(file, slotIdx);
-                });
-            });
-
-            editSlotsContainer.querySelectorAll('.btn-remove-edit-photo').forEach((btn) => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const slotIdx = parseInt(btn.getAttribute('data-slot-index'), 10);
-                    removeEditPhoto(slotIdx);
-                });
-            });
-        };
-
-        const processEditFile = async (file, slotIdx) => {
-            if (!file) return;
-
-            const isImageMime = file.type && file.type.startsWith('image/');
-            const isImageExt = /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '');
-            if (!isImageMime && !isImageExt) {
-                showToast('Veuillez sélectionner un fichier image valide (JPEG, PNG, WebP).', 'warning');
-                return;
-            }
-
-            if (file.size > 20 * 1024 * 1024) {
-                showToast("L'image sélectionnée est trop volumineuse (max 20 Mo).", 'warning');
-                return;
-            }
-
-            let instantPreviewUrl = null;
-            try {
-                instantPreviewUrl = URL.createObjectURL(file);
-            } catch {
-                instantPreviewUrl = '/assets/placeholder.webp';
-            }
-
-            const photoObj = {
-                file,
-                url: null,
-                previewUrl: instantPreviewUrl,
-                compressedBlob: null,
-                compressedDataUrl: null,
-                isExisting: false,
-            };
-
-            if (slotIdx >= editPhotos.length) {
-                editPhotos.push(photoObj);
-            } else {
-                editPhotos[slotIdx] = photoObj;
-            }
-            renderEditPhotosUI();
-
-            try {
-                const compressedDataUrl = await compressImage(file, {
-                    maxWidth: 800,
-                    maxHeight: 800,
-                    quality: 0.75,
-                });
-                const blob = dataURLtoBlob(compressedDataUrl);
-                blob._isCompressed = true;
-                photoObj.compressedBlob = blob;
-                photoObj.compressedDataUrl = compressedDataUrl;
-                renderEditPhotosUI();
-            } catch (err) {
-                console.warn('[ProductManager] Erreur compression modif:', err);
-                showToast(err.message || 'Impossible de lire cette photo.', 'warning');
-            }
-        };
-
-        const removeEditPhoto = (slotIdx) => {
-            const photo = editPhotos[slotIdx];
-            if (photo?.previewUrl && photo.previewUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(photo.previewUrl);
-            }
-            editPhotos.splice(slotIdx, 1);
-            renderEditPhotosUI();
-        };
-
-        function openEditModal(prod) {
-            editingProduct = prod;
-            if (!editModal) return;
-
-            containerEl.querySelector('#edit-prod-title').value = prod.title || '';
-            containerEl.querySelector('#edit-prod-price').value = prod.price || '';
-            containerEl.querySelector('#edit-prod-stock').value = prod.stock !== undefined ? prod.stock : -1;
-            containerEl.querySelector('#edit-prod-category').value = prod.category || 'autres';
-            containerEl.querySelector('#edit-prod-desc').value = prod.description || '';
-
-            if (Array.isArray(prod.images) && prod.images.length > 0) {
-                editPhotos = prod.images.slice(0, 3).map((url) => ({
-                    url,
-                    file: null,
-                    previewUrl: url,
-                    compressedBlob: null,
-                    compressedDataUrl: url,
-                    isExisting: true,
-                }));
-            } else if (prod.image_url) {
-                editPhotos = [{
-                    url: prod.image_url,
-                    file: null,
-                    previewUrl: prod.image_url,
-                    compressedBlob: null,
-                    compressedDataUrl: prod.image_url,
-                    isExisting: true,
-                }];
-            } else {
-                editPhotos = [];
-            }
-
-            renderEditPhotosUI();
-
-            editModal.classList.remove('hidden');
-            requestAnimationFrame(() => editModal.classList.remove('opacity-0'));
-        }
-
-        function closeEditModal() {
-            if (editModal) {
-                editModal.classList.add('opacity-0');
-                setTimeout(() => editModal.classList.add('hidden'), 300);
-            }
-            editingProduct = null;
-            editPhotos.forEach((p) => {
-                if (p?.previewUrl && p.previewUrl.startsWith('blob:')) {
-                    URL.revokeObjectURL(p.previewUrl);
-                }
-            });
-            editPhotos = [];
-        }
-
-        closeEditBtn?.addEventListener('click', closeEditModal);
-        editModal?.addEventListener('click', (e) => {
-            if (e.target === editModal) closeEditModal();
-        });
-
-        editForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!editingProduct) return;
-
-            const title = containerEl.querySelector('#edit-prod-title').value.trim();
-            const price = containerEl.querySelector('#edit-prod-price').value;
-            const stock = containerEl.querySelector('#edit-prod-stock').value;
-            const category = containerEl.querySelector('#edit-prod-category').value;
-            const description = containerEl.querySelector('#edit-prod-desc').value.trim();
-            const imageFiles = editPhotos
-                .map((p) => p.compressedBlob || p.file || p.url)
-                .filter(Boolean);
-
-            editSubmitBtn.disabled = true;
-            editSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> Enregistrement...`;
-            if (editErrorEl) editErrorEl.classList.add('hidden');
-
-            try {
-                await updateProduct({
-                    productId: editingProduct.id,
-                    sellerId,
-                    title,
-                    price,
-                    stock,
-                    category,
-                    description,
-                    imageFiles,
-                });
-                closeEditModal();
-                await loadData();
-                showToast('Article mis à jour avec succès.', 'success');
-                if (typeof onProductChanged === 'function') onProductChanged();
-            } catch (err) {
-                if (editErrorEl) {
-                    editErrorEl.textContent = err.message || 'Erreur de mise à jour.';
-                    editErrorEl.classList.remove('hidden');
-                }
-            } finally {
-                editSubmitBtn.disabled = false;
-                editSubmitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk text-xs"></i><span>Enregistrer les modifications</span>`;
-            }
-        });
-
-        // 5. Actions sur les cartes de produits de la liste
+        // 4. Actions sur les cartes de produits de la liste
         containerEl.querySelectorAll('button[data-action]').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 const action = btn.getAttribute('data-action');
