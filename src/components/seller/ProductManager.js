@@ -764,7 +764,7 @@ export function createProductManager({
                         </button>
                     </div>
 
-                    <form id="edit-product-form" class="p-5 overflow-y-auto flex flex-col gap-4">
+                    <form id="edit-product-form" class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
                         <div id="edit-product-error" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600 font-medium"></div>
 
                         <!-- Titre -->
@@ -815,16 +815,20 @@ export function createProductManager({
                                 Vous pouvez supprimer une photo ou en ajouter une nouvelle dans les emplacements disponibles.
                             </p>
                         </div>
+                    </form>
 
+                    <!-- Bouton de validation TOUJOURS visible en bas de la modal (sticky footer) -->
+                    <div class="px-5 py-4 border-t border-slate-200/80 bg-white shrink-0">
                         <button 
                             type="submit" 
+                            form="edit-product-form"
                             id="btn-submit-edit-product" 
-                            class="w-full mt-2 py-3.5 bg-primary hover:bg-primary-hover active:scale-[0.99] text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 min-h-[46px] cursor-pointer"
+                            class="w-full py-3.5 bg-primary hover:bg-primary-hover active:scale-[0.99] text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 min-h-[46px] cursor-pointer"
                         >
                             <i class="fa-solid fa-floppy-disk text-xs"></i>
                             <span>Enregistrer les modifications</span>
                         </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         `;
