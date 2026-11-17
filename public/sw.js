@@ -7,7 +7,8 @@
  * 3. NETWORK-FIRST (avec fallback offline) : HTML et bundles JS/CSS Vite pour réception immédiate des mises à jour.
  */
 
-const CACHE_NAME = 'campus-market-v24';
+const CACHE_NAME = 'campus-market-v25';
+const IMAGE_CACHE_NAME = 'campus-market-images-v1';
 
 const STATIC_PRECACHE = [
     '/',
@@ -32,13 +33,24 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-// Activation : purge immédiate des anciens caches obsolètes
+// Purge LRU pour ne pas saturer l'espace de stockage de l'appareil
+async function trimCache(cacheName, maxItems) {
+    try {
+        const cache = await caches.open(cacheName);
+        const keys = await cache.keys();
+        if (keys.length > maxItems) {
+            await cache.delete(keys[0]);
+        }
+    } catch {}
+}
+
+// Activation : purge immédiate des anciens caches applicatifs (en préservant le cache d'images)
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
+                    if (cache !== CACHE_NAME && cache !== IMAGE_CACHE_NAME) {
                         console.log('[SW] Suppression ancien cache:', cache);
                         return caches.delete(cache);
                     }
@@ -59,13 +71,44 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // RÈGLE 1 : Exclusion stricte de toutes les requêtes Supabase (Auth, REST, Storage, Realtime)
-    if (url.hostname.includes('supabase.co') || url.pathname.startsWith('/rest/v1')) {
+    // RÈGLE 1 : Exclusion stricte des requêtes dynamiques Supabase (Auth, REST, Realtime, Functions)
+    const isSupabaseDynamic = (url.hostname.includes('supabase.co') && !url.pathname.includes('/storage/v1/object/public/')) ||
+        url.pathname.startsWith('/rest/v1') ||
+        url.pathname.startsWith('/auth/v1') ||
+        url.pathname.startsWith('/realtime/v1');
+
+    if (isSupabaseDynamic) {
         return; // Requête réseau directe sans interception
     }
 
     // Ne pas intercepter les requêtes non-GET
     if (request.method !== 'GET') {
+        return;
+    }
+
+    // RÈGLE 1.5 : CACHE-FIRST pour médias distants (Cloudflare R2 & Supabase Storage Public)
+    const isR2Image = url.hostname.includes('.r2.dev') || url.hostname.startsWith('cdn.campusmarket-uidt.com');
+    const isSupabasePublicStorage = url.hostname.includes('supabase.co') && url.pathname.includes('/storage/v1/object/public/');
+
+    if (isR2Image || isSupabasePublicStorage) {
+        event.respondWith(
+            caches.open(IMAGE_CACHE_NAME).then(async (cache) => {
+                const cachedResponse = await cache.match(request);
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                try {
+                    const networkResponse = await fetch(request);
+                    if (networkResponse && networkResponse.status === 200) {
+                        cache.put(request, networkResponse.clone()).catch(() => {});
+                        trimCache(IMAGE_CACHE_NAME, 150);
+                    }
+                    return networkResponse;
+                } catch {
+                    return caches.match('/assets/placeholder.webp');
+                }
+            })
+        );
         return;
     }
 

@@ -6,6 +6,7 @@
 
 import { supabase } from './supabase.js';
 import { compressImage, dataURLtoBlob } from '../utils/image-compressor.js';
+import { uploadMediaFile } from './storage-service.js';
 import {
     computeSubscriptionStatus,
     getMaxProductsForPlan,
@@ -16,7 +17,7 @@ import {
 const STORAGE_BUCKET = 'product-images';
 
 /**
- * Compresse et téléverse une photo produit vers Supabase Storage.
+ * Compresse et téléverse une photo produit vers Cloudflare R2 (avec repli Supabase Storage).
  * Si l'élément est déjà une URL distante existante, il est conservé tel quel.
  * @param {File|Blob|string} item
  * @param {string} sellerId
@@ -30,62 +31,19 @@ async function processAndUploadProductPhoto(item, sellerId, index = 0) {
     }
 
     try {
-        let blob = null;
-        if (item instanceof Blob && (item._isCompressed || item.type === 'image/jpeg')) {
-            blob = item;
-        } else if (item?.compressedBlob instanceof Blob) {
-            blob = item.compressedBlob;
-        } else if (typeof item === 'string' && item.startsWith('data:image/')) {
-            blob = dataURLtoBlob(item);
-        } else {
-            const compressedDataUrl = await compressImage(item, {
-                maxWidth: 800,
-                maxHeight: 800,
-                quality: 0.75,
-            });
-            blob = dataURLtoBlob(compressedDataUrl);
-        }
-
-        const fileName = `${sellerId || 'seller'}/${Date.now()}_prod_${index}.jpg`;
-
-        let { data: uploadData, error: uploadErr } = await supabase.storage
-            .from(STORAGE_BUCKET)
-            .upload(fileName, blob, {
-                contentType: 'image/jpeg',
-                upsert: true,
-            });
-
-        if (uploadErr) {
-            console.warn(`[ProductManagement] Erreur upload photo ${index}, tentative rafraîchissement...`, uploadErr);
-            try {
-                await supabase.auth.refreshSession();
-                const retry = await supabase.storage
-                    .from(STORAGE_BUCKET)
-                    .upload(fileName, blob, {
-                        contentType: 'image/jpeg',
-                        upsert: true,
-                    });
-                uploadData = retry.data;
-                uploadErr = retry.error;
-            } catch {}
-        }
-
-        if (uploadErr) {
-            console.error(`[ProductManagement] Échec upload photo ${index}:`, uploadErr);
-            throw new Error(`Échec du téléversement de la photo ${index + 1} (${uploadErr.message || 'Erreur stockage'}).`);
-        }
-
-        if (uploadData) {
-            const { data: publicUrlData } = supabase.storage
-                .from(STORAGE_BUCKET)
-                .getPublicUrl(fileName);
-            return publicUrlData?.publicUrl || null;
-        }
+        const publicUrl = await uploadMediaFile(item, {
+            folder: sellerId || 'seller',
+            filename: `prod_${index}`,
+            maxWidth: 600,
+            maxHeight: 600,
+            quality: 0.72,
+            context: 'product',
+        });
+        return publicUrl;
     } catch (err) {
         console.error(`[ProductManagement] Erreur traitement photo ${index}:`, err);
         throw err;
     }
-    return null;
 }
 
 /**

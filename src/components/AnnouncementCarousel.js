@@ -6,6 +6,7 @@
 
 import { escapeHTML } from '../utils/security.js';
 import { CAROUSEL_TYPES, DEFAULT_CAROUSEL_SLIDES } from '../config/announcements.js';
+import { resolveMediaUrl } from '../utils/image-compressor.js';
 
 /**
  * Crée le carrousel 16:9 interactif de la page d'accueil.
@@ -124,7 +125,8 @@ export function createAnnouncementCarousel({
 
     function renderSlideHTML(slide, index) {
         const typeConfig = CAROUSEL_TYPES[slide.slide_type] || CAROUSEL_TYPES.annonce;
-        const hasCustomImage = Boolean(slide.image_url && slide.image_url.trim());
+        const resolvedImageUrl = resolveMediaUrl(slide.image_url);
+        const hasCustomImage = Boolean(resolvedImageUrl && resolvedImageUrl.trim());
         const gradientClass = typeConfig.gradient || 'from-blue-700 via-indigo-800 to-slate-950';
 
         return `
@@ -134,10 +136,11 @@ export function createAnnouncementCarousel({
             >
                 ${hasCustomImage ? `
                     <img 
-                        src="${escapeHTML(slide.image_url)}" 
+                        src="${escapeHTML(resolvedImageUrl)}" 
                         alt="${escapeHTML(slide.title || 'Affiche Campus Market')}"
                         class="w-full h-full object-cover object-center select-none pointer-events-none transition-transform duration-700 hover:scale-[1.02]"
                         loading="${index === 0 ? 'eager' : 'lazy'}"
+                        decoding="async"
                         onerror="this.style.display='none'; const fb = this.parentElement.querySelector('.carousel-fallback'); if (fb) fb.classList.remove('hidden');"
                     />
                     <!-- Repli visuel épuré si erreur de chargement de l'image -->

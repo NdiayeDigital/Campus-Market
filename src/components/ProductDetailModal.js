@@ -8,6 +8,7 @@ import { escapeHTML, formatSenegalPhone } from '../utils/security.js';
 import { shareProduct } from '../utils/share.js';
 import { showToast } from '../utils/notifications.js';
 import { setProductSEO, resetDefaultSEO } from '../utils/seo.js';
+import { resolveMediaUrl } from '../utils/image-compressor.js';
 
 /**
  * Crée le modal de détails d'un produit.
@@ -58,11 +59,12 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
         const rawImages = Array.isArray(p.images) && p.images.length > 0 
             ? p.images.filter(Boolean) 
             : (p.image_url ? [p.image_url] : []);
-        const productImages = rawImages.map((img) => 
-            img?.includes('photo-1611591475823-3882f0592965')
+        const productImages = rawImages.map((img) => {
+            const resolved = resolveMediaUrl(img);
+            return resolved?.includes('photo-1611591475823-3882f0592965')
                 ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
-                : img
-        );
+                : resolved;
+        });
         const hasMultipleImages = productImages.length > 1;
         const safeActiveImage = productImages[activeImageIndex] || productImages[0] || null;
 
@@ -183,7 +185,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm overflow-hidden shrink-0 border border-slate-200">
                                 ${p.seller?.avatar_url 
-                                    ? `<img src="${escapeHTML(p.seller.avatar_url)}" alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.textContent='${((sellerName[0] || 'V')).toUpperCase()}';">`
+                                    ? `<img src="${escapeHTML(resolveMediaUrl(p.seller.avatar_url))}" alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.textContent='${((sellerName[0] || 'V')).toUpperCase()}';">`
                                     : ((sellerName[0] || 'V')).toUpperCase()
                                 }
                             </div>

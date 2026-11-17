@@ -6,6 +6,7 @@
 
 import { escapeHTML } from '../utils/security.js';
 import { PARTNER_CATEGORIES, DEFAULT_PARTNERS, getBecomePartnerWhatsappUrl } from '../config/partners.js';
+import { resolveMediaUrl } from '../utils/image-compressor.js';
 
 /**
  * Crée la section des partenaires officiels en petits blocs compacts côte à côte.
@@ -37,7 +38,8 @@ export function createPartnersSection({
         : DEFAULT_PARTNERS;
 
     function renderPartnerTile(partner) {
-        const hasLogo = Boolean(partner.logo_url && partner.logo_url.trim());
+        const resolvedLogoUrl = resolveMediaUrl(partner.logo_url);
+        const hasLogo = Boolean(resolvedLogoUrl && resolvedLogoUrl.trim());
         const initial = (partner.name?.[0] || 'P').toUpperCase();
         const catConfig = PARTNER_CATEGORIES[partner.category] || PARTNER_CATEGORIES.autre;
 
@@ -53,9 +55,11 @@ export function createPartnersSection({
                 <div class="w-14 h-14 min-w-[56px] min-h-[56px] rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1.5 shrink-0 group-hover:bg-primary/5 transition-colors overflow-hidden shadow-2xs">
                     ${hasLogo ? `
                         <img 
-                            src="${escapeHTML(partner.logo_url)}" 
+                            src="${escapeHTML(resolvedLogoUrl)}" 
                             alt="Logo ${escapeHTML(partner.name)}" 
                             class="max-w-full max-h-full w-auto h-auto object-contain"
+                            loading="lazy"
+                            decoding="async"
                             onerror="this.parentElement.innerHTML='<span class=\\'font-heading font-black text-primary text-base\\'>${escapeHTML(initial)}</span>'"
                         />
                     ` : `
@@ -92,7 +96,8 @@ export function createPartnersSection({
 
         const catConfig = PARTNER_CATEGORIES[partner.category] || PARTNER_CATEGORIES.autre;
         const badgeStyle = catConfig.badgeClass || 'bg-slate-50 text-slate-700 border-slate-200';
-        const hasLogo = Boolean(partner.logo_url && partner.logo_url.trim());
+        const resolvedLogoUrl = resolveMediaUrl(partner.logo_url);
+        const hasLogo = Boolean(resolvedLogoUrl && resolvedLogoUrl.trim());
         const initial = (partner.name?.[0] || 'P').toUpperCase();
         const whatsappUrl = getBecomePartnerWhatsappUrl();
 
@@ -117,7 +122,7 @@ export function createPartnersSection({
                     <div class="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200/80 p-2.5 flex items-center justify-center shadow-xs overflow-hidden">
                         ${hasLogo ? `
                             <img 
-                                src="${escapeHTML(partner.logo_url)}" 
+                                src="${escapeHTML(resolvedLogoUrl)}" 
                                 alt="Logo ${escapeHTML(partner.name)}" 
                                 class="max-w-full max-h-full w-auto h-auto object-contain"
                                 onerror="this.parentElement.innerHTML='<span class=\\'font-heading font-black text-primary text-2xl\\'>${escapeHTML(initial)}</span>'"

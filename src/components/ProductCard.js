@@ -6,6 +6,7 @@
 import { escapeHTML } from '../utils/security.js';
 import { shareProduct } from '../utils/share.js';
 import { showToast } from '../utils/notifications.js';
+import { resolveMediaUrl } from '../utils/image-compressor.js';
 
 /**
  * Crée une carte de produit.
@@ -30,10 +31,10 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
 
     // Gestion multi-photos et image principale
     const productImages = Array.isArray(product.images) && product.images.length > 0 
-        ? product.images.filter(Boolean) 
-        : (product.image_url ? [product.image_url] : []);
+        ? product.images.filter(Boolean).map(resolveMediaUrl) 
+        : (product.image_url ? [resolveMediaUrl(product.image_url)] : []);
     const photoCount = productImages.length;
-    const primaryImg = productImages[0] || product.image_url;
+    const primaryImg = productImages[0] || resolveMediaUrl(product.image_url);
 
     // Badges statut
     let statusBadge = '';
@@ -61,6 +62,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                 src="${escapeHTML(safeImageUrl)}" 
                 alt="${escapeHTML(product.title)} — Campus Market UIDT" 
                 loading="lazy"
+                decoding="async"
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
                 onerror="this.onerror=null; this.src='/assets/placeholder.webp';"
             >
@@ -79,7 +81,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
     const sellerName = product.seller
         ? `${product.seller.prenom || ''} ${product.seller.nom || ''}`.trim()
         : 'Vendeur UIDT';
-    const sellerAvatar = product.seller?.avatar_url;
+    const sellerAvatar = resolveMediaUrl(product.seller?.avatar_url);
 
     cardEl.innerHTML = `
         <!-- Image Container -->
