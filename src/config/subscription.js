@@ -4,8 +4,8 @@
  */
 
 export const FEATURE_FLAGS = {
-    QUOTAS_ENABLED: true,   // Désactivé par défaut (sécurité production)
-    ANNONCES_ENABLED: true, // Désactivé par défaut (sécurité production)
+    QUOTAS_ENABLED: false,   // Désactivé par défaut (sécurité production)
+    ANNONCES_ENABLED: false, // Désactivé par défaut (sécurité production)
 };
 
 export const COMPTEURS_DEPUIS_BASCULE = true; // Démarrage des compteurs Découverte à la date de bascule

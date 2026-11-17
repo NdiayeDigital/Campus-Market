@@ -26,7 +26,7 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
     modalEl.id = 'seller-subscription-modal-overlay';
     modalEl.className = 'fixed inset-0 z-[70] bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
-    let selectedPlanId = seller?.subscription_plan && SUBSCRIPTION_PLANS[seller.subscription_plan] ? seller.subscription_plan : 'starter';
+    let selectedPlanId = seller?.subscription_plan && SUBSCRIPTION_PLANS[seller.subscription_plan]?.price > 0 ? seller.subscription_plan : 'starter';
     let isProcessing = false;
     let awaitingConfirmation = false;
     let submittedProof = false;
@@ -90,7 +90,9 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
     }
 
     function render() {
-        const currentPlan = SUBSCRIPTION_PLANS[selectedPlanId] || SUBSCRIPTION_PLANS.starter;
+        const currentPlan = SUBSCRIPTION_PLANS[selectedPlanId] && SUBSCRIPTION_PLANS[selectedPlanId].price > 0 
+            ? SUBSCRIPTION_PLANS[selectedPlanId] 
+            : SUBSCRIPTION_PLANS.starter;
 
         modalEl.innerHTML = `
             <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh] animate-in fade-in duration-200">
@@ -145,18 +147,36 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                 </div>
             </div>
 
-            <!-- Sélection de la Formule (Starter ou Pro) -->
+            <!-- Formule actuelle si Découverte -->
+            ${seller?.pack_actuel === 'decouverte' || seller?.subscription_plan === 'decouverte' ? `
+                <div class="bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center text-xs shrink-0 shadow-xs">
+                            <i class="fa-solid fa-compass"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-heading font-extrabold text-slate-900 text-xs">Pack Découverte (0 FCFA • Gratuit)</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">Actif sans frais</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-0.5">1 article actif • 15 commandes/mois • 5 ventes validées/mois</p>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- Sélection de la Formule Supérieure (Starter ou Pro) -->
             <div class="flex flex-col gap-2.5">
                 <div class="flex items-center justify-between">
                     <h4 class="font-heading font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                         <i class="fa-solid fa-layer-group text-primary text-xs"></i>
-                        <span>1. Choisissez votre formule</span>
+                        <span>Passez à une formule supérieure (Wave / OM)</span>
                     </h4>
                     <span class="text-[10px] text-slate-400 font-bold">Renouvellement 30 jours</span>
                 </div>
 
                 <div class="grid grid-cols-1 gap-3">
-                    ${Object.values(SUBSCRIPTION_PLANS).map((p) => {
+                    ${Object.values(SUBSCRIPTION_PLANS).filter((p) => (p.price || 0) > 0).map((p) => {
                         const isSelected = p.id === selectedPlanId;
                         return `
                             <div 
@@ -378,7 +398,9 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
         // 2. Bouton pour ouvrir le paiement SasPay
         modalEl.querySelector('#btn-proceed-subscription')?.addEventListener('click', async () => {
             if (isProcessing) return;
-            const currentPlan = SUBSCRIPTION_PLANS[selectedPlanId] || SUBSCRIPTION_PLANS.starter;
+            const currentPlan = SUBSCRIPTION_PLANS[selectedPlanId] && SUBSCRIPTION_PLANS[selectedPlanId].price > 0 
+            ? SUBSCRIPTION_PLANS[selectedPlanId] 
+            : SUBSCRIPTION_PLANS.starter;
             const paymentUrl = currentPlan.paymentLink || 'https://link.saspay.me/hgc4jifsarq';
 
             isProcessing = true;
@@ -474,10 +496,12 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
 
     async function open(defaultPlan = null) {
         stopPolling();
-        if (defaultPlan && SUBSCRIPTION_PLANS[defaultPlan]) {
+        if (defaultPlan && SUBSCRIPTION_PLANS[defaultPlan] && SUBSCRIPTION_PLANS[defaultPlan].price > 0) {
             selectedPlanId = defaultPlan;
-        } else if (seller?.subscription_plan && SUBSCRIPTION_PLANS[seller.subscription_plan]) {
+        } else if (seller?.subscription_plan && SUBSCRIPTION_PLANS[seller.subscription_plan] && SUBSCRIPTION_PLANS[seller.subscription_plan].price > 0) {
             selectedPlanId = seller.subscription_plan;
+        } else {
+            selectedPlanId = 'starter';
         }
         awaitingConfirmation = false;
         submittedProof = false;

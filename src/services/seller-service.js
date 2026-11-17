@@ -629,7 +629,10 @@ export function getSellerSubscription(profile) {
  */
 export async function initiateSubscriptionPayment({ sellerId, plan, operator, sellerEmail, sellerName }) {
     if (!sellerId) throw new Error('ID vendeur manquant.');
-    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    if (plan === 'decouverte' || (SUBSCRIPTION_PLANS[plan] && SUBSCRIPTION_PLANS[plan].price <= 0)) {
+        throw new Error('Le pack Découverte est entièrement gratuit et ne nécessite aucun paiement.');
+    }
+    const validPlan = SUBSCRIPTION_PLANS[plan] && SUBSCRIPTION_PLANS[plan].price > 0 ? plan : 'starter';
     const validOperator = operator === 'om' ? 'om' : 'wave';
 
     const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';

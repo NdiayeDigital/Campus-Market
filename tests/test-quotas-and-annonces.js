@@ -335,6 +335,13 @@ assert.equal(canSubmitAnnouncement(2).allowed, true, '2 en attente -> création 
 assert.equal(canSubmitAnnouncement(3).allowed, false, '3 en attente -> création bloquée');
 console.log('   ✅ FR-19 Montant et Quota validés : 250 FCFA, 3 en attente max.');
 
+// Contrôle strict : Pack Découverte 100% gratuit (aucun lien ni paiement SasPay)
+assert.equal(SUBSCRIPTION_PLANS.decouverte.price, 0, 'Le pack Découverte doit être strictement à 0 FCFA');
+assert.equal(SUBSCRIPTION_PLANS.decouverte.paymentLink, null, 'Le pack Découverte ne doit avoir AUCUN lien de paiement');
+const paidModalPlans = Object.values(SUBSCRIPTION_PLANS).filter((p) => (p.price || 0) > 0);
+assert.ok(!paidModalPlans.some((p) => p.id === 'decouverte'), 'Le pack Découverte ne doit jamais figurer parmi les plans payants du modal');
+console.log('   ✅ Pack Découverte 100% gratuit validé : aucun bouton ni lien de paiement SasPay.');
+
 // =========================================================================
 // TEST 16 : Feature Flags Toggles
 // =========================================================================
