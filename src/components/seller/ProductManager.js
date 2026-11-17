@@ -940,8 +940,11 @@ export function createProductManager({
                                 : rawImg;
 
                             // Badges de statut & alertes de stock
+                            const isMaskedQuota = prod.quota_status === 'masqué_quota' || prod.is_active === false;
                             let statusBadge = '';
-                            if (isSold) {
+                            if (isMaskedQuota) {
+                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1"><i class="fa-solid fa-lock text-[9px]"></i> Masqué (Quota)</span>`;
+                            } else if (isSold) {
                                 statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">Vendu</span>`;
                             } else if (isPaused) {
                                 statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Pause</span>`;

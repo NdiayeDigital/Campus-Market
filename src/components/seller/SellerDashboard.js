@@ -24,8 +24,11 @@ import { showToast, showConfirm } from '../../utils/notifications.js';
 import { exportOrdersToCSV } from '../../utils/export-csv.js';
 import { shareSellerShop } from '../../utils/share.js';
 import { createSubscriptionModal } from './SubscriptionModal.js';
+import { createSellerProductQuotaModal } from './SellerProductQuotaModal.js';
 import { createSellerProfileView } from './SellerProfileView.js';
 import { createSellerAnnounceModal } from './SellerAnnounceModal.js';
+import { getSellerQuotaConsumption } from '../../services/quota-service.js';
+import { createDevQuotaSandbox } from '../dev/DevQuotaSandbox.js';
 import { computeSubscriptionStatus, SUBSCRIPTION_PLANS, FEATURE_FLAGS } from '../../config/subscription.js';
 import logoUrl from '../../assets/logo.webp';
 
@@ -65,6 +68,9 @@ export function createSellerDashboard({
     let orderPavillonFilter = 'all';
     let realtimeChannel = null;
     let pollingTimer = null;
+    let quotaConsumption = null;
+    let mockScenarioData = null;
+    let productQuotaModal = null;
 
     /**
      * Vérifie de façon centralisée si la boutique ou le profil vendeur est suspendu.
@@ -118,6 +124,14 @@ export function createSellerDashboard({
                         }
                     }
                 }
+            }
+
+            // Récupération des quotas marchands
+            try {
+                quotaConsumption = await getSellerQuotaConsumption(sellerId);
+            } catch (qErr) {
+                console.warn('[SellerDashboard] Impossible de récupérer les quotas:', qErr);
+                quotaConsumption = null;
             }
 
             dashboardData = freshData;
@@ -304,6 +318,31 @@ export function createSellerDashboard({
         }
     }
 
+    async function openProductQuotaHandler() {
+        try {
+            const { data: prods } = await supabase
+                .from('products')
+                .select('*')
+                .eq('seller_id', sellerId)
+                .order('created_at', { ascending: false });
+
+            if (!productQuotaModal) {
+                productQuotaModal = createSellerProductQuotaModal({
+                    seller: dashboardData?.profile || seller,
+                    products: prods || [],
+                    onProductChosen: () => {
+                        loadData();
+                    },
+                    onShowToast,
+                });
+                document.body.appendChild(productQuotaModal.element);
+            }
+            productQuotaModal.open(prods || []);
+        } catch (err) {
+            console.warn('[SellerDashboard] Erreur chargement produits pour modal quota:', err);
+        }
+    }
+
     function renderSubscriptionBanner(subCalc) {
         if (!subCalc || subCalc.status === 'superadmin') return '';
 
@@ -320,7 +359,7 @@ export function createSellerDashboard({
                                     🧭 Formule Découverte (0 FCFA/mois)
                                 </span>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
-                                    Actif
+                                    Actif sans frais
                                 </span>
                             </div>
                             <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">
@@ -328,13 +367,23 @@ export function createSellerDashboard({
                             </p>
                         </div>
                     </div>
-                    <button 
-                        type="button" 
-                        class="btn-trigger-subscription px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-heading font-extrabold text-xs rounded-xl shadow-md shadow-primary/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
-                    >
-                        <i class="fa-solid fa-crown text-xs"></i>
-                        <span>Découvrir les packs Pro</span>
-                    </button>
+                    <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+                        <button 
+                            type="button" 
+                            id="btn-trigger-choose-active-product"
+                            class="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-heading font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                        >
+                            <i class="fa-solid fa-box text-xs text-primary"></i>
+                            <span>Gérer mon article actif</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            class="btn-trigger-subscription px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-heading font-extrabold text-xs rounded-xl shadow-md shadow-primary/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                        >
+                            <i class="fa-solid fa-crown text-xs"></i>
+                            <span>Découvrir les packs Pro</span>
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -459,6 +508,107 @@ export function createSellerDashboard({
         return '';
     }
 
+    function renderQuotaProgressSection(quotas, subCalc) {
+        if (!quotas || (!quotas.enabled && subCalc?.status !== 'decouverte')) return '';
+
+        const prods = quotas.activeProducts || { current: 1, max: 1, percent: 100 };
+        const orders = quotas.monthlyOrders || { current: 0, max: 15, percent: 0 };
+        const sales = quotas.validatedSales || { current: 0, max: 5, percent: 0 };
+
+        const ordersCurrent = orders.current || 0;
+        const ordersMax = orders.max || 15;
+        const ordersColor = ordersCurrent >= ordersMax ? 'bg-rose-500' : (ordersCurrent >= Math.floor(ordersMax * 0.8) ? 'bg-amber-500' : 'bg-primary');
+        const ordersText = ordersCurrent >= ordersMax ? 'text-rose-600' : (ordersCurrent >= Math.floor(ordersMax * 0.8) ? 'text-amber-600' : 'text-slate-900');
+
+        const salesCurrent = sales.current || 0;
+        const salesMax = sales.max || 5;
+        const salesColor = salesCurrent >= salesMax ? 'bg-rose-500' : (salesCurrent >= Math.floor(salesMax * 0.8) ? 'bg-amber-500' : 'bg-emerald-500');
+        const salesText = salesCurrent >= salesMax ? 'text-rose-600' : (salesCurrent >= Math.floor(salesMax * 0.8) ? 'text-amber-600' : 'text-slate-900');
+
+        return `
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center text-sm font-black shrink-0">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-2 flex-wrap">
+                                <span>Suivi des Quotas du Mois (Fuseau Dakar GMT)</span>
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-700 border border-slate-200">Pack Découverte</span>
+                            </h3>
+                            <p class="text-[11px] text-slate-500">Réinitialisation automatique chaque 1er du mois à 00:00</p>
+                        </div>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="btn-trigger-subscription text-xs font-bold text-primary hover:text-primary-hover flex items-center gap-1 self-start sm:self-center transition-colors cursor-pointer"
+                    >
+                        <span>Augmenter mes quotas</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </button>
+                </div>
+
+                <!-- Les 3 jauges visuelles -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <!-- 1. Articles en vitrine -->
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between gap-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                                <i class="fa-solid fa-box text-primary text-[11px]"></i>
+                                <span>Article en vitrine</span>
+                            </span>
+                            <span class="font-extrabold text-slate-900 tabular-nums">${prods.current} / ${prods.max}</span>
+                        </div>
+                        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div class="bg-primary h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, (prods.current / (prods.max || 1)) * 100)}%"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-500">
+                            <span>1 article max en Découverte</span>
+                            <button type="button" class="btn-trigger-choose-product text-primary font-bold hover:underline cursor-pointer">Changer</button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Commandes mensuelles -->
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between gap-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                                <i class="fa-solid fa-bell text-amber-500 text-[11px]"></i>
+                                <span>Commandes ce mois</span>
+                            </span>
+                            <span class="font-extrabold ${ordersText} tabular-nums">${ordersCurrent} / ${ordersMax}</span>
+                        </div>
+                        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div class="${ordersColor} h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, (ordersCurrent / ordersMax) * 100)}%"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] ${ordersCurrent >= ordersMax ? 'text-rose-600 font-bold' : (ordersCurrent >= Math.floor(ordersMax * 0.8) ? 'text-amber-600 font-bold' : 'text-slate-500')}">
+                            <span>${ordersCurrent >= ordersMax ? 'Plafond atteint' : (ordersCurrent >= Math.floor(ordersMax * 0.8) ? 'Bientôt à la limite' : 'Jusqu\'à 15 commandes/mois')}</span>
+                            <span>${Math.round((ordersCurrent / ordersMax) * 100)}%</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Ventes certifiées -->
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between gap-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i>
+                                <span>Ventes certifiées</span>
+                            </span>
+                            <span class="font-extrabold ${salesText} tabular-nums">${salesCurrent} / ${salesMax}</span>
+                        </div>
+                        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div class="${salesColor} h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, (salesCurrent / salesMax) * 100)}%"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] ${salesCurrent >= salesMax ? 'text-rose-600 font-bold' : (salesCurrent >= Math.floor(salesMax * 0.8) ? 'text-amber-600 font-bold' : 'text-slate-500')}">
+                            <span>${salesCurrent >= salesMax ? 'Limite de ventes atteinte' : (salesCurrent >= Math.floor(salesMax * 0.8) ? 'Plus qu\'1 vente disponible' : 'Jusqu\'à 5 ventes/mois')}</span>
+                            <span>${Math.round((salesCurrent / salesMax) * 100)}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     function render() {
         if (isLoading) {
             containerEl.innerHTML = `
@@ -477,7 +627,8 @@ export function createSellerDashboard({
 
         const data = dashboardData || {};
         const currentProfile = data.profile || seller;
-        const subCalc = computeSubscriptionStatus(currentProfile);
+        const subCalc = mockScenarioData?.subCalc || computeSubscriptionStatus(currentProfile);
+        const effectiveQuotas = mockScenarioData?.quotas || quotaConsumption;
         const isSuspended = checkSellerSuspended();
         const isOpen = !isSuspended && (data.isOpen !== false);
         const allOrders = data.recentOrders || [];
@@ -1132,7 +1283,7 @@ export function createSellerDashboard({
 
                 <!-- Zone de contenu dynamique -->
                 <div id="seller-tab-content" class="w-full">
-                    ${activeSubTab === 'dashboard' ? renderDashboardHomeTab(data, allOrders, subCalc, isSuspended, isOpen) : ''}
+                    ${activeSubTab === 'dashboard' ? renderDashboardHomeTab(data, allOrders, subCalc, isSuspended, isOpen, effectiveQuotas) : ''}
                     ${activeSubTab === 'orders' ? renderOrdersTab(allOrders) : ''}
                 </div>
             </main>
@@ -1278,9 +1429,26 @@ export function createSellerDashboard({
         }
 
         bindEvents();
+
+        // Montage de la Sandbox de test interactive en environnement dev ou prévisualisation
+        const isDevPreview = import.meta.env.DEV || (typeof window !== 'undefined' && (window.location.search.includes('preview=quotas') || localStorage.getItem('dev_sandbox') === 'true'));
+        if (isDevPreview && !containerEl.querySelector('#dev-quota-sandbox')) {
+            const devSandbox = createDevQuotaSandbox({
+                realSeller: currentProfile,
+                onApplyMockScenario: ({ subCalc: mockSub, quotas: mockQ }) => {
+                    mockScenarioData = { subCalc: mockSub, quotas: mockQ };
+                    render();
+                },
+                onResetRealData: () => {
+                    mockScenarioData = null;
+                    render();
+                },
+            });
+            containerEl.appendChild(devSandbox.element);
+        }
     }
 
-    function renderDashboardHomeTab(data, allOrders, subCalc, isSuspended, isOpen) {
+    function renderDashboardHomeTab(data, allOrders, subCalc, isSuspended, isOpen, effectiveQuotas = null) {
         const pendingOrders = allOrders.filter(
             (o) => o.status === 'pending' || o.status === 'processing' || o.status === 'confirmed'
         );
@@ -1290,6 +1458,9 @@ export function createSellerDashboard({
             <div class="flex flex-col gap-6 w-full animate-fade-in">
                 <!-- 1. Bannière d'Abonnement (uniquement sur le Dashboard) -->
                 ${renderSubscriptionBanner(subCalc)}
+
+                <!-- 1.bis. Suivi Visuel des Quotas Mensuels -->
+                ${renderQuotaProgressSection(effectiveQuotas, subCalc)}
 
                 <!-- 2. Guide de Démarrage Rapide (Onboarding Hero) si nouveau vendeur -->
                 ${(allOrders.length === 0 || Number(data.totalProductsCount || 0) === 0) && !isSuspended ? `
@@ -1963,6 +2134,11 @@ export function createSellerDashboard({
         containerEl.querySelector('#drawer-btn-subscription')?.addEventListener('click', () => {
             closeDrawer();
             openSubscriptionHandler();
+        });
+
+        // Gestion du choix de l'article actif (Pack Découverte)
+        containerEl.querySelectorAll('.btn-trigger-choose-product, #btn-trigger-choose-active-product').forEach((btn) => {
+            btn.addEventListener('click', openProductQuotaHandler);
         });
 
         // Gestion de l'Annonce Sponsorisée (250 FCFA)

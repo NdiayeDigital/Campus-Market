@@ -39,7 +39,8 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
             : false;
         const isOpen = p.seller ? (p.seller.is_open !== false && !isSuspended) : true;
         const isOutOfStock = p.stock === 0;
-        const isUnavailable = !isOpen || isOutOfStock || isSuspended;
+        const isMaskedQuota = p.quota_status === 'masqué_quota' || p.is_active === false;
+        const isUnavailable = !isOpen || isOutOfStock || isSuspended || isMaskedQuota;
 
         const sellerName = p.seller
             ? `${p.seller.prenom || ''} ${p.seller.nom || ''}`.trim()
@@ -238,6 +239,12 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                     </div>
 
                     <!-- Bouton d'ajout au panier -->
+                    ${isMaskedQuota ? `
+                        <div class="w-full p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center gap-2 text-amber-800 text-xs font-bold">
+                            <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
+                            <span>Produit momentanément indisponible</span>
+                        </div>
+                    ` : ''}
                     <button 
                         id="btn-detail-add-cart"
                         ${isUnavailable ? 'disabled' : ''}
@@ -248,7 +255,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                         }"
                     >
                         <i class="fa-solid fa-bag-shopping text-sm"></i>
-                        <span>${isUnavailable ? 'Non disponible à la commande' : 'Ajouter au panier'}</span>
+                        <span>${isMaskedQuota ? 'Produit momentanément indisponible' : (isUnavailable ? 'Non disponible à la commande' : 'Ajouter au panier')}</span>
                     </button>
                 </div>
             </div>
