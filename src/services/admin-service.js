@@ -14,6 +14,7 @@ import {
 import { DEFAULT_CAROUSEL_SLIDES, CAROUSEL_TYPES } from '../config/announcements.js';
 import { DEFAULT_PARTNERS, PARTNER_CATEGORIES } from '../config/partners.js';
 import { compressImage, dataURLtoBlob } from '../utils/image-compressor.js';
+import { uploadMediaFile } from './storage-service.js';
 
 /**
  * Vérifie formellement si l'utilisateur possède le rôle 'superadmin'.
@@ -1430,7 +1431,7 @@ export async function deletePartner(id) {
 }
 
 /**
- * Téléverse un média d'administration (bannière ou logo) vers Supabase Storage.
+ * Téléverse un média d'administration (bannière ou logo) vers Cloudflare R2 (avec repli Supabase).
  * @param {File|Blob} file
  * @param {string} [folder='carousel'] - 'carousel' ou 'partners'
  * @returns {Promise<string>} URL publique du fichier
@@ -1438,35 +1439,21 @@ export async function deletePartner(id) {
 export async function uploadAdminMedia(file, folder = 'carousel') {
     if (!file) throw new Error('Aucun fichier fourni.');
 
-    // Compression adaptée
-    let blob;
-    if (folder === 'carousel') {
-        const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 720, quality: 0.8 });
-        blob = dataURLtoBlob(compressed);
-    } else {
-        const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
-        blob = dataURLtoBlob(compressed);
+    const isCarousel = folder === 'carousel';
+    const publicUrl = await uploadMediaFile(file, {
+        folder,
+        filename: Math.random().toString(36).substring(2, 7),
+        maxWidth: isCarousel ? 1200 : 400,
+        maxHeight: isCarousel ? 675 : 400,
+        quality: isCarousel ? 0.78 : 0.8,
+        context: isCarousel ? 'carousel' : 'partner',
+    });
+
+    if (!publicUrl) {
+        throw new Error("Échec de l'upload du média.");
     }
 
-    const ext = 'jpg';
-    const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-        .from('products')
-        .upload(fileName, blob, {
-            contentType: 'image/jpeg',
-            upsert: true,
-        });
-
-    if (uploadError) {
-        throw new Error(`Échec de l'upload du média : ${uploadError.message}`);
-    }
-
-    const { data: publicData } = supabase.storage
-        .from('products')
-        .getPublicUrl(fileName);
-
-    return publicData?.publicUrl || '';
+    return publicUrl;
 }
 
 /**

@@ -7,6 +7,7 @@
 import { supabase } from './supabase.js';
 import { isUniversityEmail } from '../utils/security.js';
 import { compressImage, dataURLtoBlob } from '../utils/image-compressor.js';
+import { uploadMediaFile } from './storage-service.js';
 import { SUPPORT_CONFIG } from '../config/support.js';
 import {
     SUBSCRIPTION_PLANS,
@@ -907,58 +908,14 @@ export async function uploadSellerLogo({ sellerId, file }) {
     if (!sellerId) throw new Error('Identifiant vendeur requis pour téléverser un logo.');
     if (!file) throw new Error('Fichier image requis pour le logo.');
 
-    const STORAGE_BUCKET = 'product-images';
-    let blob = null;
-
-    if (file instanceof Blob && (file._isCompressed || file.type === 'image/jpeg' || file.type === 'image/webp')) {
-        blob = file;
-    } else if (typeof file === 'string' && file.startsWith('data:image/')) {
-        blob = dataURLtoBlob(file);
-    } else {
-        // Compression en format carré 400x400 max pour avatar boutique
-        const compressedDataUrl = await compressImage(file, {
-            maxWidth: 400,
-            maxHeight: 400,
-            quality: 0.8,
-        });
-        blob = dataURLtoBlob(compressedDataUrl);
-    }
-
-    const fileName = `${sellerId}/avatar_${Date.now()}.jpg`;
-
-    let { data: uploadData, error: uploadErr } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .upload(fileName, blob, {
-            contentType: 'image/jpeg',
-            upsert: true,
-        });
-
-    if (uploadErr) {
-        console.warn('[SellerService] Erreur upload avatar 1, tentative avec rafraîchissement auth...', uploadErr);
-        try {
-            await supabase.auth.refreshSession();
-            const retry = await supabase.storage
-                .from(STORAGE_BUCKET)
-                .upload(fileName, blob, {
-                    contentType: 'image/jpeg',
-                    upsert: true,
-                });
-            uploadData = retry.data;
-            uploadErr = retry.error;
-        } catch (retryEx) {
-            console.warn('[SellerService] Exception rafraîchissement auth:', retryEx);
-        }
-    }
-
-    if (uploadErr) {
-        throw new Error(`Échec du téléversement du logo (${uploadErr.message || 'Erreur stockage'}). Veuillez réessayer.`);
-    }
-
-    const { data: publicUrlData } = supabase.storage
-        .from(STORAGE_BUCKET)
-        .getPublicUrl(fileName);
-
-    const avatarUrl = publicUrlData?.publicUrl || null;
+    const avatarUrl = await uploadMediaFile(file, {
+        folder: sellerId,
+        filename: 'avatar',
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.8,
+        context: 'avatar',
+    });
 
     if (!avatarUrl) {
         throw new Error("Impossible d'obtenir l'URL publique du logo.");
@@ -970,7 +927,7 @@ export async function uploadSellerLogo({ sellerId, file }) {
         avatar_url: avatarUrl,
     });
 
-    return { avatar_url: avatarUrl };
+    return avatarUrl;
 }
 
 /**

@@ -1,7 +1,8 @@
 /**
  * Module de redimensionnement et de compression d'images multi-stratégies via Canvas HTML5.
  * Optimisé pour les connexions mobiles, les smartphones (Android / iOS / Safari)
- * et le stockage Supabase Storage.
+ * et le stockage Cloudflare R2 / Supabase Storage.
+ * Format privilégié : WebP (75% plus léger que JPEG) avec repli transparent sur JPEG.
  */
 
 /**
@@ -54,7 +55,7 @@ async function loadImageSource(file) {
                     }
                 };
             }
-        } catch (bitmapErr) {
+        } catch {
             // Repli gracieux vers la stratégie 2
         }
     }
@@ -77,7 +78,7 @@ async function loadImageSource(file) {
                     try { URL.revokeObjectURL(objectUrl); } catch {}
                 }
             };
-        } catch (objUrlErr) {
+        } catch {
             // Repli vers stratégie 3
         }
     }
@@ -107,7 +108,7 @@ async function loadImageSource(file) {
                 width: loadedImg.naturalWidth || loadedImg.width,
                 height: loadedImg.naturalHeight || loadedImg.height,
             };
-        } catch (readerErr) {
+        } catch {
             // Repli vers stratégie 4 si FileReader a échoué
         }
     }
@@ -132,7 +133,7 @@ async function loadImageSource(file) {
                     try { URL.revokeObjectURL(objectUrl); } catch {}
                 }
             };
-        } catch (bufErr) {
+        } catch {
             // Échec complet de la cascade
         }
     }
@@ -141,15 +142,33 @@ async function loadImageSource(file) {
 }
 
 /**
- * Compresse et redimensionne une image côté client au format JPEG.
+ * Détermine si le navigateur supporte l'exportation Canvas en WebP.
+ * @returns {boolean}
+ */
+function isWebpSupported() {
+    if (typeof document === 'undefined') return false;
+    try {
+        const testCanvas = document.createElement('canvas');
+        testCanvas.width = 1;
+        testCanvas.height = 1;
+        const uri = testCanvas.toDataURL('image/webp');
+        return uri.startsWith('data:image/webp');
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Compresse et redimensionne une image côté client au format WebP (ou JPEG en repli).
  * @param {File|Blob|string} file - Fichier image à compresser ou chaîne dataURL
  * @param {Object} [options] - Options de compression
- * @param {number} [options.maxWidth=800] - Largeur maximale en pixels
- * @param {number} [options.maxHeight=800] - Hauteur maximale en pixels
- * @param {number} [options.quality=0.75] - Qualité JPEG (0.1 à 1.0)
- * @returns {Promise<string>} Data URL de l'image compressée au format image/jpeg
+ * @param {number} [options.maxWidth=600] - Largeur maximale en pixels (600px idéal rétina mobile)
+ * @param {number} [options.maxHeight=600] - Hauteur maximale en pixels
+ * @param {number} [options.quality=0.72] - Qualité d'encodage (0.1 à 1.0)
+ * @param {'webp'|'jpeg'} [options.format='webp'] - Format cible privilégié
+ * @returns {Promise<string>} Data URL de l'image compressée
  */
-export async function compressImage(file, { maxWidth = 800, maxHeight = 800, quality = 0.75 } = {}) {
+export async function compressImage(file, { maxWidth = 600, maxHeight = 600, quality = 0.72, format = 'webp' } = {}) {
     if (!file) {
         throw new Error("Aucun fichier image fourni.");
     }
@@ -159,7 +178,7 @@ export async function compressImage(file, { maxWidth = 800, maxHeight = 800, qua
         if (typeof file === 'string' && file.startsWith('data:image/')) {
             return file;
         }
-        return 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP...';
+        return 'data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==';
     }
 
     let loaded = null;
@@ -173,8 +192,8 @@ export async function compressImage(file, { maxWidth = 800, maxHeight = 800, qua
     const { source, width, height, isBitmap, cleanup } = loaded;
 
     try {
-        let targetWidth = width || 800;
-        let targetHeight = height || 800;
+        let targetWidth = width || maxWidth;
+        let targetHeight = height || maxHeight;
 
         // Conservation stricte du ratio d'aspect
         if (targetWidth > targetHeight) {
@@ -202,7 +221,18 @@ export async function compressImage(file, { maxWidth = 800, maxHeight = 800, qua
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
 
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        let mimeType = 'image/jpeg';
+        if (format === 'webp' && isWebpSupported()) {
+            mimeType = 'image/webp';
+        }
+
+        let compressedDataUrl = canvas.toDataURL(mimeType, quality);
+
+        // Si le navigateur a renvoyé image/png en repli forcé, basculer sur image/jpeg
+        if (mimeType === 'image/webp' && compressedDataUrl.startsWith('data:image/png')) {
+            compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+
         return compressedDataUrl;
     } finally {
         if (typeof cleanup === 'function') cleanup();
@@ -213,7 +243,7 @@ export async function compressImage(file, { maxWidth = 800, maxHeight = 800, qua
 }
 
 /**
- * Convertit une chaîne Data URL (base64) en objet Blob (binaire prêt pour upload Supabase Storage).
+ * Convertit une chaîne Data URL (base64) en objet Blob (binaire prêt pour upload S3 / R2 / Supabase).
  * Accepte également directement un Blob déjà formé.
  * @param {string|Blob} dataUrl - URL base64 sous la forme data:[<mediatype>][;base64],<data> ou Blob
  * @returns {Blob}
@@ -233,7 +263,7 @@ export function dataURLtoBlob(dataUrl) {
     }
 
     const mimeMatch = parts[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const mime = mimeMatch ? mimeMatch[1] : 'image/webp';
     const binaryStr = atob(parts[1]);
     const n = binaryStr.length;
     const u8arr = new Uint8Array(n);
@@ -245,7 +275,44 @@ export function dataURLtoBlob(dataUrl) {
     return new Blob([u8arr], { type: mime });
 }
 
+/**
+ * Compresse directement vers un Blob binaire prêt à l'envoi réseau (WebP optimisé).
+ * @param {File|Blob|string} file
+ * @param {Object} [options]
+ * @returns {Promise<{ blob: Blob, dataUrl: string, mime: string, extension: string }>}
+ */
+export async function compressImageToBlob(file, options = {}) {
+    const dataUrl = await compressImage(file, options);
+    const blob = dataURLtoBlob(dataUrl);
+    const mime = blob.type || 'image/webp';
+    const extension = mime === 'image/webp' ? 'webp' : (mime === 'image/png' ? 'png' : 'jpg');
+    return {
+        blob,
+        dataUrl,
+        mime,
+        extension,
+    };
+}
+
+/**
+ * Résout une URL d'image vers le CDN Cloudflare R2 si elle pointe vers l'ancien stockage Supabase.
+ * Permet un basculement immédiat et transparent sans attendre l'exécution manuelle de migrations SQL.
+ * @param {string} url
+ * @returns {string}
+ */
+export function resolveMediaUrl(url) {
+    if (!url || typeof url !== 'string') return url || '';
+    const SUPABASE_STORAGE_PREFIX = 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/';
+    const R2_PUBLIC_PREFIX = 'https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/';
+    if (url.startsWith(SUPABASE_STORAGE_PREFIX)) {
+        return url.replace(SUPABASE_STORAGE_PREFIX, R2_PUBLIC_PREFIX);
+    }
+    return url;
+}
+
 export default {
     compressImage,
+    compressImageToBlob,
     dataURLtoBlob,
+    resolveMediaUrl,
 };
