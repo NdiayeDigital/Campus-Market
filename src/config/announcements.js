@@ -5,6 +5,17 @@
 
 import { SUPPORT_CONFIG } from './support.js';
 
+export const ANNONCE_CONFIG = {
+    price: 250,
+    currency: 'XOF',
+    priceDisplay: '250 FCFA',
+    durationDays: 7,
+    maxPendingPerSeller: 3,
+    maxTitleLength: 60,
+    maxTextLength: 300,
+    paymentLink: 'https://link.saspay.me/1aio4avhabm', // Lien SasPay officiel 250 FCFA
+};
+
 export const CAROUSEL_TYPES = {
     annonce: {
         id: 'annonce',

@@ -12,6 +12,7 @@ import { supabase } from './supabase.js';
 import { clearCart } from './cart-store.js';
 import { submitReview } from './review-service.js';
 import { isValidSenegalPhone } from '../utils/security.js';
+import { checkAndReserveOrderQuota, confirmOrderReceiptByBuyer } from './quota-service.js';
 
 const OFFLINE_QUEUE_KEY = 'pending_sync_orders';
 
@@ -245,6 +246,23 @@ export async function createOrder({
         throw new Error(`Impossible d'identifier le vendeur pour l'article "${missingSeller.title || 'sélectionné'}". Veuillez retirer cet article et réessayer.`);
     }
 
+    // 1.5. Contrôle Anti-Fraude (FR-03, FR-04, FR-05) et Quotas Serveur (FR-17)
+    const distinctSellerIds = [...new Set(items.map((i) => i.seller_id || i.seller?.id || i.sellerId).filter(Boolean))];
+    const sameRoomMap = new Map();
+
+    for (const sId of distinctSellerIds) {
+        const quotaCheck = await checkAndReserveOrderQuota({
+            sellerId: sId,
+            buyerPhone: clientTelephone,
+            buyerPavillon: pavillon,
+            buyerChambre: chambre,
+            buyerId,
+        });
+        if (quotaCheck?.isSameRoom) {
+            sameRoomMap.set(sId, true);
+        }
+    }
+
     // 2. Préparation rigoureuse des lignes de commandes pour Supabase (strictement conformes aux 10 colonnes)
     const ordersToInsert = buildOrderPayload({
         clientNom,
@@ -270,10 +288,11 @@ export async function createOrder({
     }
 
     try {
-        // Tentative d'insertion avec colonne reference (si la table a été enrichie)
+        // Tentative d'insertion avec colonne reference et is_same_room
         const payloadWithRef = ordersToInsert.map((ord) => ({
             ...ord,
             reference,
+            is_same_room: Boolean(sameRoomMap.get(ord.seller_id)),
         }));
 
         let insertError = null;
@@ -285,8 +304,8 @@ export async function createOrder({
         const { error: errWithRef } = await supabase.from('orders').insert(payloadWithRef);
 
         if (errWithRef) {
-            // Si la colonne 'reference' n'existe pas en base, repli sur le payload strict 10 colonnes
-            if (errWithRef.message && (errWithRef.message.includes('reference') || errWithRef.message.includes('column'))) {
+            // Si la colonne 'reference' ou 'is_same_room' n'existe pas en base, repli sur le payload strict 10 colonnes
+            if (errWithRef.message && (errWithRef.message.includes('reference') || errWithRef.message.includes('is_same_room') || errWithRef.message.includes('column'))) {
                 const { error: errCore } = await supabase.from('orders').insert(ordersToInsert);
                 if (errCore) insertError = errCore;
             } else {
@@ -512,6 +531,8 @@ export async function submitOrderReview({ sellerId, orderId = null, rating, comm
     return submitReview({ sellerId, orderId, rating, comment, buyerName });
 }
 
+export { confirmOrderReceiptByBuyer };
+
 export default {
     createOrder,
     buildOrderPayload,
@@ -521,4 +542,5 @@ export default {
     fetchLiveOrderStatus,
     cancelOrderByBuyer,
     submitOrderReview,
+    confirmOrderReceiptByBuyer,
 };

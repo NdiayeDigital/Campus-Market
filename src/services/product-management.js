@@ -139,45 +139,48 @@ export async function createProduct({
                             throw new Error("Votre période d'essai de 7 jours est terminée. Veuillez activer votre abonnement pour publier de nouveaux articles.");
                         }
 
-                        // CONTRÔLE DU NOMBRE DE PRODUITS SELON LE STATUT (Essai 3 articles, ou Pack 5, 10, 50)
+                        // CONTRÔLE DU NOMBRE DE PRODUITS SELON LE STATUT (Découverte 1 article, Essai 3 articles, ou Pack 5, 10)
                         const plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'starter';
-                        const maxAllowed = subStatus.isTrial
-                            ? FREE_TRIAL_CONFIG.maxProducts
-                            : (Number(profile.max_products || session.user.user_metadata?.max_products) || getMaxProductsForPlan(plan));
+                        let maxAllowed = 1;
+                        if (subStatus.status === 'decouverte') {
+                            maxAllowed = 1;
+                        } else if (subStatus.isTrial) {
+                            maxAllowed = FREE_TRIAL_CONFIG.maxProducts;
+                        } else {
+                            maxAllowed = Number(profile.max_products || session.user.user_metadata?.max_products) || getMaxProductsForPlan(plan);
+                        }
 
                         let currentCount = 0;
                         try {
                             const { count, error: countErr } = await supabase
                                 .from('products')
                                 .select('id', { count: 'exact', head: true })
-                                .eq('seller_id', activeSellerId);
+                                .eq('seller_id', activeSellerId)
+                                .neq('stock', 0);
 
                             if (!countErr && typeof count === 'number') {
                                 currentCount = count;
                             } else {
                                 const prods = await getSellerProducts(activeSellerId);
-                                currentCount = prods.length;
+                                currentCount = prods.filter((p) => p.stock !== 0 && p.is_active !== false).length;
                             }
                         } catch {
                             const prods = await getSellerProducts(activeSellerId);
-                            currentCount = prods.length;
+                            currentCount = prods.filter((p) => p.stock !== 0 && p.is_active !== false).length;
                         }
 
                         if (currentCount >= maxAllowed) {
                             const planObj = SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.starter;
-                            let upgradeMsg = "Veuillez supprimer des articles existants pour en publier de nouveaux.";
-                            if (subStatus.isTrial) {
-                                upgradeMsg = "L'essai gratuit permet de publier jusqu'à 3 articles. Activez une formule Starter (5 arts), Pro (10 arts) ou Annuelle VIP (50 arts) pour débloquer votre catalogue.";
+                            let upgradeMsg = "Veuillez supprimer ou désactiver des articles existants pour en publier de nouveaux.";
+                            if (subStatus.status === 'decouverte') {
+                                upgradeMsg = "Le Pack Découverte (0 FCFA) est limité à 1 produit actif. Passez au Pack Starter (5 articles à 1 500 F/mois) ou Pro (10 articles à 2 500 F/mois) pour débloquer votre vitrine.";
+                            } else if (subStatus.isTrial) {
+                                upgradeMsg = "L'essai gratuit permet de publier jusqu'à 3 articles. Activez une formule Starter (5 arts) ou Pro (10 arts) pour débloquer votre catalogue.";
                             } else if (plan === 'starter') {
-                                upgradeMsg = "Passez au Pack Pro (10 articles à 2 500 F) ou Annuel VIP (50 articles à 25 000 F/an) pour continuer.";
-                            } else if (plan === 'pro') {
-                                upgradeMsg = "Passez au Pack Annuel VIP (50 articles à 25 000 FCFA/an) pour maximiser votre catalogue toute l'année.";
+                                upgradeMsg = "Passez au Pack Pro (10 articles à 2 500 F) pour continuer.";
                             }
                             throw new Error(
-                                `Limite de votre formule atteinte (${currentCount}/${maxAllowed} produits). ` +
-                                (subStatus.isTrial 
-                                    ? `L'essai gratuit est plafonné à 3 articles. ` 
-                                    : `Votre formule actuelle (${planObj.name} - ${maxAllowed} articles) a atteint son plafond. `) +
+                                `Limite de votre formule atteinte (${currentCount}/${maxAllowed} produit${maxAllowed > 1 ? 's' : ''} actif${maxAllowed > 1 ? 's' : ''}). ` +
                                 upgradeMsg
                             );
                         }

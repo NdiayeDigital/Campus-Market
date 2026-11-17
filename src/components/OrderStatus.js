@@ -5,7 +5,7 @@
  * possibilité d'annulation et dépôt d'avis / notation marchand.
  */
 
-import { fetchLiveOrderStatus, cancelOrderByBuyer, submitOrderReview } from '../services/order-service.js';
+import { fetchLiveOrderStatus, cancelOrderByBuyer, submitOrderReview, confirmOrderReceiptByBuyer } from '../services/order-service.js';
 import { escapeHTML, formatSenegalPhone } from '../utils/security.js';
 import { showToast, showConfirm } from '../utils/notifications.js';
 
@@ -297,6 +297,25 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                     <span class="text-xs text-slate-500 font-medium italic">Vendeur : ${escapeHTML(sellerName)}</span>
                                 `}
 
+                                ${isDelivered && !order.buyer_confirmed_at ? `
+                                    <button 
+                                        data-action="confirm-receipt" 
+                                        data-idx="${idx}"
+                                        class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer min-h-[44px] active:scale-95"
+                                        title="Confirmer que vous avez bien reçu votre commande"
+                                    >
+                                        <i class="fa-solid fa-circle-check text-white text-xs"></i>
+                                        <span>Confirmer la réception</span>
+                                    </button>
+                                ` : ''}
+
+                                ${isDelivered && order.buyer_confirmed_at ? `
+                                    <span class="py-2 px-3 bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs rounded-xl flex items-center gap-1.5 min-h-[44px]">
+                                        <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                                        <span>Réception confirmée</span>
+                                    </span>
+                                ` : ''}
+
                                 ${isDelivered && !order.hasReviewed ? `
                                     <button 
                                         data-action="open-review" 
@@ -374,6 +393,36 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
 
         container.querySelector('#btn-refresh-orders')?.addEventListener('click', () => {
             syncOrdersWithBackend();
+        });
+
+        // Confirmation de bonne réception par l'acheteur (FR-06 double confirmation)
+        container.querySelectorAll('button[data-action="confirm-receipt"]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const target = recentOrders[idx];
+                if (!target) return;
+
+                btn.disabled = true;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>Validation...</span>';
+
+                try {
+                    const targetId = target.id || target.orderId;
+                    const targetPhone = target.buyer_phone || target.telephone || '';
+                    await confirmOrderReceiptByBuyer({
+                        orderId: targetId,
+                        phone: targetPhone,
+                    });
+                    recentOrders[idx].buyer_confirmed_at = new Date().toISOString();
+                    localStorage.setItem(RECENT_ORDERS_KEY, JSON.stringify(recentOrders));
+                    showToast('Réception confirmée avec succès ! Merci d\'avoir validé votre commande.', 'success');
+                    render();
+                } catch (err) {
+                    showToast(`Erreur : ${err.message}`, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
         });
 
         // Annulation de commande

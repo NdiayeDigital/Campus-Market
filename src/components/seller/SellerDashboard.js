@@ -25,7 +25,8 @@ import { exportOrdersToCSV } from '../../utils/export-csv.js';
 import { shareSellerShop } from '../../utils/share.js';
 import { createSubscriptionModal } from './SubscriptionModal.js';
 import { createSellerProfileView } from './SellerProfileView.js';
-import { computeSubscriptionStatus, SUBSCRIPTION_PLANS } from '../../config/subscription.js';
+import { createSellerAnnounceModal } from './SellerAnnounceModal.js';
+import { computeSubscriptionStatus, SUBSCRIPTION_PLANS, FEATURE_FLAGS } from '../../config/subscription.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -306,6 +307,38 @@ export function createSellerDashboard({
     function renderSubscriptionBanner(subCalc) {
         if (!subCalc || subCalc.status === 'superadmin') return '';
 
+        if (subCalc.status === 'decouverte') {
+            return `
+                <div class="bg-gradient-to-r from-slate-50 via-blue-50/50 to-indigo-50/30 border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center text-lg shrink-0 shadow-xs">
+                            <i class="fa-solid fa-compass"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-heading font-extrabold text-sm sm:text-base text-slate-900">
+                                    🧭 Formule Découverte (0 FCFA/mois)
+                                </span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                                    Actif
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                                Quotas inclus : 1 article actif en ligne • 15 commandes reçues/mois • 5 ventes validées/mois.
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="btn-trigger-subscription px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-heading font-extrabold text-xs rounded-xl shadow-md shadow-primary/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                    >
+                        <i class="fa-solid fa-crown text-xs"></i>
+                        <span>Découvrir les packs Pro</span>
+                    </button>
+                </div>
+            `;
+        }
+
         if (subCalc.status === 'trial_active') {
             return `
                 <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border border-emerald-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
@@ -323,7 +356,7 @@ export function createSellerDashboard({
                                 </span>
                             </div>
                             <p class="text-xs text-emerald-800 mt-0.5 leading-relaxed">
-                                Profitez de vos 7 jours offerts pour publier jusqu'à 3 articles et enregistrer vos commandes sans aucun frais.
+                                Profitez de vos 7 jours offerts pour publier jusqu'à 3 articles et enregistrer vos commandes sans frais. À l'échéance, vous basculerez sereinement vers le pack Découverte (0 FCFA).
                             </p>
                         </div>
                     </div>
@@ -351,11 +384,11 @@ export function createSellerDashboard({
                                     ⏰ Attention : Votre essai gratuit expire dans ${subCalc.daysLeft} jour${subCalc.daysLeft > 1 ? 's' : ''} !
                                 </span>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 text-amber-950">
-                                    Action recommandée
+                                    Bascule Découverte
                                 </span>
                             </div>
                             <p class="text-xs text-amber-900 mt-0.5 leading-relaxed">
-                                Sécurisez votre boutique avant la fin de l'essai pour éviter que vos articles ne soient mis en pause. Règlement Wave ou Orange Money.
+                                Votre boutique continuera sans coupure avec le pack gratuit Découverte (1 article actif, 15 cmd/mois). Passez à Pro pour garder plusieurs articles.
                             </p>
                         </div>
                     </div>
@@ -650,6 +683,18 @@ export function createSellerDashboard({
                         <span>Mon Abonnement</span>
                     </button>
 
+                    ${FEATURE_FLAGS.ANNONCES_ENABLED ? `
+                        <button 
+                            type="button"
+                            id="sidebar-btn-create-announce" 
+                            title="Faire passer une annonce sur le campus (250 FCFA)"
+                            class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 shadow-xs transition-all cursor-pointer active:scale-95"
+                        >
+                            <i class="fa-solid fa-bullhorn text-xs"></i>
+                            <span>Faire passer une annonce (250 F)</span>
+                        </button>
+                    ` : ''}
+
                     <button 
                         type="button"
                         id="hdr-btn-seller-back-shop" 
@@ -786,6 +831,14 @@ export function createSellerDashboard({
                             <i class="fa-solid fa-crown text-sm text-amber-600 w-5 text-center"></i>
                             <span>Mon Abonnement (3 Formules)</span>
                         </button>
+
+                        ${FEATURE_FLAGS.ANNONCES_ENABLED ? `
+                            <!-- Faire passer une annonce -->
+                            <button type="button" id="drawer-btn-create-announce" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-slate-950 font-bold text-xs transition-colors cursor-pointer shadow-xs active:scale-95">
+                                <i class="fa-solid fa-bullhorn text-sm text-slate-950 w-5 text-center"></i>
+                                <span>Faire passer une annonce (250 FCFA)</span>
+                            </button>
+                        ` : ''}
 
                         <!-- Actualiser -->
                         <button type="button" id="drawer-btn-refresh-orders" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer">
@@ -1910,6 +1963,27 @@ export function createSellerDashboard({
         containerEl.querySelector('#drawer-btn-subscription')?.addEventListener('click', () => {
             closeDrawer();
             openSubscriptionHandler();
+        });
+
+        // Gestion de l'Annonce Sponsorisée (250 FCFA)
+        let announceModal = null;
+        const openAnnounceHandler = () => {
+            if (!announceModal) {
+                announceModal = createSellerAnnounceModal({
+                    seller: dashboardData?.profile || seller,
+                    onAnnounceSubmitted: () => {
+                        if (typeof onShowToast === 'function') {
+                            onShowToast("Votre annonce a été soumise avec succès ! Elle sera publiée dès validation par l'administration.", 'success');
+                        }
+                    }
+                });
+            }
+            announceModal.open();
+        };
+        containerEl.querySelector('#sidebar-btn-create-announce')?.addEventListener('click', openAnnounceHandler);
+        containerEl.querySelector('#drawer-btn-create-announce')?.addEventListener('click', () => {
+            closeDrawer();
+            openAnnounceHandler();
         });
 
         // Toggle Audio (Header, Sidebar & Drawer)

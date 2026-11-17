@@ -15,6 +15,7 @@ import { createProductDetailModal } from './components/ProductDetailModal.js';
 import { createBottomNav } from './components/BottomNav.js';
 import { createAnnouncementCarousel } from './components/AnnouncementCarousel.js';
 import { createPartnersSection } from './components/PartnersSection.js';
+import { createSponsoredAnnouncements } from './components/SponsoredAnnouncements.js';
 import { createLegalView } from './components/LegalView.js';
 import { fetchCarouselSlides, fetchPartners } from './services/admin-service.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
@@ -269,6 +270,9 @@ async function initApp() {
     });
 
     rootWrapper.appendChild(categoryChipsComponent);
+
+    // Annonces sponsorisées (250 FCFA) - Discouru et masqué si aucune annonce
+    const sponsoredAnnouncementsComponent = createSponsoredAnnouncements();
 
     // 4. Carrousel 16:9 d'Accueil (Panneau d'Annonces, Pubs & Partenaires)
     const announcementCarouselComponent = createAnnouncementCarousel({
@@ -746,6 +750,7 @@ async function initApp() {
 
         // 1. Carrousel 16:9 d'Accueil (Panneau d'Annonces, Pubs & Partenaires)
         if (!appState.searchQuery && appState.currentCategory === 'all') {
+            mainContentEl.appendChild(sponsoredAnnouncementsComponent);
             mainContentEl.appendChild(announcementCarouselComponent);
         }
 

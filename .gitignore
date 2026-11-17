@@ -10,6 +10,8 @@ build/
 .env
 .env.local
 .env.*.local
+backups/
+*.backup.json
 
 # Logs
 npm-debug.log*

@@ -3,6 +3,13 @@
  * Campus Market - Université Iba Der Thiam de Thiès (UIDT).
  */
 
+export const FEATURE_FLAGS = {
+    QUOTAS_ENABLED: false,   // Désactivé par défaut (sécurité production)
+    ANNONCES_ENABLED: false, // Désactivé par défaut (sécurité production)
+};
+
+export const COMPTEURS_DEPUIS_BASCULE = true; // Démarrage des compteurs Découverte à la date de bascule
+
 export const FREE_TRIAL_CONFIG = {
     durationDays: 7,
     maxProducts: 3,
@@ -16,6 +23,30 @@ export const SASPAY_PAYMENT_LINKS = {
 };
 
 export const SUBSCRIPTION_PLANS = {
+    decouverte: {
+        id: 'decouverte',
+        name: 'Pack Découverte',
+        price: 0,
+        currency: 'XOF',
+        priceDisplay: 'Gratuit (0 FCFA)',
+        period: 'mois',
+        durationDays: 30,
+        maxProducts: 1,
+        maxOrdersPerMonth: 15,
+        maxValidatedSalesPerMonth: 5,
+        allowPromotions: false,
+        allowTopShops: false,
+        paymentLink: null,
+        badge: 'Découverte',
+        badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        description: 'Formule permanente gratuite pour tester et vendre à l\'UIDT',
+        features: [
+            '1 article actif en vente',
+            'Jusqu\'à 15 commandes reçues par mois',
+            'Jusqu\'à 5 ventes validées par mois',
+            'Notifications & encaissement direct Wave/OM',
+        ],
+    },
     starter: {
         id: 'starter',
         name: 'Pack Starter',
@@ -197,7 +228,10 @@ export function computeSubscriptionStatus(profile) {
 
     // 2. Vérification de la période d'essai gratuite (7 jours)
     let trialEndMs = null;
-    if (profile.trial_ends_at) {
+    if (profile.trial_extended_ends_at) {
+        // Cas 8 : Prolongation manuelle accordée par l'administrateur
+        trialEndMs = new Date(profile.trial_extended_ends_at).getTime();
+    } else if (profile.trial_ends_at) {
         trialEndMs = new Date(profile.trial_ends_at).getTime();
     } else if (profile.trial_started_at) {
         trialEndMs = new Date(profile.trial_started_at).getTime() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000;
@@ -231,6 +265,29 @@ export function computeSubscriptionStatus(profile) {
     }
 
     // 3. Période d'essai ou abonnement expiré
+    // Si le flag QUOTAS_ENABLED est actif ou si le vendeur a déjà le pack Découverte scellé
+    if (FEATURE_FLAGS.QUOTAS_ENABLED || profile.pack_actuel === 'decouverte') {
+        const decouvertePlan = SUBSCRIPTION_PLANS.decouverte;
+        return {
+            status: 'decouverte',
+            daysLeft: 999,
+            daysRemaining: 999,
+            isExpired: false,
+            isPaid: false,
+            isTrial: false,
+            isSuperAdmin: false,
+            canPublish: true,
+            canSell: true,
+            maxProducts: 1,
+            maxOrdersPerMonth: 15,
+            ordersLimitPerMonth: 15,
+            maxValidatedSalesPerMonth: 5,
+            salesLimitPerMonth: 5,
+            plan: decouvertePlan,
+            expiresAt: null,
+        };
+    }
+
     return {
         status: 'trial_expired',
         daysLeft: 0,

@@ -83,7 +83,9 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     let allProfiles = [];
     let pushBroadcasts = [];
     let pushSubscribersCount = { total: 0, sellers: 0, buyers: 0 };
-    let activeTab = 'overview'; // 'overview' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations' | 'carousels' | 'partners' | 'broadcast'
+    let allAdvertisements = [];
+    let annonceFilterTab = 'a_valider'; // 'a_valider' | 'all' | 'publiee' | 'refusee' | 'expiree'
+    let activeTab = 'overview'; // 'overview' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations' | 'carousels' | 'partners' | 'broadcast' | 'annonces'
     let productSearchQuery = '';
     let sellerSearchQuery = '';
     let sellerFilterTab = 'all'; // 'all' | 'pending' | 'active' | 'suspended' | 'payments'
@@ -127,7 +129,19 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         render();
 
         try {
-            const [m, p, a, prods, ords, locs, profs, subPays, carSlides, pts, bCasts, pSubs] = await Promise.all([
+            const fetchAds = async () => {
+                try {
+                    const { data, error } = await supabase
+                        .from('advertisements')
+                        .select('*, seller:seller_id(prenom, nom, telephone, business_name)')
+                        .order('created_at', { ascending: false });
+                    return error ? [] : (data || []);
+                } catch {
+                    return [];
+                }
+            };
+
+            const [m, p, a, prods, ords, locs, profs, subPays, carSlides, pts, bCasts, pSubs, ads] = await Promise.all([
                 fetchGlobalMetrics(),
                 fetchPendingSellers(),
                 fetchActiveSellers(),
@@ -140,6 +154,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 fetchPartners(true).catch(() => []),
                 fetchPushBroadcasts().catch(() => []),
                 fetchPushSubscribersCount().catch(() => ({ total: 0, sellers: 0, buyers: 0 })),
+                fetchAds(),
             ]);
             metrics = m;
             pendingSellers = p || [];
@@ -153,6 +168,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             partners = pts || [];
             pushBroadcasts = bCasts || [];
             pushSubscribersCount = pSubs || { total: 0, sellers: 0, buyers: 0 };
+            allAdvertisements = ads || [];
         } catch (err) {
             console.error('[SuperAdmin] Erreur chargement données:', err);
             if (typeof onShowToast === 'function') {
@@ -246,9 +262,11 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             sellerMonthlyFee: 1500,
         };
 
+        const pendingAdsCount = allAdvertisements.filter(a => a.status === 'a_valider').length;
         const pendingAlert = pendingSellers.length > 0 || pendingSubscriptionPayments.length > 0;
         const navTabs = [
             { id: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie', badge: null },
+            { id: 'annonces', label: "Annonces", icon: 'fa-bullhorn', badge: pendingAdsCount || null, badgeAlert: pendingAdsCount > 0 },
             { id: 'sellers', label: "Marchands", icon: 'fa-users-gear', badge: pendingSellers.length + activeSellers.length + pendingSubscriptionPayments.length, badgeAlert: pendingAlert },
             { id: 'accounts', label: "Comptes", icon: 'fa-id-card-clip', badge: allProfiles.length || (pendingSellers.length + activeSellers.length + 1) },
             { id: 'products', label: "Produits", icon: 'fa-box', badge: allProducts.length },
@@ -555,6 +573,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex-1">
                     <div id="admin-tab-content" class="w-full">
                         ${activeTab === 'overview' ? renderOverviewTab() : ''}
+                        ${activeTab === 'annonces' ? renderAnnoncesTab() : ''}
                         ${activeTab === 'sellers' ? renderSellersTab() : ''}
                         ${activeTab === 'accounts' ? renderAccountsTab() : ''}
                         ${activeTab === 'products' ? renderProductsTab() : ''}
@@ -3297,6 +3316,166 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         });
     }
 
+    function renderAnnoncesTab() {
+        const filteredAds = allAdvertisements.filter((ad) => {
+            if (annonceFilterTab === 'all') return true;
+            return ad.status === annonceFilterTab;
+        });
+
+        const countAValider = allAdvertisements.filter(a => a.status === 'a_valider').length;
+        const countPubliees = allAdvertisements.filter(a => a.status === 'publiee').length;
+        const countRefusees = allAdvertisements.filter(a => a.status === 'refusee').length;
+        const countExpirees = allAdvertisements.filter(a => a.status === 'expiree').length;
+
+        return `
+            <div class="flex flex-col gap-6">
+                <!-- En-tête -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 mb-1">
+                            <i class="fa-solid fa-bullhorn text-amber-600"></i>
+                            <span>Modération des Annonces Sponsorisées (250 FCFA)</span>
+                        </div>
+                        <h3 class="font-heading font-extrabold text-base sm:text-xl text-slate-900">Annonces à valider</h3>
+                        <p class="text-xs text-slate-500 max-w-2xl mt-0.5">Vérifiez la référence de transaction Wave / Orange Money avant d'approuver la publication de l'annonce pour 7 jours sur l'accueil.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1.5 rounded-xl font-bold text-xs ${countAValider > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 text-slate-700'}">
+                            ${countAValider} en attente
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Filtres -->
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button type="button" data-ad-filter="a_valider" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${annonceFilterTab === 'a_valider' ? 'bg-primary text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}">
+                        À valider (${countAValider})
+                    </button>
+                    <button type="button" data-ad-filter="publiee" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${annonceFilterTab === 'publiee' ? 'bg-primary text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}">
+                        Publiées (${countPubliees})
+                    </button>
+                    <button type="button" data-ad-filter="refusee" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${annonceFilterTab === 'refusee' ? 'bg-primary text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}">
+                        Refusées (${countRefusees})
+                    </button>
+                    <button type="button" data-ad-filter="expiree" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${annonceFilterTab === 'expiree' ? 'bg-primary text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}">
+                        Expirées (${countExpirees})
+                    </button>
+                    <button type="button" data-ad-filter="all" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${annonceFilterTab === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}">
+                        Toutes (${allAdvertisements.length})
+                    </button>
+                </div>
+
+                <!-- Liste des Annonces -->
+                ${filteredAds.length === 0 ? `
+                    <div class="bg-white rounded-2xl border border-slate-200/80 p-8 text-center flex flex-col items-center justify-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-bullhorn"></i>
+                        </div>
+                        <h4 class="font-heading font-extrabold text-sm text-slate-900">Aucune annonce trouvée</h4>
+                        <p class="text-xs text-slate-500">Aucune annonce ne correspond au filtre sélectionné.</p>
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-1 gap-4">
+                        ${filteredAds.map((ad) => {
+                            const sellerName = ad.seller ? `${ad.seller.prenom || ''} ${ad.seller.nom || ''}`.trim() : 'Vendeur';
+                            const sellerPhone = ad.seller?.telephone || '';
+                            const sellerShop = ad.seller?.business_name || '';
+                            const createdDate = ad.created_at ? new Date(ad.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
+                            let statusBadge = '';
+                            if (ad.status === 'a_valider') {
+                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">À valider</span>';
+                            } else if (ad.status === 'publiee') {
+                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">Publiée</span>';
+                            } else if (ad.status === 'refusee') {
+                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300">Refusée</span>';
+                            } else if (ad.status === 'expiree') {
+                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-slate-100 text-slate-600 border border-slate-300">Expirée</span>';
+                            } else {
+                                statusBadge = `<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-slate-100 text-slate-600">${escapeHTML(ad.status)}</span>`;
+                            }
+
+                            return `
+                                <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row items-start justify-between gap-4">
+                                    <div class="flex items-start gap-4 flex-1 min-w-0">
+                                        ${ad.image_url ? `
+                                            <a href="${escapeHTML(ad.image_url)}" target="_blank" rel="noopener noreferrer" class="shrink-0 group">
+                                                <img src="${escapeHTML(ad.image_url)}" alt="${escapeHTML(ad.title)}" class="w-20 h-20 rounded-xl object-cover border border-slate-200 group-hover:opacity-90 transition-opacity">
+                                            </a>
+                                        ` : `
+                                            <div class="w-16 h-16 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center text-lg shrink-0">
+                                                <i class="fa-solid fa-image"></i>
+                                            </div>
+                                        `}
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                                ${statusBadge}
+                                                <span class="text-[11px] text-slate-400 font-medium">${createdDate}</span>
+                                            </div>
+                                            <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900 leading-snug">
+                                                ${escapeHTML(ad.title)}
+                                            </h4>
+                                            <p class="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-line">
+                                                ${escapeHTML(ad.content)}
+                                            </p>
+                                            ${ad.link_url ? `
+                                                <a href="${escapeHTML(ad.link_url)}" target="_blank" rel="noopener noreferrer" class="text-xs text-primary font-bold hover:underline inline-flex items-center gap-1 mt-1">
+                                                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                                    <span>${escapeHTML(ad.link_url)}</span>
+                                                </a>
+                                            ` : ''}
+
+                                            <!-- Infos Paiement & Vendeur -->
+                                            <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                                                <span><strong>Vendeur :</strong> ${escapeHTML(sellerName)} ${sellerShop ? `(${escapeHTML(sellerShop)})` : ''}</span>
+                                                ${sellerPhone ? `
+                                                    <span><strong>Tél :</strong> <a href="tel:${escapeHTML(sellerPhone)}" class="text-primary hover:underline">${escapeHTML(sellerPhone)}</a></span>
+                                                ` : ''}
+                                                <span class="px-2 py-0.5 rounded bg-slate-100 font-mono text-[11px] font-bold">
+                                                    Réf : ${escapeHTML(ad.txn_ref || 'Non renseignée')} (${escapeHTML(ad.payment_operator || 'Wave/OM')})
+                                                </span>
+                                                <span class="font-bold text-emerald-700">250 FCFA</span>
+                                            </div>
+
+                                            ${ad.rejection_reason ? `
+                                                <div class="mt-2 text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                                                    <strong>Motif de refus :</strong> ${escapeHTML(ad.rejection_reason)}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+
+                                    ${ad.status === 'a_valider' ? `
+                                        <div class="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
+                                            <button 
+                                                type="button" 
+                                                data-ad-action="valider" 
+                                                data-ad-id="${ad.id}"
+                                                class="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                                            >
+                                                <i class="fa-solid fa-check text-xs"></i>
+                                                <span>Valider (250 F)</span>
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                data-ad-action="refuser" 
+                                                data-ad-id="${ad.id}"
+                                                class="flex-1 sm:flex-none px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-heading font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                                            >
+                                                <i class="fa-solid fa-xmark text-xs"></i>
+                                                <span>Refuser</span>
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+            </div>
+        `;
+    }
+
     function bindEvents() {
         // 1. Actions SuperAdmin (Sidebar Desktop & Top Header)
         containerEl.querySelector('#hdr-btn-refresh-admin')?.addEventListener('click', loadAdminData);
@@ -4916,7 +5095,75 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             });
         }
 
+        function bindAnnoncesEvents() {
+            containerEl.querySelectorAll('[data-ad-filter]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    annonceFilterTab = btn.getAttribute('data-ad-filter');
+                    const contentEl = containerEl.querySelector('#admin-tab-content');
+                    if (contentEl && activeTab === 'annonces') {
+                        contentEl.innerHTML = renderAnnoncesTab();
+                        bindAnnoncesEvents();
+                    }
+                });
+            });
+
+            containerEl.querySelectorAll('[data-ad-action]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const action = btn.getAttribute('data-ad-action');
+                    const adId = btn.getAttribute('data-ad-id');
+                    if (!adId) return;
+
+                    if (action === 'valider') {
+                        const confirmed = await showConfirm({
+                            title: 'Valider l\'annonce',
+                            message: 'Avez-vous bien vérifié la réception des 250 FCFA sur votre compte marchand ? L\'annonce sera publiée pendant 7 jours.',
+                            confirmText: 'Oui, valider et publier',
+                            cancelText: 'Annuler',
+                            icon: 'fa-check'
+                        });
+                        if (!confirmed) return;
+
+                        btn.disabled = true;
+                        try {
+                            const { error } = await supabase.rpc('admin_moderate_advertisement', {
+                                p_ad_id: adId,
+                                p_decision: 'valider'
+                            });
+                            if (error) throw error;
+                            showToast('Annonce validée et publiée avec succès !', 'success');
+                            await loadAdminData();
+                        } catch (err) {
+                            showToast(`Erreur validation : ${err.message}`, 'error');
+                            btn.disabled = false;
+                        }
+                    } else if (action === 'refuser') {
+                        const reason = window.prompt("Motif du refus de l'annonce (visible par le vendeur) :");
+                        if (!reason || !reason.trim()) {
+                            showToast('Le motif de refus est obligatoire.', 'warning');
+                            return;
+                        }
+
+                        btn.disabled = true;
+                        try {
+                            const { error } = await supabase.rpc('admin_moderate_advertisement', {
+                                p_ad_id: adId,
+                                p_decision: 'refuser',
+                                p_rejection_reason: reason.trim()
+                            });
+                            if (error) throw error;
+                            showToast('Annonce refusée.', 'info');
+                            await loadAdminData();
+                        } catch (err) {
+                            showToast(`Erreur refus : ${err.message}`, 'error');
+                            btn.disabled = false;
+                        }
+                    }
+                });
+            });
+        }
+
         // Lier les événements de l'onglet actif
+        if (activeTab === 'annonces') bindAnnoncesEvents();
         if (activeTab === 'sellers') bindSellersEvents();
         if (activeTab === 'accounts') bindAccountsEvents();
         if (activeTab === 'products') bindProductsEvents();
