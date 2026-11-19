@@ -68,6 +68,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
         });
         const hasMultipleImages = productImages.length > 1;
         const safeActiveImage = productImages[activeImageIndex] || productImages[0] || null;
+        const rawActiveImage = rawImages[activeImageIndex] || rawImages[0] || '';
 
         modalEl.innerHTML = `
             <div class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
@@ -79,7 +80,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                 <!-- En-tête / Image principale -->
                 <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-100 overflow-hidden shrink-0 group">
                     ${safeActiveImage 
-                        ? `<img src="${escapeHTML(safeActiveImage)}" alt="${escapeHTML(p.title)}" id="detail-active-image" class="w-full h-full object-cover transition-all duration-300" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
+                        ? `<img src="${escapeHTML(safeActiveImage)}" ${rawActiveImage && rawActiveImage !== safeActiveImage ? `data-fallback-url="${escapeHTML(rawActiveImage)}"` : ''} alt="${escapeHTML(p.title)}" id="detail-active-image" class="w-full h-full object-cover transition-all duration-300" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else { this.onerror=null; this.src='/assets/placeholder.webp'; }">`
                         : `<div class="w-full h-full flex items-center justify-center bg-primary/5 text-primary text-5xl">
                              <i class="fa-solid ${escapeHTML(p.icon || 'fa-box')}"></i>
                            </div>`
@@ -186,7 +187,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm overflow-hidden shrink-0 border border-slate-200">
                                 ${p.seller?.avatar_url 
-                                    ? `<img src="${escapeHTML(resolveMediaUrl(p.seller.avatar_url))}" alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.textContent='${((sellerName[0] || 'V')).toUpperCase()}';">`
+                                    ? `<img src="${escapeHTML(resolveMediaUrl(p.seller.avatar_url))}" ${p.seller.avatar_url !== resolveMediaUrl(p.seller.avatar_url) ? `data-fallback-url="${escapeHTML(p.seller.avatar_url)}"` : ''} alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else { this.onerror=null; this.parentElement.textContent='${((sellerName[0] || 'V')).toUpperCase()}'; }">`
                                     : ((sellerName[0] || 'V')).toUpperCase()
                                 }
                             </div>
