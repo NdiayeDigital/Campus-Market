@@ -90,13 +90,20 @@ export default async function handler(req, res) {
 
         // 2. Extraction des informations vendeur
         const metadata = transactionData.metadata || payload.metadata || {};
+        const isAdPayment = metadata.type === 'advertisement' || 
+                            metadata.type === 'annonce' || 
+                            metadata.plan === 'annonce' || 
+                            metadata.ad_id || 
+                            metadata.adId || 
+                            Number(transactionData.amount) === 250;
         const sellerId = metadata.seller_id || metadata.sellerId || transactionData.customer_id;
-        const rawPlan = metadata.plan || 'starter';
+        const adId = metadata.ad_id || metadata.adId;
+        const rawPlan = metadata.plan || (isAdPayment ? 'annonce' : 'starter');
         const validPlan = PLAN_QUOTAS[rawPlan] ? rawPlan : 'starter';
         const planConfig = PLAN_QUOTAS[validPlan];
 
-        if (!sellerId) {
-            console.warn('[SasPay Webhook] Aucun seller_id trouvé dans les métadonnées de transaction.');
+        if (!sellerId && !adId) {
+            console.warn('[SasPay Webhook] Aucun seller_id ni ad_id trouvé dans les métadonnées de transaction.');
             return res.status(200).json({ received: true, warning: 'missing_seller_id' });
         }
 
@@ -105,10 +112,101 @@ export default async function handler(req, res) {
             auth: { persistSession: false },
         });
 
-        const durationDays = planConfig.durationDays || 30;
-        const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
         const nowIso = new Date().toISOString();
         const transactionId = transactionData.id || transactionData.reference || `saspay_${Date.now()}`;
+
+        // Cas A : Paiement d'une Annonce Campus (250 FCFA) -> Publication automatique immédiate
+        if (isAdPayment) {
+            let targetAdId = adId;
+            if (!targetAdId && sellerId) {
+                const { data: pendingAd } = await supabase
+                    .from('advertisements')
+                    .select('id')
+                    .eq('seller_id', sellerId)
+                    .eq('status', 'paiement_en_attente')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                if (pendingAd) targetAdId = pendingAd.id;
+            }
+
+            if (targetAdId) {
+                const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                const { error: adErr } = await supabase
+                    .from('advertisements')
+                    .update({
+                        status: 'publiee',
+                        validated_at: nowIso,
+                        expires_at: expiresAt,
+                        transaction_ref: transactionId,
+                        rejection_reason: null,
+                        updated_at: nowIso,
+                    })
+                    .eq('id', targetAdId);
+
+                if (adErr) {
+                    console.error('[SasPay Webhook] Erreur publication annonce :', adErr.message);
+                } else {
+                    console.log(`[SasPay Webhook] 📢 Annonce ${targetAdId} activée et publiée automatiquement pour 7 jours.`);
+                }
+
+                // Journalisation dans audit_logs (FR-15)
+                try {
+                    await supabase.from('audit_logs').insert({
+                        user_id: sellerId || null,
+                        action: 'PUBLICATION_ANNONCE_SASPAY_AUTO',
+                        entity_type: 'advertisements',
+                        entity_id: String(targetAdId),
+                        details: {
+                            amount: 250,
+                            provider: 'saspay',
+                            transaction_id: transactionId,
+                            auto_published: true,
+                            expires_at: expiresAt,
+                        },
+                    });
+                } catch (logErr) {
+                    console.warn('[SasPay Webhook] Erreur journal audit annonce :', logErr.message);
+                }
+            }
+
+            // Enregistrement de la trace dans seller_payments
+            try {
+                await supabase.from('seller_payments').insert({
+                    seller_id: sellerId,
+                    amount: Number(transactionData.amount) || 250,
+                    currency: 'XOF',
+                    plan: 'starter',
+                    operator: transactionData.payment_method?.includes('om') ? 'om' : 'wave',
+                    provider: 'saspay',
+                    provider_session_id: transactionId,
+                    provider_payment_id: transactionData.payment_id || transactionId,
+                    status: 'success',
+                    metadata: {
+                        type: 'advertisement',
+                        ad_id: targetAdId,
+                        webhook_received_at: nowIso,
+                        event_type: eventType,
+                        raw_data: transactionData,
+                        mode: 'automatic_webhook',
+                    },
+                });
+            } catch (payErr) {
+                console.warn('[SasPay Webhook] Note trace seller_payments annonce :', payErr.message);
+            }
+
+            return res.status(200).json({
+                received: true,
+                success: true,
+                type: 'advertisement',
+                adId: targetAdId,
+                status: 'publiee',
+                published: true,
+            });
+        }
+
+        const durationDays = planConfig.durationDays || 30;
+        const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
 
         // Activation de la boutique du vendeur
         const { error: profError } = await supabase

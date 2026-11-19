@@ -27,12 +27,24 @@ function getEnvVar(key) {
     return null;
 }
 
-const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('SUPABASE_URL');
-const supabaseKey = getEnvVar('SUPABASE_SERVICE_ROLE_KEY') || getEnvVar('VITE_SUPABASE_ANON_KEY');
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('SUPABASE_URL') || 'https://fqulqgdjusfzhcjpvyay.supabase.co';
+const supabaseKey = getEnvVar('SUPABASE_SERVICE_ROLE_KEY') || getEnvVar('VITE_SUPABASE_ANON_KEY') || 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
 
 if (!supabaseUrl || !supabaseKey) {
     console.error('❌ Erreur : Variables Supabase manquantes.');
     process.exit(1);
+}
+
+if (typeof WebSocket === 'undefined') {
+    try {
+        globalThis.WebSocket = class MockWebSocket {
+            constructor() {}
+            addEventListener() {}
+            removeEventListener() {}
+            send() {}
+            close() {}
+        };
+    } catch (_) {}
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);

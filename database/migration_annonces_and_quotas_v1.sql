@@ -92,13 +92,12 @@ CREATE TABLE IF NOT EXISTS public.advertisements (
     amount NUMERIC(10, 2) DEFAULT 250.00 NOT NULL CHECK (amount = 250.00),
     operator TEXT DEFAULT 'wave' CHECK (operator IN ('wave', 'om')),
     transaction_ref TEXT,
-    status TEXT DEFAULT 'a_valider' CHECK (status IN ('brouillon', 'paiement_en_attente', 'a_valider', 'publiee', 'refusee', 'expiree')),
+    status TEXT DEFAULT 'paiement_en_attente' CHECK (status IN ('brouillon', 'paiement_en_attente', 'publiee', 'refusee', 'expiree')),
     rejection_reason TEXT,
     validated_at TIMESTAMP WITH TIME ZONE,
     expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    CONSTRAINT uq_advertisement_txn_ref UNIQUE (transaction_ref)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 COMMENT ON TABLE public.advertisements IS 'Annonces promotionnelles des vendeurs (250 FCFA, 7 jours, FR-19)';
@@ -126,7 +125,7 @@ CREATE POLICY "Vendeur peut créer ses annonces"
     TO authenticated
     WITH CHECK (auth.uid() = seller_id);
 
--- Seul le SuperAdmin peut modifier le statut (valider / refuser)
+-- Seul le SuperAdmin ou le service backend peut modifier les annonces
 DROP POLICY IF EXISTS "SuperAdmin peut modifier les annonces" ON public.advertisements;
 CREATE POLICY "SuperAdmin peut modifier les annonces"
     ON public.advertisements
@@ -363,7 +362,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.confirm_order_received_by_buyer(UUID, TEXT) TO anon, authenticated;
 
--- 7.3 Soumission d une annonce payante (250 FCFA) avec contrôle de limite
+-- 7.3 Soumission d une annonce payante (250 FCFA - Paiement SasPay sans saisie SMS manuelle)
 CREATE OR REPLACE FUNCTION public.submit_advertisement(
     p_title TEXT,
     p_content TEXT,
@@ -371,7 +370,7 @@ CREATE OR REPLACE FUNCTION public.submit_advertisement(
     p_link_url TEXT DEFAULT NULL,
     p_product_id UUID DEFAULT NULL,
     p_operator TEXT DEFAULT 'wave',
-    p_transaction_ref TEXT DEFAULT ''
+    p_session_id TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -383,7 +382,6 @@ DECLARE
     pending_ads_count INTEGER;
     clean_title TEXT;
     clean_content TEXT;
-    clean_ref TEXT;
     new_ad_id UUID;
 BEGIN
     caller_uid := auth.uid();
@@ -393,7 +391,6 @@ BEGIN
 
     clean_title := TRIM(COALESCE(p_title, ''));
     clean_content := TRIM(COALESCE(p_content, ''));
-    clean_ref := TRIM(COALESCE(p_transaction_ref, ''));
 
     IF LENGTH(clean_title) < 3 OR LENGTH(clean_title) > 60 THEN
         RETURN jsonb_build_object('success', false, 'message', 'Le titre de l annonce doit comporter entre 3 et 60 caractères.');
@@ -403,23 +400,17 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', 'Le texte de l annonce doit comporter entre 10 et 300 caractères.');
     END IF;
 
-    IF clean_ref = '' THEN
-        RETURN jsonb_build_object('success', false, 'message', 'La référence de transaction de paiement est obligatoire.');
-    END IF;
-
-    -- Contrôle d unicité de la référence de paiement (FR-19)
-    IF EXISTS (SELECT 1 FROM public.advertisements WHERE transaction_ref = clean_ref) THEN
-        RETURN jsonb_build_object('success', false, 'message', 'Cette référence de paiement a déjà été utilisée sur la plateforme.');
-    END IF;
-
-    -- Contrôle limite de 3 annonces en attente par vendeur
+    -- Contrôle limite anti-spam de 3 annonces actives ou en attente par vendeur
     SELECT COUNT(*) INTO pending_ads_count
     FROM public.advertisements
     WHERE seller_id = caller_uid
-      AND status IN ('a_valider', 'paiement_en_attente');
+      AND (
+          (status IN ('paiement_en_attente', 'a_valider'))
+          OR (status = 'publiee' AND expires_at > NOW())
+      );
 
     IF pending_ads_count >= 3 THEN
-        RETURN jsonb_build_object('success', false, 'message', 'Vous avez déjà 3 annonces en attente de validation. Veuillez attendre leur traitement.');
+        RETURN jsonb_build_object('success', false, 'message', 'Vous avez déjà 3 annonces actives ou en attente de paiement (limite anti-spam de 3 annonces par vendeur).');
     END IF;
 
     INSERT INTO public.advertisements (
@@ -444,24 +435,67 @@ BEGIN
         p_link_url,
         p_product_id,
         250.00,
-        LOWER(TRIM(p_operator)),
-        clean_ref,
-        'a_valider',
+        LOWER(TRIM(COALESCE(p_operator, 'wave'))),
+        p_session_id,
+        'paiement_en_attente',
         NOW(),
         NOW()
     )
     RETURNING id INTO new_ad_id;
 
     INSERT INTO public.audit_logs (user_id, action, entity_type, entity_id, details)
-    VALUES (caller_uid, 'CREATION_ANNONCE_250F', 'advertisements', new_ad_id::text, jsonb_build_object('title', clean_title, 'transaction_ref', clean_ref));
+    VALUES (caller_uid, 'CREATION_ANNONCE_250F', 'advertisements', new_ad_id::text, jsonb_build_object('title', clean_title, 'status', 'paiement_en_attente', 'amount', 250.00));
 
-    RETURN jsonb_build_object('success', true, 'ad_id', new_ad_id, 'message', 'Votre annonce a été transmise avec succès pour validation.');
+    RETURN jsonb_build_object('success', true, 'ad_id', new_ad_id, 'status', 'paiement_en_attente', 'amount', 250.00, 'message', 'Votre annonce a été enregistrée en attente de règlement SasPay.');
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.submit_advertisement(TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_advertisement(TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT) TO authenticated, anon;
 
--- 7.4 Modération SuperAdmin des annonces (Valider / Refuser avec motif)
+-- 7.4 Publication automatique d'une annonce dès confirmation du paiement SasPay
+CREATE OR REPLACE FUNCTION public.publish_advertisement_on_payment(
+    p_ad_id UUID,
+    p_transaction_id TEXT DEFAULT NULL,
+    p_seller_id UUID DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+    ad_rec RECORD;
+BEGIN
+    SELECT * INTO ad_rec FROM public.advertisements WHERE id = p_ad_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'message', 'Annonce introuvable.');
+    END IF;
+
+    UPDATE public.advertisements
+    SET status = 'publiee',
+        validated_at = NOW(),
+        expires_at = NOW() + INTERVAL '7 days',
+        transaction_ref = COALESCE(p_transaction_id, transaction_ref),
+        rejection_reason = NULL,
+        updated_at = NOW()
+    WHERE id = p_ad_id;
+
+    INSERT INTO public.audit_logs (user_id, action, entity_type, entity_id, details)
+    VALUES (
+        COALESCE(p_seller_id, ad_rec.seller_id), 
+        'PUBLICATION_ANNONCE_SASPAY_AUTO', 
+        'advertisements', 
+        p_ad_id::text, 
+        jsonb_build_object('seller_id', ad_rec.seller_id, 'transaction_id', p_transaction_id, 'amount', 250.00, 'duration_days', 7)
+    );
+
+    RETURN jsonb_build_object('success', true, 'message', 'Annonce validée et publiée automatiquement pour 7 jours.');
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.publish_advertisement_on_payment(UUID, TEXT, UUID) TO authenticated, service_role, anon;
+
+-- 7.5 Modération administrative de secours (Refus ou retrait d'une annonce inappropriée)
 CREATE OR REPLACE FUNCTION public.admin_moderate_advertisement(
     p_ad_id UUID,
     p_action TEXT,
@@ -496,9 +530,9 @@ BEGIN
         WHERE id = p_ad_id;
 
         INSERT INTO public.audit_logs (user_id, action, entity_type, entity_id, details)
-        VALUES (caller_uid, 'VALIDATION_ANNONCE_SUPERADMIN', 'advertisements', p_ad_id::text, jsonb_build_object('seller_id', ad_rec.seller_id));
+        VALUES (caller_uid, 'VALIDATION_FORCEE_SUPERADMIN', 'advertisements', p_ad_id::text, jsonb_build_object('seller_id', ad_rec.seller_id));
 
-        RETURN jsonb_build_object('success', true, 'message', 'Annonce validée et publiée pour 7 jours.');
+        RETURN jsonb_build_object('success', true, 'message', 'Annonce publiée pour 7 jours.');
     ELSIF LOWER(p_action) = 'refuser' THEN
         UPDATE public.advertisements
         SET status = 'refusee',
@@ -507,9 +541,9 @@ BEGIN
         WHERE id = p_ad_id;
 
         INSERT INTO public.audit_logs (user_id, action, entity_type, entity_id, details)
-        VALUES (caller_uid, 'REFUS_ANNONCE_SUPERADMIN', 'advertisements', p_ad_id::text, jsonb_build_object('seller_id', ad_rec.seller_id, 'reason', p_reason));
+        VALUES (caller_uid, 'RETRAIT_ANNONCE_SUPERADMIN', 'advertisements', p_ad_id::text, jsonb_build_object('seller_id', ad_rec.seller_id, 'reason', p_reason));
 
-        RETURN jsonb_build_object('success', true, 'message', 'Annonce refusée.');
+        RETURN jsonb_build_object('success', true, 'message', 'Annonce retirée/refusée.');
     ELSE
         RETURN jsonb_build_object('success', false, 'message', 'Action non reconnue (utiliser valider ou refuser).');
     END IF;

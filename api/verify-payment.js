@@ -32,16 +32,19 @@ export default async function handler(req, res) {
             }
         }
 
-        const { sessionId, sellerId, plan = 'starter', operator = 'wave' } = body || {};
+        const { sessionId, sellerId, plan = 'starter', operator = 'wave', type, adId, ad_id } = body || {};
 
-        if (!sessionId || !sellerId) {
-            return res.status(400).json({ error: 'Identifiant de session et vendeur obligatoires.' });
+        if (!sessionId || (!sellerId && !adId && !ad_id)) {
+            return res.status(400).json({ error: 'Identifiant de session et référence vendeur/annonce obligatoires.' });
         }
 
+        const isAdPayment = plan === 'annonce' || type === 'advertisement' || type === 'annonce' || Boolean(adId || ad_id);
+        const targetAdId = adId || ad_id;
+
         const validPlan = PLAN_QUOTAS[plan] ? plan : 'starter';
-        const planDetails = PLAN_QUOTAS[validPlan];
+        const planDetails = PLAN_QUOTAS[validPlan] || PLAN_QUOTAS.starter;
         const maxProducts = planDetails.maxProducts;
-        const durationDays = planDetails.durationDays;
+        const durationDays = isAdPayment ? 7 : planDetails.durationDays;
         const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
         const nowIso = new Date().toISOString();
 
@@ -49,7 +52,7 @@ export default async function handler(req, res) {
             auth: { persistSession: false },
         });
 
-        // 1. Vérifier si le paiement a déjà été validé (par le Webhook SasPay ou le SuperAdmin)
+        // 1. Vérifier si le paiement a déjà été validé (par le Webhook SasPay ou une vérification antérieure)
         const { data: existingPayment } = await supabase
             .from('seller_payments')
             .select('*')
@@ -57,6 +60,57 @@ export default async function handler(req, res) {
             .maybeSingle();
 
         if (existingPayment && existingPayment.status === 'success') {
+            if (isAdPayment) {
+                // Publication automatique de l'annonce si ce n'est pas déjà fait
+                let finalAdId = targetAdId;
+                if (!finalAdId && sellerId) {
+                    const { data: pendingAd } = await supabase
+                        .from('advertisements')
+                        .select('id')
+                        .eq('seller_id', sellerId)
+                        .eq('status', 'paiement_en_attente')
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    if (pendingAd) finalAdId = pendingAd.id;
+                }
+
+                if (finalAdId) {
+                    await supabase
+                        .from('advertisements')
+                        .update({
+                            status: 'publiee',
+                            validated_at: nowIso,
+                            expires_at: expiresAt,
+                            transaction_ref: sessionId,
+                            rejection_reason: null,
+                            updated_at: nowIso,
+                        })
+                        .eq('id', finalAdId);
+
+                    try {
+                        await supabase.from('audit_logs').insert({
+                            user_id: sellerId || null,
+                            action: 'PUBLICATION_ANNONCE_SASPAY_AUTO',
+                            entity_type: 'advertisements',
+                            entity_id: String(finalAdId),
+                            details: { amount: 250, provider: 'saspay', transaction_id: sessionId, auto_published: true, expires_at: expiresAt },
+                        });
+                    } catch {}
+                }
+
+                return res.status(200).json({
+                    success: true,
+                    verified: true,
+                    mode: 'database_confirmed',
+                    type: 'advertisement',
+                    adId: finalAdId,
+                    status: 'publiee',
+                    expiresAt,
+                    message: 'Paiement de l\'annonce confirmé avec succès. Annonce publiée pour 7 jours.',
+                });
+            }
+
             return res.status(200).json({
                 success: true,
                 verified: true,
@@ -87,7 +141,71 @@ export default async function handler(req, res) {
                     const isPaid = status === 'SUCCESS' || status === 'PAID' || data.paid === true;
 
                     if (isPaid) {
-                        // Activer le vendeur dans Supabase
+                        if (isAdPayment) {
+                            let finalAdId = targetAdId;
+                            if (!finalAdId && sellerId) {
+                                const { data: pendingAd } = await supabase
+                                    .from('advertisements')
+                                    .select('id')
+                                    .eq('seller_id', sellerId)
+                                    .eq('status', 'paiement_en_attente')
+                                    .order('created_at', { ascending: false })
+                                    .limit(1)
+                                    .maybeSingle();
+                                if (pendingAd) finalAdId = pendingAd.id;
+                            }
+
+                            if (finalAdId) {
+                                await supabase
+                                    .from('advertisements')
+                                    .update({
+                                        status: 'publiee',
+                                        validated_at: nowIso,
+                                        expires_at: expiresAt,
+                                        transaction_ref: sessionId,
+                                        rejection_reason: null,
+                                        updated_at: nowIso,
+                                    })
+                                    .eq('id', finalAdId);
+
+                                try {
+                                    await supabase.from('audit_logs').insert({
+                                        user_id: sellerId || null,
+                                        action: 'PUBLICATION_ANNONCE_SASPAY_AUTO',
+                                        entity_type: 'advertisements',
+                                        entity_id: String(finalAdId),
+                                        details: { amount: 250, provider: 'saspay', transaction_id: sessionId, auto_published: true, expires_at: expiresAt },
+                                    });
+                                } catch {}
+                            }
+
+                            try {
+                                await supabase.from('seller_payments').upsert({
+                                    seller_id: sellerId,
+                                    amount: 250,
+                                    currency: 'XOF',
+                                    plan: 'starter',
+                                    operator: operator === 'om' ? 'om' : 'wave',
+                                    provider: 'saspay',
+                                    provider_session_id: sessionId,
+                                    status: 'success',
+                                    metadata: { verified_at: nowIso, mode: 'api_realtime', type: 'advertisement', ad_id: finalAdId, saspay_response: data },
+                                }, { onConflict: 'provider_session_id' });
+                            } catch {}
+
+                            return res.status(200).json({
+                                success: true,
+                                verified: true,
+                                mode: 'live_api',
+                                type: 'advertisement',
+                                adId: finalAdId,
+                                status: 'publiee',
+                                expiresAt,
+                                message: 'Paiement SasPay validé. Annonce publiée immédiatement pour 7 jours.',
+                            });
+                        }
+
+                        // Activer le vendeur dans Supabase (Abonnement standard)
                         await supabase
                             .from('profiles')
                             .update({

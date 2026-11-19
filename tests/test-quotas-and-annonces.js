@@ -301,21 +301,76 @@ assert.ok(rejection16.userMessage.includes('atteint sa limite'), 'Message clair 
 console.log('   ✅ Cas 10 validé : Limite de 15 commandes respectée avec message clair.');
 
 // =========================================================================
-// TEST 14 : Anti-fraude FR-19 - Unicité de la référence Wave/Orange Money
+// TEST 14 : Annonces 250 F - Flux SasPay automatique (sans saisie SMS ni validation admin)
 // =========================================================================
-console.log('👉 Test 14: FR-19 - Unicité stricte de la référence de transaction');
-const existingRefs = new Set(['WAVE_12345678', 'OM_87654321']);
-function checkTxnRefUniqueness(ref) {
-    const clean = (ref || '').trim().toUpperCase();
-    if (!clean) return { valid: false, message: 'Référence requise' };
-    if (existingRefs.has(clean)) {
-        return { valid: false, message: 'Cette référence de paiement a déjà été utilisée sur la plateforme.' };
+console.log('👉 Test 14: Annonces 250 F - Flux SasPay automatique & publication directe sans saisie SMS');
+
+// Simulation de la soumission de l'annonce côté serveur (submit_advertisement)
+function simulateSubmitAdvertisement({ title, content, sellerId, currentActiveOrPendingCount }) {
+    if (!sellerId) return { success: false, message: 'Non connecté' };
+    const cleanTitle = (title || '').trim();
+    const cleanContent = (content || '').trim();
+    if (cleanTitle.length < 3 || cleanTitle.length > 60) {
+        return { success: false, message: 'Titre invalide (3-60 car.)' };
     }
-    return { valid: true };
+    if (cleanContent.length < 10 || cleanContent.length > 300) {
+        return { success: false, message: 'Texte invalide (10-300 car.)' };
+    }
+    if (currentActiveOrPendingCount >= ANNONCE_CONFIG.maxPendingPerSeller) {
+        return { success: false, message: 'Limite anti-spam de 3 annonces atteinte' };
+    }
+    return {
+        success: true,
+        ad_id: 'mock-ad-uuid-1234',
+        status: 'paiement_en_attente',
+        amount: 250.00,
+        message: 'Votre annonce a été enregistrée. Veuillez procéder au règlement pour l activer.'
+    };
 }
-assert.equal(checkTxnRefUniqueness('WAVE_12345678').valid, false, 'Référence déjà existante rejetée');
-assert.equal(checkTxnRefUniqueness('WAVE_99999999').valid, true, 'Nouvelle référence acceptée');
-console.log('   ✅ FR-19 Unicité validée : Impossible de recycler une référence de paiement.');
+
+// 1. Soumission d'une annonce valide -> Statut immédiat 'paiement_en_attente' (sans exiger de référence SMS)
+const submission = simulateSubmitAdvertisement({
+    title: 'Super promo déjeuner à B1',
+    content: 'Venez profiter de nos plats chauds et boissons fraîches à midi !',
+    sellerId: 'seller-123',
+    currentActiveOrPendingCount: 1
+});
+assert.equal(submission.success, true, 'Création annonce autorisée sans référence SMS');
+assert.equal(submission.status, 'paiement_en_attente', 'Statut initialement en attente de paiement SasPay');
+assert.equal(submission.amount, 250.00, 'Montant fixé strictement à 250 FCFA');
+
+// 2. Simulation de la confirmation automatique SasPay (api/webhook-saspay.js / api/verify-payment.js)
+function simulateSasPayAdActivation(adRecord, paymentEvent) {
+    if (paymentEvent.paid !== true && paymentEvent.status !== 'SUCCESS') {
+        return { activated: false, status: adRecord.status };
+    }
+    const validatedAt = new Date();
+    const expiresAt = new Date(validatedAt.getTime() + ANNONCE_CONFIG.durationDays * 24 * 3600 * 1000);
+    return {
+        activated: true,
+        adId: adRecord.id,
+        status: 'publiee', // Publication automatique sans passer par 'a_valider' ni validation admin
+        validatedAt,
+        expiresAt,
+        transactionRef: paymentEvent.transactionId,
+        auditLog: {
+            action: 'PUBLICATION_ANNONCE_SASPAY_AUTO',
+            entity_type: 'advertisements',
+            amount: 250,
+        }
+    };
+}
+
+const adRecord = { id: 'mock-ad-uuid-1234', status: 'paiement_en_attente' };
+const paymentSuccessEvent = { status: 'SUCCESS', paid: true, transactionId: 'saspay_txn_77889900' };
+const activatedAd = simulateSasPayAdActivation(adRecord, paymentSuccessEvent);
+
+assert.equal(activatedAd.activated, true, 'Annonce activée automatiquement par SasPay');
+assert.equal(activatedAd.status, 'publiee', 'Statut directement basculé en publiee');
+assert.equal(activatedAd.auditLog.action, 'PUBLICATION_ANNONCE_SASPAY_AUTO', 'Journalisé dans audit_logs');
+const daysDiff = Math.round((activatedAd.expiresAt - activatedAd.validatedAt) / (24 * 3600 * 1000));
+assert.equal(daysDiff, 7, 'Durée de publication fixée exactement à 7 jours');
+console.log('   ✅ Flux SasPay automatique validé : création paiement_en_attente -> publication automatique publiee pour 7 jours.');
 
 // =========================================================================
 // TEST 15 : Anti-fraude FR-19 - Montant exact 250 F et limite de 3 annonces
@@ -324,16 +379,11 @@ console.log('👉 Test 15: FR-19 - Prix fixé à 250 FCFA et limite anti-spam de
 assert.equal(ANNONCE_CONFIG.price, 250, 'Le prix de l\'annonce doit être strictement 250 FCFA');
 assert.equal(ANNONCE_CONFIG.maxPendingPerSeller, 3, 'Maximum 3 annonces en attente par vendeur');
 assert.equal(ANNONCE_CONFIG.durationDays, 7, 'Durée de publication fixée à 7 jours');
+assert.equal(ANNONCE_CONFIG.paymentLink, 'https://link.saspay.me/1aio4avhabm', 'Lien SasPay officiel 250 F configuré');
 
-function canSubmitAnnouncement(sellerPendingCount) {
-    if (sellerPendingCount >= ANNONCE_CONFIG.maxPendingPerSeller) {
-        return { allowed: false, message: 'Vous avez déjà 3 annonces en attente de validation.' };
-    }
-    return { allowed: true };
-}
-assert.equal(canSubmitAnnouncement(2).allowed, true, '2 en attente -> création autorisée');
-assert.equal(canSubmitAnnouncement(3).allowed, false, '3 en attente -> création bloquée');
-console.log('   ✅ FR-19 Montant et Quota validés : 250 FCFA, 3 en attente max.');
+assert.equal(simulateSubmitAdvertisement({ title: 'Titre OK', content: 'Contenu valide avec plus de 10 car.', sellerId: 'seller-1', currentActiveOrPendingCount: 2 }).success, true, '2 en attente -> création autorisée');
+assert.equal(simulateSubmitAdvertisement({ title: 'Titre OK', content: 'Contenu valide avec plus de 10 car.', sellerId: 'seller-1', currentActiveOrPendingCount: 3 }).success, false, '3 en attente -> création bloquée (anti-spam)');
+console.log('   ✅ FR-19 Montant et Quota anti-spam validés : 250 FCFA, 3 en attente max.');
 
 // Contrôle strict : Pack Découverte 100% gratuit (aucun lien ni paiement SasPay)
 assert.equal(SUBSCRIPTION_PLANS.decouverte.price, 0, 'Le pack Découverte doit être strictement à 0 FCFA');

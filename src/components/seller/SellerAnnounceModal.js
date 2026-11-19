@@ -1,8 +1,8 @@
 /**
  * Composant SellerAnnounceModal
  * Formulaire de soumission d'une annonce commerciale (250 FCFA - FR-19).
- * Permet au vendeur de renseigner le contenu de l'annonce, d'accéder au paiement
- * SasPay Wave / OM puis de renseigner sa référence de transaction pour validation administrative.
+ * Permet au vendeur de renseigner son annonce et de procéder directement
+ * au règlement via SasPay (Wave / Orange Money) sans saisie manuelle de référence SMS.
  */
 
 import { supabase } from '../../services/supabase.js';
@@ -24,7 +24,7 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
     modalEl.id = 'seller-announce-modal-overlay';
     modalEl.className = 'fixed inset-0 z-[75] bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
-    let step = 1; // 1: Formulaire, 2: Paiement & Référence, 3: Succès
+    let step = 1; // 1: Formulaire & Règlement direct, 2: Redirection
     let formData = {
         title: '',
         content: '',
@@ -32,7 +32,6 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
         imageFile: null,
         imageUrl: null,
         operator: 'wave',
-        transactionRef: '',
     };
     let isSubmitting = false;
 
@@ -59,7 +58,7 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
 
                 <!-- Corps du formulaire -->
                 <div class="p-5 overflow-y-auto flex-1 no-scrollbar space-y-4">
-                    ${step === 1 ? renderStep1() : (step === 2 ? renderStep2() : renderStep3())}
+                    ${step === 1 ? renderForm() : renderRedirecting()}
                 </div>
             </div>
         `;
@@ -67,14 +66,14 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
         bindEvents();
     }
 
-    function renderStep1() {
+    function renderForm() {
         return `
             <div class="space-y-4">
                 <div class="bg-blue-50 border border-blue-200/70 rounded-2xl p-3.5 flex items-start gap-3">
                     <i class="fa-solid fa-bullhorn text-primary text-lg mt-0.5"></i>
                     <div class="text-xs text-slate-700 leading-relaxed">
                         <strong class="font-bold text-slate-900 block mb-0.5">Visibilité maximale sur l'accueil acheteur</strong>
-                        Faites passer votre offre, promo ou événement auprès de toute la communauté de l'UIDT pendant <strong>7 jours</strong> pour seulement <strong>${ANNONCE_CONFIG.priceDisplay}</strong>.
+                        Faites passer votre offre, promo ou événement auprès de toute la communauté de l'UIDT pendant <strong>7 jours</strong> pour seulement <strong>${ANNONCE_CONFIG.priceDisplay}</strong> via Wave ou Orange Money.
                     </div>
                 </div>
 
@@ -137,137 +136,70 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
                     >
                 </div>
 
-                <button 
-                    type="button" 
-                    id="btn-go-to-payment" 
-                    class="w-full py-3 bg-primary hover:bg-primary-hover active:scale-95 text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-                >
-                    <span>Continuer vers le règlement (${ANNONCE_CONFIG.priceDisplay})</span>
-                    <i class="fa-solid fa-arrow-right text-xs"></i>
-                </button>
-            </div>
-        `;
-    }
-
-    function renderStep2() {
-        return `
-            <div class="space-y-4">
-                <div class="text-center p-3">
-                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center text-xl mx-auto mb-2 shadow-xs">
-                        <i class="fa-solid fa-credit-card"></i>
-                    </div>
-                    <h3 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Règlement de votre annonce</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">Montant fixe certifié : <strong class="text-slate-900 font-bold">${ANNONCE_CONFIG.priceDisplay}</strong></p>
-                </div>
-
-                <!-- 1. Bouton d'accès au lien SasPay officiel -->
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center space-y-2">
-                    <span class="text-xs font-bold text-slate-700 block">Étape 1 : Effectuez le paiement de 250 FCFA</span>
-                    <a 
-                        href="${ANNONCE_CONFIG.paymentLink}" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        id="btn-open-payment-link"
-                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
-                    >
-                        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-                        <span>Ouvrir le paiement Wave / OM (250 F)</span>
-                    </a>
-                    <p class="text-[11px] text-slate-400">Le paiement s'ouvre dans un nouvel onglet sécurisé.</p>
-                </div>
-
-                <!-- 2. Saisie de la référence de paiement -->
-                <div class="space-y-3 pt-1">
-                    <span class="text-xs font-bold text-slate-700 block">Étape 2 : Renseignez la référence reçue par SMS</span>
-                    
+                <!-- Mode de paiement SasPay direct (Wave / Orange Money) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-800 mb-1.5">
+                        Moyen de règlement (${ANNONCE_CONFIG.priceDisplay}) *
+                    </label>
                     <div class="flex gap-2">
                         <button 
                             type="button" 
                             data-operator="wave" 
-                            class="flex-1 py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${formData.operator === 'wave' ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-300' : 'border-slate-200 bg-white text-slate-600'}"
+                            class="flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${formData.operator === 'wave' ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-300' : 'border-slate-200 bg-white text-slate-600'}"
                         >
-                            <i class="fa-solid fa-water text-sky-500"></i> Wave
+                            <i class="fa-solid fa-water text-sky-500"></i> Wave Sénégal
                         </button>
                         <button 
                             type="button" 
                             data-operator="om" 
-                            class="flex-1 py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${formData.operator === 'om' ? 'border-orange-500 bg-orange-50 text-orange-700 ring-2 ring-orange-300' : 'border-slate-200 bg-white text-slate-600'}"
+                            class="flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${formData.operator === 'om' ? 'border-orange-500 bg-orange-50 text-orange-700 ring-2 ring-orange-300' : 'border-slate-200 bg-white text-slate-600'}"
                         >
                             <i class="fa-solid fa-mobile-screen-button text-orange-500"></i> Orange Money
                         </button>
                     </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-800 mb-1" for="ad-transaction-ref">
-                            Référence de transaction Wave ou Orange Money *
-                        </label>
-                        <input 
-                            type="text" 
-                            id="ad-transaction-ref" 
-                            placeholder="Ex: TXN-94821 ou référence SMS Wave" 
-                            value="${escapeHTML(formData.transactionRef)}"
-                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all"
-                        >
-                        <p class="text-[10px] text-slate-400 mt-1">Chaque référence est scellée de manière unique en base (anti-fraude FR-19).</p>
-                    </div>
                 </div>
 
-                <div class="flex gap-2 pt-2">
-                    <button 
-                        type="button" 
-                        id="btn-back-to-step-1" 
-                        class="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
-                    >
-                        <i class="fa-solid fa-arrow-left mr-1"></i> Retour
-                    </button>
-                    <button 
-                        type="button" 
-                        id="btn-submit-announce" 
-                        ${isSubmitting ? 'disabled' : ''}
-                        class="flex-1 py-3 bg-primary hover:bg-primary-hover active:scale-95 text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}"
-                    >
-                        ${isSubmitting ? '<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours...' : '<i class="fa-solid fa-paper-plane text-xs"></i> Transmettre mon annonce'}
-                    </button>
-                </div>
+                <button 
+                    type="button" 
+                    id="btn-submit-announce-direct" 
+                    ${isSubmitting ? 'disabled' : ''}
+                    class="w-full py-3 bg-primary hover:bg-primary-hover active:scale-95 text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}"
+                >
+                    ${isSubmitting ? '<i class="fa-solid fa-spinner fa-spin"></i> Traitement en cours...' : `<i class="fa-solid fa-credit-card text-xs"></i> Continuer vers le paiement (${ANNONCE_CONFIG.priceDisplay})`}
+                </button>
             </div>
         `;
     }
 
-    function renderStep3() {
+    function renderRedirecting() {
         return `
             <div class="text-center py-6 px-4 space-y-4">
                 <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center text-2xl mx-auto shadow-sm">
-                    <i class="fa-solid fa-check"></i>
+                    <i class="fa-solid fa-spinner fa-spin"></i>
                 </div>
                 <div>
-                    <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900">Annonce transmise avec succès !</h3>
+                    <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900">Redirection vers le paiement...</h3>
                     <p class="text-xs sm:text-sm text-slate-600 mt-1 max-w-xs mx-auto">
-                        Votre annonce est actuellement <strong>en attente de validation</strong> par l'administration du campus.
+                        Votre annonce est enregistrée. Vous allez être redirigé vers la session de paiement sécurisée SasPay (Wave / OM).
                     </p>
                 </div>
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-left text-xs text-slate-600 space-y-1">
-                    <div><strong>Titre :</strong> ${escapeHTML(formData.title)}</div>
-                    <div><strong>Référence :</strong> ${escapeHTML(formData.transactionRef)}</div>
-                    <div><strong>Montant :</strong> 250 FCFA</div>
-                    <div><strong>Durée :</strong> 7 jours dès validation</div>
+                <div class="pt-2">
+                    <a 
+                        href="${ANNONCE_CONFIG.paymentLink}" 
+                        id="btn-direct-payment-fallback"
+                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+                    >
+                        <span>Ouvrir la page de paiement (${ANNONCE_CONFIG.priceDisplay})</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </a>
                 </div>
-                <p class="text-[11px] text-slate-400">
-                    Délai habituel de validation administrative : moins de 2 heures.
-                </p>
-                <button 
-                    type="button" 
-                    id="btn-finish-announce" 
-                    class="w-full py-3 bg-primary hover:bg-primary-hover active:scale-95 text-white font-heading font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                >
-                    Fermer et retourner à ma boutique
-                </button>
+                <p class="text-[11px] text-slate-400">Dès la confirmation du paiement, votre annonce sera activée automatiquement pour 7 jours.</p>
             </div>
         `;
     }
 
     function bindEvents() {
         modalEl.querySelector('#btn-close-announce-modal')?.addEventListener('click', close);
-        modalEl.querySelector('#btn-finish-announce')?.addEventListener('click', close);
 
         if (step === 1) {
             const titleInput = modalEl.querySelector('#ad-title');
@@ -295,21 +227,6 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
                 formData.imageFile = e.target.files?.[0] || null;
             });
 
-            modalEl.querySelector('#btn-go-to-payment')?.addEventListener('click', () => {
-                if (!formData.title.trim()) {
-                    if (typeof onShowToast === 'function') onShowToast('Veuillez renseigner un titre pour votre annonce.', 'error');
-                    titleInput?.focus();
-                    return;
-                }
-                if (!formData.content.trim()) {
-                    if (typeof onShowToast === 'function') onShowToast('Veuillez rédiger le message de votre annonce.', 'error');
-                    contentInput?.focus();
-                    return;
-                }
-                step = 2;
-                render();
-            });
-        } else if (step === 2) {
             modalEl.querySelectorAll('button[data-operator]').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     formData.operator = btn.getAttribute('data-operator');
@@ -317,21 +234,18 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
                 });
             });
 
-            const refInput = modalEl.querySelector('#ad-transaction-ref');
-            refInput?.addEventListener('input', (e) => {
-                formData.transactionRef = e.target.value;
-            });
+            modalEl.querySelector('#btn-submit-announce-direct')?.addEventListener('click', async () => {
+                const cleanTitle = formData.title.trim();
+                const cleanContent = formData.content.trim();
 
-            modalEl.querySelector('#btn-back-to-step-1')?.addEventListener('click', () => {
-                step = 1;
-                render();
-            });
-
-            modalEl.querySelector('#btn-submit-announce')?.addEventListener('click', async () => {
-                const cleanRef = formData.transactionRef.trim();
-                if (!cleanRef) {
-                    if (typeof onShowToast === 'function') onShowToast('Veuillez renseigner la référence de transaction reçue par SMS.', 'error');
-                    refInput?.focus();
+                if (!cleanTitle || cleanTitle.length < 3) {
+                    if (typeof onShowToast === 'function') onShowToast('Le titre doit comporter au moins 3 caractères.', 'error');
+                    titleInput?.focus();
+                    return;
+                }
+                if (!cleanContent || cleanContent.length < 10) {
+                    if (typeof onShowToast === 'function') onShowToast('Le message doit comporter au moins 10 caractères.', 'error');
+                    contentInput?.focus();
                     return;
                 }
 
@@ -345,7 +259,7 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
                         try {
                             finalImageUrl = await uploadMediaFile(formData.imageFile, {
                                 folder: 'annonces',
-                                filename: `ad_${seller.id.slice(0, 8)}_${Date.now()}`,
+                                filename: `ad_${(seller?.id || 'uidt').slice(0, 8)}_${Date.now()}`,
                                 maxWidth: 800,
                                 maxHeight: 600,
                                 quality: 0.75,
@@ -356,28 +270,36 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
                         }
                     }
 
-                    // Appel RPC sécurisé submit_advertisement
+                    // Enregistrement de l'annonce en statut 'paiement_en_attente' via la RPC PostgreSQL
                     const { data: res, error: rpcErr } = await supabase.rpc('submit_advertisement', {
-                        p_title: formData.title.trim(),
-                        p_content: formData.content.trim(),
+                        p_title: cleanTitle,
+                        p_content: cleanContent,
                         p_image_url: finalImageUrl,
                         p_link_url: formData.linkUrl.trim() || null,
                         p_product_id: null,
                         p_operator: formData.operator,
-                        p_transaction_ref: cleanRef,
+                        p_session_id: null,
                     });
 
                     if (rpcErr) throw new Error(rpcErr.message);
                     if (res && res.success === false) throw new Error(res.message);
 
-                    step = 3;
+                    step = 2;
                     render();
 
                     if (typeof onShowToast === 'function') {
-                        onShowToast('🎉 Annonce transmise avec succès pour validation !', 'success');
+                        onShowToast('📢 Annonce enregistrée ! Redirection vers le paiement Wave / OM...', 'success');
                     }
                     if (typeof onSuccess === 'function') {
                         onSuccess(res);
+                    }
+
+                    // Redirection directe vers la session de paiement SasPay 250 FCFA
+                    const targetPaymentUrl = ANNONCE_CONFIG.paymentLink;
+                    if (typeof window !== 'undefined' && targetPaymentUrl) {
+                        setTimeout(() => {
+                            window.location.href = targetPaymentUrl;
+                        }, 900);
                     }
                 } catch (err) {
                     isSubmitting = false;
@@ -399,7 +321,6 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
             imageFile: null,
             imageUrl: null,
             operator: 'wave',
-            transactionRef: '',
         };
         isSubmitting = false;
         render();
