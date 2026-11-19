@@ -3,7 +3,15 @@
  */
 
 import assert from 'node:assert';
-import { isAppInstalled, initPwaInstallPrompt } from '../src/utils/pwa-install.js';
+import { 
+    isAppInstalled, 
+    initPwaInstallPrompt, 
+    isInstallPromptAvailable, 
+    isPwaBannerVisible, 
+    triggerPwaInstallPrompt,
+    showInstallBanner,
+    hideInstallBanner
+} from '../src/utils/pwa-install.js';
 
 console.log('🧪 Démarrage des tests du module PWA Install...');
 
@@ -25,6 +33,38 @@ try {
     console.log('✅ [initPwaInstallPrompt] Garde d\'exécution sécurisée validée !');
 } catch (err) {
     console.error('❌ [initPwaInstallPrompt] Échec du test :', err);
+    process.exit(1);
+}
+
+// Test 3 : isInstallPromptAvailable et isPwaBannerVisible
+try {
+    assert.strictEqual(isInstallPromptAvailable(), false, 'En environnement de test, deferredPrompt doit être null');
+    assert.strictEqual(isPwaBannerVisible(), false, 'En environnement de test, la bannière ne doit pas être visible');
+    console.log('✅ [Prompt & Banner Status] Statut d\'installation par défaut validé !');
+} catch (err) {
+    console.error('❌ [Prompt & Banner Status] Échec :', err);
+    process.exit(1);
+}
+
+// Test 4 : triggerPwaInstallPrompt sans prompt différé doit renvoyer 'unavailable' sans crasher
+try {
+    const outcome = await triggerPwaInstallPrompt();
+    assert.strictEqual(outcome, 'unavailable', 'triggerPwaInstallPrompt doit renvoyer "unavailable" sans prompt');
+    console.log('✅ [triggerPwaInstallPrompt] Repli gracieux hors-navigateur validé !');
+} catch (err) {
+    console.error('❌ [triggerPwaInstallPrompt] Échec :', err);
+    process.exit(1);
+}
+
+// Test 5 : showInstallBanner et hideInstallBanner résilients
+try {
+    assert.doesNotThrow(() => {
+        showInstallBanner();
+        hideInstallBanner();
+    });
+    console.log('✅ [Banner Lifecycle] Affichage et fermeture sécurisés validés !');
+} catch (err) {
+    console.error('❌ [Banner Lifecycle] Échec :', err);
     process.exit(1);
 }
 

@@ -7,6 +7,7 @@
 
 import { isNotificationSupported, getNotificationPermission, subscribePlatformPush } from './background-notifications.js';
 import { showToast } from './notifications.js';
+import { isPwaBannerVisible } from './pwa-install.js';
 
 const DISMISSED_KEY = 'campus_push_dismissed_until';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -55,6 +56,14 @@ export function initPushNotificationPrompt() {
 function showPushPromptBanner() {
     if (getNotificationPermission() !== 'default') return;
     if (bannerEl && document.body?.contains(bannerEl)) return;
+
+    // Si la bannière d'installation PWA est déjà affichée, reporter pour éviter tout chevauchement visuel
+    if (isPwaBannerVisible()) {
+        setTimeout(() => {
+            showPushPromptBanner();
+        }, 10000);
+        return;
+    }
 
     bannerEl = document.createElement('aside');
     bannerEl.id = 'push-prompt-banner';
