@@ -16,6 +16,12 @@ const resolved = resolveMediaUrl(legacySupabaseUrl);
 console.assert(resolved === expectedR2Url, `Échec: URL attendue ${expectedR2Url}, obtenu ${resolved}`);
 console.log('✅ [resolveMediaUrl] Conversion transparente Supabase -> Cloudflare R2 validée !');
 
+// 1b. Test resolveMediaUrl avec une URL téléversée après la migration R2 (post-17 Nov 2026 via repli Supabase)
+const postMigrationSupabaseUrl = 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/product-images/seller-123/1795031169525_prod_0.webp';
+const resolvedPost = resolveMediaUrl(postMigrationSupabaseUrl);
+console.assert(resolvedPost === postMigrationSupabaseUrl, `Échec: URL post-migration attendue ${postMigrationSupabaseUrl}, obtenu ${resolvedPost}`);
+console.log('✅ [resolveMediaUrl] Préservation des uploads récents sur Supabase Storage validée !');
+
 // 2. Test resolveMediaUrl avec une URL déjà sur R2 (idempotence)
 const alreadyR2 = 'https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/products/test.webp';
 console.assert(resolveMediaUrl(alreadyR2) === alreadyR2, 'Échec: L\'URL R2 existante ne doit pas être modifiée');

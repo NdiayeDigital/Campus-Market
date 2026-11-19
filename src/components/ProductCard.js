@@ -56,15 +56,17 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
         const safeImageUrl = primaryImg.includes('photo-1611591475823-3882f0592965')
             ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
             : primaryImg;
+        const fallbackUrl = product.image_url || (Array.isArray(product.images) && product.images[0]) || '';
 
         imageContent = `
             <img 
                 src="${escapeHTML(safeImageUrl)}" 
+                ${fallbackUrl && fallbackUrl !== safeImageUrl ? `data-fallback-url="${escapeHTML(fallbackUrl)}"` : ''}
                 alt="${escapeHTML(product.title)} — Campus Market UIDT" 
                 loading="lazy"
                 decoding="async"
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
-                onerror="this.onerror=null; this.src='/assets/placeholder.webp';"
+                onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else { this.onerror=null; this.src='/assets/placeholder.webp'; }"
             >
         `;
     } else {
@@ -81,7 +83,8 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
     const sellerName = product.seller
         ? `${product.seller.prenom || ''} ${product.seller.nom || ''}`.trim()
         : 'Vendeur UIDT';
-    const sellerAvatar = resolveMediaUrl(product.seller?.avatar_url);
+    const rawSellerAvatar = product.seller?.avatar_url || '';
+    const sellerAvatar = resolveMediaUrl(rawSellerAvatar);
 
     cardEl.innerHTML = `
         <!-- Image Container -->
@@ -120,7 +123,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                 >
                     <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold overflow-hidden shrink-0">
                         ${sellerAvatar 
-                            ? `<img src="${escapeHTML(sellerAvatar)}" alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.textContent='${(sellerName[0] || 'V').toUpperCase()}';">`
+                            ? `<img src="${escapeHTML(sellerAvatar)}" ${rawSellerAvatar && rawSellerAvatar !== sellerAvatar ? `data-fallback-url="${escapeHTML(rawSellerAvatar)}"` : ''} alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else { this.onerror=null; this.parentElement.textContent='${(sellerName[0] || 'V').toUpperCase()}'; }">`
                             : (sellerName[0] || 'V').toUpperCase()
                         }
                     </span>

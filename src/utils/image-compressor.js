@@ -297,6 +297,8 @@ export async function compressImageToBlob(file, options = {}) {
 /**
  * Résout une URL d'image vers le CDN Cloudflare R2 si elle pointe vers l'ancien stockage Supabase.
  * Permet un basculement immédiat et transparent sans attendre l'exécution manuelle de migrations SQL.
+ * Si le média a été téléversé postérieurement à la migration R2 (post 17 Nov 2026 02:16 UTC)
+ * via le repli Supabase Storage, il n'est pas présent sur R2 et doit rester servi depuis Supabase.
  * @param {string} url
  * @returns {string}
  */
@@ -305,6 +307,12 @@ export function resolveMediaUrl(url) {
     const SUPABASE_STORAGE_PREFIX = 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/';
     const R2_PUBLIC_PREFIX = 'https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/';
     if (url.startsWith(SUPABASE_STORAGE_PREFIX)) {
+        // Détection de la date d'upload par timestamp 13 chiffres (ex: 1795031169525)
+        // La coupure de migration R2 a eu lieu le 17 Nov 2026 à 02:16:12 UTC (timestamp 1794881772000)
+        const timestampMatch = url.match(/\/(\d{13})_/);
+        if (timestampMatch && Number(timestampMatch[1]) > 1794881772000) {
+            return url;
+        }
         return url.replace(SUPABASE_STORAGE_PREFIX, R2_PUBLIC_PREFIX);
     }
     return url;
