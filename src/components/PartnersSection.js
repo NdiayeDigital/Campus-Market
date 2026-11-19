@@ -60,7 +60,7 @@ export function createPartnersSection({
                             class="max-w-full max-h-full w-auto h-auto object-contain"
                             loading="lazy"
                             decoding="async"
-                            onerror="this.parentElement.innerHTML='<span class=\\'font-heading font-black text-primary text-base\\'>${escapeHTML(initial)}</span>'"
+                            onerror="if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.parentElement.innerHTML='<span class=\\'font-heading font-black text-primary text-base\\'>${escapeHTML(initial)}</span>'; }"
                         />
                     ` : `
                         <span class="font-heading font-black text-primary text-base">${escapeHTML(initial)}</span>
@@ -125,7 +125,7 @@ export function createPartnersSection({
                                 src="${escapeHTML(resolvedLogoUrl)}" 
                                 alt="Logo ${escapeHTML(partner.name)}" 
                                 class="max-w-full max-h-full w-auto h-auto object-contain"
-                                onerror="this.parentElement.innerHTML='<span class=\\'font-heading font-black text-primary text-2xl\\'>${escapeHTML(initial)}</span>'"
+                                onerror="if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.parentElement.innerHTML='<span class=\\'font-heading font-black text-primary text-2xl\\'>${escapeHTML(initial)}</span>'; }"
                             />
                         ` : `
                             <span class="font-heading font-black text-primary text-2xl">${escapeHTML(initial)}</span>

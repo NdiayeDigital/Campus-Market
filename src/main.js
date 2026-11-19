@@ -1127,6 +1127,9 @@ if (document.readyState === 'loading') {
 }
 
 // Enregistrement PWA Service Worker et invite d'installation
+// Initialisation précoce de l'écouteur d'installation PWA (évite de rater beforeinstallprompt)
+initPwaInstallPrompt();
+
 if (
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
@@ -1153,7 +1156,6 @@ if (
             })
             .catch((err) => console.warn('[SW] Ignoré:', err.message));
         
-        initPwaInstallPrompt();
         initPushNotificationPrompt();
     });
 }

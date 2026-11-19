@@ -318,9 +318,26 @@ export function resolveMediaUrl(url) {
     return url;
 }
 
+/**
+ * Convertit une URL CDN Cloudflare R2 vers l'URL Supabase Storage d'origine correspondante.
+ * Sert de repli (fallback) immédiat si le CDN R2 renvoie une erreur 404.
+ * @param {string} url
+ * @returns {string}
+ */
+export function getFallbackStorageUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const SUPABASE_STORAGE_PREFIX = 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/';
+    const R2_PUBLIC_PREFIX = 'https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/';
+    if (url.startsWith(R2_PUBLIC_PREFIX)) {
+        return url.replace(R2_PUBLIC_PREFIX, SUPABASE_STORAGE_PREFIX);
+    }
+    return url;
+}
+
 export default {
     compressImage,
     compressImageToBlob,
     dataURLtoBlob,
     resolveMediaUrl,
+    getFallbackStorageUrl,
 };

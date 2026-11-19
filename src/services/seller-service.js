@@ -383,13 +383,27 @@ export async function loginSeller({ email, password }) {
 export async function getCurrentSeller() {
     try {
         let { data: { session }, error: sessionErr } = await supabase.auth.getSession();
-        if (!session?.user) {
+        // Si aucune session n'existe, ne pas forcer de refreshSession (évite les erreurs 400 chez les visiteurs)
+        // Ne tenter le rafraîchissement QUE si un token de rafraîchissement est explicitement présent mais que l'utilisateur est manquant
+        if (!session?.user && session?.refresh_token) {
             try {
-                const { data: refreshData } = await supabase.auth.refreshSession();
+                const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
                 if (refreshData?.session?.user) {
                     session = refreshData.session;
+                } else if (refreshErr) {
+                    // Token révoqué ou expiré (ex: HTTP 400 invalid_grant)
+                    // Purger immédiatement la session locale pour éliminer les boucles d'erreur
+                    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                    if (typeof localStorage !== 'undefined') {
+                        try {
+                            localStorage.removeItem('campus_market_cached_seller');
+                        } catch {}
+                    }
+                    return null;
                 }
-            } catch {}
+            } catch {
+                return null;
+            }
         }
         if (!session?.user) return null;
 

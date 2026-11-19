@@ -25,10 +25,59 @@ export function isAppInstalled() {
 }
 
 /**
+ * Indique si l'événement d'installation PWA est disponible pour être déclenché.
+ * @returns {boolean}
+ */
+export function isInstallPromptAvailable() {
+    return deferredPrompt !== null;
+}
+
+/**
+ * Indique si la bannière PWA est actuellement visible dans le DOM.
+ * @returns {boolean}
+ */
+export function isPwaBannerVisible() {
+    return Boolean(bannerEl && typeof document !== 'undefined' && document.body?.contains(bannerEl));
+}
+
+/**
+ * Déclenche manuellement l'invite d'installation PWA suite à un geste utilisateur (bouton, menu).
+ * @returns {Promise<'accepted'|'dismissed'|'unavailable'>}
+ */
+export async function triggerPwaInstallPrompt() {
+    if (!deferredPrompt) return 'unavailable';
+    try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            try {
+                localStorage.setItem('campus_pwa_installed', 'true');
+            } catch {}
+        }
+        hideInstallBanner();
+        return outcome;
+    } catch (err) {
+        console.warn('[PWA] Erreur déclenchement prompt:', err);
+        return 'unavailable';
+    } finally {
+        deferredPrompt = null;
+    }
+}
+
+/**
  * Affiche la bannière d'installation PWA si les conditions sont réunies.
  */
-function showInstallBanner() {
+export function showInstallBanner() {
     if (!deferredPrompt || isAppInstalled()) return;
+
+    // Si la bannière d'alerte Push est déjà visible, différer pour éviter tout conflit visuel
+    const pushBanner = typeof document !== 'undefined' && document.getElementById('push-prompt-banner');
+    if (pushBanner && document.body?.contains(pushBanner)) {
+        setTimeout(() => {
+            showInstallBanner();
+        }, 10000);
+        return;
+    }
 
     // Vérifie le délai de grâce après fermeture (7 jours)
     try {
@@ -119,7 +168,7 @@ function showInstallBanner() {
 /**
  * Cache et supprime la bannière du DOM avec transition fluide.
  */
-function hideInstallBanner() {
+export function hideInstallBanner() {
     if (!bannerEl) return;
     bannerEl.classList.remove('translate-y-0', 'opacity-100');
     bannerEl.classList.add('translate-y-8', 'opacity-0');
@@ -151,3 +200,13 @@ export function initPwaInstallPrompt() {
         } catch {}
     });
 }
+
+export default {
+    isAppInstalled,
+    isInstallPromptAvailable,
+    isPwaBannerVisible,
+    triggerPwaInstallPrompt,
+    showInstallBanner,
+    hideInstallBanner,
+    initPwaInstallPrompt,
+};

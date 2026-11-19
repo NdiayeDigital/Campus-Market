@@ -179,7 +179,7 @@ export function createSellerShowcase({
                         <div class="relative">
                             <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white font-heading font-extrabold text-xl sm:text-2xl flex items-center justify-center shadow-md shadow-primary/20 shrink-0 overflow-hidden border-2 border-white">
                                 ${seller.avatar_url 
-                                    ? `<img src="${escapeHTML(seller.avatar_url)}" alt="${escapeHTML(shopTitle)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='${initials}';">`
+                                    ? `<img src="${escapeHTML(seller.avatar_url)}" alt="${escapeHTML(shopTitle)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.parentElement.innerHTML='${initials}'; }">`
                                     : initials
                                 }
                             </div>

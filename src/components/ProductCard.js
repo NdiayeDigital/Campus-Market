@@ -66,7 +66,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                 loading="lazy"
                 decoding="async"
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
-                onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else { this.onerror=null; this.src='/assets/placeholder.webp'; }"
+                onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.src = '/assets/placeholder.webp'; }"
             >
         `;
     } else {
@@ -123,7 +123,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
                 >
                     <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold overflow-hidden shrink-0">
                         ${sellerAvatar 
-                            ? `<img src="${escapeHTML(sellerAvatar)}" ${rawSellerAvatar && rawSellerAvatar !== sellerAvatar ? `data-fallback-url="${escapeHTML(rawSellerAvatar)}"` : ''} alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else { this.onerror=null; this.parentElement.textContent='${(sellerName[0] || 'V').toUpperCase()}'; }">`
+                            ? `<img src="${escapeHTML(sellerAvatar)}" ${rawSellerAvatar && rawSellerAvatar !== sellerAvatar ? `data-fallback-url="${escapeHTML(rawSellerAvatar)}"` : ''} alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.parentElement.textContent='${(sellerName[0] || 'V').toUpperCase()}'; }">`
                             : (sellerName[0] || 'V').toUpperCase()
                         }
                     </span>

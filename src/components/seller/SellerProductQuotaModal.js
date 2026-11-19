@@ -83,7 +83,7 @@ export function createSellerProductQuotaModal({ seller, products = [], onProduct
                                     <div class="flex items-center gap-3 min-w-0">
                                         <div class="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
                                             ${imgUrl ? `
-                                                <img src="${imgUrl}" alt="${escapeHTML(p.title)}" class="w-full h-full object-cover">
+                                                <img src="${imgUrl}" alt="${escapeHTML(p.title)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.src = '/assets/placeholder.webp'; }">
                                             ` : `
                                                 <div class="w-full h-full flex items-center justify-center text-slate-400 text-lg">
                                                     <i class="fa-solid fa-box"></i>

@@ -80,7 +80,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                 <!-- En-tête / Image principale -->
                 <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-100 overflow-hidden shrink-0 group">
                     ${safeActiveImage 
-                        ? `<img src="${escapeHTML(safeActiveImage)}" ${rawActiveImage && rawActiveImage !== safeActiveImage ? `data-fallback-url="${escapeHTML(rawActiveImage)}"` : ''} alt="${escapeHTML(p.title)}" id="detail-active-image" class="w-full h-full object-cover transition-all duration-300" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else { this.onerror=null; this.src='/assets/placeholder.webp'; }">`
+                        ? `<img src="${escapeHTML(safeActiveImage)}" ${rawActiveImage && rawActiveImage !== safeActiveImage ? `data-fallback-url="${escapeHTML(rawActiveImage)}"` : ''} alt="${escapeHTML(p.title)}" id="detail-active-image" class="w-full h-full object-cover transition-all duration-300" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.src = '/assets/placeholder.webp'; }">`
                         : `<div class="w-full h-full flex items-center justify-center bg-primary/5 text-primary text-5xl">
                              <i class="fa-solid ${escapeHTML(p.icon || 'fa-box')}"></i>
                            </div>`
@@ -146,7 +146,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                                 data-photo-index="${idx}"
                                 title="Voir photo ${idx + 1}"
                             >
-                                <img src="${escapeHTML(img)}" alt="Miniature ${idx + 1}" class="w-full h-full object-cover">
+                                <img src="${escapeHTML(img)}" alt="Miniature ${idx + 1}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.src = '/assets/placeholder.webp'; }">
                             </button>
                         `).join('')}
                     </div>
@@ -187,7 +187,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-primary/10 text-primary font-heading font-extrabold flex items-center justify-center text-sm overflow-hidden shrink-0 border border-slate-200">
                                 ${p.seller?.avatar_url 
-                                    ? `<img src="${escapeHTML(resolveMediaUrl(p.seller.avatar_url))}" ${p.seller.avatar_url !== resolveMediaUrl(p.seller.avatar_url) ? `data-fallback-url="${escapeHTML(p.seller.avatar_url)}"` : ''} alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else { this.onerror=null; this.parentElement.textContent='${((sellerName[0] || 'V')).toUpperCase()}'; }">`
+                                    ? `<img src="${escapeHTML(resolveMediaUrl(p.seller.avatar_url))}" ${p.seller.avatar_url !== resolveMediaUrl(p.seller.avatar_url) ? `data-fallback-url="${escapeHTML(p.seller.avatar_url)}"` : ''} alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.parentElement.textContent='${((sellerName[0] || 'V')).toUpperCase()}'; }">`
                                     : ((sellerName[0] || 'V')).toUpperCase()
                                 }
                             </div>

@@ -141,7 +141,7 @@ export function createAnnouncementCarousel({
                         class="w-full h-full object-cover object-center select-none pointer-events-none transition-transform duration-700 hover:scale-[1.02]"
                         loading="${index === 0 ? 'eager' : 'lazy'}"
                         decoding="async"
-                        onerror="this.style.display='none'; const fb = this.parentElement.querySelector('.carousel-fallback'); if (fb) fb.classList.remove('hidden');"
+                        onerror="if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.style.display='none'; const fb = this.parentElement.querySelector('.carousel-fallback'); if (fb) fb.classList.remove('hidden'); }"
                     />
                     <!-- Repli visuel épuré si erreur de chargement de l'image -->
                     <div class="carousel-fallback hidden absolute inset-0 bg-gradient-to-br ${gradientClass} flex flex-col items-center justify-center text-center p-6 text-white select-none">

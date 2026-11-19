@@ -107,7 +107,7 @@ export function createSellerProfileView({
                         <div class="relative group">
                             <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center shadow-md border-4 border-white overflow-hidden shrink-0">
                                 ${currentSeller.avatar_url 
-                                    ? `<img src="${escapeHTML(currentSeller.avatar_url)}" alt="Logo ${escapeHTML(currentSeller.shop_name || '')}" class="w-full h-full object-cover" id="seller-logo-img" onerror="this.onerror=null; this.src='/assets/placeholder.webp';">`
+                                    ? `<img src="${escapeHTML(currentSeller.avatar_url)}" alt="Logo ${escapeHTML(currentSeller.shop_name || '')}" class="w-full h-full object-cover" id="seller-logo-img" onerror="if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.src = '/assets/placeholder.webp'; }">`
                                     : `<span class="text-2xl font-black">${initials}</span>`
                                 }
                             </div>
