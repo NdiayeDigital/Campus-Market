@@ -39,6 +39,7 @@ export const CATEGORIES_BOUTIQUE = [
  * @param {Function} [props.onBackToCatalog] - Callback pour retourner au catalogue
  * @param {Function} props.onProfileUpdated - Callback appelé avec le profil mis à jour
  * @param {Function} props.onOpenDashboard - Callback pour basculer vers le tableau de bord vendeur
+ * @param {Function} [props.onOpenLeaderboard] - Callback pour basculer vers le classement plateforme
  * @param {Function} props.onOpenShop - Callback pour voir la vitrine publique
  * @param {Function} props.onOpenSubscription - Callback pour ouvrir la modale d'abonnement
  * @param {Function} props.onLogout - Callback de déconnexion
@@ -50,6 +51,7 @@ export function createSellerProfileView({
     onBackToCatalog,
     onProfileUpdated,
     onOpenDashboard,
+    onOpenLeaderboard,
     onOpenShop,
     onOpenSubscription,
     onLogout,
@@ -528,8 +530,12 @@ export function createSellerProfileView({
             if (typeof onOpenDashboard === 'function') onOpenDashboard();
         });
 
-        // Ouvrir la modale du Classement officiel inter-vendeurs
+        // Ouvrir le Classement officiel inter-vendeurs
         containerEl.querySelector('#btn-open-leaderboard-from-profile')?.addEventListener('click', async () => {
+            if (typeof onOpenLeaderboard === 'function') {
+                onOpenLeaderboard();
+                return;
+            }
             const btn = containerEl.querySelector('#btn-open-leaderboard-from-profile');
             const originalHTML = btn ? btn.innerHTML : '';
             if (btn) {

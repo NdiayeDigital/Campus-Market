@@ -32,6 +32,7 @@ import { createDevQuotaSandbox } from '../dev/DevQuotaSandbox.js';
 import { computeSubscriptionStatus, SUBSCRIPTION_PLANS, FEATURE_FLAGS } from '../../config/subscription.js';
 import { fetchCampusLeaderboard } from '../../services/seller-ranking-service.js';
 import { openSellerLeaderboardModal } from './SellerLeaderboardModal.js';
+import { createSellerLeaderboardView } from './SellerLeaderboardView.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -64,7 +65,7 @@ export function createSellerDashboard({
     const sellerId = seller.id;
     let dashboardData = null;
     let isLoading = true;
-    let activeSubTab = (initialTab === 'add' ? 'add-product' : initialTab) || 'dashboard'; // 'dashboard' | 'orders' | 'products' | 'add-product' | 'profile'
+    let activeSubTab = (initialTab === 'add' ? 'add-product' : initialTab) || 'dashboard'; // 'dashboard' | 'orders' | 'products' | 'add-product' | 'profile' | 'leaderboard'
     let orderFilter = 'all'; // 'all' | 'pending' | 'in_progress' | 'delivered'
     let orderSearchQuery = '';
     let orderPavillonFilter = 'all';
@@ -684,14 +685,22 @@ export function createSellerDashboard({
                         <button 
                             type="button" 
                             id="subtab-leaderboard" 
-                            class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 text-slate-600 hover:text-slate-900 hover:bg-amber-50/70 border border-transparent hover:border-amber-200 font-semibold"
+                            class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 ${
+                                activeSubTab === 'leaderboard'
+                                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold border border-amber-600'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50/70 border border-transparent hover:border-amber-200 font-semibold'
+                            }"
                             title="Consulter le classement officiel de la plateforme (réservé aux packs payants)"
                         >
                             <div class="flex items-center gap-3">
-                                <i class="fa-solid fa-trophy text-xs w-4 text-center text-amber-500 group-hover:scale-110 transition-transform"></i>
+                                <i class="fa-solid fa-trophy text-xs w-4 text-center ${
+                                    activeSubTab === 'leaderboard' ? 'text-slate-950' : 'text-amber-500'
+                                } group-hover:scale-110 transition-transform"></i>
                                 <span>Classement Plateforme</span>
                             </div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                activeSubTab === 'leaderboard' ? 'bg-slate-950 text-amber-300' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            } shadow-2xs">
                                 🏆 Top
                             </span>
                         </button>
@@ -971,7 +980,7 @@ export function createSellerDashboard({
                             <span class="hover:text-slate-600 transition-colors">Espace Marchand</span>
                             <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
                             <span class="text-primary font-bold">
-                                ${activeSubTab === 'dashboard' ? 'Tableau de bord' : activeSubTab === 'orders' ? 'Commandes en direct' : activeSubTab === 'products' ? 'Mes Articles' : activeSubTab === 'profile' ? 'Mon Profil' : 'Ajouter un produit'}
+                                ${activeSubTab === 'dashboard' ? 'Tableau de bord' : activeSubTab === 'orders' ? 'Commandes en direct' : activeSubTab === 'products' ? 'Mes Articles' : activeSubTab === 'profile' ? 'Mon Profil' : activeSubTab === 'leaderboard' ? 'Classement Plateforme' : 'Ajouter un produit'}
                             </span>
                         </div>
                     </div>
@@ -1210,6 +1219,19 @@ export function createSellerDashboard({
                         <i class="fa-solid fa-circle-user text-xs"></i>
                         <span>Mon Profil</span>
                     </button>
+
+                    <button 
+                        type="button" 
+                        data-seller-tab="leaderboard"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap min-h-[44px] cursor-pointer active:scale-95 ${
+                            activeSubTab === 'leaderboard'
+                                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }"
+                    >
+                        <i class="fa-solid fa-trophy text-xs ${activeSubTab === 'leaderboard' ? 'text-slate-950' : 'text-amber-500'}"></i>
+                        <span>Classement</span>
+                    </button>
                 </div>
 
                 <!-- Zone de contenu dynamique -->
@@ -1348,6 +1370,9 @@ export function createSellerDashboard({
                 onOpenDashboard: () => {
                     switchSubTab('dashboard');
                 },
+                onOpenLeaderboard: () => {
+                    switchSubTab('leaderboard');
+                },
                 onOpenShop: (sId) => {
                     window.location.hash = `#shop/${sId || sellerId}`;
                 },
@@ -1358,6 +1383,13 @@ export function createSellerDashboard({
                 },
             });
             containerEl.querySelector('#seller-tab-content')?.appendChild(profileViewEl);
+        } else if (activeSubTab === 'leaderboard') {
+            const leaderboardViewEl = createSellerLeaderboardView({
+                currentSellerId: seller.id,
+                onBack: () => switchSubTab('dashboard'),
+                onOpenSubscription: openSubscriptionHandler,
+            });
+            containerEl.querySelector('#seller-tab-content')?.appendChild(leaderboardViewEl);
         }
 
         bindEvents();
@@ -2247,31 +2279,9 @@ export function createSellerDashboard({
         containerEl.querySelector('#subtab-profile')?.addEventListener('click', handleOpenProfile);
         containerEl.querySelector('#bnav-seller-profile')?.addEventListener('click', handleOpenProfile);
 
-        // Ouverture de la modale du Classement Inter-Vendeurs
-        const handleOpenLeaderboard = async () => {
-            const btnDashboard = containerEl.querySelector('#btn-open-leaderboard-dashboard');
-            const originalHTML = btnDashboard ? btnDashboard.innerHTML : '';
-            if (btnDashboard) {
-                btnDashboard.disabled = true;
-                btnDashboard.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Chargement...</span>';
-            }
-            try {
-                const leaderboard = await fetchCampusLeaderboard({ currentSellerId: seller.id });
-                openSellerLeaderboardModal({
-                    leaderboard,
-                    currentSellerId: seller.id,
-                });
-            } catch (err) {
-                console.warn('[SellerDashboard] Erreur ouverture classement inter-vendeurs:', err);
-                if (typeof onShowToast === 'function') {
-                    onShowToast('Impossible de charger le classement pour le moment.', 'error');
-                }
-            } finally {
-                if (btnDashboard) {
-                    btnDashboard.disabled = false;
-                    btnDashboard.innerHTML = originalHTML;
-                }
-            }
+        // Navigation vers le Classement Inter-Vendeurs (Vue en liste intégrée sans modale)
+        const handleOpenLeaderboard = () => {
+            switchSubTab('leaderboard');
         };
 
         containerEl.querySelector('#subtab-leaderboard')?.addEventListener('click', handleOpenLeaderboard);
