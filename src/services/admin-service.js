@@ -195,6 +195,7 @@ export async function fetchGlobalMetrics() {
             suspendedSellersCount,
             totalOrdersCount,
             totalDeliveredRevenue,
+            totalRealRevenue: (statsV2?.delivered_amount || 0) + (statsV2?.cancelled_amount || 0),
             totalSubscriptionRevenue,
             activePaidSellersCount,
             trialSellersCount,
@@ -347,6 +348,8 @@ export function computeSellerOrderStats(orders = [], sellerId) {
             cancelledAmount: 0,
             cancellationRate: 0,
             deliveryRate: 0,
+            realRevenue: 0,
+            realOrdersCount: 0,
         };
     }
 
@@ -369,6 +372,10 @@ export function computeSellerOrderStats(orders = [], sellerId) {
     const cancellationRate = totalOrders > 0 ? Number(((cancelledCount / totalOrders) * 100).toFixed(1)) : 0;
     const deliveryRate = totalOrders > 0 ? Number(((deliveredCount / totalOrders) * 100).toFixed(1)) : 0;
 
+    // Règle comptable : Chiffre d'Affaires Réel = Commandes Livrées + Commandes Annulées
+    const realRevenue = deliveredAmount + cancelledAmount;
+    const realOrdersCount = deliveredCount + cancelledCount;
+
     return {
         totalOrders,
         totalAmount,
@@ -380,6 +387,8 @@ export function computeSellerOrderStats(orders = [], sellerId) {
         cancelledAmount,
         cancellationRate,
         deliveryRate,
+        realRevenue,
+        realOrdersCount,
     };
 }
 
@@ -396,7 +405,9 @@ export function computeSellerOrderStats(orders = [], sellerId) {
  *   cancelledCount: number,
  *   cancelledAmount: number,
  *   cancellationRate: number,
- *   deliveryRate: number
+ *   deliveryRate: number,
+ *   realRevenue: number,
+ *   realOrdersCount: number
  * }>}
  */
 export function buildAllSellersStatsMap(orders = []) {
@@ -419,6 +430,8 @@ export function buildAllSellersStatsMap(orders = []) {
                 cancelledAmount: 0,
                 cancellationRate: 0,
                 deliveryRate: 0,
+                realRevenue: 0,
+                realOrdersCount: 0,
             };
         }
 
@@ -440,6 +453,8 @@ export function buildAllSellersStatsMap(orders = []) {
     });
 
     Object.values(map).forEach((stat) => {
+        stat.realRevenue = stat.deliveredAmount + stat.cancelledAmount;
+        stat.realOrdersCount = stat.deliveredCount + stat.cancelledCount;
         if (stat.totalOrders > 0) {
             stat.cancellationRate = Number(((stat.cancelledCount / stat.totalOrders) * 100).toFixed(1));
             stat.deliveryRate = Number(((stat.deliveredCount / stat.totalOrders) * 100).toFixed(1));
@@ -1202,7 +1217,14 @@ export async function manuallyActivateSubscription(sellerId, plan = 'starter', d
         throw new Error("Action sans objet : Les comptes SuperAdmin disposent déjà d'un accès illimité permanent.");
     }
 
-    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    let validPlan = 'starter';
+    const cleanPlan = String(plan || '').trim().toLowerCase();
+    if (cleanPlan === 'pro' || cleanPlan === 'business' || cleanPlan === 'pack_business' || cleanPlan === '2000') {
+        validPlan = 'pro'; // Pack Business (2 000 FCFA, 10 articles, 1 promo/semaine)
+    } else {
+        validPlan = 'starter'; // Pack Pro (1 000 FCFA, 5 articles, 1 promo/mois)
+    }
+
     const maxProducts = getMaxProductsForPlan(validPlan);
     const finalDurationDays = durationDays || 30;
     const expiresAt = new Date(Date.now() + finalDurationDays * 24 * 60 * 60 * 1000).toISOString();
@@ -1212,11 +1234,13 @@ export async function manuallyActivateSubscription(sellerId, plan = 'starter', d
         .update({
             subscription_status: 'active',
             subscription_plan: validPlan,
+            pack_actuel: validPlan,
             max_products: maxProducts,
             subscription_expires_at: expiresAt,
             last_payment_date: new Date().toISOString(),
             last_payment_id: 'manual_admin',
             is_open: true,
+            is_suspended: false,
         })
         .eq('id', sellerId)
         .select()

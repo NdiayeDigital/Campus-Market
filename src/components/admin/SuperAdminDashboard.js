@@ -728,23 +728,23 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         </div>
                     </div>
 
-                    <!-- Chiffre d'Affaires Livré Réalisé -->
+                    <!-- Chiffre d'Affaires Réel (Livrées + Annulées) -->
                     <div 
-                        data-stat-target="orders-delivered" 
-                        title="Cliquer pour afficher les commandes générant ce chiffre d'affaires"
+                        data-stat-target="orders-all" 
+                        title="Chiffre d'affaires réel de la plateforme (commandes livrées + commandes annulées)"
                         class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
                         <div class="flex items-center justify-between text-slate-500 mb-1.5">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Chiffre d'Affaires Réalisé</span>
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Chiffre d'Affaires Réel</span>
                             <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
                                 <i class="fa-solid fa-coins"></i>
                             </div>
                         </div>
                         <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
-                            ${Number(deliveredOrdersRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                            ${Number(deliveredOrdersRevenue + cancelledOrdersRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
                         </span>
                         <div class="flex items-center justify-between text-[11px] font-medium text-emerald-700 mt-1">
-                            <span>${deliveredOrdersCount} livrée${deliveredOrdersCount > 1 ? 's' : ''} (${deliveryRate}%)</span>
+                            <span>${Number(deliveredOrdersRevenue).toLocaleString('fr-FR')} F livrées • ${Number(cancelledOrdersRevenue).toLocaleString('fr-FR')} F annulées</span>
                             <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
                     </div>
@@ -1290,14 +1290,17 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             return true;
         });
 
-        // Tri des marchands actifs
+        // Tri des marchands actifs (Chiffre d'Affaires Réel = Livrées + Annulées)
         filteredActive.sort((a, b) => {
-            const statA = sellerStatsMap[a.id] || { totalOrders: 0, deliveredAmount: 0 };
-            const statB = sellerStatsMap[b.id] || { totalOrders: 0, deliveredAmount: 0 };
+            const statA = sellerStatsMap[a.id] || { totalOrders: 0, deliveredAmount: 0, realRevenue: 0 };
+            const statB = sellerStatsMap[b.id] || { totalOrders: 0, deliveredAmount: 0, realRevenue: 0 };
+
+            const revA = statA.realRevenue !== undefined ? statA.realRevenue : ((statA.deliveredAmount || 0) + (statA.cancelledAmount || 0));
+            const revB = statB.realRevenue !== undefined ? statB.realRevenue : ((statB.deliveredAmount || 0) + (statB.cancelledAmount || 0));
 
             if (sellerSortBy === 'ca_desc') {
-                if (statB.deliveredAmount !== statA.deliveredAmount) {
-                    return statB.deliveredAmount - statA.deliveredAmount;
+                if (revB !== revA) {
+                    return revB - revA;
                 }
                 return statB.totalOrders - statA.totalOrders;
             }
@@ -1305,7 +1308,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 if (statB.totalOrders !== statA.totalOrders) {
                     return statB.totalOrders - statA.totalOrders;
                 }
-                return statB.deliveredAmount - statA.deliveredAmount;
+                return revB - revA;
             }
             if (sellerSortBy === 'name_asc') {
                 const nameA = (a.shop_name || `${a.prenom || ''} ${a.nom || ''}`).toLowerCase();
@@ -1845,22 +1848,22 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         <div class="flex flex-col gap-1 min-w-[170px]">
                                             <div class="flex items-baseline gap-1.5">
                                                 <span class="font-extrabold text-sm text-emerald-600 tabular-nums">
-                                                    ${Number(stat.deliveredAmount || 0).toLocaleString('fr-FR')} <span class="text-[10px] text-slate-500 font-bold">FCFA</span>
+                                                    ${Number(stat.realRevenue !== undefined ? stat.realRevenue : (stat.deliveredAmount || 0) + (stat.cancelledAmount || 0)).toLocaleString('fr-FR')} <span class="text-[10px] text-slate-500 font-bold">FCFA</span>
                                                 </span>
-                                                <span class="text-[10px] text-slate-400 font-medium">réalisé</span>
+                                                <span class="text-[10px] text-slate-400 font-medium">CA réel</span>
                                             </div>
                                             <div class="flex items-center gap-1.5 flex-wrap text-[10px]">
-                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60" title="Commandes livrées avec succès">
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60" title="Commandes livrées avec succès (${Number(stat.deliveredAmount || 0).toLocaleString('fr-FR')} FCFA)">
                                                     <i class="fa-solid fa-circle-check text-[9px]"></i> ${stat.deliveredCount} livrée${stat.deliveredCount > 1 ? 's' : ''}
                                                 </span>
+                                                ${stat.cancelledCount > 0 ? `
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 font-semibold border border-rose-200/60" title="Commandes annulées (${Number(stat.cancelledAmount || 0).toLocaleString('fr-FR')} FCFA)">
+                                                        <i class="fa-solid fa-ban text-[9px]"></i> ${stat.cancelledCount} annulée${stat.cancelledCount > 1 ? 's' : ''}
+                                                    </span>
+                                                ` : ''}
                                                 ${stat.pendingCount > 0 ? `
                                                     <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 font-semibold border border-amber-200/60" title="Commandes en attente de livraison (${Number(stat.pendingAmount || 0).toLocaleString('fr-FR')} FCFA)">
                                                         <i class="fa-solid fa-hourglass-half text-[9px]"></i> ${stat.pendingCount} en attente
-                                                    </span>
-                                                ` : ''}
-                                                ${stat.cancelledCount > 0 ? `
-                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 font-semibold border border-rose-200/60" title="Commandes annulées (${Number(stat.cancelledAmount || 0).toLocaleString('fr-FR')} FCFA)">
-                                                        <i class="fa-solid fa-ban text-[9px]"></i> ${stat.cancelledCount}
                                                     </span>
                                                 ` : ''}
                                             </div>
@@ -1922,24 +1925,34 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                     <i class="fa-solid fa-shield-halved text-primary"></i> SuperAdmin Protégé (Illimité)
                                                 </span>
                                             ` : `
+                                                <!-- Bouton Activer Pack Pro (1 000 FCFA) -->
                                                 <button 
                                                     type="button" 
-                                                    data-action="extend-trial" 
+                                                    data-action="activate-plan" 
+                                                    data-plan="starter"
+                                                    data-price="1000"
                                                     data-id="${s.id}" 
-                                                    class="px-2 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-[11px] font-semibold cursor-pointer"
-                                                    title="Prolonger l'essai gratuit de 7 jours"
+                                                    data-shop="${escapeHTML(s.shop_name || `${s.prenom || ''} ${s.nom || ''}`)}"
+                                                    class="px-2.5 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 text-[11px] font-bold cursor-pointer flex items-center gap-1 shadow-2xs transition-colors"
+                                                    title="Activer Pack Pro (1 000 FCFA / 30 jours)"
                                                 >
-                                                    +7j Essai
+                                                    <i class="fa-solid fa-crown text-[10px] text-indigo-600"></i>
+                                                    <span>Pack 1 000 F</span>
                                                 </button>
+
+                                                <!-- Bouton Activer Pack Business (2 000 FCFA) -->
                                                 <button 
                                                     type="button" 
-                                                    data-action="activate-sub" 
+                                                    data-action="activate-plan" 
+                                                    data-plan="pro"
+                                                    data-price="2000"
                                                     data-id="${s.id}" 
-                                                    data-plan="${s.subscription_plan || 'starter'}"
-                                                    class="px-2 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-[11px] font-semibold cursor-pointer"
-                                                    title="Activer manuellement 30 jours (règlement cash sur campus)"
+                                                    data-shop="${escapeHTML(s.shop_name || `${s.prenom || ''} ${s.nom || ''}`)}"
+                                                    class="px-2.5 py-1.5 rounded-lg border border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100 text-[11px] font-bold cursor-pointer flex items-center gap-1 shadow-2xs transition-colors"
+                                                    title="Activer Pack Business (2 000 FCFA / 30 jours)"
                                                 >
-                                                    Activer 30j
+                                                    <i class="fa-solid fa-gem text-[10px] text-amber-600"></i>
+                                                    <span>Pack 2 000 F</span>
                                                 </button>
                                                 <button 
                                                     type="button" 
@@ -2050,21 +2063,23 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             <!-- Bloc Chiffre d'Affaires & Ventes du Vendeur -->
                             <div class="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/70 flex flex-col gap-1.5">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-[11px] font-semibold text-slate-500">Chiffre d'Affaires réalisé :</span>
+                                    <span class="text-[11px] font-semibold text-slate-500">Chiffre d'Affaires Réel :</span>
                                     <span class="font-extrabold text-sm text-emerald-600 tabular-nums">
-                                        ${Number(stat.deliveredAmount || 0).toLocaleString('fr-FR')} FCFA
+                                        ${Number(stat.realRevenue !== undefined ? stat.realRevenue : (stat.deliveredAmount || 0) + (stat.cancelledAmount || 0)).toLocaleString('fr-FR')} FCFA
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-1.5 flex-wrap text-[10px] pt-1 border-t border-slate-200/50">
                                     <span class="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold">
-                                        ${stat.deliveredCount} livrée${stat.deliveredCount > 1 ? 's' : ''}
-                                    </span>
-                                    <span class="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 font-semibold">
-                                        ${stat.pendingCount} en attente (${Number(stat.pendingAmount || 0).toLocaleString('fr-FR')} F)
+                                        ${stat.deliveredCount} livrée${stat.deliveredCount > 1 ? 's' : ''} (${Number(stat.deliveredAmount || 0).toLocaleString('fr-FR')} F)
                                     </span>
                                     ${stat.cancelledCount > 0 ? `
                                         <span class="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 font-semibold">
-                                            ${stat.cancelledCount} annulée${stat.cancelledCount > 1 ? 's' : ''}
+                                            ${stat.cancelledCount} annulée${stat.cancelledCount > 1 ? 's' : ''} (${Number(stat.cancelledAmount || 0).toLocaleString('fr-FR')} F)
+                                        </span>
+                                    ` : ''}
+                                    ${stat.pendingCount > 0 ? `
+                                        <span class="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 font-semibold">
+                                            ${stat.pendingCount} en attente (${Number(stat.pendingAmount || 0).toLocaleString('fr-FR')} F)
                                         </span>
                                     ` : ''}
                                     <button 
@@ -2099,25 +2114,34 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         <span>SuperAdmin Protégé (Illimité)</span>
                                     </div>
                                 ` : `
+                                    <!-- Bouton Activer Pack Pro (1 000 FCFA) -->
                                     <button 
                                         type="button" 
-                                        data-action="extend-trial" 
+                                        data-action="activate-plan" 
+                                        data-plan="starter"
+                                        data-price="1000"
                                         data-id="${s.id}" 
-                                        class="py-2 px-2.5 rounded-xl border border-indigo-200 text-indigo-700 bg-indigo-50/50 text-xs font-semibold min-h-[44px] cursor-pointer"
-                                        title="Prolonger l'essai gratuit de 7 jours"
+                                        data-shop="${escapeHTML(s.shop_name || `${s.prenom || ''} ${s.nom || ''}`)}"
+                                        class="py-2 px-2.5 rounded-xl border border-indigo-200 text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 text-xs font-bold min-h-[44px] cursor-pointer flex items-center gap-1 shadow-2xs"
+                                        title="Activer Pack Pro (1 000 FCFA / 30 jours)"
                                     >
-                                        +7j Essai
+                                        <i class="fa-solid fa-crown text-[10px] text-indigo-600"></i>
+                                        <span>Pack 1 000 F</span>
                                     </button>
 
+                                    <!-- Bouton Activer Pack Business (2 000 FCFA) -->
                                     <button 
                                         type="button" 
-                                        data-action="activate-sub" 
+                                        data-action="activate-plan" 
+                                        data-plan="pro"
+                                        data-price="2000"
                                         data-id="${s.id}" 
-                                        data-plan="${s.subscription_plan || 'starter'}"
-                                        class="py-2 px-2.5 rounded-xl border border-emerald-200 text-emerald-700 bg-emerald-50/50 text-xs font-semibold min-h-[44px] cursor-pointer"
-                                        title="Activer manuellement 30 jours"
+                                        data-shop="${escapeHTML(s.shop_name || `${s.prenom || ''} ${s.nom || ''}`)}"
+                                        class="py-2 px-2.5 rounded-xl border border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100 text-xs font-bold min-h-[44px] cursor-pointer flex items-center gap-1 shadow-2xs"
+                                        title="Activer Pack Business (2 000 FCFA / 30 jours)"
                                     >
-                                        Activer 30j
+                                        <i class="fa-solid fa-gem text-[10px] text-amber-600"></i>
+                                        <span>Pack 2 000 F</span>
                                     </button>
 
                                     <button 
@@ -5320,67 +5344,34 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 });
             });
 
-            // Prolonger l'essai gratuit (+7 jours)
-            containerEl.querySelectorAll('button[data-action="extend-trial"]').forEach((btn) => {
+            // Activer manuellement Pack Pro (1 000 FCFA) ou Pack Business (2 000 FCFA) pour 30 jours
+            containerEl.querySelectorAll('button[data-action="activate-plan"]').forEach((btn) => {
                 btn.addEventListener('click', async () => {
                     const id = btn.getAttribute('data-id');
+                    const plan = btn.getAttribute('data-plan') || 'starter';
+                    const shop = btn.getAttribute('data-shop') || 'ce marchand';
+                    const isBusiness = plan === 'pro' || plan === 'business';
+                    const planName = isBusiness ? 'Pack Business (2 000 FCFA)' : 'Pack Pro (1 000 FCFA)';
+                    const planDetails = isBusiness
+                        ? "10 articles actifs, ventes illimitées, 1 promotion de produit par semaine (reset chaque lundi), et visibilité Top Vendeurs"
+                        : "5 articles actifs, ventes illimitées, et 1 promotion de produit par mois (reset le 1er du mois)";
+
                     const confirmed = await showConfirm({
-                        title: 'Prolonger l\'essai gratuit',
-                        message: 'Accorder 7 jours supplémentaires d\'accès gratuit à ce marchand ?',
-                        confirmText: 'Prolonger de 7 jours',
+                        title: `Activer le ${planName}`,
+                        message: `Confirmez-vous l'activation du ${planName} pour 30 jours pour la boutique "${shop}" ?\n\nAvantages inclus :\n• ${planDetails}.`,
+                        confirmText: `Activer (${isBusiness ? '2 000 F' : '1 000 F'})`,
                         cancelText: 'Annuler',
                         isDestructive: false,
-                        icon: 'fa-gift',
+                        icon: isBusiness ? 'fa-gem' : 'fa-crown',
                     });
 
                     if (!confirmed) return;
 
                     btn.disabled = true;
+                    const originalHTML = btn.innerHTML;
                     btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i>`;
                     try {
-                        const updated = await grantSellerTrialExtension(id, 7);
-                        const target = activeSellers.find((s) => s.id === id);
-                        if (target) {
-                            target.subscription_status = 'trial';
-                            target.trial_ends_at = updated.trial_ends_at;
-                            target.is_open = true;
-                        }
-                        showToast('Période d\'essai prolongée de 7 jours ! 🎁', 'success');
-                        const contentEl = containerEl.querySelector('#admin-tab-content');
-                        if (contentEl && activeTab === 'sellers') {
-                            contentEl.innerHTML = renderSellersTab();
-                            bindSellersEvents();
-                        }
-                    } catch (err) {
-                        showToast(err.message, 'error');
-                        btn.disabled = false;
-                        btn.textContent = '+7j Essai';
-                    }
-                });
-            });
-
-            // Activer manuellement l'abonnement pour 30 jours (règlement campus)
-            containerEl.querySelectorAll('button[data-action="activate-sub"]').forEach((btn) => {
-                btn.addEventListener('click', async () => {
-                    const id = btn.getAttribute('data-id');
-                    const currentPlan = btn.getAttribute('data-plan') || 'starter';
-                    const planLabel = currentPlan === 'pro' ? 'Pack Pro (10 arts)' : 'Pack Starter (5 arts)';
-
-                    const confirmed = await showConfirm({
-                        title: "Activer l'abonnement (30 jours)",
-                        message: `Confirmer le règlement manuel pour 30 jours (${planLabel}) ? Le vendeur aura accès direct sans paiement en ligne.`,
-                        confirmText: 'Activer 30 jours',
-                        cancelText: 'Annuler',
-                        isDestructive: false,
-                        icon: 'fa-credit-card',
-                    });
-
-                    if (!confirmed) return;
-
-                    btn.disabled = true;
-                    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i>`;
-                    try {
-                        const updated = await manuallyActivateSubscription(id, currentPlan, 30);
+                        const updated = await manuallyActivateSubscription(id, plan, 30);
                         const target = activeSellers.find((s) => s.id === id);
                         if (target) {
                             target.subscription_status = 'active';
@@ -5389,16 +5380,16 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             target.subscription_expires_at = updated.subscription_expires_at;
                             target.is_open = true;
                         }
-                        showToast(`Abonnement 30 jours activé (${planLabel}) ! 💳`, 'success');
+                        showToast(`${planName} activé pour 30 jours pour "${shop}" ! ${isBusiness ? '💎' : '👑'}`, 'success');
                         const contentEl = containerEl.querySelector('#admin-tab-content');
                         if (contentEl && activeTab === 'sellers') {
                             contentEl.innerHTML = renderSellersTab();
                             bindSellersEvents();
                         }
                     } catch (err) {
-                        showToast(err.message, 'error');
+                        showToast(err.message || "Erreur lors de l'activation", 'error');
                         btn.disabled = false;
-                        btn.textContent = 'Activer 30j';
+                        btn.innerHTML = originalHTML;
                     }
                 });
             });

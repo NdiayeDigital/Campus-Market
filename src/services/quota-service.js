@@ -216,7 +216,7 @@ export async function consumeFreeBusinessAd(adId) {
 /**
  * Active la promotion d'un produit en décrémentant le compteur serveur sécurisé.
  * 1 promo/mois pour Pack Pro, 1 promo/semaine (lundi Dakar) pour Pack Business.
- * Invoque la RPC PostgreSQL `use_product_promotion`.
+ * Invoque la RPC PostgreSQL `use_product_promotion`, avec repli gracieux direct.
  * @param {string} productId - UUID du produit promu
  * @returns {Promise<{ success: boolean, message?: string }>}
  */
@@ -230,15 +230,76 @@ export async function useProductPromotion(productId) {
             p_product_id: productId,
         });
 
-        if (error) {
-            throw new Error(error.message);
+        if (!error && data) {
+            return data;
         }
 
-        return data || { success: true };
-    } catch (err) {
-        console.error('[QuotaService] Erreur promotion produit :', err);
-        throw err;
+        // Si l'erreur n'est pas "function does not exist", propager l'erreur serveur (ex: quota dépassé)
+        if (error && !error.message?.includes('function') && !error.message?.includes('does not exist')) {
+            throw new Error(error.message);
+        }
+    } catch (rpcErr) {
+        if (!rpcErr.message?.includes('function') && !rpcErr.message?.includes('does not exist')) {
+            throw rpcErr;
+        }
     }
+
+    // Repli gracieux direct côté Supabase si la fonction RPC n'est pas encore déployée
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Authentification requise pour promouvoir un article.');
+
+    const { data: profile, error: profErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+    if (profErr || !profile) throw new Error('Profil vendeur introuvable.');
+
+    const promoQuota = computePromotionQuota(profile);
+    if (!promoQuota.allowed) {
+        return {
+            success: false,
+            message: 'La mise en avant de produit est réservée aux formules Pro (1/mois) et Business (1/semaine).',
+        };
+    }
+
+    if (promoQuota.remaining <= 0) {
+        return {
+            success: false,
+            message: promoQuota.limitReachedMessage,
+        };
+    }
+
+    // Activation de la promotion sur le produit pour 7 jours
+    const promotedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { error: prodErr } = await supabase
+        .from('products')
+        .update({
+            is_promoted: true,
+            promoted_until: promotedUntil,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', productId)
+        .eq('seller_id', user.id);
+
+    if (prodErr) throw new Error(`Impossible d'activer la promotion : ${prodErr.message}`);
+
+    // Mise à jour du compteur sur le profil
+    const newUsed = (Number(promoQuota.used) || 0) + 1;
+    await supabase
+        .from('profiles')
+        .update({
+            promotions_used_this_period: newUsed,
+            promotions_period_start: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+    return {
+        success: true,
+        message: 'Votre produit est maintenant mis en avant pour 7 jours ! 🔥',
+        promoted_until: promotedUntil,
+    };
 }
 
 /**
