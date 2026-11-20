@@ -599,14 +599,32 @@ export async function updateOrderStatus(orderId, nextStatus) {
         throw new Error(`Statut de commande invalide: ${nextStatus}`);
     }
 
-    const { data, error } = await supabase
+    const updatePayload = { status: nextStatus };
+    if (nextStatus === 'cancelled') {
+        updatePayload.cancelled_by = 'seller';
+    }
+
+    let { data, error } = await supabase
         .from('orders')
-        .update({ status: nextStatus })
+        .update(updatePayload)
         .eq('id', orderId)
         .select()
         .single();
 
     if (error) {
+        // Fallback gracieux si la colonne cancelled_by n'existe pas encore en base distante
+        if (error.message?.includes('cancelled_by') || error.code === '42703') {
+            const fallbackRes = await supabase
+                .from('orders')
+                .update({ status: nextStatus })
+                .eq('id', orderId)
+                .select()
+                .single();
+            if (fallbackRes.error) {
+                throw new Error(`Échec de mise à jour du statut: ${fallbackRes.error.message}`);
+            }
+            return fallbackRes.data;
+        }
         throw new Error(`Échec de mise à jour du statut: ${error.message}`);
     }
 

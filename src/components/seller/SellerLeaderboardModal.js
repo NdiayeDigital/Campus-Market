@@ -96,7 +96,7 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                     </div>
                     <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                         <span class="text-xs font-black text-rose-600 block">-5 pts</span>
-                        <span class="text-[10px] text-slate-500 font-semibold">Commande annulée</span>
+                        <span class="text-[10px] text-slate-500 font-semibold">Annulée par vendeur (0 pt client)</span>
                     </div>
                 </div>
 

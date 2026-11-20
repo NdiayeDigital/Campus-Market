@@ -12,7 +12,7 @@ export const POINTS_RULES = {
     REVIEW_3_STAR: 5,          // +5 pts pour un avis client 3 étoiles
     PROFILE_COMPLETE_BONUS: 5, // +5 pts pour un profil marchand 100% complété
     ACTIVE_SHOP_BONUS: 5,      // +5 pts pour une boutique ouverte avec au moins 1 article en vente
-    CANCELLED_PENALTY: 5,      // -5 pts de pénalité en cas de commande annulée
+    CANCELLED_PENALTY: 5,      // -5 pts de pénalité pour commande annulée PAR LE VENDEUR (0 pt si annulée par l'acheteur)
 };
 
 export const SELLER_TIERS = [
@@ -113,9 +113,13 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
     const deliveredCount = sellerOrders.filter((o) => o.status === 'delivered').length;
     const deliveredPoints = deliveredCount * POINTS_RULES.DELIVERED_ORDER;
 
-    // 2. Pénalité Commandes Annulées (-5 pts par annulation)
-    const cancelledCount = sellerOrders.filter((o) => o.status === 'cancelled').length;
-    const cancelledPenalty = cancelledCount * POINTS_RULES.CANCELLED_PENALTY;
+    // 2. Pénalité Commandes Annulées (-5 pts par annulation VENDEUR uniquement)
+    // Règle d'équité : Seules les commandes annulées/refusées PAR LE VENDEUR (cancelled_by === 'seller')
+    // sont pénalisées. Les annulations faites par le client/acheteur (cancelled_by === 'buyer') n'entraînent aucune pénalité (0 pt).
+    const cancelledOrders = sellerOrders.filter((o) => o.status === 'cancelled');
+    const cancelledBySellerCount = cancelledOrders.filter((o) => o.cancelled_by === 'seller').length;
+    const cancelledByBuyerCount = cancelledOrders.filter((o) => o.cancelled_by === 'buyer').length;
+    const cancelledPenalty = cancelledBySellerCount * POINTS_RULES.CANCELLED_PENALTY;
 
     // 3. Points Avis Clients (8 pts pour 5★, 6 pts pour 4★, 5 pts pour 3★)
     let reviewsPoints = 0;
@@ -148,7 +152,9 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
     return {
         totalPoints,
         deliveredCount,
-        cancelledCount,
+        cancelledCount: cancelledOrders.length,
+        cancelledBySellerCount,
+        cancelledByBuyerCount,
         reviewsCount: sellerReviews.length,
         breakdown: {
             deliveredPoints,
@@ -156,6 +162,8 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
             profileBonus,
             activeShopBonus,
             cancelledPenalty,
+            cancelledBySellerCount,
+            cancelledByBuyerCount,
         },
         tier,
     };
@@ -205,6 +213,8 @@ export function buildSellersLeaderboard(sellers = [], allOrders = [], allReviews
             breakdown: pointsData.breakdown,
             deliveredCount: pointsData.deliveredCount,
             cancelledCount: pointsData.cancelledCount,
+            cancelledBySellerCount: pointsData.cancelledBySellerCount,
+            cancelledByBuyerCount: pointsData.cancelledByBuyerCount,
             reviewCount: sReviews.length,
             avgRating,
             realRevenue,

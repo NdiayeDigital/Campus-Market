@@ -497,7 +497,8 @@ export async function cancelOrderByBuyer(params) {
         }
     }
 
-    let query = supabase.from('orders').update({ status: 'cancelled' }).in('status', ['pending', 'confirmed', 'processing']);
+    let updatePayload = { status: 'cancelled', cancelled_by: 'buyer' };
+    let query = supabase.from('orders').update(updatePayload).in('status', ['pending', 'confirmed', 'processing']);
 
     if (isUUID) {
         query = query.eq('id', cleanTarget);
@@ -505,10 +506,25 @@ export async function cancelOrderByBuyer(params) {
         query = query.eq('reference', cleanTarget);
     }
 
-    const { data, error } = await query.select();
+    let { data, error } = await query.select();
 
     if (error) {
-        throw new Error(`Échec d'annulation de la commande: ${error.message}`);
+        // Fallback gracieux si la colonne cancelled_by n'existe pas encore en base distante
+        if (error.message?.includes('cancelled_by') || error.code === '42703') {
+            let fallbackQuery = supabase.from('orders').update({ status: 'cancelled' }).in('status', ['pending', 'confirmed', 'processing']);
+            if (isUUID) {
+                fallbackQuery = fallbackQuery.eq('id', cleanTarget);
+            } else {
+                fallbackQuery = fallbackQuery.eq('reference', cleanTarget);
+            }
+            const fallbackRes = await fallbackQuery.select();
+            if (fallbackRes.error) {
+                throw new Error(`Échec d'annulation de la commande: ${fallbackRes.error.message}`);
+            }
+            data = fallbackRes.data;
+        } else {
+            throw new Error(`Échec d'annulation de la commande: ${error.message}`);
+        }
     }
 
     if (!data || data.length === 0) {

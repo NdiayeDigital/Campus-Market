@@ -367,6 +367,8 @@ export function computeSellerOrderStats(orders = [], sellerId) {
 
     const cancelledOrders = sellerOrders.filter((o) => o.status === 'cancelled');
     const cancelledCount = cancelledOrders.length;
+    const cancelledBySellerCount = cancelledOrders.filter((o) => o.cancelled_by === 'seller').length;
+    const cancelledByBuyerCount = cancelledOrders.filter((o) => o.cancelled_by === 'buyer').length;
     const cancelledAmount = cancelledOrders.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
 
     const cancellationRate = totalOrders > 0 ? Number(((cancelledCount / totalOrders) * 100).toFixed(1)) : 0;
@@ -376,8 +378,8 @@ export function computeSellerOrderStats(orders = [], sellerId) {
     const realRevenue = deliveredAmount + cancelledAmount;
     const realOrdersCount = deliveredCount + cancelledCount;
 
-    // Calcul des points de classement (+10 pts par commande livrée, -5 pts par commande annulée)
-    const points = Math.max(0, (deliveredCount * 10) - (cancelledCount * 5));
+    // Calcul des points de classement (+10 pts par commande livrée, -5 pts par commande annulée par le vendeur uniquement)
+    const points = Math.max(0, (deliveredCount * 10) - (cancelledBySellerCount * 5));
 
     return {
         totalOrders,
@@ -387,6 +389,8 @@ export function computeSellerOrderStats(orders = [], sellerId) {
         pendingCount,
         pendingAmount,
         cancelledCount,
+        cancelledBySellerCount,
+        cancelledByBuyerCount,
         cancelledAmount,
         cancellationRate,
         deliveryRate,
@@ -431,6 +435,8 @@ export function buildAllSellersStatsMap(orders = []) {
                 pendingCount: 0,
                 pendingAmount: 0,
                 cancelledCount: 0,
+                cancelledBySellerCount: 0,
+                cancelledByBuyerCount: 0,
                 cancelledAmount: 0,
                 cancellationRate: 0,
                 deliveryRate: 0,
@@ -450,6 +456,11 @@ export function buildAllSellersStatsMap(orders = []) {
         } else if (o.status === 'cancelled') {
             stat.cancelledCount++;
             stat.cancelledAmount += price;
+            if (o.cancelled_by === 'seller') {
+                stat.cancelledBySellerCount++;
+            } else if (o.cancelled_by === 'buyer') {
+                stat.cancelledByBuyerCount++;
+            }
         } else {
             stat.pendingCount++;
             stat.pendingAmount += price;
@@ -459,7 +470,7 @@ export function buildAllSellersStatsMap(orders = []) {
     Object.values(map).forEach((stat) => {
         stat.realRevenue = stat.deliveredAmount + stat.cancelledAmount;
         stat.realOrdersCount = stat.deliveredCount + stat.cancelledCount;
-        stat.points = Math.max(0, (stat.deliveredCount * 10) - (stat.cancelledCount * 5));
+        stat.points = Math.max(0, (stat.deliveredCount * 10) - (stat.cancelledBySellerCount * 5));
         if (stat.totalOrders > 0) {
             stat.cancellationRate = Number(((stat.cancelledCount / stat.totalOrders) * 100).toFixed(1));
             stat.deliveryRate = Number(((stat.deliveredCount / stat.totalOrders) * 100).toFixed(1));
@@ -1104,14 +1115,32 @@ export async function updateOrderStatusAdmin(orderId, newStatus) {
         throw new Error(`Statut invalide : ${newStatus}`);
     }
 
-    const { data, error } = await supabase
+    const updatePayload = { status: newStatus };
+    if (newStatus === 'cancelled') {
+        updatePayload.cancelled_by = 'admin';
+    }
+
+    let { data, error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update(updatePayload)
         .eq('id', orderId)
         .select()
         .single();
 
     if (error) {
+        // Fallback gracieux si la colonne cancelled_by n'existe pas encore en base distante
+        if (error.message?.includes('cancelled_by') || error.code === '42703') {
+            const fallbackRes = await supabase
+                .from('orders')
+                .update({ status: newStatus })
+                .eq('id', orderId)
+                .select()
+                .single();
+            if (fallbackRes.error) {
+                throw new Error(`Échec de mise à jour du statut : ${fallbackRes.error.message}`);
+            }
+            return fallbackRes.data;
+        }
         throw new Error(`Échec de mise à jour du statut : ${error.message}`);
     }
     return data;

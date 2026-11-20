@@ -131,12 +131,13 @@ const sellerNovice = {
 const mockOrdersNovice = [
     { seller_id: 's-novice', status: 'delivered', price: 2000 }, // +10 pts
     { seller_id: 's-novice', status: 'delivered', price: 3000 }, // +10 pts
-    { seller_id: 's-novice', status: 'cancelled', price: 1500 }, // -5 pts
+    { seller_id: 's-novice', status: 'cancelled', cancelled_by: 'seller', price: 1500 }, // -5 pts (vendeur)
+    { seller_id: 's-novice', status: 'cancelled', cancelled_by: 'buyer', price: 1200 }, // 0 pt (client/acheteur)
 ];
 const mockReviewsNovice = [
     { seller_id: 's-novice', rating: 5 }, // +8 pts
 ];
-// Total attendu : 10 + 10 - 5 + 8 + 5 (profil) + 5 (active shop) = 33 pts -> Bronze
+// Total attendu : 10 + 10 - 5 + 0 + 8 + 5 (profil) + 5 (active shop) = 33 pts -> Bronze
 const pointsNovice = computeSellerPoints({
     seller: sellerNovice,
     orders: mockOrdersNovice,
@@ -144,10 +145,42 @@ const pointsNovice = computeSellerPoints({
     activeProductsCount: 2,
 });
 assert.equal(pointsNovice.totalPoints, 33, 'Le total de points doit être exactement 33');
+assert.equal(pointsNovice.cancelledBySellerCount, 1, '1 commande annulée par le vendeur');
+assert.equal(pointsNovice.cancelledByBuyerCount, 1, '1 commande annulée par l\'acheteur');
+assert.equal(pointsNovice.breakdown.cancelledPenalty, 5, 'Pénalité de 5 points uniquement pour l\'annulation vendeur');
 assert.equal(pointsNovice.tier.id, 'bronze', '33 points doit correspondre au niveau Bronze');
 assert.equal(pointsNovice.tier.name, 'Bronze');
 assert.equal(pointsNovice.tier.pointsToNextTier, 17, 'Il doit manquer 17 points pour atteindre Argent (50)');
-console.log('✅ [3.1] Calcul exact et palier Bronze validés !');
+console.log('✅ [3.1] Calcul exact, palier Bronze et distinction annulation vendeur/client validés !');
+
+// Test 3.1.b : Vérification rigoureuse de la règle métier :
+// Annulée par le client (cancelled_by === 'buyer') => 0 pénalité
+// Annulée par le vendeur (cancelled_by === 'seller') => -5 pts
+const testBuyerCancelled = computeSellerPoints({
+    seller: { id: 's-test' },
+    orders: [
+        { seller_id: 's-test', status: 'delivered', price: 1000 }, // +10
+        { seller_id: 's-test', status: 'cancelled', cancelled_by: 'buyer', price: 1000 }, // 0 pt
+        { seller_id: 's-test', status: 'cancelled', cancelled_by: 'buyer', price: 2000 }, // 0 pt
+    ],
+});
+assert.equal(testBuyerCancelled.totalPoints, 10, 'Une commande annulée par le client ne doit JAMAIS pénaliser le vendeur');
+assert.equal(testBuyerCancelled.breakdown.cancelledPenalty, 0, 'La pénalité doit être strictement 0 pt');
+assert.equal(testBuyerCancelled.cancelledByBuyerCount, 2);
+assert.equal(testBuyerCancelled.cancelledBySellerCount, 0);
+
+const testSellerCancelled = computeSellerPoints({
+    seller: { id: 's-test' },
+    orders: [
+        { seller_id: 's-test', status: 'delivered', price: 1000 }, // +10
+        { seller_id: 's-test', status: 'cancelled', cancelled_by: 'seller', price: 1000 }, // -5
+    ],
+});
+assert.equal(testSellerCancelled.totalPoints, 5, 'Une commande refusée/annulée par le vendeur doit déduire 5 pts');
+assert.equal(testSellerCancelled.breakdown.cancelledPenalty, 5);
+assert.equal(testSellerCancelled.cancelledBySellerCount, 1);
+assert.equal(testSellerCancelled.cancelledByBuyerCount, 0);
+console.log('✅ [3.1.b] 0 pénalité pour les annulations clients et -5 pts pour annulation vendeur validé à 100% !');
 
 // Test 3.2 : Paliers Argent (50+), Or (150+) et Diamant (300+)
 const tierArgent = getSellerTier(60);
@@ -181,9 +214,10 @@ const allOrders = [
     { seller_id: 's-1', status: 'delivered', price: 1000 },
     // s-2 : 10 livrées (+100 pts) -> Devrait être #1
     ...Array(10).fill(null).map(() => ({ seller_id: 's-2', status: 'delivered', price: 1500 })),
-    // s-3 : 1 livrée (+10 pts), 1 annulée (-5 pts) -> 5 pts
+    // s-3 : 1 livrée (+10 pts), 1 annulée vendeur (-5 pts), 1 annulée acheteur (0 pt) -> 5 pts
     { seller_id: 's-3', status: 'delivered', price: 500 },
-    { seller_id: 's-3', status: 'cancelled', price: 500 },
+    { seller_id: 's-3', status: 'cancelled', cancelled_by: 'seller', price: 500 },
+    { seller_id: 's-3', status: 'cancelled', cancelled_by: 'buyer', price: 500 },
 ];
 
 const leaderboard = buildSellersLeaderboard(sellers, allOrders, []);
@@ -194,11 +228,27 @@ assert.equal(leaderboard[1].id, 's-1', 'Boutique Alpha avec 40 pts doit être cl
 assert.equal(leaderboard[1].rank, 2);
 assert.equal(leaderboard[2].id, 's-3', 'Boutique Gamma avec 5 pts doit être classée #3');
 assert.equal(leaderboard[2].rank, 3);
+assert.equal(leaderboard[2].cancelledBySellerCount, 1);
+assert.equal(leaderboard[2].cancelledByBuyerCount, 1);
 
 const rankInfo = getSellerRankInfo('s-1', leaderboard);
 assert.equal(rankInfo.rank, 2);
 assert.equal(rankInfo.totalSellers, 3);
 console.log('✅ [4.1] Algorithme de classement et rangs #1, #2, #3 validés !');
+
+// Test 4.2 : computeSellerOrderStats & buildAllSellersStatsMap dans admin-service
+const sellerStats = computeSellerOrderStats(allOrders, 's-3');
+assert.equal(sellerStats.deliveredCount, 1);
+assert.equal(sellerStats.cancelledCount, 2);
+assert.equal(sellerStats.cancelledBySellerCount, 1);
+assert.equal(sellerStats.cancelledByBuyerCount, 1);
+assert.equal(sellerStats.points, 5, 'Points admin pour s-3 doivent être 10 - 5 = 5 (l\'annulation client ne déduit aucun point)');
+
+const statsMap = buildAllSellersStatsMap(allOrders);
+assert.equal(statsMap['s-3'].cancelledBySellerCount, 1);
+assert.equal(statsMap['s-3'].cancelledByBuyerCount, 1);
+assert.equal(statsMap['s-3'].points, 5);
+console.log('✅ [4.2] computeSellerOrderStats et buildAllSellersStatsMap avec traçabilité d\'annulation validés !');
 
 // =========================================================================
 // 5. Tests d'Intégration UI : Bouton Profil Vendeur & Colonne SuperAdmin
