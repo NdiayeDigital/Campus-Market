@@ -132,19 +132,14 @@ export async function fetchGlobalMetrics() {
         } else {
             const { data: orders, error: errOrders } = await supabase
                 .from('orders')
-                .select('id, price, status');
+                .select('id, price, status, is_same_room');
 
             if (errOrders) throw errOrders;
 
             allOrders = orders || [];
             totalOrdersCount = allOrders.length;
-            const deliveredOrders = allOrders.filter((o) => o.status === 'delivered');
-
-            // Somme des chiffres d'affaires réels sur les commandes livrées (Volume d'affaires vendeur)
-            totalDeliveredRevenue = deliveredOrders.reduce(
-                (sum, o) => sum + (Number(o.price) || 0),
-                0
-            );
+            statsV2 = await fetchAdminGlobalStatsV2(allOrders);
+            totalDeliveredRevenue = statsV2.delivered_amount;
         }
 
         // 3. Revenus Récurrents RÉELS des abonnements vendeurs (aucun montant arbitraire ou fictif)
@@ -320,6 +315,138 @@ export async function fetchAdminGlobalStatsV2(cachedOrders = null) {
         delivery_rate: deliveryRate,
         same_room_count: sameRoomCount,
     };
+}
+
+/**
+ * Calcule les statistiques d'un vendeur spécifique à partir d'une liste de commandes.
+ * @param {Array} orders - Liste de toutes les commandes ou des commandes filtrées
+ * @param {string} sellerId - Identifiant unique du vendeur
+ * @returns {{
+ *   totalOrders: number,
+ *   totalAmount: number,
+ *   deliveredCount: number,
+ *   deliveredAmount: number,
+ *   pendingCount: number,
+ *   pendingAmount: number,
+ *   cancelledCount: number,
+ *   cancelledAmount: number,
+ *   cancellationRate: number,
+ *   deliveryRate: number
+ * }}
+ */
+export function computeSellerOrderStats(orders = [], sellerId) {
+    if (!sellerId) {
+        return {
+            totalOrders: 0,
+            totalAmount: 0,
+            deliveredCount: 0,
+            deliveredAmount: 0,
+            pendingCount: 0,
+            pendingAmount: 0,
+            cancelledCount: 0,
+            cancelledAmount: 0,
+            cancellationRate: 0,
+            deliveryRate: 0,
+        };
+    }
+
+    const sellerOrders = (orders || []).filter((o) => (o.seller_id === sellerId || o.seller?.id === sellerId));
+    const totalOrders = sellerOrders.length;
+    const totalAmount = sellerOrders.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const deliveredOrders = sellerOrders.filter((o) => o.status === 'delivered');
+    const deliveredCount = deliveredOrders.length;
+    const deliveredAmount = deliveredOrders.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const pendingOrders = sellerOrders.filter((o) => ['pending', 'confirmed', 'processing', 'shipped'].includes(o.status));
+    const pendingCount = pendingOrders.length;
+    const pendingAmount = pendingOrders.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const cancelledOrders = sellerOrders.filter((o) => o.status === 'cancelled');
+    const cancelledCount = cancelledOrders.length;
+    const cancelledAmount = cancelledOrders.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const cancellationRate = totalOrders > 0 ? Number(((cancelledCount / totalOrders) * 100).toFixed(1)) : 0;
+    const deliveryRate = totalOrders > 0 ? Number(((deliveredCount / totalOrders) * 100).toFixed(1)) : 0;
+
+    return {
+        totalOrders,
+        totalAmount,
+        deliveredCount,
+        deliveredAmount,
+        pendingCount,
+        pendingAmount,
+        cancelledCount,
+        cancelledAmount,
+        cancellationRate,
+        deliveryRate,
+    };
+}
+
+/**
+ * Construit une table d'indexation O(N) des statistiques de tous les vendeurs.
+ * @param {Array} orders - Liste de toutes les commandes
+ * @returns {Record<string, {
+ *   totalOrders: number,
+ *   totalAmount: number,
+ *   deliveredCount: number,
+ *   deliveredAmount: number,
+ *   pendingCount: number,
+ *   pendingAmount: number,
+ *   cancelledCount: number,
+ *   cancelledAmount: number,
+ *   cancellationRate: number,
+ *   deliveryRate: number
+ * }>}
+ */
+export function buildAllSellersStatsMap(orders = []) {
+    const map = {};
+    if (!Array.isArray(orders)) return map;
+
+    orders.forEach((o) => {
+        const sId = o.seller_id || o.seller?.id;
+        if (!sId) return;
+
+        if (!map[sId]) {
+            map[sId] = {
+                totalOrders: 0,
+                totalAmount: 0,
+                deliveredCount: 0,
+                deliveredAmount: 0,
+                pendingCount: 0,
+                pendingAmount: 0,
+                cancelledCount: 0,
+                cancelledAmount: 0,
+                cancellationRate: 0,
+                deliveryRate: 0,
+            };
+        }
+
+        const stat = map[sId];
+        const price = Number(o.price) || 0;
+        stat.totalOrders++;
+        stat.totalAmount += price;
+
+        if (o.status === 'delivered') {
+            stat.deliveredCount++;
+            stat.deliveredAmount += price;
+        } else if (o.status === 'cancelled') {
+            stat.cancelledCount++;
+            stat.cancelledAmount += price;
+        } else {
+            stat.pendingCount++;
+            stat.pendingAmount += price;
+        }
+    });
+
+    Object.values(map).forEach((stat) => {
+        if (stat.totalOrders > 0) {
+            stat.cancellationRate = Number(((stat.cancelledCount / stat.totalOrders) * 100).toFixed(1));
+            stat.deliveryRate = Number(((stat.deliveredCount / stat.totalOrders) * 100).toFixed(1));
+        }
+    });
+
+    return map;
 }
 
 import { getPendingSellersCache, removePendingSellerCache } from './seller-service.js';
@@ -1739,5 +1866,7 @@ export default {
     broadcastPushNotification,
     fetchPushBroadcasts,
     fetchPushSubscribersCount,
+    computeSellerOrderStats,
+    buildAllSellersStatsMap,
 };
 

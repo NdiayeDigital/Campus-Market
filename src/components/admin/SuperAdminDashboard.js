@@ -47,6 +47,8 @@ import {
     broadcastPushNotification,
     fetchPushBroadcasts,
     fetchPushSubscribersCount,
+    computeSellerOrderStats,
+    buildAllSellersStatsMap,
 } from '../../services/admin-service.js';
 import { CAROUSEL_TYPES } from '../../config/announcements.js';
 import { PARTNER_CATEGORIES } from '../../config/partners.js';
@@ -89,12 +91,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     let productSearchQuery = '';
     let sellerSearchQuery = '';
     let sellerFilterTab = 'all'; // 'all' | 'pending' | 'active' | 'suspended' | 'payments'
+    let sellerSortBy = 'ca_desc'; // 'ca_desc' | 'orders_desc' | 'name_asc' | 'recent'
     let pendingSubscriptionPayments = [];
     let accountSearchQuery = '';
     let accountRoleFilter = 'all'; // 'all' | 'acheteur' | 'vendeur' | 'superadmin' | 'suspendu'
     let orderSearchQuery = '';
     let orderPavillonFilter = 'all';
     let orderPaymentFilter = 'all';
+    let orderSellerFilter = 'all'; // 'all' | seller_id
     let orderStatusFilter = 'all'; // 'all' | 'delivered' | 'undelivered' | 'cancelled'
     let isLoading = true;
     let isAuthenticated = false;
@@ -631,7 +635,21 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             sellerMonthlyFee: 1500,
         };
 
-        const deliveredOrdersCount = allOrders.filter((o) => o.status === 'delivered').length;
+        const sV2 = m.statsV2 || {};
+        const totalOrdersCount = sV2.total_count !== undefined ? sV2.total_count : allOrders.length;
+        const totalOrdersRevenue = sV2.total_amount !== undefined ? sV2.total_amount : allOrders.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+        const deliveredOrdersCount = sV2.delivered_count !== undefined ? sV2.delivered_count : allOrders.filter((o) => o.status === 'delivered').length;
+        const deliveredOrdersRevenue = sV2.delivered_amount !== undefined ? sV2.delivered_amount : (m.totalDeliveredRevenue || allOrders.filter((o) => o.status === 'delivered').reduce((sum, o) => sum + (Number(o.price) || 0), 0));
+
+        const pendingOrdersCount = sV2.undelivered_count !== undefined ? sV2.undelivered_count : allOrders.filter((o) => ['pending', 'confirmed', 'processing', 'shipped'].includes(o.status)).length;
+        const pendingOrdersRevenue = sV2.undelivered_amount !== undefined ? sV2.undelivered_amount : allOrders.filter((o) => ['pending', 'confirmed', 'processing', 'shipped'].includes(o.status)).reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+        const cancelledOrdersCount = sV2.cancelled_count !== undefined ? sV2.cancelled_count : allOrders.filter((o) => o.status === 'cancelled').length;
+        const cancelledOrdersRevenue = sV2.cancelled_amount !== undefined ? sV2.cancelled_amount : allOrders.filter((o) => o.status === 'cancelled').reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+        const deliveryRate = totalOrdersCount > 0 ? ((deliveredOrdersCount / totalOrdersCount) * 100).toFixed(1) : '0.0';
+        const cancellationRate = totalOrdersCount > 0 ? ((cancelledOrdersCount / totalOrdersCount) * 100).toFixed(1) : '0.0';
 
         // Calcul de la répartition des commandes par Pavillon / Zone
         const locationCounts = {};
@@ -703,62 +721,109 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 <i class="fa-solid fa-boxes-packing"></i>
                             </div>
                         </div>
-                        <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${m.totalOrdersCount}</span>
+                        <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${totalOrdersCount}</span>
                         <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
-                            <span>Transactions campus</span>
+                            <span>${Number(totalOrdersRevenue).toLocaleString('fr-FR')} FCFA brut</span>
                             <span class="text-[10px] font-bold text-slate-400 group-hover:text-primary flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
                     </div>
 
-                    <!-- Volume d'affaires vendeur -->
+                    <!-- Chiffre d'Affaires Livré Réalisé -->
                     <div 
                         data-stat-target="orders-delivered" 
                         title="Cliquer pour afficher les commandes générant ce chiffre d'affaires"
                         class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
-                        ${FEATURE_FLAGS.ADMIN_STATS_V2 && m.statsV2 ? `
-                            <div class="flex items-center justify-between text-slate-500 mb-1.5">
-                                <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Volume d'affaires global</span>
-                                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
-                                    <i class="fa-solid fa-coins"></i>
-                                </div>
+                        <div class="flex items-center justify-between text-slate-500 mb-1.5">
+                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Chiffre d'Affaires Réalisé</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
+                                <i class="fa-solid fa-coins"></i>
                             </div>
-                            <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
-                                ${Number(m.statsV2.total_amount).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
-                            </span>
-                            <div class="text-[11px] font-medium text-slate-400 mb-2">
-                                Total global (${m.statsV2.total_count} commande${m.statsV2.total_count > 1 ? 's' : ''})
-                            </div>
-                            <div class="pt-2 border-t border-slate-100 flex flex-col gap-1 text-[11px]">
-                                <div class="flex items-center justify-between text-emerald-700 font-medium">
-                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>Livrées (${m.statsV2.delivered_count})</span>
-                                    <span class="font-bold tabular-nums">${Number(m.statsV2.delivered_amount).toLocaleString('fr-FR')} F</span>
-                                </div>
-                                <div class="flex items-center justify-between text-amber-700 font-medium">
-                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>Non livrées (${m.statsV2.undelivered_count})</span>
-                                    <span class="font-bold tabular-nums">${Number(m.statsV2.undelivered_amount).toLocaleString('fr-FR')} F</span>
-                                </div>
-                                <div class="flex items-center justify-between text-rose-700 font-medium">
-                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>Annulées (${m.statsV2.cancelled_count})</span>
-                                    <span class="font-bold tabular-nums">${Number(m.statsV2.cancelled_amount).toLocaleString('fr-FR')} F</span>
-                                </div>
-                            </div>
-                        ` : `
-                            <div class="flex items-center justify-between text-slate-500 mb-2">
-                                <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Volume d'affaires</span>
-                                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
-                                    <i class="fa-solid fa-coins"></i>
-                                </div>
-                            </div>
-                            <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
-                                ${Number(m.totalDeliveredRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
-                            </span>
-                            <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
-                                <span>Commandes livrées</span>
-                                <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
-                            </div>
-                        `}
+                        </div>
+                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
+                            ${Number(deliveredOrdersRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                        </span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-emerald-700 mt-1">
+                            <span>${deliveredOrdersCount} livrée${deliveredOrdersCount > 1 ? 's' : ''} (${deliveryRate}%)</span>
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Décomposition des Flux : Livrées, En attente, Annulées -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+                    <!-- Livrées (CA réel) -->
+                    <div 
+                        data-stat-target="orders-delivered"
+                        title="Cliquer pour afficher les commandes livrées"
+                        class="bg-gradient-to-br from-white to-emerald-50/50 p-4 sm:p-5 rounded-2xl border border-emerald-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
+                        <div class="flex items-center justify-between text-emerald-800 mb-1">
+                            <span class="text-xs font-bold flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                Commandes Livrées (CA Réel)
+                            </span>
+                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                ${deliveryRate}%
+                            </span>
+                        </div>
+                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-700 tracking-tight tabular-nums mt-1">
+                            ${Number(deliveredOrdersRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                        </span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 mt-2 pt-2 border-t border-emerald-100">
+                            <span>${deliveredOrdersCount} commande${deliveredOrdersCount > 1 ? 's' : ''} encaissée${deliveredOrdersCount > 1 ? 's' : ''}</span>
+                            <span class="text-[10px] font-bold text-emerald-700 group-hover:underline flex items-center gap-0.5">Voir livrées <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
+                    </div>
+
+                    <!-- En attente (En cours) -->
+                    <div 
+                        data-stat-target="orders-pending"
+                        title="Cliquer pour afficher les commandes en attente de livraison"
+                        class="bg-gradient-to-br from-white to-amber-50/50 p-4 sm:p-5 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
+                        <div class="flex items-center justify-between text-amber-800 mb-1">
+                            <span class="text-xs font-bold flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
+                                En Attente & En Cours
+                            </span>
+                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                                ${pendingOrdersCount} commande${pendingOrdersCount > 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-amber-700 tracking-tight tabular-nums mt-1">
+                            ${Number(pendingOrdersRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                        </span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 mt-2 pt-2 border-t border-amber-100">
+                            <span>En cours de traitement/livraison</span>
+                            <span class="text-[10px] font-bold text-amber-700 group-hover:underline flex items-center gap-0.5">Voir en attente <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
+                    </div>
+
+                    <!-- Annulées -->
+                    <div 
+                        data-stat-target="orders-cancelled"
+                        title="Cliquer pour afficher les commandes annulées"
+                        class="bg-gradient-to-br from-white to-rose-50/50 p-4 sm:p-5 rounded-2xl border border-rose-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-rose-400 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
+                        <div class="flex items-center justify-between text-rose-800 mb-1">
+                            <span class="text-xs font-bold flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0"></span>
+                                Commandes Annulées
+                            </span>
+                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                                ${cancellationRate}%
+                            </span>
+                        </div>
+                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-rose-700 tracking-tight tabular-nums mt-1">
+                            ${Number(cancelledOrdersRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                        </span>
+                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 mt-2 pt-2 border-t border-rose-100">
+                            <span>${cancelledOrdersCount} commande${cancelledOrdersCount > 1 ? 's' : ''} non aboutie${cancelledOrdersCount > 1 ? 's' : ''}</span>
+                            <span class="text-[10px] font-bold text-rose-700 group-hover:underline flex items-center gap-0.5">Voir annulées <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                        </div>
+                    </div>
+                </div>
                 </div>
 
                 <!-- Analyse Financière et Modèle Économique UIDT -->
@@ -1215,12 +1280,39 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 (p.customer_phone || '').toLowerCase().includes(query)
             );
         });
+        const sellerStatsMap = buildAllSellersStatsMap(allOrders);
+
         const filteredActive = activeSellers.filter((s) => {
             if (!matchesQuery(s)) return false;
             const suspended = isSellerSuspended(s);
             if (sellerFilterTab === 'active') return !suspended;
             if (sellerFilterTab === 'suspended') return suspended;
             return true;
+        });
+
+        // Tri des marchands actifs
+        filteredActive.sort((a, b) => {
+            const statA = sellerStatsMap[a.id] || { totalOrders: 0, deliveredAmount: 0 };
+            const statB = sellerStatsMap[b.id] || { totalOrders: 0, deliveredAmount: 0 };
+
+            if (sellerSortBy === 'ca_desc') {
+                if (statB.deliveredAmount !== statA.deliveredAmount) {
+                    return statB.deliveredAmount - statA.deliveredAmount;
+                }
+                return statB.totalOrders - statA.totalOrders;
+            }
+            if (sellerSortBy === 'orders_desc') {
+                if (statB.totalOrders !== statA.totalOrders) {
+                    return statB.totalOrders - statA.totalOrders;
+                }
+                return statB.deliveredAmount - statA.deliveredAmount;
+            }
+            if (sellerSortBy === 'name_asc') {
+                const nameA = (a.shop_name || `${a.prenom || ''} ${a.nom || ''}`).toLowerCase();
+                const nameB = (b.shop_name || `${b.prenom || ''} ${b.nom || ''}`).toLowerCase();
+                return nameA.localeCompare(nameB);
+            }
+            return new Date(b.created_at || 0) - new Date(a.created_at || 0);
         });
 
         const showPaymentsSection = (sellerFilterTab === 'all' || sellerFilterTab === 'payments') && (filteredPendingPayments.length > 0 || sellerFilterTab === 'payments');
@@ -1248,6 +1340,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     </div>
 
                     <div class="flex items-center gap-2 flex-wrap">
+                        <!-- Sélecteur de tri par CA / Commandes / Nom -->
+                        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs min-h-[36px]">
+                            <i class="fa-solid fa-arrow-down-wide-short text-slate-400 text-[11px]"></i>
+                            <label for="admin-seller-sort" class="text-[11px] font-semibold text-slate-500 whitespace-nowrap hidden sm:inline">Tri :</label>
+                            <select id="admin-seller-sort" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+                                <option value="ca_desc" ${sellerSortBy === 'ca_desc' ? 'selected' : ''}>Top CA Réalisé</option>
+                                <option value="orders_desc" ${sellerSortBy === 'orders_desc' ? 'selected' : ''}>Plus de commandes</option>
+                                <option value="name_asc" ${sellerSortBy === 'name_asc' ? 'selected' : ''}>Nom (A-Z)</option>
+                                <option value="recent" ${sellerSortBy === 'recent' ? 'selected' : ''}>Récents d'abord</option>
+                            </select>
+                        </div>
+
                         <!-- Filtres statut -->
                         <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
                             <button type="button" data-seller-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${sellerFilterTab === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
@@ -1641,7 +1745,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         `;
     }
 
-    function renderActiveSellersList(list = activeSellers) {
+    function renderActiveSellersList(list = activeSellers, statsMap = null) {
         if (list.length === 0) {
             return `
                 <div class="text-center py-10 text-slate-400 text-xs">
@@ -1650,6 +1754,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 </div>
             `;
         }
+
+        const effectiveStatsMap = statsMap || buildAllSellersStatsMap(allOrders);
 
         const getPlanBadgeHTML = (plan, isSuperAdmin = false) => {
             if (isSuperAdmin) {
@@ -1691,6 +1797,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200/80">
                         <tr>
                             <th class="py-3 px-4">Marchand</th>
+                            <th class="py-3 px-4">Chiffre d'Affaires & Ventes</th>
                             <th class="py-3 px-4">Articles & Pack</th>
                             <th class="py-3 px-4">Abonnement</th>
                             <th class="py-3 px-4">Contact</th>
@@ -1708,6 +1815,16 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             const prodCount = allProducts.filter((p) => p.seller_id === s.id).length;
                             const cleanPhone = (s.telephone || '').replace(/\D/g, '');
                             const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
+                            const stat = effectiveStatsMap[s.id] || {
+                                totalOrders: 0,
+                                totalAmount: 0,
+                                deliveredCount: 0,
+                                deliveredAmount: 0,
+                                pendingCount: 0,
+                                pendingAmount: 0,
+                                cancelledCount: 0,
+                                cancelledAmount: 0,
+                            };
 
                             return `
                                 <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
@@ -1721,6 +1838,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                             <div class="min-w-0">
                                                 <span class="font-bold text-slate-900 block truncate">${escapeHTML(s.prenom)} ${escapeHTML(s.nom)}</span>
                                                 <span class="text-[10px] text-slate-400 block">${escapeHTML(s.shop_name || 'Boutique')}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex flex-col gap-1 min-w-[170px]">
+                                            <div class="flex items-baseline gap-1.5">
+                                                <span class="font-extrabold text-sm text-emerald-600 tabular-nums">
+                                                    ${Number(stat.deliveredAmount || 0).toLocaleString('fr-FR')} <span class="text-[10px] text-slate-500 font-bold">FCFA</span>
+                                                </span>
+                                                <span class="text-[10px] text-slate-400 font-medium">réalisé</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5 flex-wrap text-[10px]">
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60" title="Commandes livrées avec succès">
+                                                    <i class="fa-solid fa-circle-check text-[9px]"></i> ${stat.deliveredCount} livrée${stat.deliveredCount > 1 ? 's' : ''}
+                                                </span>
+                                                ${stat.pendingCount > 0 ? `
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 font-semibold border border-amber-200/60" title="Commandes en attente de livraison (${Number(stat.pendingAmount || 0).toLocaleString('fr-FR')} FCFA)">
+                                                        <i class="fa-solid fa-hourglass-half text-[9px]"></i> ${stat.pendingCount} en attente
+                                                    </span>
+                                                ` : ''}
+                                                ${stat.cancelledCount > 0 ? `
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 font-semibold border border-rose-200/60" title="Commandes annulées (${Number(stat.cancelledAmount || 0).toLocaleString('fr-FR')} FCFA)">
+                                                        <i class="fa-solid fa-ban text-[9px]"></i> ${stat.cancelledCount}
+                                                    </span>
+                                                ` : ''}
                                             </div>
                                         </div>
                                     </td>
@@ -1762,6 +1904,19 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     </td>
                                     <td class="py-3 px-4 text-right">
                                         <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                                            <!-- Bouton Filtrer Commandes Vendeur -->
+                                            <button 
+                                                type="button" 
+                                                data-action="view-seller-orders" 
+                                                data-seller-id="${s.id}" 
+                                                data-seller-name="${escapeHTML(s.shop_name || `${s.prenom || ''} ${s.nom || ''}`)}"
+                                                class="px-2 py-1.5 rounded-lg border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 text-[11px] font-bold cursor-pointer flex items-center gap-1 shadow-2xs transition-colors"
+                                                title="Afficher toutes les commandes de ce vendeur"
+                                            >
+                                                <i class="fa-solid fa-boxes-packing text-[10px]"></i>
+                                                <span>Commandes (${stat.totalOrders})</span>
+                                            </button>
+
                                             ${isSuperAdmin ? `
                                                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200/90 shadow-xs select-none">
                                                     <i class="fa-solid fa-shield-halved text-primary"></i> SuperAdmin Protégé (Illimité)
@@ -1848,6 +2003,16 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     const prodCount = allProducts.filter((p) => p.seller_id === s.id).length;
                     const cleanPhone = (s.telephone || '').replace(/\D/g, '');
                     const waUrl = cleanPhone ? `https://wa.me/221${cleanPhone.slice(-9)}` : null;
+                    const stat = effectiveStatsMap[s.id] || {
+                        totalOrders: 0,
+                        totalAmount: 0,
+                        deliveredCount: 0,
+                        deliveredAmount: 0,
+                        pendingCount: 0,
+                        pendingAmount: 0,
+                        cancelledCount: 0,
+                        cancelledAmount: 0,
+                    };
 
                     return `
                         <div class="py-3 flex flex-col gap-2.5">
@@ -1879,6 +2044,39 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         ${getPlanBadgeHTML(s.subscription_plan, isSuperAdmin)}
                                         ${getSubscriptionBadgeHTML(s)}
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Bloc Chiffre d'Affaires & Ventes du Vendeur -->
+                            <div class="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/70 flex flex-col gap-1.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-semibold text-slate-500">Chiffre d'Affaires réalisé :</span>
+                                    <span class="font-extrabold text-sm text-emerald-600 tabular-nums">
+                                        ${Number(stat.deliveredAmount || 0).toLocaleString('fr-FR')} FCFA
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-wrap text-[10px] pt-1 border-t border-slate-200/50">
+                                    <span class="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold">
+                                        ${stat.deliveredCount} livrée${stat.deliveredCount > 1 ? 's' : ''}
+                                    </span>
+                                    <span class="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 font-semibold">
+                                        ${stat.pendingCount} en attente (${Number(stat.pendingAmount || 0).toLocaleString('fr-FR')} F)
+                                    </span>
+                                    ${stat.cancelledCount > 0 ? `
+                                        <span class="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 font-semibold">
+                                            ${stat.cancelledCount} annulée${stat.cancelledCount > 1 ? 's' : ''}
+                                        </span>
+                                    ` : ''}
+                                    <button 
+                                        type="button" 
+                                        data-action="view-seller-orders" 
+                                        data-seller-id="${s.id}" 
+                                        data-seller-name="${escapeHTML(s.shop_name || `${s.prenom || ''} ${s.nom || ''}`)}"
+                                        class="ml-auto text-primary font-bold text-[11px] hover:underline flex items-center gap-1 cursor-pointer"
+                                    >
+                                        <span>Voir commandes (${stat.totalOrders})</span>
+                                        <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -2176,13 +2374,21 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     function renderOrdersTab() {
         const query = (orderSearchQuery || '').toLowerCase().trim();
 
-        // Calculs des métriques V2 sur l'ensemble des commandes pour les indicateurs d'entête
+        // Calculs des métriques sur l'ensemble des commandes
         const v2TotalOrders = allOrders.length;
         const v2CancelledOrders = allOrders.filter((o) => o.status === 'cancelled').length;
         const v2DeliveredOrders = allOrders.filter((o) => o.status === 'delivered').length;
+        const v2PendingOrders = allOrders.filter((o) => ['pending', 'confirmed', 'processing', 'shipped'].includes(o.status)).length;
+        const deliveredOrdersRevenue = allOrders.filter((o) => o.status === 'delivered').reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+        const pendingOrdersRevenue = allOrders.filter((o) => ['pending', 'confirmed', 'processing', 'shipped'].includes(o.status)).reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+        const cancelledOrdersRevenue = allOrders.filter((o) => o.status === 'cancelled').reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
         const v2CancellationRate = v2TotalOrders > 0 ? ((v2CancelledOrders / v2TotalOrders) * 100).toFixed(1) : '0.0';
         const v2DeliveryRate = v2TotalOrders > 0 ? ((v2DeliveredOrders / v2TotalOrders) * 100).toFixed(1) : '0.0';
         const v2SameRoomOrders = allOrders.filter((o) => Boolean(o.is_same_room)).length;
+
+        const selectedSellerObj = orderSellerFilter !== 'all' ? activeSellers.find((s) => s.id === orderSellerFilter) : null;
+        const selectedSellerName = selectedSellerObj ? (selectedSellerObj.shop_name || `${selectedSellerObj.prenom || ''} ${selectedSellerObj.nom || ''}`) : '';
 
         const filteredOrders = allOrders.filter((ord) => {
             if (query) {
@@ -2191,7 +2397,8 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 const phone = (ord.buyer_phone || '').toLowerCase();
                 const loc = (ord.delivery_address || '').toLowerCase();
                 const prod = (ord.product?.title || '').toLowerCase();
-                if (!ref.includes(query) && !buyer.includes(query) && !phone.includes(query) && !loc.includes(query) && !prod.includes(query)) {
+                const sellerTitle = (ord.seller?.shop_name || `${ord.seller?.prenom || ''} ${ord.seller?.nom || ''}`).toLowerCase();
+                if (!ref.includes(query) && !buyer.includes(query) && !phone.includes(query) && !loc.includes(query) && !prod.includes(query) && !sellerTitle.includes(query)) {
                     return false;
                 }
             }
@@ -2207,12 +2414,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     return false;
                 }
             }
-            if (FEATURE_FLAGS.ADMIN_STATS_V2 && orderStatusFilter !== 'all') {
+            if (orderSellerFilter !== 'all') {
+                const sId = ord.seller_id || ord.seller?.id;
+                if (sId !== orderSellerFilter) {
+                    return false;
+                }
+            }
+            if (orderStatusFilter !== 'all') {
                 if (orderStatusFilter === 'cancelled') {
                     if (ord.status !== 'cancelled') return false;
                 } else if (orderStatusFilter === 'delivered') {
                     if (ord.status !== 'delivered') return false;
-                } else if (orderStatusFilter === 'undelivered') {
+                } else if (orderStatusFilter === 'undelivered' || orderStatusFilter === 'pending') {
                     if (['delivered', 'cancelled'].includes(ord.status)) return false;
                 } else if (ord.status !== orderStatusFilter) {
                     return false;
@@ -2236,7 +2449,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         <input 
                             type="text" 
                             id="admin-order-search" 
-                            placeholder="Réf, client, pavillon, produit..." 
+                            placeholder="Réf, client, pavillon, produit, boutique..." 
                             value="${escapeHTML(orderSearchQuery)}"
                             class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[40px]"
                         >
@@ -2248,8 +2461,23 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     </div>
 
                     <div class="flex items-center gap-2 flex-wrap">
+                        <!-- Filtre Vendeur -->
+                        <div class="relative min-w-[160px]">
+                            <select 
+                                id="admin-order-seller-filter" 
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer min-h-[38px]"
+                            >
+                                <option value="all" ${orderSellerFilter === 'all' ? 'selected' : ''}>Tous les vendeurs (${activeSellers.length})</option>
+                                ${activeSellers.map((s) => `
+                                    <option value="${s.id}" ${orderSellerFilter === s.id ? 'selected' : ''}>
+                                        ${escapeHTML(s.shop_name || `${s.prenom || ''} ${s.nom || ''}`)}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
                         <!-- Filtre Pavillon -->
-                        <div class="relative min-w-[150px]">
+                        <div class="relative min-w-[140px]">
                             <select 
                                 id="admin-order-pavillon-filter" 
                                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer min-h-[38px]"
@@ -2264,7 +2492,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         </div>
 
                         <!-- Filtre Mode de Paiement -->
-                        <div class="relative min-w-[140px]">
+                        <div class="relative min-w-[130px]">
                             <select 
                                 id="admin-order-payment-filter" 
                                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer min-h-[38px]"
@@ -2276,20 +2504,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             </select>
                         </div>
 
-                        ${FEATURE_FLAGS.ADMIN_STATS_V2 ? `
-                            <!-- Filtre Statut (V2) -->
-                            <div class="relative min-w-[140px]">
-                                <select 
-                                    id="admin-order-status-filter" 
-                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer min-h-[38px]"
-                                >
-                                    <option value="all" ${orderStatusFilter === 'all' ? 'selected' : ''}>Tous statuts</option>
-                                    <option value="delivered" ${orderStatusFilter === 'delivered' ? 'selected' : ''}>Livrées</option>
-                                    <option value="undelivered" ${orderStatusFilter === 'undelivered' ? 'selected' : ''}>En cours (non livrées)</option>
-                                    <option value="cancelled" ${orderStatusFilter === 'cancelled' ? 'selected' : ''}>Annulées</option>
-                                </select>
-                            </div>
-                        ` : ''}
+                        <!-- Filtre Statut (V2 & Direct) -->
+                        <div class="relative min-w-[130px]">
+                            <select 
+                                id="admin-order-status-filter" 
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer min-h-[38px]"
+                            >
+                                <option value="all" ${orderStatusFilter === 'all' ? 'selected' : ''}>Tous statuts</option>
+                                <option value="delivered" ${orderStatusFilter === 'delivered' ? 'selected' : ''}>Livrées</option>
+                                <option value="undelivered" ${orderStatusFilter === 'undelivered' || orderStatusFilter === 'pending' ? 'selected' : ''}>En cours (non livrées)</option>
+                                <option value="cancelled" ${orderStatusFilter === 'cancelled' ? 'selected' : ''}>Annulées</option>
+                            </select>
+                        </div>
 
                         <!-- Export CSV -->
                         <button type="button" id="btn-export-orders-csv" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[38px] bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80 flex items-center gap-1.5 shrink-0">
@@ -2310,23 +2536,55 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             </div>
                             <p class="text-xs text-slate-500 mt-0.5">Traçabilité des transactions et résolution directe des litiges campus</p>
                         </div>
-                        ${FEATURE_FLAGS.ADMIN_STATS_V2 ? `
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200" title="Taux de commandes annulées sur le total des commandes">
-                                    <i class="fa-solid fa-ban text-rose-600"></i>
-                                    <span>Taux d'annulation : <strong>${v2CancellationRate}%</strong></span>
-                                    <span class="text-[10px] text-rose-600 font-normal">(${v2CancelledOrders}/${v2TotalOrders})</span>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200" title="Taux de commandes annulées sur le total des commandes">
+                                <i class="fa-solid fa-ban text-rose-600"></i>
+                                <span>Taux d'annulation : <strong>${v2CancellationRate}%</strong></span>
+                                <span class="text-[10px] text-rose-600 font-normal">(${v2CancelledOrders}/${v2TotalOrders})</span>
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Taux de commandes livrées avec succès">
+                                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                                <span>Taux de livraison : <strong>${v2DeliveryRate}%</strong></span>
+                            </span>
+                            ${v2SameRoomOrders > 0 ? `
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Commandes passées depuis la même chambre">
+                                    <i class="fa-solid fa-door-closed text-amber-600"></i>
+                                    <span>Même chambre : <strong>${v2SameRoomOrders}</strong></span>
                                 </span>
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Taux de commandes livrées avec succès">
-                                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
-                                    <span>Taux de livraison : <strong>${v2DeliveryRate}%</strong></span>
-                                </span>
-                                ${v2SameRoomOrders > 0 ? `
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Commandes passées depuis la même chambre">
-                                        <i class="fa-solid fa-door-closed text-amber-600"></i>
-                                        <span>Même chambre : <strong>${v2SameRoomOrders}</strong></span>
-                                    </span>
-                                ` : ''}
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Filtres Rapides par Onglets de Statut & Indicateur Vendeur -->
+                    <div class="p-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+                            <button type="button" data-order-status-tab="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer min-h-[34px] ${orderStatusFilter === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'}">
+                                Toutes (${allOrders.length})
+                            </button>
+                            <button type="button" data-order-status-tab="delivered" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer min-h-[34px] flex items-center gap-1.5 ${orderStatusFilter === 'delivered' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60'}">
+                                <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                <span>Livrées (${v2DeliveredOrders})</span>
+                                <span class="text-[10px] font-extrabold opacity-90">${deliveredOrdersRevenue.toLocaleString('fr-FR')} F</span>
+                            </button>
+                            <button type="button" data-order-status-tab="undelivered" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer min-h-[34px] flex items-center gap-1.5 ${orderStatusFilter === 'undelivered' || orderStatusFilter === 'pending' ? 'bg-amber-500 text-white shadow-xs' : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'}">
+                                <i class="fa-solid fa-hourglass-half text-[11px]"></i>
+                                <span>En attente (${v2PendingOrders})</span>
+                                <span class="text-[10px] font-extrabold opacity-90">${pendingOrdersRevenue.toLocaleString('fr-FR')} F</span>
+                            </button>
+                            <button type="button" data-order-status-tab="cancelled" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer min-h-[34px] flex items-center gap-1.5 ${orderStatusFilter === 'cancelled' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60'}">
+                                <i class="fa-solid fa-ban text-[11px]"></i>
+                                <span>Annulées (${v2CancelledOrders})</span>
+                                <span class="text-[10px] font-extrabold opacity-90">${cancelledOrdersRevenue.toLocaleString('fr-FR')} F</span>
+                            </button>
+                        </div>
+
+                        ${orderSellerFilter !== 'all' ? `
+                            <div class="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold">
+                                <i class="fa-solid fa-store text-[11px]"></i>
+                                <span>Vendeur : <strong>${escapeHTML(selectedSellerName || orderSellerFilter)}</strong></span>
+                                <button type="button" id="btn-clear-seller-filter" class="ml-1 text-slate-400 hover:text-rose-600 cursor-pointer" title="Effacer le filtre vendeur">
+                                    <i class="fa-solid fa-circle-xmark text-xs"></i>
+                                </button>
                             </div>
                         ` : ''}
                     </div>
@@ -3728,12 +3986,32 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     orderSearchQuery = '';
                     orderPavillonFilter = 'all';
                     orderPaymentFilter = 'all';
+                    orderSellerFilter = 'all';
+                    orderStatusFilter = 'all';
                     render();
                 } else if (target === 'orders-delivered') {
                     activeTab = 'orders';
-                    orderSearchQuery = 'livré';
+                    orderSearchQuery = '';
                     orderPavillonFilter = 'all';
                     orderPaymentFilter = 'all';
+                    orderSellerFilter = 'all';
+                    orderStatusFilter = 'delivered';
+                    render();
+                } else if (target === 'orders-pending') {
+                    activeTab = 'orders';
+                    orderSearchQuery = '';
+                    orderPavillonFilter = 'all';
+                    orderPaymentFilter = 'all';
+                    orderSellerFilter = 'all';
+                    orderStatusFilter = 'undelivered';
+                    render();
+                } else if (target === 'orders-cancelled') {
+                    activeTab = 'orders';
+                    orderSearchQuery = '';
+                    orderPavillonFilter = 'all';
+                    orderPaymentFilter = 'all';
+                    orderSellerFilter = 'all';
+                    orderStatusFilter = 'cancelled';
                     render();
                 }
             });
@@ -4365,7 +4643,40 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 }
             });
 
-            // Filtre Statut (V2)
+            // Filtre Vendeur
+            const sellerSelect = containerEl.querySelector('#admin-order-seller-filter');
+            sellerSelect?.addEventListener('change', (e) => {
+                orderSellerFilter = e.target.value;
+                const contentEl = containerEl.querySelector('#admin-tab-content');
+                if (contentEl && activeTab === 'orders') {
+                    contentEl.innerHTML = renderOrdersTab();
+                    bindOrdersEvents();
+                }
+            });
+
+            // Bouton effacer filtre vendeur
+            containerEl.querySelector('#btn-clear-seller-filter')?.addEventListener('click', () => {
+                orderSellerFilter = 'all';
+                const contentEl = containerEl.querySelector('#admin-tab-content');
+                if (contentEl && activeTab === 'orders') {
+                    contentEl.innerHTML = renderOrdersTab();
+                    bindOrdersEvents();
+                }
+            });
+
+            // Onglets rapides de statut (Toutes, Livrées, En attente, Annulées)
+            containerEl.querySelectorAll('button[data-order-status-tab]').forEach((tabBtn) => {
+                tabBtn.addEventListener('click', () => {
+                    orderStatusFilter = tabBtn.getAttribute('data-order-status-tab') || 'all';
+                    const contentEl = containerEl.querySelector('#admin-tab-content');
+                    if (contentEl && activeTab === 'orders') {
+                        contentEl.innerHTML = renderOrdersTab();
+                        bindOrdersEvents();
+                    }
+                });
+            });
+
+            // Filtre Statut (V2 select)
             const statusSelect = containerEl.querySelector('#admin-order-status-filter');
             statusSelect?.addEventListener('change', (e) => {
                 orderStatusFilter = e.target.value;
@@ -4823,6 +5134,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     contentEl.innerHTML = renderSellersTab();
                     bindSellersEvents();
                 }
+            });
+
+            // Sélecteur de tri des vendeurs (Top CA, Ventes, Nom, Date)
+            const sellerSortSelect = containerEl.querySelector('#admin-seller-sort');
+            sellerSortSelect?.addEventListener('change', (e) => {
+                sellerSortBy = e.target.value;
+                const contentEl = containerEl.querySelector('#admin-tab-content');
+                if (contentEl && activeTab === 'sellers') {
+                    contentEl.innerHTML = renderSellersTab();
+                    bindSellersEvents();
+                }
+            });
+
+            // Afficher directement les commandes d'un vendeur donné
+            containerEl.querySelectorAll('button[data-action="view-seller-orders"]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const sellerId = btn.getAttribute('data-seller-id');
+                    if (sellerId) {
+                        orderSellerFilter = sellerId;
+                        orderStatusFilter = 'all';
+                        orderSearchQuery = '';
+                        activeTab = 'orders';
+                        render();
+                    }
+                });
             });
 
             // Filtres par pilule
