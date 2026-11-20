@@ -1773,7 +1773,65 @@ export async function broadcastPushNotification({ title, body, url = '/', target
         throw new Error(result.error || `Erreur lors de la diffusion push (Code ${response.status})`);
     }
 
+    // Filet de sécurité résilient : si l'API n'a pas renvoyé le record sauvegardé, tenter l'enregistrement direct
+    if (!result.broadcast) {
+        const fallbackBroadcast = await recordPushBroadcastDirectly({
+            title: cleanTitle,
+            body: cleanBody,
+            url: cleanUrl,
+            targetAudience,
+            sentCount: result.sentCount || 0,
+            failureCount: result.failureCount || 0,
+            cleanedStaleCount: result.cleanedStaleCount || 0,
+        }).catch(() => null);
+
+        if (fallbackBroadcast) {
+            result.broadcast = fallbackBroadcast;
+        }
+    }
+
     return result;
+}
+
+/**
+ * Enregistre directement une diffusion push dans la base de données (filet de sécurité résilient côté SuperAdmin).
+ * @param {Object} broadcastData
+ * @returns {Promise<Object|null>}
+ */
+export async function recordPushBroadcastDirectly({
+    title,
+    body,
+    url = '/',
+    targetAudience = 'all',
+    sentCount = 0,
+    failureCount = 0,
+    cleanedStaleCount = 0,
+} = {}) {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data, error } = await supabase
+            .from('push_broadcasts')
+            .insert({
+                admin_id: user?.id || null,
+                title: (title || '').trim(),
+                body: (body || '').trim(),
+                url: (url || '/').trim(),
+                target_audience: targetAudience,
+                sent_count: sentCount,
+                failure_count: failureCount,
+                cleaned_stale_count: cleanedStaleCount,
+            })
+            .select();
+
+        if (error) {
+            console.warn('[AdminService] Échec enregistrement direct push_broadcasts:', error.message);
+            return null;
+        }
+        return (data && data[0]) ? data[0] : null;
+    } catch (err) {
+        console.warn('[AdminService] Exception recordPushBroadcastDirectly:', err.message);
+        return null;
+    }
 }
 
 /**
@@ -1888,6 +1946,7 @@ export default {
     deletePartner,
     uploadAdminMedia,
     broadcastPushNotification,
+    recordPushBroadcastDirectly,
     fetchPushBroadcasts,
     fetchPushSubscribersCount,
     computeSellerOrderStats,

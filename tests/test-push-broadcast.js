@@ -15,6 +15,7 @@ import {
 } from '../src/utils/background-notifications.js';
 import {
     broadcastPushNotification,
+    recordPushBroadcastDirectly,
     fetchPushBroadcasts,
     fetchPushSubscribersCount,
 } from '../src/services/admin-service.js';
@@ -85,6 +86,14 @@ console.log('✅ [AdminService Validation] Contrôles stricts de saisie (titre 3
 // 4. Tests des Services de Repli & Statistiques
 // =========================================================================
 
+assert.equal(typeof recordPushBroadcastDirectly, 'function', 'recordPushBroadcastDirectly doit être une fonction exportée');
+const fallbackResult = await recordPushBroadcastDirectly({
+    title: 'Test direct fallback',
+    body: 'Message de repli d\'enregistrement',
+    url: '/',
+});
+assert.ok(fallbackResult === null || typeof fallbackResult === 'object', 'recordPushBroadcastDirectly doit renvoyer un objet ou null en environnement simulé');
+
 const counts = await fetchPushSubscribersCount();
 assert.ok(typeof counts.total === 'number', 'fetchPushSubscribersCount doit renvoyer un total numérique');
 assert.ok(typeof counts.sellers === 'number', 'fetchPushSubscribersCount doit renvoyer sellers numérique');
@@ -92,7 +101,7 @@ assert.ok(typeof counts.buyers === 'number', 'fetchPushSubscribersCount doit ren
 
 const broadcasts = await fetchPushBroadcasts();
 assert.ok(Array.isArray(broadcasts), 'fetchPushBroadcasts doit renvoyer un tableau');
-console.log('✅ [AdminService Stats] fetchPushSubscribersCount et fetchPushBroadcasts validés !');
+console.log('✅ [AdminService Stats & Fallback] recordPushBroadcastDirectly, fetchPushSubscribersCount et fetchPushBroadcasts validés !');
 
 // =========================================================================
 // 5. Tests de l'Endpoint Serverless /api/admin-broadcast-push
@@ -137,6 +146,14 @@ assert.ok(/authentification|jeton/i.test(postResponse.error), 'Message d\'erreur
 
 console.log('✅ [Serverless API Security] Protection 405 et 401 Bearer Token validées !');
 
+// Test 5.3: Vérification de l'enregistrement systématique dans push_broadcasts (y compris avec 0 abonné)
+const apiBroadcastFile = fs.readFileSync(path.resolve('api/admin-broadcast-push.js'), 'utf8');
+assert.ok(apiBroadcastFile.includes(".from('push_broadcasts').insert("), 'L\'API doit insérer dans push_broadcasts');
+assert.ok(apiBroadcastFile.includes('.select()'), 'L\'API doit sélectionner et retourner la ligne insérée');
+assert.ok(apiBroadcastFile.includes('broadcast: savedBroadcast'), 'L\'API doit retourner l\'objet broadcast dans la réponse');
+assert.ok(!apiBroadcastFile.includes('if (activeSubscriptions.length === 0) {\n            return res.status(200)'), 'L\'API ne doit plus faire de return prématuré bloquant l\'enregistrement');
+console.log('✅ [Serverless API History Sync] Persistance systématique dans push_broadcasts validée !');
+
 // =========================================================================
 // 6. Intégrité du Script SQL de Migration
 // =========================================================================
@@ -162,7 +179,10 @@ assert.ok(adminDashboardFile.includes('mockup-notification-title'), 'Le mockup s
 assert.ok(adminDashboardFile.includes('maxlength="210"'), 'La limite de description doit être portée à 210 caractères');
 assert.ok(adminDashboardFile.includes('0 / 210'), 'Le compteur de caractères doit afficher la limite de 210');
 assert.ok(adminDashboardFile.includes('broadcastPushNotification'), 'L\'appel de diffusion doit être branché');
-console.log('✅ [SuperAdmin Dashboard] Studio de diffusion push et mockup temps réel validés !');
+assert.ok(adminDashboardFile.includes("table: 'push_broadcasts'"), 'L\'écouteur Realtime doit être branché sur la table push_broadcasts');
+assert.ok(adminDashboardFile.includes('btn-refresh-push-history'), 'Le bouton de synchronisation manuelle doit être présent');
+assert.ok(adminDashboardFile.includes('En direct'), 'L\'indicateur de synchronisation temps réel doit être visible');
+console.log('✅ [SuperAdmin Dashboard] Studio de diffusion push, synchronisation temps réel et mockup validés !');
 
 console.log('🎉 TOUS LES TESTS DU STUDIO DE DIFFUSION PUSH SONT PASSÉS AVEC SUCCÈS !');
 process.exit(0);

@@ -235,6 +235,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     }
                 }
             )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'push_broadcasts',
+                },
+                async (payload) => {
+                    console.log('[SuperAdmin Realtime] Événement push_broadcasts:', payload?.eventType);
+                    try {
+                        const [freshBroadcasts, freshCounts] = await Promise.all([
+                            fetchPushBroadcasts().catch(() => pushBroadcasts),
+                            fetchPushSubscribersCount().catch(() => pushSubscribersCount),
+                        ]);
+                        pushBroadcasts = freshBroadcasts;
+                        pushSubscribersCount = freshCounts;
+
+                        if (activeTab === 'broadcast') {
+                            render();
+                        }
+                    } catch (err) {
+                        console.warn('[SuperAdmin] Erreur mise à jour temps réel push:', err);
+                    }
+                }
+            )
             .subscribe();
     }
 
@@ -3567,14 +3592,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                 <!-- Historique des Campagnes Envoyées -->
                 <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-4">
-                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <div class="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Historique des diffusions récentes</h4>
-                            <p class="text-xs text-slate-500">Traçabilité complète des notifications envoyées sur la plateforme</p>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Historique des diffusions récentes</h4>
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    En direct
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500">Traçabilité complète synchronisée en temps réel avec la base de données</p>
                         </div>
-                        <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                            ${pushBroadcasts.length} diffusion${pushBroadcasts.length > 1 ? 's' : ''}
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                id="btn-refresh-push-history"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer"
+                                title="Synchroniser l'historique avec la base de données"
+                            >
+                                <i class="fa-solid fa-arrows-rotate text-[11px]"></i>
+                                <span class="hidden sm:inline">Synchroniser</span>
+                            </button>
+                            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                                ${pushBroadcasts.length} diffusion${pushBroadcasts.length > 1 ? 's' : ''}
+                            </span>
+                        </div>
                     </div>
 
                     ${pushBroadcasts.length === 0 ? `
@@ -5133,6 +5175,31 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             submitBtn.disabled = false;
                             submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i><span>Diffuser la notification push maintenant 📢</span>';
                         }
+                    }
+                });
+            }
+
+            // Bouton de rafraîchissement manuel de l'historique push
+            const refreshHistoryBtn = containerEl.querySelector('#btn-refresh-push-history');
+            if (refreshHistoryBtn) {
+                refreshHistoryBtn.addEventListener('click', async () => {
+                    const icon = refreshHistoryBtn.querySelector('i');
+                    if (icon) icon.classList.add('fa-spin');
+                    refreshHistoryBtn.disabled = true;
+                    try {
+                        const [freshBroadcasts, freshCounts] = await Promise.all([
+                            fetchPushBroadcasts().catch(() => pushBroadcasts),
+                            fetchPushSubscribersCount().catch(() => pushSubscribersCount),
+                        ]);
+                        pushBroadcasts = freshBroadcasts;
+                        pushSubscribersCount = freshCounts;
+                        render();
+                        showToast('Historique des notifications push synchronisé avec succès.', 'success');
+                    } catch (err) {
+                        showToast('Erreur lors de la synchronisation de l\'historique.', 'error');
+                    } finally {
+                        if (icon) icon.classList.remove('fa-spin');
+                        if (refreshHistoryBtn) refreshHistoryBtn.disabled = false;
                     }
                 });
             }

@@ -190,75 +190,68 @@ export default async function handler(req, res) {
 
         const activeSubscriptions = Array.from(subscriptionsMap.values());
 
-        if (activeSubscriptions.length === 0) {
-            return res.status(200).json({
-                success: true,
-                sentCount: 0,
-                failureCount: 0,
-                totalDevices: 0,
-                message: 'Aucun appareil enregistré en veille pour cette audience.',
-            });
-        }
-
-        // 5. Préparation du payload Web Push
-        const payload = JSON.stringify({
-            title: cleanTitle,
-            body: cleanMessage,
-            icon: '/assets/logo-192x192.png',
-            badge: '/assets/logo-192x192.png',
-            url: cleanUrl,
-            tag: `broadcast-${Date.now()}`,
-            timestamp: Date.now(),
-        });
-
         let successCount = 0;
         let failureCount = 0;
         const staleEndpointsToDelete = []; // Array of { id, sourceTable }
 
-        // 6. Envoi des notifications en parallèle
-        const pushPromises = activeSubscriptions.map(async (sub) => {
-            const pushConfig = {
-                endpoint: sub.endpoint,
-                keys: {
-                    p256dh: sub.p256dh,
-                    auth: sub.auth,
-                },
-            };
+        if (activeSubscriptions.length > 0) {
+            // 5. Préparation du payload Web Push
+            const payload = JSON.stringify({
+                title: cleanTitle,
+                body: cleanMessage,
+                icon: '/assets/logo-192x192.png',
+                badge: '/assets/logo-192x192.png',
+                url: cleanUrl,
+                tag: `broadcast-${Date.now()}`,
+                timestamp: Date.now(),
+            });
 
-            try {
-                await webpush.sendNotification(pushConfig, payload, {
-                    TTL: 60 * 60 * 24, // 24 heures
-                    urgency: 'high',
-                });
-                successCount++;
-            } catch (err) {
-                failureCount++;
-                console.warn('[BroadcastPushAPI] Échec envoi push:', sub.endpoint, err.statusCode);
-                // Si l'endpoint a expiré (404 ou 410 GCM/Apple/Mozilla), nettoyer
-                if (err.statusCode === 404 || err.statusCode === 410) {
-                    staleEndpointsToDelete.push({ id: sub.id, sourceTable: sub.sourceTable });
+            // 6. Envoi des notifications en parallèle
+            const pushPromises = activeSubscriptions.map(async (sub) => {
+                const pushConfig = {
+                    endpoint: sub.endpoint,
+                    keys: {
+                        p256dh: sub.p256dh,
+                        auth: sub.auth,
+                    },
+                };
+
+                try {
+                    await webpush.sendNotification(pushConfig, payload, {
+                        TTL: 60 * 60 * 24, // 24 heures
+                        urgency: 'high',
+                    });
+                    successCount++;
+                } catch (err) {
+                    failureCount++;
+                    console.warn('[BroadcastPushAPI] Échec envoi push:', sub.endpoint, err.statusCode);
+                    // Si l'endpoint a expiré (404 ou 410 GCM/Apple/Mozilla), nettoyer
+                    if (err.statusCode === 404 || err.statusCode === 410) {
+                        staleEndpointsToDelete.push({ id: sub.id, sourceTable: sub.sourceTable });
+                    }
                 }
-            }
-        });
+            });
 
-        await Promise.all(pushPromises);
+            await Promise.all(pushPromises);
 
-        // 7. Nettoyage des endpoints expirés
-        if (staleEndpointsToDelete.length > 0) {
-            const globalIds = staleEndpointsToDelete.filter((s) => s.sourceTable === 'push_subscriptions').map((s) => s.id);
-            const sellerIds = staleEndpointsToDelete.filter((s) => s.sourceTable === 'seller_push_subscriptions').map((s) => s.id);
+            // 7. Nettoyage des endpoints expirés
+            if (staleEndpointsToDelete.length > 0) {
+                const globalIds = staleEndpointsToDelete.filter((s) => s.sourceTable === 'push_subscriptions').map((s) => s.id);
+                const sellerIds = staleEndpointsToDelete.filter((s) => s.sourceTable === 'seller_push_subscriptions').map((s) => s.id);
 
-            if (globalIds.length > 0) {
-                await supabaseAdmin.from('push_subscriptions').delete().in('id', globalIds).catch(() => {});
-            }
-            if (sellerIds.length > 0) {
-                await supabaseAdmin.from('seller_push_subscriptions').delete().in('id', sellerIds).catch(() => {});
+                if (globalIds.length > 0) {
+                    await supabaseAdmin.from('push_subscriptions').delete().in('id', globalIds).catch(() => {});
+                }
+                if (sellerIds.length > 0) {
+                    await supabaseAdmin.from('seller_push_subscriptions').delete().in('id', sellerIds).catch(() => {});
+                }
             }
         }
 
-        // 8. Enregistrement dans l'historique push_broadcasts
+        // 8. Enregistrement systématique dans l'historique push_broadcasts
+        let savedBroadcast = null;
         try {
-            await supabaseAdmin.from('push_broadcasts').insert({
+            const { data: bData, error: bError } = await supabaseAdmin.from('push_broadcasts').insert({
                 admin_id: callerId,
                 title: cleanTitle,
                 body: cleanMessage,
@@ -267,18 +260,30 @@ export default async function handler(req, res) {
                 sent_count: successCount,
                 failure_count: failureCount,
                 cleaned_stale_count: staleEndpointsToDelete.length,
-            });
+            }).select();
+
+            if (bError) {
+                console.warn('[BroadcastPushAPI] Erreur insertion push_broadcasts:', bError.message);
+            } else if (Array.isArray(bData) && bData.length > 0) {
+                savedBroadcast = bData[0];
+            }
         } catch (histErr) {
-            console.warn('[BroadcastPushAPI] Impossible d\'enregistrer dans push_broadcasts (table non migrée):', histErr.message);
+            console.warn('[BroadcastPushAPI] Exception push_broadcasts:', histErr.message);
         }
+
+        const message = activeSubscriptions.length === 0
+            ? 'Alerte enregistrée dans l\'historique (aucun appareil actif actuellement sur ce segment).'
+            : undefined;
 
         return res.status(200).json({
             success: true,
+            broadcast: savedBroadcast,
             totalDevices: activeSubscriptions.length,
             sentCount: successCount,
             failureCount: failureCount,
             cleanedStaleCount: staleEndpointsToDelete.length,
             audience,
+            ...(message ? { message } : {}),
         });
     } catch (err) {
         console.error('[BroadcastPushAPI] Exception globale:', err);
