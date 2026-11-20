@@ -8,12 +8,41 @@ import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://fqulqgdjusfzhcjpvyay.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const SASPAY_WEBHOOK_SECRET = process.env.SASPAY_WEBHOOK_SECRET || process.env.SASPAY_SECRET_KEY || '';
 
+/**
+ * Correspondances et alias commerciaux vers les clés techniques en base.
+ * Clé technique 'starter' = Pack Pro (1 500 FCFA / 30 jours)
+ * Clé technique 'pro'     = Pack Business (2 500 FCFA / 30 jours)
+ * Alias : pro -> starter (1 500 F), business -> pro (2 500 F).
+ */
+const PLAN_ALIASES = {
+    starter: 'starter',
+    pro: 'starter',          // Alias commercial Pack Pro -> clé technique starter (1 000 F)
+    business: 'pro',         // Alias commercial Pack Business -> clé technique pro (2 000 F)
+    pack_pro: 'starter',
+    pack_business: 'pro',
+    pack_starter: 'starter',
+};
+
+function resolvePlanKey(rawPlan, amount) {
+    if (amount !== undefined && amount !== null && !isNaN(Number(amount))) {
+        const num = Number(amount);
+        if (num >= 2000) return 'pro';      // Pack Business (2 000 FCFA, compatible ancien 2 500)
+        if (num >= 1000) return 'starter';  // Pack Pro (1 000 FCFA, compatible ancien 1 500)
+    }
+    if (!rawPlan) return 'starter';
+    const clean = String(rawPlan).trim().toLowerCase();
+    if (clean === 'business' || clean === 'pack_business') return 'pro';
+    if (clean === 'starter' || clean === 'pack_starter') return 'starter';
+    if (clean === 'pro' || clean === 'pack_pro') return 'starter';
+    return PLAN_ALIASES[clean] || 'starter';
+}
+
 const PLAN_QUOTAS = {
-    starter: { maxProducts: 5, durationDays: 30 },
-    pro: { maxProducts: 10, durationDays: 30 },
+    starter: { maxProducts: 5, durationDays: 30, maxOrders: null, maxSales: null },
+    pro: { maxProducts: 10, durationDays: 30, maxOrders: null, maxSales: null },
     premium: { maxProducts: 20, durationDays: 30 },
 };
 
@@ -99,7 +128,8 @@ export default async function handler(req, res) {
         const sellerId = metadata.seller_id || metadata.sellerId || transactionData.customer_id;
         const adId = metadata.ad_id || metadata.adId;
         const rawPlan = metadata.plan || (isAdPayment ? 'annonce' : 'starter');
-        const validPlan = PLAN_QUOTAS[rawPlan] ? rawPlan : 'starter';
+        const resolvedPlanKey = isAdPayment ? 'annonce' : resolvePlanKey(rawPlan, transactionData.amount);
+        const validPlan = PLAN_QUOTAS[resolvedPlanKey] ? resolvedPlanKey : 'starter';
         const planConfig = PLAN_QUOTAS[validPlan];
 
         if (!sellerId && !adId) {
@@ -108,6 +138,11 @@ export default async function handler(req, res) {
         }
 
         // 3. Mise à jour automatique de la base Supabase
+        if (!SUPABASE_SERVICE_ROLE_KEY) {
+            console.error('[SasPay Webhook] Clé SUPABASE_SERVICE_ROLE_KEY manquante dans l\'environnement.');
+            return res.status(500).json({ error: 'Configuration serveur incomplète (SUPABASE_SERVICE_ROLE_KEY manquant).' });
+        }
+
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
             auth: { persistSession: false },
         });

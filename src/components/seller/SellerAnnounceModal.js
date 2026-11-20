@@ -9,6 +9,7 @@ import { supabase } from '../../services/supabase.js';
 import { ANNONCE_CONFIG } from '../../config/announcements.js';
 import { uploadMediaFile } from '../../services/storage-service.js';
 import { escapeHTML } from '../../utils/security.js';
+import { consumeFreeBusinessAd } from '../../services/quota-service.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -25,6 +26,8 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
     modalEl.className = 'fixed inset-0 z-[75] bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
     let step = 1; // 1: Formulaire & Règlement direct, 2: Redirection
+    const isBusinessSeller = seller?.subscription_plan === 'pro' || seller?.pack_actuel === 'pro';
+    const freeAdsRemaining = Math.max(0, 2 - (Number(seller?.free_ads_used_this_month) || 0));
     let formData = {
         title: '',
         content: '',
@@ -159,6 +162,27 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
                     </div>
                 </div>
 
+                ${isBusinessSeller && freeAdsRemaining > 0 ? `
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-3 text-xs">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-gift text-amber-600 text-base"></i>
+                            <div>
+                                <span class="font-heading font-bold text-amber-950 block">Avantage Pack Business</span>
+                                <span class="text-amber-800 text-[11px]">${freeAdsRemaining} annonce(s) offerte(s) ce mois-ci</span>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            id="btn-submit-announce-free"
+                            ${isSubmitting ? 'disabled' : ''}
+                            class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-heading font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                            <i class="fa-solid fa-bolt"></i>
+                            <span>Publier gratuitement</span>
+                        </button>
+                    </div>
+                ` : ''}
+
                 <button 
                     type="button" 
                     id="btn-submit-announce-direct" 
@@ -232,6 +256,78 @@ export function createSellerAnnounceModal({ seller, onSuccess, onShowToast } = {
                     formData.operator = btn.getAttribute('data-operator');
                     render();
                 });
+            });
+
+            modalEl.querySelector('#btn-submit-announce-free')?.addEventListener('click', async () => {
+                const cleanTitle = formData.title.trim();
+                const cleanContent = formData.content.trim();
+
+                if (!cleanTitle || cleanTitle.length < 3) {
+                    if (typeof onShowToast === 'function') onShowToast('Le titre doit comporter au moins 3 caractères.', 'error');
+                    titleInput?.focus();
+                    return;
+                }
+                if (!cleanContent || cleanContent.length < 10) {
+                    if (typeof onShowToast === 'function') onShowToast('Le message doit comporter au moins 10 caractères.', 'error');
+                    contentInput?.focus();
+                    return;
+                }
+
+                isSubmitting = true;
+                render();
+
+                try {
+                    let finalImageUrl = null;
+                    if (formData.imageFile) {
+                        try {
+                            finalImageUrl = await uploadMediaFile(formData.imageFile, {
+                                folder: 'annonces',
+                                filename: `ad_free_${(seller?.id || 'uidt').slice(0, 8)}_${Date.now()}`,
+                                maxWidth: 800,
+                                maxHeight: 600,
+                                quality: 0.75,
+                                context: 'ad',
+                            });
+                        } catch (imgErr) {
+                            console.warn('[SellerAnnounceModal] Erreur upload image annonce offerte:', imgErr);
+                        }
+                    }
+
+                    // 1. Enregistrement initial de l'annonce
+                    const { data: res, error: rpcErr } = await supabase.rpc('submit_advertisement', {
+                        p_title: cleanTitle,
+                        p_content: cleanContent,
+                        p_image_url: finalImageUrl,
+                        p_link_url: formData.linkUrl.trim() || null,
+                        p_product_id: null,
+                        p_operator: 'pack_business_free',
+                        p_session_id: 'free_business_ad',
+                    });
+
+                    if (rpcErr) throw new Error(rpcErr.message);
+                    if (res && res.success === false) throw new Error(res.message);
+
+                    const adId = res?.ad_id || res?.id;
+
+                    // 2. Consommation de l'annonce offerte côté serveur
+                    await consumeFreeBusinessAd(adId);
+
+                    isSubmitting = false;
+                    close();
+
+                    if (typeof onShowToast === 'function') {
+                        onShowToast('🎉 Annonce offerte publiée avec succès pour 7 jours !', 'success');
+                    }
+                    if (typeof onSuccess === 'function') {
+                        onSuccess({ ...res, published: true, is_free_business: true });
+                    }
+                } catch (err) {
+                    isSubmitting = false;
+                    render();
+                    if (typeof onShowToast === 'function') {
+                        onShowToast(`Erreur : ${err.message}`, 'error');
+                    }
+                }
             });
 
             modalEl.querySelector('#btn-submit-announce-direct')?.addEventListener('click', async () => {

@@ -132,20 +132,15 @@ export async function createProduct({
                         throw new Error("Seuls les comptes marchands validés et administrateurs peuvent publier des articles.");
                     }
 
-                    // VÉRIFICATION DE LA PÉRIODE D'ESSAI OU DE L'ABONNEMENT
+                    // VÉRIFICATION DE LA FORMULE ET DU QUOTA D'ARTICLES
                     if (profile.role !== 'superadmin') {
                         const subStatus = computeSubscriptionStatus(profile);
-                        if (subStatus.isExpired) {
-                            throw new Error("Votre période d'essai de 7 jours est terminée. Veuillez activer votre abonnement pour publier de nouveaux articles.");
-                        }
 
-                        // CONTRÔLE DU NOMBRE DE PRODUITS SELON LE STATUT (Découverte 1 article, Essai 3 articles, ou Pack 5, 10)
-                        const plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'starter';
-                        let maxAllowed = 1;
+                        // CONTRÔLE DU NOMBRE DE PRODUITS SELON LE STATUT (Découverte 1 article, Pro 5, Business 10)
+                        const plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'decouverte';
+                        let maxAllowed = subStatus.maxProducts || 1;
                         if (subStatus.status === 'decouverte') {
                             maxAllowed = 1;
-                        } else if (subStatus.isTrial) {
-                            maxAllowed = FREE_TRIAL_CONFIG.maxProducts;
                         } else {
                             maxAllowed = Number(profile.max_products || session.user.user_metadata?.max_products) || getMaxProductsForPlan(plan);
                         }
@@ -170,14 +165,11 @@ export async function createProduct({
                         }
 
                         if (currentCount >= maxAllowed) {
-                            const planObj = SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.starter;
                             let upgradeMsg = "Veuillez supprimer ou désactiver des articles existants pour en publier de nouveaux.";
                             if (subStatus.status === 'decouverte') {
-                                upgradeMsg = "Le Pack Découverte (0 FCFA) est limité à 1 produit actif. Passez au Pack Starter (5 articles à 1 500 F/mois) ou Pro (10 articles à 2 500 F/mois) pour débloquer votre vitrine.";
-                            } else if (subStatus.isTrial) {
-                                upgradeMsg = "L'essai gratuit permet de publier jusqu'à 3 articles. Activez une formule Starter (5 arts) ou Pro (10 arts) pour débloquer votre catalogue.";
-                            } else if (plan === 'starter') {
-                                upgradeMsg = "Passez au Pack Pro (10 articles à 2 500 F) pour continuer.";
+                                upgradeMsg = `Limite de catalogue atteinte (1 produit max en Pack Découverte). Passez au ${SUBSCRIPTION_PLANS.starter.name} (${SUBSCRIPTION_PLANS.starter.max_produits} produits • ${SUBSCRIPTION_PLANS.starter.priceDisplay}) ou ${SUBSCRIPTION_PLANS.pro.name} (${SUBSCRIPTION_PLANS.pro.max_produits} produits • ${SUBSCRIPTION_PLANS.pro.priceDisplay}) pour ajouter plus d'articles.`;
+                            } else if (plan === 'starter' || plan === 'pro_legacy') {
+                                upgradeMsg = `Passez au ${SUBSCRIPTION_PLANS.pro.name} (${SUBSCRIPTION_PLANS.pro.max_produits} produits • ${SUBSCRIPTION_PLANS.pro.priceDisplay}) pour élargir votre catalogue jusqu'à 10 produits.`;
                             }
                             throw new Error(
                                 `Limite de votre formule atteinte (${currentCount}/${maxAllowed} produit${maxAllowed > 1 ? 's' : ''} actif${maxAllowed > 1 ? 's' : ''}). ` +

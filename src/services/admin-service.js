@@ -10,6 +10,7 @@ import {
     getMaxProductsForPlan,
     SUBSCRIPTION_PLANS,
     FREE_TRIAL_CONFIG,
+    FEATURE_FLAGS,
 } from '../config/subscription.js';
 import { DEFAULT_CAROUSEL_SLIDES, CAROUSEL_TYPES } from '../config/announcements.js';
 import { DEFAULT_PARTNERS, PARTNER_CATEGORIES } from '../config/partners.js';
@@ -119,21 +120,32 @@ export async function fetchGlobalMetrics() {
         const suspendedSellersCount = allProfiles.filter((p) => p.role === 'vendeur_desactive' || p.role === 'suspendu' || suspendedIds.includes(p.id)).length;
 
         // 2. Commandes globales et CA réel
-        const { data: orders, error: errOrders } = await supabase
-            .from('orders')
-            .select('id, price, status');
+        let allOrders = [];
+        let totalOrdersCount = 0;
+        let totalDeliveredRevenue = 0;
+        let statsV2 = null;
 
-        if (errOrders) throw errOrders;
+        if (FEATURE_FLAGS.ADMIN_STATS_V2) {
+            statsV2 = await fetchAdminGlobalStatsV2();
+            totalOrdersCount = statsV2.total_count;
+            totalDeliveredRevenue = statsV2.delivered_amount;
+        } else {
+            const { data: orders, error: errOrders } = await supabase
+                .from('orders')
+                .select('id, price, status');
 
-        const allOrders = orders || [];
-        const totalOrdersCount = allOrders.length;
-        const deliveredOrders = allOrders.filter((o) => o.status === 'delivered');
+            if (errOrders) throw errOrders;
 
-        // Somme des chiffres d'affaires réels sur les commandes livrées (Volume d'affaires vendeur)
-        const totalDeliveredRevenue = deliveredOrders.reduce(
-            (sum, o) => sum + (Number(o.price) || 0),
-            0
-        );
+            allOrders = orders || [];
+            totalOrdersCount = allOrders.length;
+            const deliveredOrders = allOrders.filter((o) => o.status === 'delivered');
+
+            // Somme des chiffres d'affaires réels sur les commandes livrées (Volume d'affaires vendeur)
+            totalDeliveredRevenue = deliveredOrders.reduce(
+                (sum, o) => sum + (Number(o.price) || 0),
+                0
+            );
+        }
 
         // 3. Revenus Récurrents RÉELS des abonnements vendeurs (aucun montant arbitraire ou fictif)
         const now = new Date();
@@ -176,7 +188,7 @@ export async function fetchGlobalMetrics() {
             console.warn('[AdminService] seller_payments non bloquant:', e);
         }
 
-        // Le revenu réel des abonnements actifs : somme des forfaits réels des boutiques actuellement payantes (Starter 1 500 F / Pro 2 500 F)
+        // Le revenu réel des abonnements actifs : somme des forfaits réels des boutiques actuellement payantes (Pro 1 000 F / Business 2 000 F)
         // Ne doit pas être écrasé par seller_payments qui ne contient que les paiements automatisés en ligne
         const totalSubscriptionRevenue = activePaidSubscriptionRevenue > 0
             ? activePaidSubscriptionRevenue
@@ -193,12 +205,121 @@ export async function fetchGlobalMetrics() {
             trialSellersCount,
             expiredSellersCount,
             totalPaymentsCollected,
-            sellerMonthlyFee: 1500,
+            sellerMonthlyFee: SUBSCRIPTION_PLANS.starter.price,
+            statsV2,
         };
     } catch (err) {
         console.error('[AdminService] Erreur fetchGlobalMetrics:', err);
         throw new Error('Impossible de charger les métriques globales.');
     }
+}
+
+/**
+ * Récupère les métriques globales agrégées V2 pour le SuperAdmin.
+ * Utilise la fonction PostgreSQL RPC get_admin_global_stats_v2() pour économiser l'egress Supabase.
+ * En cas d'indisponibilité du RPC, effectue un calcul résilient en mémoire.
+ * @param {Array} [cachedOrders=null] - Commandes préchargées optionnelles pour éviter un second fetch en cas de repli
+ * @returns {Promise<Object>}
+ */
+export async function fetchAdminGlobalStatsV2(cachedOrders = null) {
+    try {
+        const { data, error } = await supabase.rpc('get_admin_global_stats_v2');
+        if (!error && data && typeof data === 'object') {
+            return {
+                total_count: Number(data.total_count) || 0,
+                total_amount: Number(data.total_amount) || 0,
+                delivered_count: Number(data.delivered_count) || 0,
+                delivered_amount: Number(data.delivered_amount) || 0,
+                undelivered_count: Number(data.undelivered_count) || 0,
+                undelivered_amount: Number(data.undelivered_amount) || 0,
+                pending_count: Number(data.pending_count) || 0,
+                pending_amount: Number(data.pending_amount) || 0,
+                confirmed_count: Number(data.confirmed_count) || 0,
+                confirmed_amount: Number(data.confirmed_amount) || 0,
+                processing_count: Number(data.processing_count) || 0,
+                processing_amount: Number(data.processing_amount) || 0,
+                shipped_count: Number(data.shipped_count) || 0,
+                shipped_amount: Number(data.shipped_amount) || 0,
+                cancelled_count: Number(data.cancelled_count) || 0,
+                cancelled_amount: Number(data.cancelled_amount) || 0,
+                cancellation_rate: Number(data.cancellation_rate) || 0,
+                delivery_rate: Number(data.delivery_rate) || 0,
+                same_room_count: Number(data.same_room_count) || 0,
+            };
+        }
+    } catch (rpcErr) {
+        console.warn('[AdminService] RPC get_admin_global_stats_v2 indisponible, calcul local:', rpcErr);
+    }
+
+    // Repli de secours : calcul en mémoire
+    let ordersList = cachedOrders;
+    if (!ordersList) {
+        const { data: ords, error: ordErr } = await supabase
+            .from('orders')
+            .select('id, price, status, is_same_room');
+        if (ordErr) {
+            const { data: ordsFallback } = await supabase.from('orders').select('id, price, status');
+            ordersList = ordsFallback || [];
+        } else {
+            ordersList = ords || [];
+        }
+    }
+
+    const all = ordersList || [];
+    const totalCount = all.length;
+    const totalAmount = all.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+    const delivered = all.filter((o) => o.status === 'delivered');
+    const deliveredCount = delivered.length;
+    const deliveredAmount = delivered.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const pending = all.filter((o) => o.status === 'pending');
+    const pendingCount = pending.length;
+    const pendingAmount = pending.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const confirmed = all.filter((o) => o.status === 'confirmed');
+    const confirmedCount = confirmed.length;
+    const confirmedAmount = confirmed.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const processing = all.filter((o) => o.status === 'processing');
+    const processingCount = processing.length;
+    const processingAmount = processing.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const shipped = all.filter((o) => o.status === 'shipped');
+    const shippedCount = shipped.length;
+    const shippedAmount = shipped.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const undeliveredCount = pendingCount + confirmedCount + processingCount + shippedCount;
+    const undeliveredAmount = pendingAmount + confirmedAmount + processingAmount + shippedAmount;
+
+    const cancelled = all.filter((o) => o.status === 'cancelled');
+    const cancelledCount = cancelled.length;
+    const cancelledAmount = cancelled.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const cancellationRate = totalCount > 0 ? Number(((cancelledCount / totalCount) * 100).toFixed(2)) : 0;
+    const deliveryRate = totalCount > 0 ? Number(((deliveredCount / totalCount) * 100).toFixed(2)) : 0;
+    const sameRoomCount = all.filter((o) => Boolean(o.is_same_room)).length;
+
+    return {
+        total_count: totalCount,
+        total_amount: totalAmount,
+        delivered_count: deliveredCount,
+        delivered_amount: deliveredAmount,
+        undelivered_count: undeliveredCount,
+        undelivered_amount: undeliveredAmount,
+        pending_count: pendingCount,
+        pending_amount: pendingAmount,
+        confirmed_count: confirmedCount,
+        confirmed_amount: confirmedAmount,
+        processing_count: processingCount,
+        processing_amount: processingAmount,
+        shipped_count: shippedCount,
+        shipped_amount: shippedAmount,
+        cancelled_count: cancelledCount,
+        cancelled_amount: cancelledAmount,
+        cancellation_rate: cancellationRate,
+        delivery_rate: deliveryRate,
+        same_room_count: sameRoomCount,
+    };
 }
 
 import { getPendingSellersCache, removePendingSellerCache } from './seller-service.js';

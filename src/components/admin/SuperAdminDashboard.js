@@ -50,7 +50,7 @@ import {
 } from '../../services/admin-service.js';
 import { CAROUSEL_TYPES } from '../../config/announcements.js';
 import { PARTNER_CATEGORIES } from '../../config/partners.js';
-import { computeSubscriptionStatus, getPlanDetails } from '../../config/subscription.js';
+import { computeSubscriptionStatus, getPlanDetails, SUBSCRIPTION_PLANS, FEATURE_FLAGS } from '../../config/subscription.js';
 import { supabase } from '../../services/supabase.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
@@ -95,6 +95,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     let orderSearchQuery = '';
     let orderPavillonFilter = 'all';
     let orderPaymentFilter = 'all';
+    let orderStatusFilter = 'all'; // 'all' | 'delivered' | 'undelivered' | 'cancelled'
     let isLoading = true;
     let isAuthenticated = false;
 
@@ -712,22 +713,51 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <!-- Volume d'affaires vendeur -->
                     <div 
                         data-stat-target="orders-delivered" 
-                        title="Cliquer pour afficher les commandes livrées générant ce chiffre d'affaires"
+                        title="Cliquer pour afficher les commandes générant ce chiffre d'affaires"
                         class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer group hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
-                        <div class="flex items-center justify-between text-slate-500 mb-2">
-                            <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Volume d'affaires</span>
-                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
-                                <i class="fa-solid fa-coins"></i>
+                        ${FEATURE_FLAGS.ADMIN_STATS_V2 && m.statsV2 ? `
+                            <div class="flex items-center justify-between text-slate-500 mb-1.5">
+                                <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Volume d'affaires global</span>
+                                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
+                                    <i class="fa-solid fa-coins"></i>
+                                </div>
                             </div>
-                        </div>
-                        <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
-                            ${Number(m.totalDeliveredRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
-                        </span>
-                        <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
-                            <span>Commandes livrées</span>
-                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
-                        </div>
+                            <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
+                                ${Number(m.statsV2.total_amount).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                            </span>
+                            <div class="text-[11px] font-medium text-slate-400 mb-2">
+                                Total global (${m.statsV2.total_count} commande${m.statsV2.total_count > 1 ? 's' : ''})
+                            </div>
+                            <div class="pt-2 border-t border-slate-100 flex flex-col gap-1 text-[11px]">
+                                <div class="flex items-center justify-between text-emerald-700 font-medium">
+                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>Livrées (${m.statsV2.delivered_count})</span>
+                                    <span class="font-bold tabular-nums">${Number(m.statsV2.delivered_amount).toLocaleString('fr-FR')} F</span>
+                                </div>
+                                <div class="flex items-center justify-between text-amber-700 font-medium">
+                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>Non livrées (${m.statsV2.undelivered_count})</span>
+                                    <span class="font-bold tabular-nums">${Number(m.statsV2.undelivered_amount).toLocaleString('fr-FR')} F</span>
+                                </div>
+                                <div class="flex items-center justify-between text-rose-700 font-medium">
+                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>Annulées (${m.statsV2.cancelled_count})</span>
+                                    <span class="font-bold tabular-nums">${Number(m.statsV2.cancelled_amount).toLocaleString('fr-FR')} F</span>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="flex items-center justify-between text-slate-500 mb-2">
+                                <span class="text-xs font-semibold text-slate-600 truncate group-hover:text-emerald-700 transition-colors">Volume d'affaires</span>
+                                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0 group-hover:bg-emerald-100 transition-colors">
+                                    <i class="fa-solid fa-coins"></i>
+                                </div>
+                            </div>
+                            <span class="font-heading font-extrabold text-xl sm:text-2xl text-emerald-600 tracking-tight tabular-nums">
+                                ${Number(m.totalDeliveredRevenue).toLocaleString('fr-FR')} <span class="text-xs font-bold text-slate-500">FCFA</span>
+                            </span>
+                            <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
+                                <span>Commandes livrées</span>
+                                <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
+                            </div>
+                        `}
                     </div>
                 </div>
 
@@ -745,7 +775,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 </div>
                                 <div>
                                     <h3 class="font-heading font-bold text-sm text-slate-900 group-hover:text-indigo-700 transition-colors">Abonnements Plateforme</h3>
-                                    <p class="text-xs text-slate-500">${m.activePaidSellersCount || 0} payant(s) • ${m.trialSellersCount || 0} en essai gratuit</p>
+                                    <p class="text-xs text-slate-500">${m.activePaidSellersCount || 0} payant(s) • ${m.decouverteSellersCount || m.trialSellersCount || 0} Découverte</p>
                                 </div>
                             </div>
                             <span class="font-heading font-extrabold text-lg text-indigo-600 tabular-nums">
@@ -1364,7 +1394,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <tbody class="divide-y divide-slate-100">
                         ${list.map((pay) => {
                             const prof = pay.profiles || {};
-                            const planLabel = pay.amount >= 2500 ? 'Pack Pro (10 arts)' : 'Pack Starter (5 arts)';
+                            const planLabel = pay.amount >= 2000 ? `${SUBSCRIPTION_PLANS.pro.name} (10 arts)` : `${SUBSCRIPTION_PLANS.starter.name} (5 arts)`;
                             const dateStr = pay.created_at ? new Date(pay.created_at).toLocaleDateString('fr-FR', {
                                 day: 'numeric',
                                 month: 'short',
@@ -1446,7 +1476,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             <div class="md:hidden flex flex-col gap-3">
                 ${list.map((pay) => {
                     const prof = pay.profiles || {};
-                    const planLabel = pay.amount >= 2500 ? 'Pack Pro (10 arts)' : 'Pack Starter (5 arts)';
+                    const planLabel = pay.amount >= 2000 ? `${SUBSCRIPTION_PLANS.pro.name} (10 arts)` : `${SUBSCRIPTION_PLANS.starter.name} (5 arts)`;
                     const dateStr = pay.created_at ? new Date(pay.created_at).toLocaleDateString('fr-FR', {
                         day: 'numeric',
                         month: 'short',
@@ -1544,17 +1574,19 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 ${s.subscription_plan === 'pro' ? `
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 border border-amber-500/30 shadow-2xs">
                                         <i class="fa-solid fa-crown text-[9px]"></i>
-                                        <span>Pack Pro • 10 produits (2 500 F/mois)</span>
+                                        <span>${SUBSCRIPTION_PLANS.pro.name} • 10 produits (${SUBSCRIPTION_PLANS.pro.priceDisplay}/mois)</span>
                                     </span>
-                                ` : `
+                                ` : (s.subscription_plan === 'starter' ? `
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                                         <i class="fa-solid fa-cube text-[9px]"></i>
-                                        <span>Pack Starter • 5 produits (1 500 F/mois)</span>
+                                        <span>${SUBSCRIPTION_PLANS.starter.name} • 5 produits (${SUBSCRIPTION_PLANS.starter.priceDisplay}/mois)</span>
                                     </span>
-                                `}
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                    <i class="fa-solid fa-gift text-[9px]"></i> Essai 7j
-                                </span>
+                                ` : `
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                        <i class="fa-solid fa-store text-[9px]"></i>
+                                        <span>Candidature Vendeur • Pack Découverte (1 article)</span>
+                                    </span>
+                                `)}
                             </div>
 
                             <!-- Informations Boutique et Contact -->
@@ -1573,6 +1605,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <span>${escapeHTML(s.telephone || 'Non renseigné')}</span>
                                     ${s.email ? `<span class="text-slate-300">•</span><span class="truncate text-[11px]">${escapeHTML(s.email)}</span>` : ''}
                                 </div>
+                                ${s.pavillon ? `
+                                    <div class="flex items-center gap-1.5 text-slate-500">
+                                        <i class="fa-solid fa-location-dot text-amber-500 text-[10px]"></i>
+                                        <span>${escapeHTML(s.pavillon)}${s.chambre ? ` • Ch. ${escapeHTML(s.chambre)}` : ''}</span>
+                                    </div>
+                                ` : ''}
                             </div>
 
                             <p class="text-[10px] text-slate-400 mt-1.5">
@@ -1618,15 +1656,21 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 return '<span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-2xs">Admin Pro (∞)</span>';
             }
             if (plan === 'pro') {
-                return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Pro</span>';
+                return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">Business</span>';
             }
-            return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Starter</span>';
+            if (plan === 'starter') {
+                return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-primary text-white">Pro</span>';
+            }
+            return '<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">Découverte</span>';
         };
 
         const getSubscriptionBadgeHTML = (seller) => {
             const subCalc = computeSubscriptionStatus(seller);
             if (subCalc.status === 'superadmin') {
                 return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">Pack Pro Admin</span>';
+            }
+            if (subCalc.status === 'decouverte') {
+                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">Découverte (1 art.)</span>';
             }
             if (subCalc.status === 'trial_active') {
                 return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Fin essai : ${seller.trial_ends_at ? new Date(seller.trial_ends_at).toLocaleDateString('fr-FR') : ''}">Essai (${subCalc.daysRemaining}j)</span>`;
@@ -1637,7 +1681,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             if (subCalc.status === 'active') {
                 return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Expire le : ${seller.subscription_expires_at ? new Date(seller.subscription_expires_at).toLocaleDateString('fr-FR') : ''}">Actif (${subCalc.daysRemaining}j)</span>`;
             }
-            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expiré</span>';
+            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">Découverte</span>';
         };
 
         return `
@@ -2101,14 +2145,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     };
 
     const renderOrderStatusBadge = (status) => {
+        const isV2 = FEATURE_FLAGS.ADMIN_STATS_V2;
         const statusMap = {
             pending: { label: 'En attente', class: 'bg-amber-50 text-amber-800 border border-amber-200' },
             confirmed: { label: 'Confirmée', class: 'bg-sky-50 text-sky-800 border border-sky-200' },
             shipped: { label: 'En livraison', class: 'bg-indigo-50 text-indigo-800 border border-indigo-200' },
             delivered: { label: 'Livrée', class: 'bg-emerald-50 text-emerald-800 border border-emerald-200' },
-            cancelled: { label: 'Annulée', class: 'bg-rose-50 text-rose-800 border border-rose-200' },
+            cancelled: { label: 'Annulée', class: isV2 ? 'bg-rose-100 text-rose-800 border border-rose-300 font-extrabold ring-1 ring-rose-200' : 'bg-rose-50 text-rose-800 border border-rose-200' },
         };
         const config = statusMap[status] || { label: status || 'En attente', class: 'bg-slate-100 text-slate-700 border border-slate-200' };
+        if (isV2 && status === 'cancelled') {
+            return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${config.class}"><i class="fa-solid fa-ban text-[9px] text-rose-600"></i> ${config.label}</span>`;
+        }
         return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${config.class}">${config.label}</span>`;
     };
 
@@ -2127,6 +2175,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
     function renderOrdersTab() {
         const query = (orderSearchQuery || '').toLowerCase().trim();
+
+        // Calculs des métriques V2 sur l'ensemble des commandes pour les indicateurs d'entête
+        const v2TotalOrders = allOrders.length;
+        const v2CancelledOrders = allOrders.filter((o) => o.status === 'cancelled').length;
+        const v2DeliveredOrders = allOrders.filter((o) => o.status === 'delivered').length;
+        const v2CancellationRate = v2TotalOrders > 0 ? ((v2CancelledOrders / v2TotalOrders) * 100).toFixed(1) : '0.0';
+        const v2DeliveryRate = v2TotalOrders > 0 ? ((v2DeliveredOrders / v2TotalOrders) * 100).toFixed(1) : '0.0';
+        const v2SameRoomOrders = allOrders.filter((o) => Boolean(o.is_same_room)).length;
+
         const filteredOrders = allOrders.filter((ord) => {
             if (query) {
                 const ref = (ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6) : ''))).toLowerCase();
@@ -2147,6 +2204,17 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             if (orderPaymentFilter !== 'all') {
                 const pMethod = ord.payment_method || 'cash';
                 if (pMethod !== orderPaymentFilter) {
+                    return false;
+                }
+            }
+            if (FEATURE_FLAGS.ADMIN_STATS_V2 && orderStatusFilter !== 'all') {
+                if (orderStatusFilter === 'cancelled') {
+                    if (ord.status !== 'cancelled') return false;
+                } else if (orderStatusFilter === 'delivered') {
+                    if (ord.status !== 'delivered') return false;
+                } else if (orderStatusFilter === 'undelivered') {
+                    if (['delivered', 'cancelled'].includes(ord.status)) return false;
+                } else if (ord.status !== orderStatusFilter) {
                     return false;
                 }
             }
@@ -2208,6 +2276,21 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             </select>
                         </div>
 
+                        ${FEATURE_FLAGS.ADMIN_STATS_V2 ? `
+                            <!-- Filtre Statut (V2) -->
+                            <div class="relative min-w-[140px]">
+                                <select 
+                                    id="admin-order-status-filter" 
+                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer min-h-[38px]"
+                                >
+                                    <option value="all" ${orderStatusFilter === 'all' ? 'selected' : ''}>Tous statuts</option>
+                                    <option value="delivered" ${orderStatusFilter === 'delivered' ? 'selected' : ''}>Livrées</option>
+                                    <option value="undelivered" ${orderStatusFilter === 'undelivered' ? 'selected' : ''}>En cours (non livrées)</option>
+                                    <option value="cancelled" ${orderStatusFilter === 'cancelled' ? 'selected' : ''}>Annulées</option>
+                                </select>
+                            </div>
+                        ` : ''}
+
                         <!-- Export CSV -->
                         <button type="button" id="btn-export-orders-csv" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[38px] bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80 flex items-center gap-1.5 shrink-0">
                             <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
@@ -2219,12 +2302,33 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                 <!-- Conteneur Commandes -->
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div>
-                            <h2 class="font-heading font-extrabold text-base text-slate-900">Historique des Commandes</h2>
-                            <p class="text-xs text-slate-500">Traçabilité des transactions et résolution directe des litiges campus</p>
+                            <div class="flex items-center gap-2.5 flex-wrap">
+                                <h2 class="font-heading font-extrabold text-base text-slate-900">Historique des Commandes</h2>
+                                <span class="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-full">${filteredOrders.length} commande${filteredOrders.length > 1 ? 's' : ''}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-0.5">Traçabilité des transactions et résolution directe des litiges campus</p>
                         </div>
-                        <span class="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-full">${filteredOrders.length} commande${filteredOrders.length > 1 ? 's' : ''}</span>
+                        ${FEATURE_FLAGS.ADMIN_STATS_V2 ? `
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200" title="Taux de commandes annulées sur le total des commandes">
+                                    <i class="fa-solid fa-ban text-rose-600"></i>
+                                    <span>Taux d'annulation : <strong>${v2CancellationRate}%</strong></span>
+                                    <span class="text-[10px] text-rose-600 font-normal">(${v2CancelledOrders}/${v2TotalOrders})</span>
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Taux de commandes livrées avec succès">
+                                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                                    <span>Taux de livraison : <strong>${v2DeliveryRate}%</strong></span>
+                                </span>
+                                ${v2SameRoomOrders > 0 ? `
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Commandes passées depuis la même chambre">
+                                        <i class="fa-solid fa-door-closed text-amber-600"></i>
+                                        <span>Même chambre : <strong>${v2SameRoomOrders}</strong></span>
+                                    </span>
+                                ` : ''}
+                            </div>
+                        ` : ''}
                     </div>
 
                     ${filteredOrders.length === 0 ? `
@@ -2253,9 +2357,16 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     ${filteredOrders.map((ord) => `
                                         <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
                                             <td class="py-3 px-4">
-                                                <span class="font-mono font-bold text-xs text-primary block">
-                                                    ${escapeHTML(ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6).toUpperCase() : '')))}
-                                                </span>
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <span class="font-mono font-bold text-xs text-primary block">
+                                                        ${escapeHTML(ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6).toUpperCase() : '')))}
+                                                    </span>
+                                                    ${FEATURE_FLAGS.ADMIN_STATS_V2 && ord.is_same_room ? `
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300" title="Commande passée depuis la même chambre">
+                                                            <i class="fa-solid fa-door-closed text-[8px]"></i> Même chambre
+                                                        </span>
+                                                    ` : ''}
+                                                </div>
                                                 <span class="text-[10px] text-slate-400">${ord.created_at ? new Date(ord.created_at).toLocaleDateString('fr-FR') : ''}</span>
                                             </td>
                                             <td class="py-3 px-4">
@@ -2316,9 +2427,16 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 <div class="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-3.5 flex flex-col gap-2.5">
                                     <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
                                         <div>
-                                            <span class="font-mono font-bold text-xs text-primary block">
-                                                ${escapeHTML(ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6).toUpperCase() : '')))}
-                                            </span>
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <span class="font-mono font-bold text-xs text-primary block">
+                                                    ${escapeHTML(ord.reference || ('#CMD-' + (ord.id ? ord.id.slice(0, 6).toUpperCase() : '')))}
+                                                </span>
+                                                ${FEATURE_FLAGS.ADMIN_STATS_V2 && ord.is_same_room ? `
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300" title="Commande passée depuis la même chambre">
+                                                        <i class="fa-solid fa-door-closed text-[8px]"></i> Même chambre
+                                                    </span>
+                                                ` : ''}
+                                            </div>
                                             <span class="text-[10px] text-slate-400">${ord.created_at ? new Date(ord.created_at).toLocaleDateString('fr-FR') : ''}</span>
                                         </div>
                                         <div class="flex items-center gap-1.5">
@@ -4240,6 +4358,17 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             const paymentSelect = containerEl.querySelector('#admin-order-payment-filter');
             paymentSelect?.addEventListener('change', (e) => {
                 orderPaymentFilter = e.target.value;
+                const contentEl = containerEl.querySelector('#admin-tab-content');
+                if (contentEl && activeTab === 'orders') {
+                    contentEl.innerHTML = renderOrdersTab();
+                    bindOrdersEvents();
+                }
+            });
+
+            // Filtre Statut (V2)
+            const statusSelect = containerEl.querySelector('#admin-order-status-filter');
+            statusSelect?.addEventListener('change', (e) => {
+                orderStatusFilter = e.target.value;
                 const contentEl = containerEl.querySelector('#admin-tab-content');
                 if (contentEl && activeTab === 'orders') {
                     contentEl.innerHTML = renderOrdersTab();

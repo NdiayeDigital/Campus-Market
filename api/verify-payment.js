@@ -7,12 +7,41 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://fqulqgdjusfzhcjpvyay.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const SASPAY_SECRET_KEY = process.env.SASPAY_SECRET_KEY;
 
+/**
+ * Correspondances et alias commerciaux vers les clés techniques en base.
+ * Clé technique 'starter' = Pack Pro (1 000 FCFA / 30 jours, ancien prix 1 500)
+ * Clé technique 'pro'     = Pack Business (2 000 FCFA / 30 jours, ancien prix 2 500)
+ * Alias : pro -> starter (1 000 F), business -> pro (2 000 F).
+ */
+const PLAN_ALIASES = {
+    starter: 'starter',
+    pro: 'starter',          // Alias commercial Pack Pro -> starter
+    business: 'pro',         // Alias commercial Pack Business -> pro
+    pack_pro: 'starter',
+    pack_business: 'pro',
+    pack_starter: 'starter',
+};
+
+function resolvePlanKey(rawPlan, amount) {
+    if (amount !== undefined && amount !== null && !isNaN(Number(amount))) {
+        const num = Number(amount);
+        if (num >= 2000) return 'pro';      // Pack Business (2 000 FCFA, compatible ancien 2 500)
+        if (num >= 1000) return 'starter';  // Pack Pro (1 000 FCFA, compatible ancien 1 500)
+    }
+    if (!rawPlan) return 'starter';
+    const clean = String(rawPlan).trim().toLowerCase();
+    if (clean === 'business' || clean === 'pack_business') return 'pro';
+    if (clean === 'starter' || clean === 'pack_starter') return 'starter';
+    if (clean === 'pro' || clean === 'pack_pro') return 'starter';
+    return PLAN_ALIASES[clean] || 'starter';
+}
+
 const PLAN_QUOTAS = {
-    starter: { maxProducts: 5, durationDays: 30 },
-    pro: { maxProducts: 10, durationDays: 30 },
+    starter: { maxProducts: 5, durationDays: 30, maxOrders: null, maxSales: null },
+    pro: { maxProducts: 10, durationDays: 30, maxOrders: null, maxSales: null },
     premium: { maxProducts: 20, durationDays: 30 },
 };
 
@@ -41,12 +70,18 @@ export default async function handler(req, res) {
         const isAdPayment = plan === 'annonce' || type === 'advertisement' || type === 'annonce' || Boolean(adId || ad_id);
         const targetAdId = adId || ad_id;
 
-        const validPlan = PLAN_QUOTAS[plan] ? plan : 'starter';
+        const resolvedKey = isAdPayment ? 'annonce' : resolvePlanKey(plan, body?.amount);
+        const validPlan = PLAN_QUOTAS[resolvedKey] ? resolvedKey : 'starter';
         const planDetails = PLAN_QUOTAS[validPlan] || PLAN_QUOTAS.starter;
         const maxProducts = planDetails.maxProducts;
         const durationDays = isAdPayment ? 7 : planDetails.durationDays;
         const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
         const nowIso = new Date().toISOString();
+
+        if (!SUPABASE_SERVICE_ROLE_KEY) {
+            console.error('[Verify Payment] Clé SUPABASE_SERVICE_ROLE_KEY manquante.');
+            return res.status(500).json({ error: 'Configuration serveur incomplète (SUPABASE_SERVICE_ROLE_KEY manquant).' });
+        }
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
             auth: { persistSession: false },

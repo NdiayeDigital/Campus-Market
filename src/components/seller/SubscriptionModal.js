@@ -1,6 +1,6 @@
 /**
  * Composant SubscriptionModal (Gestion des formules & Passerelle SasPay).
- * Permet au vendeur de choisir parmi les formules (Starter 1 500F ou Pro 2 500F)
+ * Permet au vendeur de choisir parmi les formules (Pro 1 000F ou Business 2 000F)
  * et d'accéder au paiement direct via SasPay (Wave ou Orange Money) avec vérification 100% automatique.
  */
 
@@ -176,7 +176,7 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                 </div>
 
                 <div class="grid grid-cols-1 gap-3">
-                    ${Object.values(SUBSCRIPTION_PLANS).filter((p) => (p.price || 0) > 0).map((p) => {
+                    ${Array.from(new Map(Object.values(SUBSCRIPTION_PLANS).filter((p) => (p.price || 0) > 0).map((p) => [p.id, p])).values()).map((p) => {
                         const isSelected = p.id === selectedPlanId;
                         return `
                             <div 
@@ -204,6 +204,12 @@ export function createSubscriptionModal({ seller, onSubscribed, onShowToast } = 
                                             </span>
                                         </div>
                                         <p class="text-[11px] text-slate-500 truncate mt-0.5">${p.description}</p>
+                                        <div class="text-[10px] text-slate-400 font-medium mt-1 flex items-center gap-2">
+                                            ${p.id === 'pro' 
+                                                ? '<span><i class="fa-solid fa-infinity text-amber-500 text-[9px]"></i> Ventes illimitées</span> • <span>1 promo / semaine</span> • <span>Top Vendeurs</span>'
+                                                : '<span><i class="fa-solid fa-infinity text-indigo-500 text-[9px]"></i> Ventes illimitées</span> • <span>1 promo / mois</span>'
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0">

@@ -13,11 +13,8 @@ import { SUPPORT_CONFIG } from '../../config/support.js';
 export const PAVILLONS_UIDT = [
     { id: 'Pavillon A', label: 'Pavillon A' },
     { id: 'Pavillon B', label: 'Pavillon B' },
-    { id: 'Pavillon C', label: 'Pavillon C' },
-    { id: 'Pavillon D', label: 'Pavillon D' },
-    { id: '1000 lits', label: 'Cité 1000 Lits' },
-    { id: 'Campus VDN', label: 'Campus VDN' },
-    { id: 'Autre', label: 'Autre / Résidence externe' },
+    { id: '1000 lits', label: 'Pavillon 1000 Lits' },
+    { id: 'Autre', label: 'Autre / Hors campus' },
 ];
 
 export const CATEGORIES_BOUTIQUE = [

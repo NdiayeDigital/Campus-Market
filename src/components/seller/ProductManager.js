@@ -25,8 +25,10 @@ import {
     SUBSCRIPTION_PLANS,
     getMaxProductsForPlan,
     computeSubscriptionStatus,
+    computePromotionQuota,
     FREE_TRIAL_CONFIG,
 } from '../../config/subscription.js';
+import { useProductPromotion } from '../../services/quota-service.js';
 
 /**
  * Crée le gestionnaire de catalogue vendeur.
@@ -44,6 +46,7 @@ export function createProductManager({
     initialTab = 'list',
     onProductChanged,
     onTabChange,
+    onOpenSubscription,
 } = {}) {
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full flex flex-col gap-5 view-transition-enter';
@@ -432,13 +435,11 @@ export function createProductManager({
     const getQuotaInfo = () => {
         const profile = sellerProfile || {};
         const subStatus = computeSubscriptionStatus(profile);
-        const plan = profile?.subscription_plan || 'starter';
-        const planObj = SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.starter;
+        const plan = subStatus?.plan?.id || profile?.subscription_plan || 'decouverte';
+        const planObj = subStatus?.plan || SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.decouverte;
         const maxAllowed = subStatus?.isSuperAdmin
             ? (subStatus.maxProducts || 10)
-            : (subStatus?.isTrial
-                ? FREE_TRIAL_CONFIG.maxProducts
-                : (Number(profile?.max_products) || getMaxProductsForPlan(plan)));
+            : (subStatus?.maxProducts || Number(profile?.max_products) || getMaxProductsForPlan(plan));
         const count = products.length;
         const isLimitReached = count >= maxAllowed;
         const percent = Math.min(100, Math.round((count / Math.max(1, maxAllowed)) * 100));
@@ -517,7 +518,7 @@ export function createProductManager({
                     }">
                         <div class="flex items-center gap-1.5">
                             <i class="fa-solid ${isLimitReached ? 'fa-lock text-amber-600' : 'fa-crown text-amber-500'} text-xs"></i>
-                            <span class="font-extrabold">${subStatus?.isTrial ? 'Essai Gratuit' : (planObj?.name || 'Pack Starter')} :</span>
+                            <span class="font-extrabold">${planObj?.name || 'Pack Découverte'} :</span>
                             <span class="tabular-nums">${count} / ${maxAllowed} produits</span>
                         </div>
                         <span class="text-[10px] font-black px-1.5 py-0.2 rounded-full ${
@@ -577,34 +578,13 @@ export function createProductManager({
                             <span class="px-2.5 py-1 rounded-xl text-xs font-bold ${
                                 isLimitReached ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-slate-100 text-slate-700'
                             }">
-                                ${subStatus?.isTrial ? 'Essai Gratuit' : planObj.name} • ${count} / ${maxAllowed} articles
+                                ${planObj.name} • ${count} / ${maxAllowed} articles
                             </span>
                         </div>
                         <p class="text-xs text-slate-500 mt-0.5">Remplissez les détails pour publier immédiatement votre article aux étudiants de l'UIDT.</p>
                     </div>
 
-                    ${subStatus?.isExpired ? `
-                        <!-- Alerte Période d'essai Terminée -->
-                        <div class="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex flex-col gap-2.5 shadow-2xs">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-rose-200 text-rose-950 flex items-center justify-center text-sm shrink-0">
-                                    <i class="fa-solid fa-lock"></i>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <h4 class="font-heading font-extrabold text-sm text-rose-950">
-                                        Période d'essai terminée
-                                    </h4>
-                                    <p class="text-xs text-rose-800">
-                                        Votre période d'essai de 7 jours est terminée. Veuillez activer votre formule pour continuer à ajouter des articles.
-                                    </p>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-trigger-subscription px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-heading font-extrabold text-xs rounded-xl self-start flex items-center gap-2 cursor-pointer shadow-xs active:scale-95">
-                                <i class="fa-solid fa-crown text-xs"></i>
-                                <span>Activer mon abonnement (Dès 1 500 F)</span>
-                            </button>
-                        </div>
-                    ` : (isLimitReached ? `
+                    ${isLimitReached ? `
                         <!-- Alerte Quota Atteint Stricte -->
                         <div class="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex flex-col gap-2.5 shadow-2xs">
                             <div class="flex items-center gap-3">
@@ -613,22 +593,22 @@ export function createProductManager({
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <h4 class="font-heading font-extrabold text-sm text-amber-950">
-                                        Plafond de catalogue atteint (${count} / ${maxAllowed} produits)
+                                        Plafond de catalogue atteint (${count} / ${maxAllowed} produit${maxAllowed > 1 ? 's' : ''})
                                     </h4>
                                     <p class="text-xs text-amber-800">
-                                        Votre formule actuelle <strong>${subStatus?.isTrial ? 'Essai Gratuit (3 articles max)' : `${planObj.name} (${maxAllowed} articles max)`}</strong> est complète.
+                                        Votre formule actuelle <strong>${planObj.name} (${maxAllowed} article${maxAllowed > 1 ? 's' : ''} max)</strong> est complète.
                                     </p>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between gap-3 border-t border-amber-200/80 pt-2 flex-wrap">
                                 <p class="text-xs text-amber-900 leading-relaxed">
-                                    ${subStatus?.isTrial
-                                        ? "L'essai gratuit est limité à 3 articles. Passez au <strong>Pack Starter (5 prod.)</strong> ou <strong>Pack Pro (10 prod.)</strong> pour publier plus d'articles."
-                                        : (plan === 'starter' 
-                                            ? "Passez au <strong>Pack Pro (10 prod.)</strong> pour publier jusqu'à 10 articles."
-                                            : "Vous avez atteint votre quota de 10 articles. Archivez ou supprimez des articles pour en ajouter de nouveaux.")}
+                                    ${plan === 'decouverte' || subStatus?.status === 'decouverte'
+                                        ? `Le Pack Découverte est limité à 1 article. Passez au <strong>${SUBSCRIPTION_PLANS.starter.name} (${SUBSCRIPTION_PLANS.starter.max_produits} prod. • ${SUBSCRIPTION_PLANS.starter.priceDisplay})</strong> ou <strong>${SUBSCRIPTION_PLANS.pro.name} (${SUBSCRIPTION_PLANS.pro.max_produits} prod. • ${SUBSCRIPTION_PLANS.pro.priceDisplay})</strong> pour publier plus d'articles.`
+                                        : (plan === 'starter' || plan === 'pro_legacy'
+                                            ? `Passez au <strong>${SUBSCRIPTION_PLANS.pro.name} (${SUBSCRIPTION_PLANS.pro.max_produits} prod. • ${SUBSCRIPTION_PLANS.pro.priceDisplay})</strong> pour publier jusqu'à ${SUBSCRIPTION_PLANS.pro.max_produits} articles.`
+                                            : `Vous avez atteint votre quota de ${maxAllowed} articles. Archivez ou supprimez des articles pour en ajouter de nouveaux.`)}
                                 </p>
-                                ${plan === 'starter' || subStatus?.isTrial ? `
+                                ${plan !== 'pro' ? `
                                     <button type="button" class="btn-trigger-subscription px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-heading font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
                                         <i class="fa-solid fa-arrow-up text-xs"></i>
                                         <span>Augmenter mon quota</span>
@@ -636,7 +616,7 @@ export function createProductManager({
                                 ` : ''}
                             </div>
                         </div>
-                    ` : '')}
+                    ` : ''}
 
                     <div id="add-product-error" class="hidden p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium"></div>
 
@@ -881,6 +861,7 @@ export function createProductManager({
             `;
         }
 
+        const promoQuota = computePromotionQuota(sellerProfile);
         const filtered = products.filter((prod) => {
             const isSold = prod.stock === 0;
             const isPaused = prod.is_paused === true || prod.stock === -2;
@@ -892,6 +873,59 @@ export function createProductManager({
 
         return `
             <div class="flex flex-col gap-4">
+                <!-- Bannière Quota Promotion Produit (FR-Offres Vendeurs) -->
+                ${promoQuota.allowed ? `
+                    <div class="p-3.5 rounded-2xl ${
+                        promoQuota.remaining > 0
+                            ? 'bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50/50 border border-amber-200/90 shadow-2xs'
+                            : 'bg-slate-50 border border-slate-200/90'
+                    } flex items-center justify-between gap-3 flex-wrap">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl ${
+                                promoQuota.remaining > 0
+                                    ? 'bg-gradient-to-tr from-amber-500 to-rose-500 text-white shadow-xs'
+                                    : 'bg-slate-200 text-slate-600'
+                            } flex items-center justify-center text-sm shrink-0">
+                                <i class="fa-solid fa-fire"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="font-heading font-extrabold text-xs sm:text-sm ${
+                                    promoQuota.remaining > 0 ? 'text-amber-950' : 'text-slate-800'
+                                }">
+                                    ${promoQuota.counterText}
+                                </h4>
+                                <p class="text-[11px] ${
+                                    promoQuota.remaining > 0 ? 'text-amber-800' : 'text-slate-500'
+                                }">
+                                    ${promoQuota.remaining > 0 
+                                        ? "Choisissez un produit et mettez-le en avant 7 jours (badge « Promo » + priorité dans les recherches)."
+                                        : "Toute promotion activée est consommée pour sa période et valable 7 jours."}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-50/80 via-blue-50/60 to-purple-50/40 border border-indigo-100 flex items-center justify-between gap-3 flex-wrap shadow-2xs">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
+                                <i class="fa-solid fa-fire text-amber-300"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-heading font-extrabold text-xs sm:text-sm text-indigo-950">
+                                    Mise en avant 7 jours de produit
+                                </h4>
+                                <p class="text-[11px] text-indigo-700">
+                                    ${promoQuota.counterText}
+                                </p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-trigger-subscription px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5">
+                            <i class="fa-solid fa-crown text-[10px]"></i>
+                            <span>Découvrir les offres</span>
+                        </button>
+                    </div>
+                `}
+
                 <!-- Filtres pills de statut d'articles -->
                 <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                     <button type="button" data-article-filter="all" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[38px] cursor-pointer active:scale-95 ${
@@ -934,6 +968,7 @@ export function createProductManager({
                         ${filtered.map((prod) => {
                             const isSold = prod.stock === 0;
                             const isPaused = prod.is_paused === true || prod.stock === -2;
+                            const isPromoted = Boolean(prod.is_promoted && (!prod.promoted_until || new Date(prod.promoted_until) > new Date()));
                             const rawImg = prod.image_url;
                             const safeImg = (rawImg && rawImg.includes('photo-1611591475823-3882f0592965'))
                                 ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
@@ -950,6 +985,11 @@ export function createProductManager({
                                 statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Pause</span>`;
                             } else {
                                 statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">En vente</span>`;
+                            }
+
+                            let promoBadge = '';
+                            if (isPromoted) {
+                                promoBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-2xs flex items-center gap-1"><i class="fa-solid fa-fire text-[9px] text-amber-200"></i> Promo (7j)</span>`;
                             }
 
                             let stockAlertBadge = '';
@@ -987,6 +1027,7 @@ export function createProductManager({
                                                     ${escapeHTML(prod.title)}
                                                 </h4>
                                                 ${statusBadge}
+                                                ${promoBadge}
                                                 ${stockAlertBadge}
                                             </div>
 
@@ -1042,6 +1083,27 @@ export function createProductManager({
                                         >
                                             <i class="fa-solid fa-share-nodes text-xs"></i>
                                         </button>
+
+                                        <!-- Bouton Mettre en avant / Badge Promo (FR-Offres Vendeurs) -->
+                                        ${!isSold && !isPaused && !isMaskedQuota ? (
+                                            isPromoted ? `
+                                                <span class="px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-xs font-bold flex items-center gap-1.5 shadow-2xs" title="Mis en avant pendant 7 jours">
+                                                    <i class="fa-solid fa-fire text-amber-500 text-xs"></i>
+                                                    <span class="hidden sm:inline">En Promo</span>
+                                                </span>
+                                            ` : `
+                                                <button 
+                                                    type="button" 
+                                                    data-action="promote-product" 
+                                                    data-id="${prod.id}" 
+                                                    title="Mettre en avant ce produit pendant 7 jours"
+                                                    class="px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/90 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-all min-h-[44px] flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
+                                                >
+                                                    <i class="fa-solid fa-fire text-amber-600 text-xs"></i>
+                                                    <span>Promouvoir</span>
+                                                </button>
+                                            `
+                                        ) : ''}
 
                                         <button 
                                             type="button" 
@@ -1324,14 +1386,6 @@ export function createProductManager({
                 e.preventDefault();
 
                 const { plan, planObj, maxAllowed, isLimitReached, subStatus } = getQuotaInfo();
-                if (subStatus?.isExpired) {
-                    if (errorEl) {
-                        errorEl.textContent = "Votre période d'essai de 7 jours est terminée. Veuillez activer votre abonnement pour publier de nouveaux articles.";
-                        errorEl.classList.remove('hidden');
-                    }
-                    showToast("Votre période d'essai de 7 jours est terminée.", 'warning');
-                    return;
-                }
 
                 if (isLimitReached) {
                     if (errorEl) {
@@ -1418,13 +1472,78 @@ export function createProductManager({
             });
         }
 
-        // 4. Actions sur les cartes de produits de la liste
+        // 4. Déclencheurs de souscription / changement de formule
+        containerEl.querySelectorAll('.btn-trigger-subscription').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (typeof onOpenSubscription === 'function') {
+                    onOpenSubscription();
+                } else {
+                    window.dispatchEvent(new CustomEvent('open-subscription-modal'));
+                }
+            });
+        });
+
+        // 5. Actions sur les cartes de produits de la liste
         containerEl.querySelectorAll('button[data-action]').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 const action = btn.getAttribute('data-action');
                 const id = btn.getAttribute('data-id');
 
-                if (action === 'share') {
+                if (action === 'promote-product') {
+                    const prod = products.find((p) => p.id === id);
+                    if (!prod) return;
+
+                    const promoQuota = computePromotionQuota(sellerProfile);
+                    if (!promoQuota.allowed) {
+                        showToast("La mise en avant de produit est réservée aux formules Pro (1/mois) et Business (1/semaine).", 'warning');
+                        if (typeof onOpenSubscription === 'function') {
+                            onOpenSubscription();
+                        } else {
+                            window.dispatchEvent(new CustomEvent('open-subscription-modal'));
+                        }
+                        return;
+                    }
+
+                    if (promoQuota.remaining <= 0) {
+                        showToast(promoQuota.limitReachedMessage, 'warning');
+                        return;
+                    }
+
+                    const confirmed = await showConfirm({
+                        title: "Promouvoir ce produit ?",
+                        message: `Mettre en avant « ${prod.title} » pendant 7 jours ?\n\nVotre produit aura le badge « Promo » et apparaîtra en priorité dans le catalogue et sur la page d'accueil.\n\nAttention : une fois consommée, la promotion de cette période ne peut pas être annulée ni remboursée.`,
+                        confirmText: "Activer la promotion (7 jours)",
+                        cancelText: "Annuler",
+                        isDestructive: false,
+                        icon: "fa-fire",
+                    });
+
+                    if (confirmed) {
+                        btn.disabled = true;
+                        const originalHTML = btn.innerHTML;
+                        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Activation...</span>`;
+                        try {
+                            const res = await useProductPromotion(id);
+                            if (res && res.success === false) {
+                                showToast(res.message || "Erreur lors de la promotion du produit.", 'warning');
+                                btn.disabled = false;
+                                btn.innerHTML = originalHTML;
+                            } else {
+                                if (sellerProfile) {
+                                    sellerProfile.promotions_used_this_period = (Number(sellerProfile.promotions_used_this_period) || 0) + 1;
+                                    sellerProfile.promotions_period_start = new Date().toISOString();
+                                }
+                                showToast(res?.message || "Votre produit est maintenant mis en avant pour 7 jours ! 🔥", 'success');
+                                await loadData();
+                                if (typeof onProductChanged === 'function') onProductChanged();
+                            }
+                        } catch (err) {
+                            showToast(err.message || "Erreur lors de la promotion du produit.", 'error');
+                            btn.disabled = false;
+                            btn.innerHTML = originalHTML;
+                        }
+                    }
+                } else if (action === 'share') {
                     const prod = products.find((p) => p.id === id);
                     if (prod) {
                         shareProduct(prod, showToast);

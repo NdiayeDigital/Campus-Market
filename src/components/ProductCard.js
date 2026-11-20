@@ -37,6 +37,7 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
     const primaryImg = productImages[0] || resolveMediaUrl(product.image_url);
 
     // Badges statut
+    const isPromoted = Boolean(product.is_promoted && (!product.promoted_until || new Date(product.promoted_until) > new Date()));
     let statusBadge = '';
     if (isSuspended) {
         statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white"></span>Boutique Suspendue</span>`;
@@ -44,6 +45,8 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
         statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-slate-900/85 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Fermé</span>`;
     } else if (isOutOfStock) {
         statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white"></span>Rupture</span>`;
+    } else if (isPromoted) {
+        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-heading font-black text-[11px] px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1"><i class="fa-solid fa-fire text-slate-950 text-[10px]"></i> Promo</span>`;
     } else if (product.old_price && Number(product.old_price) > Number(product.price)) {
         const discount = Math.round(((product.old_price - product.price) / product.old_price) * 100);
         statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-extrabold text-[11px] px-2.5 py-0.5 rounded-full shadow-sm">-${discount}%</span>`;

@@ -50,6 +50,10 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
         const cleanPhone = formatSenegalPhone(sellerPhone);
 
         // Calcul réduction éventuelle
+        const isPromoted = Boolean(p.is_promoted && (!p.promoted_until || new Date(p.promoted_until) > new Date()));
+        const promoBadge = isPromoted 
+            ? `<span class="bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-heading font-black text-xs px-2.5 py-1 rounded-full shadow-md flex items-center gap-1"><i class="fa-solid fa-fire text-slate-950 text-[10px]"></i> Promo</span>`
+            : '';
         let discountBadge = '';
         if (p.old_price && Number(p.old_price) > Number(p.price)) {
             const pct = Math.round(((p.old_price - p.price) / p.old_price) * 100);
@@ -116,6 +120,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
 
                     <!-- Badges flottants -->
                     <div class="absolute bottom-3 left-3 flex items-center gap-2 z-10">
+                        ${promoBadge}
                         ${discountBadge}
                         <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
                             isSuspended
@@ -194,6 +199,12 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                             <div class="flex flex-col">
                                 <span class="text-[11px] text-slate-400 block">Vendu par</span>
                                 <span class="font-heading font-bold text-slate-900 text-xs sm:text-sm leading-tight">${escapeHTML(sellerName)}</span>
+                                ${p.seller?.pavillon ? `
+                                    <span class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                        <i class="fa-solid fa-location-dot text-amber-500 text-[10px]"></i>
+                                        <span>${escapeHTML(p.seller.pavillon)}${p.seller.chambre ? ` • Ch. ${escapeHTML(p.seller.chambre)}` : ''}</span>
+                                    </span>
+                                ` : ''}
                                 ${p.seller ? `
                                     <button 
                                         type="button" 

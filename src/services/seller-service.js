@@ -89,7 +89,9 @@ export async function registerSeller({
     telephone,
     shopName,
     category,
-    plan = 'starter',
+    pavillon = '',
+    chambre = '',
+    plan = 'decouverte',
 }) {
     if (!email || !password || !prenom || !nom || !telephone) {
         throw new Error('Veuillez renseigner tous les champs obligatoires.');
@@ -106,10 +108,11 @@ export async function registerSeller({
     const cleanEmail = email.trim().toLowerCase();
     const finalShopName = (shopName && shopName.trim()) || `${prenom} Shop`;
     const finalCategory = category || 'autres';
-    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'starter';
+    const finalPavillon = (pavillon && String(pavillon).trim()) || '';
+    const finalChambre = (chambre && String(chambre).trim()) || '';
+    const validPlan = SUBSCRIPTION_PLANS[plan] ? plan : 'decouverte';
     const maxProducts = getMaxProductsForPlan(validPlan);
     const nowIso = new Date().toISOString();
-    const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
 
     // 1. Envoi du code OTP via signInWithOtp (Supabase Auth déclenche l'envoi du code à 6 chiffres via Brevo SMTP)
     const { data: otpData, error: otpError } = await supabase.auth.signInWithOtp({
@@ -122,11 +125,13 @@ export async function registerSeller({
                 telephone,
                 shop_name: finalShopName,
                 shop_category: finalCategory,
+                pavillon: finalPavillon,
+                chambre: finalChambre,
                 subscription_plan: validPlan,
-                max_products: FREE_TRIAL_CONFIG.maxProducts,
-                subscription_status: 'trial',
-                trial_started_at: nowIso,
-                trial_ends_at: trialEndIso,
+                max_products: maxProducts,
+                subscription_status: 'decouverte',
+                trial_started_at: null,
+                trial_ends_at: null,
                 role: 'vendeur_pending',
             },
         },
@@ -214,13 +219,13 @@ export async function verifySellerOtp({ email, token, password = null, registrat
         }
     }
 
-    // 3. Auto-approbation immédiate : Passage au rôle 'vendeur' avec essai 7 jours activé
+    // 3. Auto-approbation immédiate : Passage au rôle 'vendeur' avec Pack Découverte permanent
     const nowIso = new Date().toISOString();
-    const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
     const userMeta = authUser.user_metadata || {};
     const finalShopName = registrationData?.shopName || userMeta.shop_name || `${registrationData?.prenom || userMeta.prenom || ''} Shop`;
     const finalCategory = registrationData?.category || userMeta.shop_category || 'autres';
-    const validPlan = registrationData?.plan || userMeta.subscription_plan || 'starter';
+    const validPlan = registrationData?.plan || userMeta.subscription_plan || 'decouverte';
+    const maxProducts = getMaxProductsForPlan(validPlan);
 
     const profilePayload = {
         id: authUser.id,
@@ -230,11 +235,13 @@ export async function verifySellerOtp({ email, token, password = null, registrat
         email: cleanEmail,
         shop_name: finalShopName,
         shop_category: finalCategory,
+        pavillon: registrationData?.pavillon || userMeta.pavillon || '',
+        chambre: registrationData?.chambre || userMeta.chambre || '',
         subscription_plan: validPlan,
-        max_products: FREE_TRIAL_CONFIG.maxProducts,
-        subscription_status: 'trial',
-        trial_started_at: nowIso,
-        trial_ends_at: trialEndIso,
+        max_products: maxProducts,
+        subscription_status: validPlan === 'decouverte' ? 'decouverte' : 'active',
+        trial_started_at: null,
+        trial_ends_at: null,
         role: 'vendeur',
         is_open: true,
         updated_at: nowIso,
@@ -257,6 +264,8 @@ export async function verifySellerOtp({ email, token, password = null, registrat
                 prenom: profilePayload.prenom,
                 nom: profilePayload.nom,
                 telephone: profilePayload.telephone,
+                pavillon: profilePayload.pavillon,
+                chambre: profilePayload.chambre,
                 role: 'vendeur',
                 is_open: true,
             };
@@ -433,33 +442,17 @@ export async function getCurrentSeller() {
         }
 
         if (profile) {
-            profile.subscription_plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'starter';
-            profile.max_products = Number(profile.max_products || session.user.user_metadata?.max_products) || getMaxProductsForPlan(profile.subscription_plan);
+            profile.subscription_plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'decouverte';
             profile.shop_name = profile.shop_name || session.user.user_metadata?.shop_name || `${profile.prenom || 'Boutique'} Shop`;
             profile.shop_category = profile.shop_category || session.user.user_metadata?.shop_category || 'autres';
             profile.email = profile.email || session.user.email;
             profile.must_change_password = Boolean(profile.must_change_password);
 
-            // Si le vendeur actif n'a pas encore scellé sa date d'essai ou si elle est nulle, lui accorder 7 jours pleins
-            if (profile.role === 'vendeur' && (!profile.trial_ends_at || !profile.trial_started_at) && !profile.subscription_expires_at) {
-                const nowIso = new Date().toISOString();
-                const trialEndIso = new Date(Date.now() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000).toISOString();
-                profile.trial_started_at = profile.trial_started_at || nowIso;
-                profile.trial_ends_at = trialEndIso;
-                profile.subscription_status = 'trial';
-
-                // Sauvegarde non bloquante dans Supabase
-                supabase.from('profiles').update({
-                    trial_started_at: profile.trial_started_at,
-                    trial_ends_at: profile.trial_ends_at,
-                    subscription_status: 'trial',
-                }).eq('id', session.user.id).then().catch(() => {});
-            }
-
-            // Calcul dynamique de l'état de l'abonnement
+            // Calcul dynamique de l'état de l'abonnement (Découverte permanent si aucun abonnement payant actif)
             const subCalc = computeSubscriptionStatus(profile);
-            profile.subscription_status = profile.subscription_status || subCalc.status;
-            profile.trial_ends_at = profile.trial_ends_at || (subCalc.expiresAt ? subCalc.expiresAt.toISOString() : null);
+            profile.subscription_status = subCalc.status;
+            profile.max_products = subCalc.maxProducts || (Number(profile.max_products) || getMaxProductsForPlan(profile.subscription_plan));
+            profile.subscription_expires_at = subCalc.expiresAt ? subCalc.expiresAt.toISOString() : null;
             profile._subscription = subCalc;
         }
 
@@ -557,9 +550,7 @@ export async function getSellerDashboardData(sellerId) {
 
         const activeProducts = productsList.filter((p) => p.stock !== 0);
         const subCalc = computeSubscriptionStatus(profile);
-        const maxAllowed = subCalc.isTrial 
-            ? FREE_TRIAL_CONFIG.maxProducts 
-            : (Number(profile?.max_products) || getMaxProductsForPlan(profile?.subscription_plan));
+        const maxAllowed = subCalc.maxProducts || (Number(profile?.max_products) || getMaxProductsForPlan(profile?.subscription_plan));
 
         return {
             profile: profile || {},

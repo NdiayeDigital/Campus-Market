@@ -388,102 +388,6 @@ export function createSellerDashboard({
             `;
         }
 
-        if (subCalc.status === 'trial_active') {
-            return `
-                <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border border-emerald-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
-                    <div class="flex items-start gap-3.5">
-                        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shrink-0 shadow-xs">
-                            <i class="fa-solid fa-gift"></i>
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="font-heading font-extrabold text-sm sm:text-base text-emerald-950">
-                                    🎁 Essai Gratuit : ${subCalc.daysLeft} jour${subCalc.daysLeft > 1 ? 's' : ''} restant${subCalc.daysLeft > 1 ? 's' : ''}
-                                </span>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-200 text-emerald-900">
-                                    3 articles inclus
-                                </span>
-                            </div>
-                            <p class="text-xs text-emerald-800 mt-0.5 leading-relaxed">
-                                Profitez de vos 7 jours offerts pour publier jusqu'à 3 articles et enregistrer vos commandes sans frais. À l'échéance, vous basculerez sereinement vers le pack Découverte (0 FCFA).
-                            </p>
-                        </div>
-                    </div>
-                    <button 
-                        type="button" 
-                        class="btn-trigger-subscription px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-extrabold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
-                    >
-                        <i class="fa-solid fa-crown text-xs"></i>
-                        <span>S'abonner dès maintenant</span>
-                    </button>
-                </div>
-            `;
-        }
-
-        if (subCalc.status === 'trial_expiring') {
-            return `
-                <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/60 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-pulse-slow">
-                    <div class="flex items-start gap-3.5">
-                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shrink-0 shadow-xs">
-                            <i class="fa-solid fa-hourglass-half"></i>
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="font-heading font-extrabold text-sm sm:text-base text-amber-950">
-                                    ⏰ Attention : Votre essai gratuit expire dans ${subCalc.daysLeft} jour${subCalc.daysLeft > 1 ? 's' : ''} !
-                                </span>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 text-amber-950">
-                                    Bascule Découverte
-                                </span>
-                            </div>
-                            <p class="text-xs text-amber-900 mt-0.5 leading-relaxed">
-                                Votre boutique continuera sans coupure avec le pack gratuit Découverte (1 article actif, 15 cmd/mois). Passez à Pro pour garder plusieurs articles.
-                            </p>
-                        </div>
-                    </div>
-                    <button 
-                        type="button" 
-                        class="btn-trigger-subscription px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-heading font-extrabold text-xs rounded-xl shadow-md shadow-amber-500/25 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
-                    >
-                        <i class="fa-solid fa-wallet text-xs"></i>
-                        <span>Pérenniser ma boutique (Wave / OM)</span>
-                    </button>
-                </div>
-            `;
-        }
-
-        if (subCalc.isExpired) {
-            return `
-                <div class="bg-rose-50 border-2 border-rose-300 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
-                    <div class="flex items-start gap-3.5">
-                        <div class="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shrink-0 shadow-xs">
-                            <i class="fa-solid fa-lock"></i>
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="font-heading font-extrabold text-base text-rose-950">
-                                    ⛔ Période d'essai terminée — Boutique en pause
-                                </span>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-200 text-rose-950">
-                                    Paywall
-                                </span>
-                            </div>
-                            <p class="text-xs text-rose-800 mt-1 leading-relaxed">
-                                Votre période d'essai de 7 jours est terminée. Vos articles sont temporairement masqués aux acheteurs sur le campus. Activez votre formule dès 1 500 F/mois pour réactiver votre boutique immédiatement.
-                            </p>
-                        </div>
-                    </div>
-                    <button 
-                        type="button" 
-                        class="btn-trigger-subscription px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white font-heading font-extrabold text-xs sm:text-sm rounded-xl shadow-lg shadow-rose-600/30 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
-                    >
-                        <i class="fa-solid fa-bolt text-xs"></i>
-                        <span>Activer mon abonnement</span>
-                    </button>
-                </div>
-            `;
-        }
-
         if (subCalc.status === 'active') {
             return `
                 <div class="bg-white border border-slate-200/80 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-xs shadow-2xs flex-wrap">
@@ -1397,6 +1301,7 @@ export function createSellerDashboard({
                     switchSubTab('products');
                     loadData(true);
                 },
+                onOpenSubscription: openSubscriptionHandler,
             });
             containerEl.querySelector('#seller-tab-content')?.appendChild(productManagerEl);
         } else if (activeSubTab === 'profile') {

@@ -8,6 +8,7 @@ import { loginSeller, registerSeller, verifySellerOtp, resendSellerOtp } from '.
 import { CATEGORIES } from '../../services/catalog-service.js';
 import { SUPPORT_CONFIG } from '../../config/support.js';
 import { SUBSCRIPTION_PLANS } from '../../config/subscription.js';
+import { PAVILLONS_UIDT } from './SellerProfileView.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -21,8 +22,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     modalEl.id = 'seller-auth-modal-overlay';
     modalEl.className = 'fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300';
 
-    let activeTab = 'login'; // 'login' | 'terms' | 'register' | 'otp' | 'pending' | 'forgot-password'
-    let selectedPlan = 'starter'; // 'starter' (1500 FCFA/mois - 5 produits) | 'pro' (2500 FCFA/mois - 10 produits)
+    let activeTab = 'login'; // 'login' | 'register' | 'otp' | 'pending' | 'forgot-password'
     let pendingOtpEmail = '';
     let pendingRegistration = null;
     let otpCooldown = 0;
@@ -80,11 +80,9 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     ? renderPendingScreen() 
                     : (activeTab === 'otp' 
                         ? renderOtpScreen() 
-                        : (activeTab === 'terms' 
-                            ? renderTermsScreen() 
-                            : (activeTab === 'forgot-password' 
-                                ? renderForgotPasswordScreen() 
-                                : renderTabsAndForm())))}
+                        : (activeTab === 'forgot-password' 
+                            ? renderForgotPasswordScreen() 
+                            : renderTabsAndForm()))}
             </div>
         `;
 
@@ -92,24 +90,20 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     }
 
     function renderPendingScreen() {
-        const planLabel = selectedPlan === 'pro' 
-            ? 'Pack Pro (10 produits max • 2 500 FCFA/mois)' 
-            : 'Pack Starter (5 produits max • 1 500 FCFA/mois)';
-
         return `
             <div class="p-6 flex flex-col items-center text-center my-auto overflow-y-auto">
                 <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-3xl mb-4 animate-pulse">
                     <i class="fa-solid fa-hourglass-half"></i>
                 </div>
                 <h3 class="font-heading font-extrabold text-xl text-slate-900 mb-2">Demande en cours d'examen</h3>
-                <div class="mb-4 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700">
-                    <span class="text-slate-400 text-[10px] uppercase font-bold block">Formule sélectionnée</span>
-                    <strong class="text-slate-900">${planLabel}</strong>
+                <div class="mb-4 px-3.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+                    <span class="text-emerald-700 text-[10px] uppercase font-bold block">Formule d'accueil</span>
+                    <strong class="text-emerald-950 font-heading">Pack Découverte (0 FCFA • Gratuit)</strong>
                 </div>
                 <p class="text-xs text-slate-600 mb-4 leading-relaxed">
-                    Votre candidature pour ouvrir une boutique sur Campus Market a bien été transmise au Super Administrateur de l'UIDT.
+                    Votre candidature pour ouvrir une boutique sur Campus Market a bien été transmise à l'administration de l'UIDT.
                     <br><br>
-                    Vous recevrez une confirmation sous <strong>24h à 48h</strong>.
+                    Dès validation sous <strong>24h à 48h</strong>, votre boutique s'activera automatiquement sous le <strong>Pack Découverte permanent</strong> (1 article en vente, jusqu'à 5 ventes/mois sans frais).
                 </p>
 
                 <div class="w-full mb-5 p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex flex-col gap-2 text-left">
@@ -272,174 +266,6 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
         `;
     }
 
-    function renderTermsScreen() {
-        return `
-            <div class="p-5 sm:p-6 overflow-y-auto flex flex-col gap-4 text-slate-900">
-                <div class="text-center">
-                    <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl mx-auto mb-2">
-                        <i class="fa-solid fa-handshake"></i>
-                    </div>
-                    <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900 leading-tight">Conditions & Formules d'Adhésion</h3>
-                    <p class="text-xs text-slate-500 mt-1">Rejoignez la première marketplace étudiante de l'UIDT</p>
-                </div>
-
-                <!-- Conditions essentielles -->
-                <div class="bg-slate-50 rounded-2xl border border-slate-200/80 p-3.5 flex flex-col gap-2">
-                    <h4 class="font-heading font-bold text-xs text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
-                        <i class="fa-solid fa-scroll text-primary text-xs"></i>
-                        <span>Modalités pour devenir vendeur</span>
-                    </h4>
-                    <ul class="flex flex-col gap-1.5 text-xs text-slate-600 leading-snug">
-                        <li class="flex items-start gap-2">
-                            <i class="fa-solid fa-check text-emerald-600 text-[11px] mt-0.5 shrink-0"></i>
-                            <span>Être <strong>étudiant inscrit</strong> à l'Université Iba Der Thiam de Thiès.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <i class="fa-solid fa-check text-emerald-600 text-[11px] mt-0.5 shrink-0"></i>
-                            <span>Email étudiant institutionnel <strong>@univ-thies.sn</strong> obligatoire.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <i class="fa-solid fa-check text-emerald-600 text-[11px] mt-0.5 shrink-0"></i>
-                            <span>Examen et validation de votre dossier sous <strong>24h à 48h</strong> par l'administration.</span>
-                        </li>
-                        <li class="flex items-start gap-2 pt-1 border-t border-slate-200/60">
-                            <i class="fa-solid fa-file-contract text-primary text-[11px] mt-0.5 shrink-0"></i>
-                            <span>Adhésion aux <a href="#terms" target="_blank" class="text-primary hover:underline font-bold">Règles & CGU officielles</a> du campus.</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Offre de bienvenue Free Tier -->
-                <div class="bg-emerald-50 rounded-2xl border border-emerald-200/90 p-3.5 flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-sm shrink-0 mt-0.5 shadow-xs">
-                        <i class="fa-solid fa-gift"></i>
-                    </div>
-                    <div>
-                        <span class="font-heading font-extrabold text-xs text-emerald-950 block">🎉 7 Jours d'essai 100% GRATUIT</span>
-                        <p class="text-[11px] text-emerald-800 leading-snug mt-0.5">
-                            Dès validation de votre candidature, profitez de <strong>7 jours d'essai offerts (3 articles inclus)</strong> pour tester la vente sans aucun frais initial.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Formules d'abonnement -->
-                <div class="flex flex-col gap-2.5">
-                    <div class="flex items-center justify-between">
-                        <h4 class="font-heading font-bold text-xs text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
-                            <i class="fa-solid fa-crown text-amber-500 text-xs"></i>
-                            <span>Formules d'abonnement post-essai</span>
-                        </h4>
-                        <span class="text-[10px] text-slate-400 font-semibold">Tarifs transparents</span>
-                    </div>
-
-                    <!-- Option Starter -->
-                    <div 
-                        id="plan-option-starter" 
-                        class="p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                            selectedPlan === 'starter' 
-                                ? 'border-primary bg-primary/5 shadow-xs' 
-                                : 'border-slate-200 bg-white hover:border-slate-300'
-                        }"
-                    >
-                        <div class="flex items-center gap-3">
-                            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                selectedPlan === 'starter' ? 'border-primary' : 'border-slate-300'
-                            }">
-                                ${selectedPlan === 'starter' ? '<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>' : ''}
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="font-heading font-extrabold text-sm text-slate-900">Pack Starter</span>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">5 produits</span>
-                                </div>
-                                <span class="text-[11px] text-slate-500">Catalogue de 5 produits</span>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="font-heading font-extrabold text-base text-primary tabular-nums">1 500</span>
-                            <span class="text-[10px] font-bold text-slate-500 block leading-none">FCFA / mois</span>
-                        </div>
-                    </div>
-
-                    <!-- Option Pro -->
-                    <div 
-                        id="plan-option-pro" 
-                        class="p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-3 relative overflow-hidden ${
-                            selectedPlan === 'pro' 
-                                ? 'border-amber-400 bg-amber-50/50 shadow-xs' 
-                                : 'border-slate-200 bg-white hover:border-slate-300'
-                        }"
-                    >
-                        <div class="flex items-center gap-3">
-                            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                selectedPlan === 'pro' ? 'border-amber-500' : 'border-slate-300'
-                            }">
-                                ${selectedPlan === 'pro' ? '<span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>' : ''}
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="font-heading font-extrabold text-sm text-slate-900">Pack Pro</span>
-                                    <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-400 text-slate-950">10 produits</span>
-                                </div>
-                                <span class="text-[11px] text-slate-500">Catalogue de 10 produits & stats avancées</span>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="font-heading font-extrabold text-base text-slate-900 tabular-nums">2 500</span>
-                            <span class="text-[10px] font-bold text-slate-500 block leading-none">FCFA / mois</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Information Paiement SasPay Wave & OM -->
-                <div class="bg-sky-50/70 rounded-2xl border border-sky-200/90 p-3 flex items-start gap-2.5">
-                    <div class="w-7 h-7 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-xs shrink-0 mt-0.5">
-                        <i class="fa-solid fa-mobile-screen"></i>
-                    </div>
-                    <div>
-                        <span class="font-heading font-bold text-xs text-sky-950 block">Paiement Mobile Wave & Orange Money</span>
-                        <p class="text-[11px] text-sky-800 leading-snug mt-0.5">
-                            Aucun paiement immédiat n'est requis aujourd'hui. Vos 7 jours d'essai démarrent gratuitement. Vous choisirez ensuite votre opérateur (Wave ou OM) pour vous abonner.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Case à cocher d'acceptation -->
-                <label class="flex items-start gap-2.5 cursor-pointer pt-1 group">
-                    <input 
-                        type="checkbox" 
-                        id="terms-checkbox" 
-                        class="mt-0.5 w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
-                    >
-                    <span class="text-xs text-slate-700 leading-tight group-hover:text-slate-900 select-none">
-                        J'ai lu et j'accepte les <strong>modalités pour devenir vendeur</strong> et je confirme ma souscription à la formule sélectionnée.
-                    </span>
-                </label>
-
-                <!-- Boutons d'action -->
-                <div class="flex flex-col gap-2 pt-1">
-                    <button 
-                        type="button" 
-                        id="btn-proceed-to-register" 
-                        disabled
-                        class="w-full py-3.5 bg-primary text-white font-heading font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 min-h-[46px] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95"
-                    >
-                        <span>Continuer vers ma demande</span>
-                        <i class="fa-solid fa-arrow-right text-xs"></i>
-                    </button>
-
-                    <button 
-                        type="button" 
-                        id="btn-terms-back-login" 
-                        class="w-full py-2.5 text-xs text-slate-500 hover:text-slate-800 font-semibold transition-colors min-h-[40px] cursor-pointer"
-                    >
-                        Déjà un compte ? Se connecter
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
     function renderTabsAndForm() {
         return `
             <!-- Onglets Connexion / Inscription -->
@@ -452,7 +278,7 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     Se connecter
                 </button>
                 <button id="tab-register" class="flex-1 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-                    activeTab === 'register' || activeTab === 'terms'
+                    activeTab === 'register'
                         ? 'border-primary text-primary bg-white'
                         : 'border-transparent text-slate-500 hover:text-slate-800'
                 }">
@@ -513,22 +339,20 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
     function renderRegisterForm() {
         return `
             <form id="seller-register-form" class="flex flex-col gap-3.5">
-                <!-- Récapitulatif de la formule sélectionnée -->
-                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <span class="w-2.5 h-2.5 rounded-full shrink-0 ${selectedPlan === 'pro' ? 'bg-amber-400' : 'bg-primary'}"></span>
-                        <div class="truncate">
-                            <span class="text-slate-500 text-[10px] block leading-none">Formule choisie (Essai 7j inclus)</span>
-                            <span class="text-slate-800 font-bold text-xs truncate">
-                                ${selectedPlan === 'pro' 
-                                    ? 'Pack Pro (2 500 FCFA/mois — 10 produits)' 
-                                    : 'Pack Starter (1 500 FCFA/mois — 5 produits)'}
-                            </span>
-                        </div>
+                <!-- Formule Découverte 0 FCFA -->
+                <div class="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 flex items-center gap-3 text-xs">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-sm shrink-0">
+                        <i class="fa-solid fa-store"></i>
                     </div>
-                    <button type="button" id="btn-change-selected-plan" class="text-primary font-bold hover:underline shrink-0 text-xs ml-2 cursor-pointer">
-                        Changer
-                    </button>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-emerald-950 font-extrabold text-xs">Pack Découverte — Gratuit (0 FCFA)</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">1 produit inclus</span>
+                        </div>
+                        <p class="text-[11px] text-emerald-800 mt-0.5 leading-snug">
+                            Ouvrez votre boutique gratuitement avec 1 article actif et jusqu'à 5 ventes/mois. Vous pourrez passer aux Packs Pro ou Business plus tard.
+                        </p>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2.5">
@@ -567,10 +391,38 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     </div>
                 </div>
 
+                <!-- Localisation sur le campus (Pavillon & Chambre) -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-pavillon">Pavillon de résidence *</label>
+                        <select id="reg-pavillon" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer">
+                            <option value="" disabled selected>Choisir pavillon...</option>
+                            ${PAVILLONS_UIDT.map((p) => `<option value="${p.id}">${p.label}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-chambre">Numéro de chambre *</label>
+                        <input type="text" id="reg-chambre" required placeholder="Ex: Ch. 12, B-204" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1" for="reg-password">Mot de passe (min 6 car.) *</label>
                     <input type="password" id="reg-password" required minlength="6" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
                 </div>
+
+                <!-- Acceptation des conditions -->
+                <label class="flex items-start gap-2.5 cursor-pointer pt-1 group">
+                    <input 
+                        type="checkbox" 
+                        id="reg-terms-checkbox" 
+                        required
+                        class="mt-0.5 w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
+                    >
+                    <span class="text-[11px] text-slate-600 leading-tight group-hover:text-slate-900 select-none">
+                        J'ai lu et j'accepte les <a href="#terms" target="_blank" class="text-primary hover:underline font-bold">conditions d'utilisation</a> et je confirme être étudiant inscrit à l'UIDT.
+                    </span>
+                </label>
 
                 <button 
                     type="submit" 
@@ -590,54 +442,14 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
             if (e.target === modalEl) close();
         });
 
-        // 1. Événements de l'écran Modalités & Conditions (terms)
-        if (activeTab === 'terms') {
-            const planStarter = modalEl.querySelector('#plan-option-starter');
-            const planPro = modalEl.querySelector('#plan-option-pro');
-            const checkbox = modalEl.querySelector('#terms-checkbox');
-            const proceedBtn = modalEl.querySelector('#btn-proceed-to-register');
-            const backLoginBtn = modalEl.querySelector('#btn-terms-back-login');
-
-            planStarter?.addEventListener('click', () => {
-                selectedPlan = 'starter';
-                render();
-            });
-
-            planPro?.addEventListener('click', () => {
-                selectedPlan = 'pro';
-                render();
-            });
-
-            checkbox?.addEventListener('change', (e) => {
-                if (proceedBtn) {
-                    proceedBtn.disabled = !e.target.checked;
-                }
-            });
-
-            proceedBtn?.addEventListener('click', () => {
-                activeTab = 'register';
-                render();
-            });
-
-            backLoginBtn?.addEventListener('click', () => {
-                activeTab = 'login';
-                render();
-            });
-        }
-
-        // 2. Bascule d'onglets
+        // 1. Bascule d'onglets
         modalEl.querySelector('#tab-login')?.addEventListener('click', () => {
             activeTab = 'login';
             render();
         });
 
         modalEl.querySelector('#tab-register')?.addEventListener('click', () => {
-            activeTab = 'terms';
-            render();
-        });
-
-        modalEl.querySelector('#btn-change-selected-plan')?.addEventListener('click', () => {
-            activeTab = 'terms';
+            activeTab = 'register';
             render();
         });
 
@@ -821,12 +633,23 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
         // 5. Soumission Inscription
         modalEl.querySelector('#seller-register-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const termsCheckbox = modalEl.querySelector('#reg-terms-checkbox');
+            if (termsCheckbox && !termsCheckbox.checked) {
+                if (errorEl) {
+                    errorEl.textContent = "Veuillez accepter les conditions d'utilisation pour continuer.";
+                    errorEl.classList.remove('hidden');
+                }
+                return;
+            }
+
             const prenom = modalEl.querySelector('#reg-prenom').value;
             const nom = modalEl.querySelector('#reg-nom').value;
             const email = modalEl.querySelector('#reg-email').value;
             const telephone = modalEl.querySelector('#reg-phone').value;
             const shopName = modalEl.querySelector('#reg-shop-name').value;
             const category = modalEl.querySelector('#reg-category').value;
+            const pavillon = modalEl.querySelector('#reg-pavillon')?.value || '';
+            const chambre = modalEl.querySelector('#reg-chambre')?.value?.trim() || '';
             const password = modalEl.querySelector('#reg-password').value;
             const btn = modalEl.querySelector('#btn-seller-reg-submit');
 
@@ -842,8 +665,10 @@ export function createSellerAuthModal({ onAuthenticated } = {}) {
                     telephone,
                     shopName,
                     category,
+                    pavillon,
+                    chambre,
                     password,
-                    plan: selectedPlan,
+                    plan: 'decouverte',
                 };
                 const regRes = await registerSeller(pendingRegistration);
                 if (regRes?.status === 'approved') {

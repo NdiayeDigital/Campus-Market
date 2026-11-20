@@ -6,7 +6,7 @@
 import { supabase } from './supabase.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
 import { getSuspendedSellersCache } from './admin-service.js';
-import { computeSubscriptionStatus } from '../config/subscription.js';
+import { computeSubscriptionStatus, FEATURE_FLAGS, resolvePlanKey } from '../config/subscription.js';
 
 // Clés de persistance locale pour tolérance hors-ligne
 const PRODUCTS_CACHE_KEY = 'campus_market_cached_products';
@@ -112,30 +112,25 @@ export const CATEGORIES = [
  * @param {boolean} [options.shuffle=true] - Mélanger aléatoirement l'ordre des boutiques pour le tour de rôle
  * @returns {Array<Object>}
  */
-export function interleaveProductsBySeller(products, { shuffle = true } = {}) {
-    if (!Array.isArray(products) || products.length <= 1) {
-        return products || [];
-    }
-
-    // 1. Regroupement des produits par boutique (sellerKey) en préservant l'ordre chronologique individuel
+/**
+ * Répartit équitablement les produits entre les boutiques via un algorithme Round-Robin.
+ * @param {Array<Object>} prodsList
+ * @param {boolean} shuffle
+ * @returns {Array<Object>}
+ */
+function roundRobinDistribute(prodsList, shuffle) {
+    if (!Array.isArray(prodsList) || prodsList.length <= 1) return prodsList || [];
     const sellerQueues = new Map();
-    for (const prod of products) {
+    for (const prod of prodsList) {
         const sellerKey = prod.seller_id || prod.seller?.id || 'default';
         if (!sellerQueues.has(sellerKey)) {
             sellerQueues.set(sellerKey, []);
         }
         sellerQueues.get(sellerKey).push(prod);
     }
-
     const sellerKeys = Array.from(sellerQueues.keys());
+    if (sellerKeys.length <= 1) return prodsList;
 
-    // S'il n'y a qu'une seule boutique, aucun entrelacement nécessaire
-    if (sellerKeys.length <= 1) {
-        return products;
-    }
-
-    // 2. Mélange aléatoire (Fisher-Yates) de l'ordre d'apparition des boutiques
-    // pour garantir qu'aucune boutique n'ait le monopole de la toute première place
     if (shuffle) {
         for (let i = sellerKeys.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -145,9 +140,6 @@ export function interleaveProductsBySeller(products, { shuffle = true } = {}) {
         }
     }
 
-    // 3. Distribution équitable au tour de rôle (Round-Robin) :
-    // Tour 1 : 1 produit de chaque boutique
-    // Tour 2 : 2e produit de chaque boutique restante, etc.
     const result = [];
     let hasMore = true;
     while (hasMore) {
@@ -162,8 +154,35 @@ export function interleaveProductsBySeller(products, { shuffle = true } = {}) {
             }
         }
     }
-
     return result;
+}
+
+/**
+ * Répartit équitablement les produits entre les différentes boutiques (Approche B - Round-Robin).
+ * Les produits sponsorisés en promotion active (7 jours) bénéficient d'une position prioritaire en tête de liste.
+ *
+ * @param {Array<Object>} products - Liste brute des produits actifs
+ * @param {Object} [options]
+ * @param {boolean} [options.shuffle=true] - Mélanger aléatoirement l'ordre des boutiques pour le tour de rôle
+ * @returns {Array<Object>}
+ */
+export function interleaveProductsBySeller(products, { shuffle = true } = {}) {
+    if (!Array.isArray(products) || products.length <= 1) {
+        return products || [];
+    }
+
+    // Priorisation des produits promus (7 jours avec badge Promo)
+    const now = Date.now();
+    const isPromoted = (p) => Boolean(p.is_promoted && (!p.promoted_until || new Date(p.promoted_until).getTime() > now));
+
+    const promoted = products.filter(isPromoted);
+    const standard = products.filter((p) => !isPromoted(p));
+
+    if (promoted.length > 0 && standard.length > 0) {
+        return [...roundRobinDistribute(promoted, shuffle), ...roundRobinDistribute(standard, shuffle)];
+    }
+
+    return roundRobinDistribute(products, shuffle);
 }
 
 /**
@@ -332,7 +351,7 @@ export async function fetchTopShops(preloadedProducts = []) {
         const queries = [
             supabase
                 .from('profiles')
-                .select('id, prenom, nom, telephone, is_open, shop_name, shop_category, avatar_url')
+                .select('id, prenom, nom, telephone, is_open, shop_name, shop_category, avatar_url, subscription_plan, subscription_status, pack_actuel, subscription_expires_at')
                 .eq('role', 'vendeur')
                 .abortSignal(controller.signal),
             supabase
@@ -382,6 +401,7 @@ export async function fetchTopShops(preloadedProducts = []) {
                 if (st && st.seller_id) {
                     statsMap.set(st.seller_id, {
                         deliveredOrders: Number(st.delivered_orders_count) || 0,
+                        distinctBuyers: Number(st.distinct_buyers_count) || 0,
                     });
                 }
             });
@@ -411,7 +431,7 @@ export async function fetchTopShops(preloadedProducts = []) {
         const suspendedIds = getSuspendedSellersCache();
 
         // Calcul et enrichissement des marchands
-        const computedSellers = sellers
+        let computedSellers = sellers
             .filter((seller) => !suspendedIds.includes(seller.id))
             .map((seller) => {
                 const sellerReviews = reviewsList.filter((r) => r.seller_id === seller.id);
@@ -423,6 +443,7 @@ export async function fetchTopShops(preloadedProducts = []) {
 
                 const rpcStats = statsMap.get(seller.id);
                 const deliveredOrders = rpcStats ? rpcStats.deliveredOrders : 0;
+                const distinctBuyers = rpcStats ? rpcStats.distinctBuyers : 0;
                 const activeProducts = productCounts.get(seller.id) || 0;
                 const shopName = seller.shop_name || (seller.prenom ? `Boutique ${seller.prenom}` : 'Boutique UIDT');
 
@@ -432,9 +453,26 @@ export async function fetchTopShops(preloadedProducts = []) {
                     reviewCount,
                     avgRating: Number(avgRating.toFixed(1)),
                     deliveredOrders,
+                    distinctBuyers,
                     activeProducts,
                 };
             });
+
+        // FR-18 : Règle Top Vendeurs sous QUOTAS_ENABLED
+        // N'afficher que les vendeurs actifs en Pack Business (clé 'pro', 2 000 FCFA)
+        // ayant des ventes validées hors même_chambre avec au moins 10 acheteurs distincts.
+        if (FEATURE_FLAGS.QUOTAS_ENABLED) {
+            const now = Date.now();
+            computedSellers = computedSellers.filter((seller) => {
+                const isBusinessPlan = seller.subscription_plan === 'pro' || 
+                                       seller.pack_actuel === 'pro' || 
+                                       resolvePlanKey(seller.subscription_plan) === 'pro';
+                const isPlanActive = seller.subscription_status === 'active' || 
+                                     (seller.subscription_expires_at && new Date(seller.subscription_expires_at).getTime() > now);
+                const hasTenDistinctBuyers = (seller.distinctBuyers || 0) >= 10;
+                return isBusinessPlan && isPlanActive && hasTenDistinctBuyers;
+            });
+        }
 
         // Tri multi-critères :
         // 1. Boutiques ouvertes en priorité

@@ -28,7 +28,7 @@ function getEnvVar(key) {
 }
 
 const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('SUPABASE_URL') || 'https://fqulqgdjusfzhcjpvyay.supabase.co';
-const supabaseKey = getEnvVar('SUPABASE_SERVICE_ROLE_KEY') || getEnvVar('VITE_SUPABASE_ANON_KEY') || 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
+const supabaseKey = getEnvVar('SUPABASE_SERVICE_ROLE_KEY') || getEnvVar('VITE_SUPABASE_ANON_KEY') || getEnvVar('SUPABASE_ANON_KEY');
 
 if (!supabaseUrl || !supabaseKey) {
     console.error('❌ Erreur : Variables Supabase manquantes.');

@@ -178,6 +178,20 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                     // Règle métier : l'annulation par le client n'est plus faisable dès que la commande est en livraison ('shipped') ou livrée ('delivered')
                     const canCancel = ['pending', 'confirmed', 'processing'].includes(currentStatus);
 
+                    // Message WhatsApp enrichi Option A pour le suivi de commande
+                    const orderRef = order.reference || `#CMD-${idx + 1}`;
+                    const itemTitle = firstItem?.title || 'votre article';
+                    const itemQty = firstItem?.quantity ? ` (x${firstItem.quantity})` : '';
+                    const extraItems = totalItemsCount > 1 ? ` (+${totalItemsCount - 1} autre${totalItemsCount > 2 ? 's' : ''})` : '';
+                    const deliveryPlace = [order.pavillon, order.chambre ? `Chambre ${order.chambre}` : ''].filter(Boolean).join(', ') || 'Campus UIDT';
+                    const buyerInfo = order.buyer_name ? `\n👤 Client : ${order.buyer_name}` : '';
+
+                    const waMessage = `Bonjour ! Je vous contacte concernant ma commande ${orderRef} sur Campus Market :
+📦 Article : ${itemTitle}${itemQty}${extraItems}
+📍 Livraison : ${deliveryPlace}${buyerInfo}
+
+Pouvez-vous me donner des nouvelles de la livraison ? Merci !`;
+
                     return `
                         <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4 transition-all">
                             <!-- En-tête de la commande -->
@@ -285,7 +299,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                                         <span>Appeler</span>
                                     </a>
                                     <a 
-                                        href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Bonjour ! Je vous contacte au sujet de ma commande ${order.reference || ''} sur Campus Market.`)}" 
+                                        href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}" 
                                         target="_blank" 
                                         rel="noopener" 
                                         class="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm min-h-[44px]"

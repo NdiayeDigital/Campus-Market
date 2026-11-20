@@ -6,15 +6,16 @@
 export const FEATURE_FLAGS = {
     QUOTAS_ENABLED: false,   // Désactivé par défaut (sécurité production)
     ANNONCES_ENABLED: false, // Désactivé par défaut (sécurité production)
+    ADMIN_STATS_V2: false,   // Stats Admin V2 avec agrégation serveur et taux d'annulation
 };
 
 export const COMPTEURS_DEPUIS_BASCULE = true; // Démarrage des compteurs Découverte à la date de bascule
 
 export const FREE_TRIAL_CONFIG = {
-    durationDays: 7,
-    maxProducts: 3,
-    planId: 'starter',
-    label: '7 Jours Gratuits (3 articles)',
+    durationDays: 0,
+    maxProducts: 1,
+    planId: 'decouverte',
+    label: 'Pack Découverte (0 FCFA)',
 };
 
 export const SASPAY_PAYMENT_LINKS = {
@@ -22,19 +23,85 @@ export const SASPAY_PAYMENT_LINKS = {
     pro: 'https://link.saspay.me/gxky6adwejc',
 };
 
+/**
+ * Correspondances et alias commerciaux vers les clés techniques historiques en base de données.
+ * - Clé technique 'starter' = Pack Pro (1 000 FCFA / 30 jours, ancien prix 1 500)
+ * - Clé technique 'pro'     = Pack Business (2 000 FCFA / 30 jours, ancien prix 2 500)
+ * Alias : pro -> starter (1 000 F), business -> pro (2 000 F).
+ */
+export const PLAN_ALIASES = {
+    starter: 'starter',
+    pro: 'starter',          // Alias commercial Pack Pro -> clé technique starter
+    business: 'pro',         // Alias commercial Pack Business -> clé technique pro
+    pack_pro: 'starter',
+    pack_business: 'pro',
+    pack_starter: 'starter',
+    decouverte: 'decouverte',
+    free: 'decouverte',
+};
+
+/**
+ * Résout la clé technique ('starter' pour Pack Pro, 'pro' pour Pack Business)
+ * en tenant compte de l'alias textuel ou du montant réglé via SasPay.
+ * Compatible avec les nouveaux tarifs (1 000 / 2 000 FCFA) et les anciens abonnements (1 500 / 2 500 FCFA).
+ * @param {string} [planId]
+ * @param {number|string} [amount]
+ * @returns {'decouverte'|'starter'|'pro'}
+ */
+export function resolvePlanKey(planId, amount) {
+    if (amount !== undefined && amount !== null && !isNaN(Number(amount))) {
+        const numAmount = Number(amount);
+        if (numAmount >= 2000) return 'pro';      // Pack Business (2 000 FCFA, compatible ancien 2 500)
+        if (numAmount >= 1000) return 'starter';  // Pack Pro (1 000 FCFA, compatible ancien 1 500)
+        if (numAmount === 0) return 'decouverte';
+    }
+
+    if (!planId) return 'starter';
+    const clean = String(planId).trim().toLowerCase();
+
+    if (clean === 'business' || clean === 'pack_business') {
+        return 'pro';
+    }
+    if (clean === 'starter' || clean === 'pack_starter') {
+        return 'starter';
+    }
+    if (clean === 'decouverte' || clean === 'free') {
+        return 'decouverte';
+    }
+    if (clean === 'pro' || clean === 'pack_pro') {
+        return 'starter'; // Commercial Pack Pro -> clé technique starter
+    }
+
+    return PLAN_ALIASES[clean] || 'starter';
+}
+
+/**
+ * CONFIGURATION UNIQUE ET CENTRALISÉE DES OFFRES VENDEURS
+ * Clés standardisées :
+ * prix, max_produits, max_ventes_mois, promos_par_periode, periode_promo, top_vendeurs
+ */
 export const SUBSCRIPTION_PLANS = {
     decouverte: {
         id: 'decouverte',
         name: 'Pack Découverte',
+        prix: 0,
         price: 0,
         currency: 'XOF',
         priceDisplay: 'Gratuit (0 FCFA)',
         period: 'mois',
         durationDays: 30,
+        isPermanent: true,
+        isFree: true,
+        max_produits: 1,
         maxProducts: 1,
-        maxOrdersPerMonth: 15,
+        max_ventes_mois: 5,
         maxValidatedSalesPerMonth: 5,
+        maxOrdersPerMonth: 15,
+        promos_par_periode: 0,
+        periode_promo: 'none',
         allowPromotions: false,
+        freeAdsPerMonth: 0,
+        top_vendeurs: false,
         allowTopShops: false,
         paymentLink: null,
         badge: 'Découverte',
@@ -42,52 +109,79 @@ export const SUBSCRIPTION_PLANS = {
         description: 'Formule permanente gratuite pour tester et vendre à l\'UIDT',
         features: [
             '1 article actif en vente',
-            'Jusqu\'à 15 commandes reçues par mois',
             'Jusqu\'à 5 ventes validées par mois',
             'Notifications & encaissement direct Wave/OM',
         ],
     },
     starter: {
         id: 'starter',
-        name: 'Pack Starter',
-        price: 1500,
+        name: 'Pack Pro',
+        prix: 1000,
+        price: 1000,
         currency: 'XOF',
-        priceDisplay: '1 500 FCFA',
+        priceDisplay: '1 000 FCFA',
         period: 'mois',
         durationDays: 30,
+        max_produits: 5,
         maxProducts: 5,
+        max_ventes_mois: null, // Ventes illimitées
+        maxValidatedSalesPerMonth: null,
+        maxOrdersPerMonth: null, // Commandes illimitées
+        promos_par_periode: 1,
+        periode_promo: 'month', // 1 promotion par mois (reset le 1er du mois)
+        allowPromotions: true,
+        maxPromotionsPerMonth: 1,
+        freeAdsPerMonth: 0,
+        top_vendeurs: false,
+        allowTopShops: false,
         paymentLink: SASPAY_PAYMENT_LINKS.starter,
-        badge: 'Essentiel',
-        badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
-        description: 'Idéal pour démarrer votre boutique étudiante à l\'UIDT',
+        badge: 'Pro',
+        badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        description: 'Pour développer vos ventes régulières avec promotions mensuelles',
         features: [
-            'Catalogue jusqu\'à 5 articles',
-            'Commandes & notifications en direct',
-            'Paiement Wave & OM direct des acheteurs',
-            'Support vendeur dédié',
+            'Catalogue jusqu\'à 5 articles actifs',
+            'Commandes & ventes validées illimitées',
+            '1 promotion d\'article par mois (7 jours en tête de liste)',
+            'Notifications & encaissement direct Wave/OM',
         ],
     },
     pro: {
         id: 'pro',
-        name: 'Pack Pro',
-        price: 2500,
+        name: 'Pack Business',
+        prix: 2000,
+        price: 2000,
         currency: 'XOF',
-        priceDisplay: '2 500 FCFA',
+        priceDisplay: '2 000 FCFA',
         period: 'mois',
         durationDays: 30,
+        max_produits: 10,
         maxProducts: 10,
+        max_ventes_mois: null, // Ventes illimitées
+        maxValidatedSalesPerMonth: null,
+        maxOrdersPerMonth: null, // Commandes illimitées
+        promos_par_periode: 1,
+        periode_promo: 'week', // 1 promotion par semaine (reset chaque lundi 00h00 Dakar)
+        maxPromotionsPerWeek: 1,
+        promotionsFrequency: 'week',
+        allowPromotions: true,
+        freeAdsPerMonth: 0, // Suppression des 2 campagnes publicitaires au profit de la promo hebdo
+        top_vendeurs: true,
+        allowTopShops: true, // Accès exclusif Top Vendeurs (FR-18)
         paymentLink: SASPAY_PAYMENT_LINKS.pro,
-        badge: 'Populaire',
+        badge: 'Business',
         badgeColor: 'bg-amber-400 text-slate-950 border-amber-500',
-        description: 'Pour les vendeurs réguliers avec un catalogue élargi',
+        description: 'Pour les commerçants majeurs et les boutiques à fort volume',
         features: [
-            'Catalogue jusqu\'à 10 articles',
-            'Mise en avant sur la page d\'accueil',
-            'Statistiques de vente avancées',
-            'Badge Boutique Recommandée',
+            'Catalogue jusqu\'à 10 articles actifs',
+            'Commandes & ventes validées illimitées',
+            '1 promotion par semaine (reset chaque lundi)',
+            'Mise en avant exclusive dans « Top vendeurs » (FR-18)',
         ],
     },
 };
+
+// Alias commercial direct pour SUBSCRIPTION_PLANS.business
+SUBSCRIPTION_PLANS.business = SUBSCRIPTION_PLANS.pro;
 
 export const PAYMENT_OPERATORS = [
     {
@@ -124,6 +218,10 @@ export const PAYMENT_OPERATORS = [
 export function getPlanDetails(planId) {
     if (planId && SUBSCRIPTION_PLANS[planId]) {
         return SUBSCRIPTION_PLANS[planId];
+    }
+    const resolvedKey = resolvePlanKey(planId);
+    if (resolvedKey && SUBSCRIPTION_PLANS[resolvedKey]) {
+        return SUBSCRIPTION_PLANS[resolvedKey];
     }
     return SUBSCRIPTION_PLANS.starter;
 }
@@ -204,102 +302,151 @@ export function computeSubscriptionStatus(profile) {
                 canPublish: true,
                 canSell: true,
                 maxProducts: plan.maxProducts || 5,
+                maxOrdersPerMonth: plan.maxOrdersPerMonth,
+                maxValidatedSalesPerMonth: plan.maxValidatedSalesPerMonth,
                 plan,
                 expiresAt: new Date(paidExpiry),
             };
         } else {
             // Abonnement payant arrivé à terme
+            // Rétrogradation automatique vers le pack Découverte permanent (0 FCFA)
+            const decouvertePlan = SUBSCRIPTION_PLANS.decouverte;
             return {
-                status: 'expired',
-                daysLeft: 0,
-                daysRemaining: 0,
-                isExpired: true,
+                status: 'decouverte',
+                daysLeft: 999,
+                daysRemaining: 999,
+                isExpired: false,
                 isPaid: false,
                 isTrial: false,
                 isSuperAdmin: false,
-                canPublish: false,
-                canSell: false,
-                maxProducts: 0,
-                plan,
-                expiresAt: new Date(paidExpiry),
-            };
-        }
-    }
-
-    // 2. Vérification de la période d'essai gratuite (7 jours)
-    let trialEndMs = null;
-    if (profile.trial_extended_ends_at) {
-        // Cas 8 : Prolongation manuelle accordée par l'administrateur
-        trialEndMs = new Date(profile.trial_extended_ends_at).getTime();
-    } else if (profile.trial_ends_at) {
-        trialEndMs = new Date(profile.trial_ends_at).getTime();
-    } else if (profile.trial_started_at) {
-        trialEndMs = new Date(profile.trial_started_at).getTime() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000;
-    } else if (profile.role === 'vendeur' && (profile.subscription_status === 'trial' || !profile.subscription_status)) {
-        // Nouveau vendeur actif : accorder 7 jours complets dès l'activation
-        trialEndMs = now + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000;
-    } else if (profile.created_at) {
-        // Rétrocompatibilité si trial_ends_at non renseigné
-        trialEndMs = new Date(profile.created_at).getTime() + FREE_TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000;
-    }
-
-    if (trialEndMs) {
-        if (trialEndMs > now) {
-            const daysLeft = Math.max(1, Math.ceil((trialEndMs - now) / (1000 * 60 * 60 * 24)));
-            const status = daysLeft <= 2 ? 'trial_expiring' : 'trial_active';
-            return {
-                status,
-                daysLeft,
-                daysRemaining: daysLeft,
-                isExpired: false,
-                isPaid: false,
-                isTrial: true,
-                isSuperAdmin: false,
                 canPublish: true,
                 canSell: true,
-                maxProducts: FREE_TRIAL_CONFIG.maxProducts, // 3 articles max pendant l'essai
-                plan: SUBSCRIPTION_PLANS.starter,
-                expiresAt: new Date(trialEndMs),
+                maxProducts: 1,
+                maxOrdersPerMonth: 15,
+                ordersLimitPerMonth: 15,
+                maxValidatedSalesPerMonth: 5,
+                salesLimitPerMonth: 5,
+                plan: decouvertePlan,
+                expiresAt: null,
             };
         }
     }
 
-    // 3. Période d'essai ou abonnement expiré
-    // Si le flag QUOTAS_ENABLED est actif ou si le vendeur a déjà le pack Découverte scellé
-    if (FEATURE_FLAGS.QUOTAS_ENABLED || profile.pack_actuel === 'decouverte') {
-        const decouvertePlan = SUBSCRIPTION_PLANS.decouverte;
-        return {
-            status: 'decouverte',
-            daysLeft: 999,
-            daysRemaining: 999,
-            isExpired: false,
-            isPaid: false,
-            isTrial: false,
-            isSuperAdmin: false,
-            canPublish: true,
-            canSell: true,
-            maxProducts: 1,
-            maxOrdersPerMonth: 15,
-            ordersLimitPerMonth: 15,
-            maxValidatedSalesPerMonth: 5,
-            salesLimitPerMonth: 5,
-            plan: decouvertePlan,
-            expiresAt: null,
-        };
-    }
-
+    // 2. Absence d'abonnement payant actif : Attribution permanente du Pack Découverte (0 FCFA)
+    const decouvertePlan = SUBSCRIPTION_PLANS.decouverte;
     return {
-        status: 'trial_expired',
-        daysLeft: 0,
-        daysRemaining: 0,
-        isExpired: true,
+        status: 'decouverte',
+        daysLeft: 999,
+        daysRemaining: 999,
+        isExpired: false,
         isPaid: false,
         isTrial: false,
         isSuperAdmin: false,
-        canPublish: false,
-        canSell: false,
-        maxProducts: 0,
-        plan,
-        expiresAt: trialEndMs ? new Date(trialEndMs) : null,
+        canPublish: true,
+        canSell: true,
+        maxProducts: 1,
+        maxOrdersPerMonth: 15,
+        ordersLimitPerMonth: 15,
+        maxValidatedSalesPerMonth: 5,
+        salesLimitPerMonth: 5,
+        plan: decouvertePlan,
+        expiresAt: null,
+    };
+}
+
+/**
+ * Calcule le début de la semaine courante (lundi 00:00:00 UTC / Dakar).
+ * @param {Date} [date]
+ * @returns {Date}
+ */
+export function getDakarWeekStart(date = new Date()) {
+    const d = new Date(date);
+    const day = d.getUTCDay(); // 0 = dimanche, 1 = lundi...
+    const diff = (day === 0 ? -6 : 1) - day;
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diff, 0, 0, 0, 0));
+}
+
+/**
+ * Calcule le début du mois courant (1er du mois à 00:00:00 UTC / Dakar).
+ * @param {Date} [date]
+ * @returns {Date}
+ */
+export function getDakarMonthStart(date = new Date()) {
+    const d = new Date(date);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0));
+}
+
+/**
+ * Calcule l'état de consommation des promotions d'un vendeur en accord avec les règles serveur.
+ * Pack Pro : 1 promo / mois (reset le 1er du mois à 00h00 Dakar).
+ * Pack Business : 1 promo / semaine (reset chaque lundi à 00h00 Dakar).
+ * @param {Object} profile - Profil vendeur
+ * @returns {Object}
+ */
+export function computePromotionQuota(profile) {
+    if (!profile) {
+        return {
+            allowed: false,
+            used: 0,
+            remaining: 0,
+            max: 0,
+            period: 'none',
+            counterText: 'Mise en avant 7 jours réservée aux formules Pro (1/mois) et Business (1/semaine)',
+            limitReachedMessage: '',
+        };
+    }
+
+    const subStatus = computeSubscriptionStatus(profile);
+    const planObj = subStatus?.plan || getPlanDetails(profile.subscription_plan || profile.pack_actuel);
+    const planKey = planObj?.id || 'decouverte';
+
+    const isPaidActive = subStatus.isPaid || subStatus.isSuperAdmin;
+    if (!isPaidActive || !planObj.allowPromotions) {
+        return {
+            allowed: false,
+            planKey,
+            planName: planObj.name,
+            used: 0,
+            remaining: 0,
+            max: 0,
+            period: 'none',
+            counterText: 'Mise en avant 7 jours réservée aux formules Pro (1/mois) et Business (1/semaine)',
+            limitReachedMessage: '',
+        };
+    }
+
+    const isBusiness = planKey === 'pro'; // 'pro' est la clé technique du Pack Business
+    const now = new Date();
+    const periodStart = isBusiness ? getDakarWeekStart(now) : getDakarMonthStart(now);
+    const userPeriodStart = profile.promotions_period_start ? new Date(profile.promotions_period_start) : null;
+
+    let used = Number(profile.promotions_used_this_period) || 0;
+    if (!userPeriodStart || userPeriodStart < periodStart) {
+        used = 0;
+    }
+
+    const max = planObj.promos_par_periode || 1;
+    const remaining = Math.max(0, max - used);
+    const period = isBusiness ? 'week' : 'month';
+
+    const limitReachedMessage = isBusiness
+        ? 'Vous avez utilisé votre promotion de la semaine. Prochaine disponible lundi.'
+        : 'Vous avez utilisé votre promotion du mois. Prochaine disponible le 1er du mois.';
+
+    const counterText = remaining > 0
+        ? `Promotions restantes : ${remaining}/${max} ${isBusiness ? 'cette semaine' : 'ce mois-ci'}`
+        : limitReachedMessage;
+
+    return {
+        allowed: true,
+        isBusiness,
+        planKey,
+        planName: planObj.name,
+        used,
+        max,
+        remaining,
+        period,
+        counterText,
+        limitReachedMessage,
     };
 }

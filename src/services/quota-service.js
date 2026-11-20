@@ -56,7 +56,7 @@ export async function getSellerQuotaConsumption(sellerId) {
         // 1. Récupération du profil vendeur
         const { data: profile, error: profErr } = await supabase
             .from('profiles')
-            .select('id, role, subscription_plan, subscription_status, subscription_expires_at, trial_ends_at, pack_actuel, date_bascule, max_products')
+            .select('id, role, subscription_plan, subscription_status, subscription_expires_at, trial_ends_at, pack_actuel, date_bascule, max_products, promotions_used_this_period, promotions_period_start, free_ads_used_this_month, free_ads_period_start')
             .eq('id', sellerId)
             .maybeSingle();
 
@@ -66,23 +66,24 @@ export async function getSellerQuotaConsumption(sellerId) {
 
         const now = new Date();
         const isPaidActive = profile.subscription_expires_at && new Date(profile.subscription_expires_at) > now;
-        const isTrialActive = profile.trial_ends_at && new Date(profile.trial_ends_at) > now && !isPaidActive;
 
         let packId = 'decouverte';
         if (isPaidActive) {
             packId = profile.subscription_plan || 'starter';
-        } else if (isTrialActive) {
-            packId = 'essai_7j';
-        } else if (profile.pack_actuel) {
+        } else if (profile.pack_actuel && profile.pack_actuel !== 'essai_7j') {
             packId = profile.pack_actuel;
         }
 
         const planConfig = SUBSCRIPTION_PLANS[packId] || SUBSCRIPTION_PLANS.decouverte;
         const maxActiveProducts = isPaidActive 
-            ? (planConfig.maxProducts || 5) 
-            : (isTrialActive ? 3 : (planConfig.maxProducts || 1));
-        const maxOrders = planConfig.maxOrdersPerMonth || (isPaidActive || isTrialActive ? 999999 : 15);
-        const maxSales = planConfig.maxValidatedSalesPerMonth || (isPaidActive || isTrialActive ? 999999 : 5);
+            ? (planConfig.max_produits || planConfig.maxProducts || 5) 
+            : (planConfig.max_produits || planConfig.maxProducts || 1);
+        const maxOrders = planConfig.maxOrdersPerMonth !== undefined && planConfig.maxOrdersPerMonth !== null
+            ? planConfig.maxOrdersPerMonth
+            : 999999;
+        const maxSales = planConfig.max_ventes_mois !== undefined && planConfig.max_ventes_mois !== null
+            ? planConfig.max_ventes_mois
+            : 999999;
 
         // 2. Comptage des produits actifs
         let activeProductsCount = 0;
@@ -158,6 +159,22 @@ export async function getSellerQuotaConsumption(sellerId) {
                 max: maxSales,
                 percent: salesPercent,
             },
+            promotions: {
+                used: Number(profile.promotions_used_this_period) || 0,
+                max: planConfig.promos_par_periode !== undefined ? planConfig.promos_par_periode : (planConfig.allowPromotions ? 1 : 0),
+                remaining: Math.max(0, (planConfig.promos_par_periode !== undefined ? planConfig.promos_par_periode : (planConfig.allowPromotions ? 1 : 0)) - (Number(profile.promotions_used_this_period) || 0)),
+                frequency: planConfig.periode_promo || (packId === 'pro' ? 'week' : 'month'),
+                resetPeriodText: (planConfig.periode_promo === 'week' || packId === 'pro') ? 'cette semaine' : 'ce mois-ci',
+                nextResetDayText: (planConfig.periode_promo === 'week' || packId === 'pro') ? 'lundi' : 'le 1er du mois',
+                allowed: Boolean(planConfig.allowPromotions),
+            },
+            freeAds: {
+                used: Number(profile.free_ads_used_this_month) || 0,
+                max: planConfig.freeAdsPerMonth || 0,
+                remaining: Math.max(0, (planConfig.freeAdsPerMonth || 0) - (Number(profile.free_ads_used_this_month) || 0)),
+                allowed: (planConfig.freeAdsPerMonth || 0) > 0,
+            },
+            allowTopShops: Boolean(planConfig.allowTopShops),
             isNearLimit,
             isAtLimit,
             resetDate: getDakarNextMonthResetDate(),
@@ -166,6 +183,61 @@ export async function getSellerQuotaConsumption(sellerId) {
     } catch (err) {
         console.warn('[QuotaService] Erreur calcul quotas marchand:', err);
         return null;
+    }
+}
+
+/**
+ * Consomme l'une des 2 annonces offertes par mois pour un marchand en Pack Business.
+ * Invoque la fonction RPC sécurisée PostgreSQL `consume_free_business_ad`.
+ * @param {string} adId - UUID de l'annonce à publier gratuitement
+ * @returns {Promise<{ success: boolean, message?: string }>}
+ */
+export async function consumeFreeBusinessAd(adId) {
+    if (!adId) {
+        throw new Error('Identifiant d\'annonce requis pour consommer une annonce offerte.');
+    }
+
+    try {
+        const { data, error } = await supabase.rpc('consume_free_business_ad', {
+            p_ad_id: adId,
+        });
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        return data || { success: true };
+    } catch (err) {
+        console.error('[QuotaService] Erreur consommation annonce offerte Business :', err);
+        throw err;
+    }
+}
+
+/**
+ * Active la promotion d'un produit en décrémentant le compteur serveur sécurisé.
+ * 1 promo/mois pour Pack Pro, 1 promo/semaine (lundi Dakar) pour Pack Business.
+ * Invoque la RPC PostgreSQL `use_product_promotion`.
+ * @param {string} productId - UUID du produit promu
+ * @returns {Promise<{ success: boolean, message?: string }>}
+ */
+export async function useProductPromotion(productId) {
+    if (!productId) {
+        throw new Error('Identifiant produit requis pour appliquer une promotion.');
+    }
+
+    try {
+        const { data, error } = await supabase.rpc('use_product_promotion', {
+            p_product_id: productId,
+        });
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        return data || { success: true };
+    } catch (err) {
+        console.error('[QuotaService] Erreur promotion produit :', err);
+        throw err;
     }
 }
 

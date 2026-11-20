@@ -182,9 +182,9 @@ En cas d'absence imprévue dans sa chambre, l'acheteur est tenu de prévenir le 
             num: "9",
             title: "Espace Vendeur & Formules marchandes",
             content: `Tout étudiant peut activer sa boutique après validation de son profil par l'administration.
-• Formule Découverte : Essai gratuit de 7 jours (jusqu'à 3 articles) pour tester l'engouement du campus sans engagement.
-• Formule Pro (1 500 FCFA / mois) : Boutique active, catalogue élargi, statistiques de ventes et visibilité prioritaire.
-• Formule Business (2 500 FCFA / mois) : Catalogue illimité, mise en avant Top Shop, badge officiel et support dédié.
+• Formule Découverte (0 FCFA / mois) : Formule permanente gratuite sans engagement (1 produit actif, jusqu'à 5 ventes validées par mois max).
+• Formule Pro (1 000 FCFA / mois) : Jusqu'à 5 produits actifs, commandes et ventes validées illimitées, 1 promotion de produit par mois (7 jours).
+• Formule Business (2 000 FCFA / mois) : Jusqu'à 10 produits actifs, commandes et ventes validées illimitées, 1 promotion de produit par semaine et mise en avant Top Vendeurs.
 Le marchand s'engage à honorer ses commandes avec ponctualité et à maintenir ses stocks à jour.`,
         },
         {
