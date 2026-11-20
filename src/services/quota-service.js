@@ -64,6 +64,23 @@ export async function getSellerQuotaConsumption(sellerId) {
             return null;
         }
 
+        // Les administrateurs marchands ont 10 produits actifs permanents sans blocage de quota
+        if (profile.role === 'superadmin') {
+            return {
+                enabled: false,
+                isSuperAdmin: true,
+                packId: 'superadmin',
+                packName: 'Admin Marchand',
+                activeProducts: { current: 10, max: 10, percent: 100 },
+                monthlyOrders: { current: 0, max: 999999, percent: 0 },
+                validatedSales: { current: 0, max: 999999, percent: 0 },
+                ongoingOrdersCount: 0,
+                isNearLimit: false,
+                isAtLimit: false,
+                resetDate: null,
+            };
+        }
+
         const now = new Date();
         const isPaidActive = profile.subscription_expires_at && new Date(profile.subscription_expires_at) > now;
 
@@ -223,6 +240,45 @@ export async function consumeFreeBusinessAd(adId) {
 export async function useProductPromotion(productId) {
     if (!productId) {
         throw new Error('Identifiant produit requis pour appliquer une promotion.');
+    }
+
+    // Contrôle préalable pour les comptes SuperAdmin (Promotions illimitées directes)
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data: prof } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (prof && prof.role === 'superadmin') {
+                const promotedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                const { error: prodErr } = await supabase
+                    .from('products')
+                    .update({
+                        is_promoted: true,
+                        promoted_until: promotedUntil,
+                        is_active: true,
+                        quota_status: 'actif',
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', productId)
+                    .eq('seller_id', user.id);
+
+                if (prodErr) throw new Error(`Impossible d'activer la promotion : ${prodErr.message}`);
+
+                return {
+                    success: true,
+                    message: 'Produit mis en avant avec succès pour 7 jours (Privilège Admin Marchand ♾️) ! 🔥',
+                    promoted_until: promotedUntil,
+                    promotions_remaining: 999,
+                };
+            }
+        }
+    } catch (adminCheckErr) {
+        // En cas d'erreur de vérification admin, poursuivre le flux normal
+        if (adminCheckErr.message?.includes('Impossible d\'activer')) throw adminCheckErr;
     }
 
     try {

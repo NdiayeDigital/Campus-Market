@@ -9,6 +9,9 @@ import { escapeHTML } from '../../utils/security.js';
 import { updateSellerProfile, changeSellerPassword, uploadSellerLogo, removeSellerLogo } from '../../services/seller-service.js';
 import { computeSubscriptionStatus } from '../../config/subscription.js';
 import { SUPPORT_CONFIG } from '../../config/support.js';
+import { supabase } from '../../services/supabase.js';
+import { buildSellersLeaderboard } from '../../services/seller-ranking-service.js';
+import { openSellerLeaderboardModal } from './SellerLeaderboardModal.js';
 
 export const PAVILLONS_UIDT = [
     { id: 'Pavillon A', label: 'Pavillon A' },
@@ -213,6 +216,30 @@ export function createSellerProfileView({
                                 <i class="fa-brands fa-whatsapp text-sm"></i>
                             </a>
                         </div>
+                    </div>
+
+                    <!-- Carte 4 : Classement & Points du Vendeur -->
+                    <div class="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-5 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                                <i class="fa-solid fa-trophy text-amber-500 text-xs"></i>
+                                Classement Campus
+                            </span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 shadow-2xs">
+                                🏆 Leaderboard
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Consultez votre rang officiel, vos points méritocratiques et le podium des meilleures boutiques du campus.
+                        </p>
+                        <button 
+                            type="button" 
+                            id="btn-open-leaderboard-from-profile" 
+                            class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+                        >
+                            <i class="fa-solid fa-ranking-star text-xs"></i>
+                            <span>Classement</span>
+                        </button>
                     </div>
                 </div>
 
@@ -499,6 +526,53 @@ export function createSellerProfileView({
         // Aller au Dashboard
         containerEl.querySelector('#btn-goto-dashboard')?.addEventListener('click', () => {
             if (typeof onOpenDashboard === 'function') onOpenDashboard();
+        });
+
+        // Ouvrir la modale du Classement officiel des vendeurs
+        containerEl.querySelector('#btn-open-leaderboard-from-profile')?.addEventListener('click', async () => {
+            const btn = containerEl.querySelector('#btn-open-leaderboard-from-profile');
+            const originalHTML = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Chargement...</span>';
+            }
+            try {
+                const [sellersRes, ordersRes, reviewsRes, prodsRes] = await Promise.all([
+                    supabase.from('profiles').select('*').in('role', ['vendeur', 'superadmin']),
+                    supabase.from('orders').select('*'),
+                    supabase.from('reviews').select('*').catch(() => ({ data: [] })),
+                    supabase.from('products').select('seller_id').eq('is_active', true),
+                ]);
+
+                const productCounts = new Map();
+                (prodsRes.data || []).forEach((p) => {
+                    productCounts.set(p.seller_id, (productCounts.get(p.seller_id) || 0) + 1);
+                });
+
+                const leaderboard = buildSellersLeaderboard(
+                    sellersRes.data || [currentSeller],
+                    ordersRes.data || [],
+                    reviewsRes.data || [],
+                    productCounts
+                );
+
+                openSellerLeaderboardModal({
+                    leaderboard,
+                    currentSellerId: currentSeller.id,
+                });
+            } catch (err) {
+                console.warn('[SellerProfileView] Erreur ouverture classement:', err);
+                const leaderboard = buildSellersLeaderboard([currentSeller], [], []);
+                openSellerLeaderboardModal({
+                    leaderboard,
+                    currentSellerId: currentSeller.id,
+                });
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }
+            }
         });
 
         // Toggle ouvert / fermé

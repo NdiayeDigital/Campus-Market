@@ -376,6 +376,9 @@ export function computeSellerOrderStats(orders = [], sellerId) {
     const realRevenue = deliveredAmount + cancelledAmount;
     const realOrdersCount = deliveredCount + cancelledCount;
 
+    // Calcul des points de classement (+10 pts par commande livrée, -5 pts par commande annulée)
+    const points = Math.max(0, (deliveredCount * 10) - (cancelledCount * 5));
+
     return {
         totalOrders,
         totalAmount,
@@ -389,6 +392,7 @@ export function computeSellerOrderStats(orders = [], sellerId) {
         deliveryRate,
         realRevenue,
         realOrdersCount,
+        points,
     };
 }
 
@@ -455,6 +459,7 @@ export function buildAllSellersStatsMap(orders = []) {
     Object.values(map).forEach((stat) => {
         stat.realRevenue = stat.deliveredAmount + stat.cancelledAmount;
         stat.realOrdersCount = stat.deliveredCount + stat.cancelledCount;
+        stat.points = Math.max(0, (stat.deliveredCount * 10) - (stat.cancelledCount * 5));
         if (stat.totalOrders > 0) {
             stat.cancellationRate = Number(((stat.cancelledCount / stat.totalOrders) * 100).toFixed(1));
             stat.deliveryRate = Number(((stat.deliveredCount / stat.totalOrders) * 100).toFixed(1));

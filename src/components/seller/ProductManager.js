@@ -974,8 +974,9 @@ export function createProductManager({
                                 ? 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&auto=format&fit=crop&q=80'
                                 : rawImg;
 
-                            // Badges de statut & alertes de stock
-                            const isMaskedQuota = prod.quota_status === 'masqué_quota' || prod.is_active === false;
+                            // Badges de statut & alertes de stock (Les admins marchands ne sont jamais masqués par quota)
+                            const isSuperAdminSeller = subStatus?.isSuperAdmin || sellerProfile?.role === 'superadmin';
+                            const isMaskedQuota = !isSuperAdminSeller && (prod.quota_status === 'masqué_quota' || prod.is_active === false);
                             let statusBadge = '';
                             if (isMaskedQuota) {
                                 statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1"><i class="fa-solid fa-lock text-[9px]"></i> Masqué (Quota)</span>`;
@@ -1504,14 +1505,16 @@ export function createProductManager({
                         return;
                     }
 
-                    if (promoQuota.remaining <= 0) {
+                    if (!promoQuota.isSuperAdmin && promoQuota.remaining <= 0) {
                         showToast(promoQuota.limitReachedMessage, 'warning');
                         return;
                     }
 
                     const confirmed = await showConfirm({
                         title: "Promouvoir ce produit ?",
-                        message: `Mettre en avant « ${prod.title} » pendant 7 jours ?\n\nVotre produit aura le badge « Promo » et apparaîtra en priorité dans le catalogue et sur la page d'accueil.\n\nAttention : une fois consommée, la promotion de cette période ne peut pas être annulée ni remboursée.`,
+                        message: promoQuota.isSuperAdmin
+                            ? `Mettre en avant « ${prod.title} » pendant 7 jours ?\n\nEn tant qu'Admin Marchand, vous pouvez promouvoir autant de produits que vous le souhaitez sans décompte de quota.`
+                            : `Mettre en avant « ${prod.title} » pendant 7 jours ?\n\nVotre produit aura le badge « Promo » et apparaîtra en priorité dans le catalogue et sur la page d'accueil.\n\nAttention : une fois consommée, la promotion de cette période ne peut pas être annulée ni remboursée.`,
                         confirmText: "Activer la promotion (7 jours)",
                         cancelText: "Annuler",
                         isDestructive: false,

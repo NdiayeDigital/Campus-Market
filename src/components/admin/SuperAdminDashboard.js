@@ -53,6 +53,7 @@ import {
 import { CAROUSEL_TYPES } from '../../config/announcements.js';
 import { PARTNER_CATEGORIES } from '../../config/partners.js';
 import { computeSubscriptionStatus, getPlanDetails, SUBSCRIPTION_PLANS, FEATURE_FLAGS } from '../../config/subscription.js';
+import { getSellerTier } from '../../services/seller-ranking-service.js';
 import { supabase } from '../../services/supabase.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
@@ -1323,6 +1324,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             const revA = statA.realRevenue !== undefined ? statA.realRevenue : ((statA.deliveredAmount || 0) + (statA.cancelledAmount || 0));
             const revB = statB.realRevenue !== undefined ? statB.realRevenue : ((statB.deliveredAmount || 0) + (statB.cancelledAmount || 0));
 
+            if (sellerSortBy === 'points_desc' || sellerSortBy === 'ranking_desc') {
+                const ptsA = statA.points !== undefined ? statA.points : Math.max(0, (statA.deliveredCount || 0) * 10 - (statA.cancelledCount || 0) * 5);
+                const ptsB = statB.points !== undefined ? statB.points : Math.max(0, (statB.deliveredCount || 0) * 10 - (statB.cancelledCount || 0) * 5);
+                if (ptsB !== ptsA) return ptsB - ptsA;
+                return revB - revA;
+            }
             if (sellerSortBy === 'ca_desc') {
                 if (revB !== revA) {
                     return revB - revA;
@@ -1373,6 +1380,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             <i class="fa-solid fa-arrow-down-wide-short text-slate-400 text-[11px]"></i>
                             <label for="admin-seller-sort" class="text-[11px] font-semibold text-slate-500 whitespace-nowrap hidden sm:inline">Tri :</label>
                             <select id="admin-seller-sort" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+                                <option value="points_desc" ${sellerSortBy === 'points_desc' ? 'selected' : ''}>🏆 Classement (Top Points)</option>
                                 <option value="ca_desc" ${sellerSortBy === 'ca_desc' ? 'selected' : ''}>Top CA Réalisé</option>
                                 <option value="orders_desc" ${sellerSortBy === 'orders_desc' ? 'selected' : ''}>Plus de commandes</option>
                                 <option value="name_asc" ${sellerSortBy === 'name_asc' ? 'selected' : ''}>Nom (A-Z)</option>
@@ -1826,6 +1834,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         <tr>
                             <th class="py-3 px-4">Marchand</th>
                             <th class="py-3 px-4">Chiffre d'Affaires & Ventes</th>
+                            <th class="py-3 px-4">Classement</th>
                             <th class="py-3 px-4">Articles & Pack</th>
                             <th class="py-3 px-4">Abonnement</th>
                             <th class="py-3 px-4">Contact</th>
@@ -1853,6 +1862,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 cancelledCount: 0,
                                 cancelledAmount: 0,
                             };
+
+                            // Calcul du rang et du palier dans le classement
+                            const sortedSellerIds = Object.keys(effectiveStatsMap).sort((idA, idB) => {
+                                const pA = effectiveStatsMap[idA]?.points || 0;
+                                const pB = effectiveStatsMap[idB]?.points || 0;
+                                if (pB !== pA) return pB - pA;
+                                return (effectiveStatsMap[idB]?.realRevenue || 0) - (effectiveStatsMap[idA]?.realRevenue || 0);
+                            });
+                            const sRankIndex = sortedSellerIds.indexOf(s.id);
+                            const sellerRank = sRankIndex >= 0 ? sRankIndex + 1 : list.indexOf(s) + 1;
+                            const sellerPoints = stat.points !== undefined ? stat.points : Math.max(0, (stat.deliveredCount || 0) * 10 - (stat.cancelledCount || 0) * 5);
+                            const sellerTier = getSellerTier(sellerPoints);
 
                             return `
                                 <tr class="even:bg-slate-50/40 hover:bg-slate-50/80 transition-colors">
@@ -1891,6 +1912,21 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                         <i class="fa-solid fa-hourglass-half text-[9px]"></i> ${stat.pendingCount} en attente
                                                     </span>
                                                 ` : ''}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 whitespace-nowrap">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-7 h-7 rounded-lg ${sellerRank <= 3 ? 'bg-amber-100 text-amber-900 font-black' : 'bg-slate-100 text-slate-700 font-bold'} flex items-center justify-center text-xs tabular-nums shrink-0 shadow-2xs">
+                                                #${sellerRank}
+                                            </span>
+                                            <div class="flex flex-col">
+                                                <span class="font-heading font-black text-xs text-slate-900 tabular-nums">
+                                                    ${sellerPoints} pts
+                                                </span>
+                                                <span class="text-[9px] font-bold ${sellerTier.badgeClass} px-1.5 py-0.2 rounded-md border inline-flex items-center gap-1 w-fit mt-0.5">
+                                                    ${sellerTier.icon} ${sellerTier.name}
+                                                </span>
                                             </div>
                                         </div>
                                     </td>
@@ -2052,6 +2088,17 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         cancelledAmount: 0,
                     };
 
+                    const sortedSellerIds = Object.keys(effectiveStatsMap).sort((idA, idB) => {
+                        const pA = effectiveStatsMap[idA]?.points || 0;
+                        const pB = effectiveStatsMap[idB]?.points || 0;
+                        if (pB !== pA) return pB - pA;
+                        return (effectiveStatsMap[idB]?.realRevenue || 0) - (effectiveStatsMap[idA]?.realRevenue || 0);
+                    });
+                    const sRankIndex = sortedSellerIds.indexOf(s.id);
+                    const sellerRank = sRankIndex >= 0 ? sRankIndex + 1 : list.indexOf(s) + 1;
+                    const sellerPoints = stat.points !== undefined ? stat.points : Math.max(0, (stat.deliveredCount || 0) * 10 - (stat.cancelledCount || 0) * 5);
+                    const sellerTier = getSellerTier(sellerPoints);
+
                     return `
                         <div class="py-3 flex flex-col gap-2.5">
                             <div class="flex items-center gap-3">
@@ -2092,6 +2139,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                     <span class="font-extrabold text-sm text-emerald-600 tabular-nums">
                                         ${Number(stat.realRevenue !== undefined ? stat.realRevenue : (stat.deliveredAmount || 0) + (stat.cancelledAmount || 0)).toLocaleString('fr-FR')} FCFA
                                     </span>
+                                </div>
+                                <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/50">
+                                    <span class="text-slate-500 font-semibold">Classement :</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-black text-slate-900 tabular-nums">#${sellerRank} (${sellerPoints} pts)</span>
+                                        <span class="px-1.5 py-0.2 rounded-md ${sellerTier.badgeClass} border text-[9px] font-bold">
+                                            ${sellerTier.icon} ${sellerTier.name}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="flex items-center gap-1.5 flex-wrap text-[10px] pt-1 border-t border-slate-200/50">
                                     <span class="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold">

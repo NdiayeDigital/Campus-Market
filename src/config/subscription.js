@@ -397,6 +397,24 @@ export function computePromotionQuota(profile) {
     }
 
     const subStatus = computeSubscriptionStatus(profile);
+
+    // Les administrateurs marchands disposent de promotions illimitées sans blocage de quota
+    if (profile.role === 'superadmin' || subStatus?.isSuperAdmin) {
+        return {
+            allowed: true,
+            isBusiness: true,
+            isSuperAdmin: true,
+            planKey: 'superadmin',
+            planName: 'Admin Marchand',
+            used: 0,
+            max: 999,
+            remaining: 999,
+            period: 'none',
+            counterText: 'Mise en avant illimitée (Compte Admin ♾️)',
+            limitReachedMessage: '',
+        };
+    }
+
     const planObj = subStatus?.plan || getPlanDetails(profile.subscription_plan || profile.pack_actuel);
     const planKey = planObj?.id || 'decouverte';
 
