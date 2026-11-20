@@ -685,11 +685,11 @@ export function createSellerDashboard({
                             type="button" 
                             id="subtab-leaderboard" 
                             class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 text-slate-600 hover:text-slate-900 hover:bg-amber-50/70 border border-transparent hover:border-amber-200 font-semibold"
-                            title="Consulter le classement officiel inter-vendeurs du campus"
+                            title="Consulter le classement officiel de la plateforme (réservé aux packs payants)"
                         >
                             <div class="flex items-center gap-3">
                                 <i class="fa-solid fa-trophy text-xs w-4 text-center text-amber-500 group-hover:scale-110 transition-transform"></i>
-                                <span>Classement Vendeurs</span>
+                                <span>Classement Plateforme</span>
                             </div>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
                                 🏆 Top
@@ -897,7 +897,7 @@ export function createSellerDashboard({
                         <button type="button" id="drawer-btn-leaderboard" class="flex items-center justify-between px-4 py-3 rounded-2xl bg-amber-50/80 hover:bg-amber-100 text-amber-950 font-bold text-xs transition-colors cursor-pointer border border-amber-300 shadow-2xs">
                             <div class="flex items-center gap-3">
                                 <i class="fa-solid fa-trophy text-sm text-amber-600 w-5 text-center"></i>
-                                <span>Classement Inter-Vendeurs (Top Campus)</span>
+                                <span>Classement Plateforme (Packs Payants)</span>
                             </div>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">🏆 Voir</span>
                         </button>
@@ -1589,11 +1589,11 @@ export function createSellerDashboard({
                     </div>
                 </div>
 
-                <!-- Carte Interactive : Classement Inter-Vendeurs du Campus -->
+                <!-- Carte Interactive : Classement Général Plateforme du Campus -->
                 <div 
                     id="card-seller-leaderboard" 
                     class="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-primary/5 p-4 sm:p-5 rounded-3xl border border-amber-300 shadow-xs flex items-center justify-between gap-4 flex-wrap cursor-pointer hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99] group"
-                    title="Cliquer pour voir le classement officiel inter-vendeurs"
+                    title="Cliquer pour voir le classement officiel de la plateforme"
                 >
                     <div class="flex items-center gap-3.5 min-w-0">
                         <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black flex items-center justify-center text-xl shrink-0 shadow-sm group-hover:scale-105 transition-transform">
@@ -1602,14 +1602,14 @@ export function createSellerDashboard({
                         <div class="min-w-0">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="font-heading font-black text-sm sm:text-base text-slate-900">
-                                    Classement Inter-Vendeurs
+                                    Classement Plateforme
                                 </span>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 shadow-2xs">
                                     Campus UIDT
                                 </span>
                             </div>
                             <p class="text-xs text-slate-600 mt-0.5 truncate max-w-md">
-                                Comparez votre boutique avec tous les vendeurs du campus et visez la 1ère place du podium !
+                                Classement officiel de tous les marchands du campus ayant un pack payant actif (Pro & Business).
                             </p>
                         </div>
                     </div>

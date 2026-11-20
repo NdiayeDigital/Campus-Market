@@ -198,13 +198,15 @@ assert.equal(tierDiamant.icon, '💎');
 console.log('✅ [3.2] Paliers Argent (🥈), Or (🥇) et Diamant (💎) validés !');
 
 // =========================================================================
-// 4. Tests de Construction du Classement (Leaderboard)
+// 4. Tests de Construction du Classement (Leaderboard Plateforme - Packs Payants Uniquement)
 // =========================================================================
 
 const sellers = [
-    { id: 's-1', shop_name: 'Boutique Alpha', prenom: 'Amadou', nom: 'Diallo' },
-    { id: 's-2', shop_name: 'Boutique Beta', prenom: 'Fatou', nom: 'Sow' },
-    { id: 's-3', shop_name: 'Boutique Gamma', prenom: 'Moussa', nom: 'Diop' },
+    { id: 's-1', shop_name: 'Boutique Alpha', prenom: 'Amadou', nom: 'Diallo', role: 'vendeur', subscription_plan: 'starter', subscription_expires_at: new Date(Date.now() + 86400000 * 30).toISOString() },
+    { id: 's-2', shop_name: 'Boutique Beta', prenom: 'Fatou', nom: 'Sow', role: 'vendeur', subscription_plan: 'pro', subscription_expires_at: new Date(Date.now() + 86400000 * 30).toISOString() },
+    { id: 's-3', shop_name: 'Boutique Gamma', prenom: 'Moussa', nom: 'Diop', role: 'superadmin' },
+    // Vendeur en formule gratuite Pack Découverte : doit être exclu du classement
+    { id: 's-decouverte', shop_name: 'Boutique Découverte', prenom: 'Awa', nom: 'Fall', role: 'vendeur', subscription_plan: 'decouverte' },
 ];
 
 const allOrders = [
@@ -219,10 +221,14 @@ const allOrders = [
     { seller_id: 's-3', status: 'delivered', price: 500 },
     { seller_id: 's-3', status: 'cancelled', cancelled_by: 'seller', price: 500 },
     { seller_id: 's-3', status: 'cancelled', cancelled_by: 'buyer', price: 500 },
+    // s-decouverte : 2 livrées (+20 pts)
+    { seller_id: 's-decouverte', status: 'delivered', price: 1000 },
+    { seller_id: 's-decouverte', status: 'delivered', price: 1000 },
 ];
 
 const leaderboard = buildSellersLeaderboard(sellers, allOrders, []);
-assert.equal(leaderboard.length, 3, 'Le leaderboard doit contenir les 3 vendeurs');
+assert.equal(leaderboard.length, 3, 'Le leaderboard ne doit contenir QUE les 3 vendeurs payants (Découverte exclu)');
+assert.equal(leaderboard.some((s) => s.id === 's-decouverte'), false, 'Un vendeur en Pack Découverte ne doit JAMAIS figurer dans le classement officiel');
 assert.equal(leaderboard[0].id, 's-2', 'Boutique Beta avec 100 pts doit être classée #1');
 assert.equal(leaderboard[0].rank, 1);
 assert.equal(leaderboard[1].id, 's-1', 'Boutique Alpha avec 40 pts doit être classée #2');
@@ -235,7 +241,12 @@ assert.equal(leaderboard[2].cancelledByBuyerCount, 1);
 const rankInfo = getSellerRankInfo('s-1', leaderboard);
 assert.equal(rankInfo.rank, 2);
 assert.equal(rankInfo.totalSellers, 3);
-console.log('✅ [4.1] Algorithme de classement et rangs #1, #2, #3 validés !');
+assert.equal(rankInfo.isPaid, true);
+
+const rankInfoDecouverte = getSellerRankInfo('s-decouverte', leaderboard);
+assert.equal(rankInfoDecouverte.rank, null, 'Un vendeur Découverte n\'a pas de rang officiel');
+assert.equal(rankInfoDecouverte.isPaid, false);
+console.log('✅ [4.1] Règle stricte respectée : seuls les vendeurs avec Pack Payant (Pro, Business, SuperAdmin) figurent au classement !');
 
 // Test 4.2 : computeSellerOrderStats & buildAllSellersStatsMap dans admin-service
 const sellerStats = computeSellerOrderStats(allOrders, 's-3');
@@ -293,21 +304,24 @@ assert.ok(sellerDashboardFile.includes('id="btn-open-leaderboard-dashboard"'), '
 assert.ok(sellerDashboardFile.includes('fetchCampusLeaderboard'), 'SellerDashboard doit faire appel à fetchCampusLeaderboard');
 console.log('✅ [6.2] Intégration complète de l\'accès au classement dans SellerDashboard (Sidebar, Drawer, Accueil) validée !');
 
-// 6.3 Modale SellerLeaderboardModal.js enrichie
+// 6.3 Modale SellerLeaderboardModal.js : Plateforme uniquement (pas de filtres pavillons) & Réservé aux packs payants
 const modalFile = fs.readFileSync(path.resolve('src/components/seller/SellerLeaderboardModal.js'), 'utf8');
-assert.ok(modalFile.includes('Classement Inter-Vendeurs'), 'Titre officiel Classement Inter-Vendeurs présent');
-assert.ok(modalFile.includes('btn-filter-pavillon'), 'Boutons de filtrage par pavillon présents');
-assert.ok(modalFile.includes('leaderboard-pavillon-filters'), 'Conteneur des filtres pavillon présent');
-assert.ok(modalFile.includes('renderSellersList'), 'Rendu dynamique filtrable par pavillon présent');
-console.log('✅ [6.3] Modale de classement avec filtre par Pavillon et comparaison relative validée !');
+assert.ok(modalFile.includes('Classement Plateforme') || modalFile.includes('Classement Officiel des Vendeurs'), 'Titre officiel Classement Plateforme présent');
+assert.ok(!modalFile.includes('btn-filter-pavillon'), 'Les filtres par pavillon doivent être formellement supprimés (classement 100% plateforme)');
+assert.ok(!modalFile.includes('leaderboard-pavillon-filters'), 'Le conteneur des filtres pavillons ne doit plus exister');
+assert.ok(modalFile.includes('Pack Découverte'), 'Le bandeau d\'invitation pour les vendeurs Découverte doit être présent');
+assert.ok(modalFile.includes('Pack Pro (1 000 F)') && modalFile.includes('Business (2 000 F)'), 'L\'explication de réservation aux formules Pro et Business doit être présente');
+console.log('✅ [6.3] Modale de classement plateforme sans pavillon et avec invitation Pack Découverte validée !');
 
-// 6.4 Migration SQL Additive pour l'agrégation inter-vendeurs
+// 6.4 Migration SQL Additive pour l'agrégation inter-vendeurs avec filtre packs payants
 const migrationFile = fs.readFileSync(path.resolve('database/migration_sellers_inter_ranking.sql'), 'utf8');
 assert.ok(migrationFile.includes('CREATE OR REPLACE FUNCTION public.get_seller_ranking_stats()'), 'Fonction RPC get_seller_ranking_stats définie');
 assert.ok(migrationFile.includes('SECURITY DEFINER'), 'La fonction doit être SECURITY DEFINER pour contourner l\'isolation des commandes sans fuite de données');
 assert.ok(migrationFile.includes('cancelled_by_seller_count'), 'La fonction doit compter les annulations vendeur');
 assert.ok(migrationFile.includes('delivered_orders_count'), 'La fonction doit compter les livraisons');
-console.log('✅ [6.4] Script de migration SQL additive get_seller_ranking_stats validé !');
+assert.ok(migrationFile.includes('subscription_expires_at > NOW()'), 'La fonction SQL doit filtrer exclusivement les abonnements payants actifs');
+assert.ok(migrationFile.includes("p.role = 'superadmin'"), 'La fonction SQL doit inclure les comptes superadmin marchands');
+console.log('✅ [6.4] Script de migration SQL additive avec filtre exclusif abonnements payants validé !');
 
 console.log('🎉 TOUS LES TESTS DES PROMOTIONS ADMIN ET DU CLASSEMENT ONT RÉUSSI AVEC SUCCÈS !');
 process.exit(0);

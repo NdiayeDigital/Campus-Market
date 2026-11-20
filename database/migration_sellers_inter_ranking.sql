@@ -24,7 +24,10 @@ RETURNS TABLE (
     FROM public.profiles p
     LEFT JOIN public.orders o ON o.seller_id = p.id
     LEFT JOIN public.products prod ON prod.seller_id = p.id
-    WHERE p.role IN ('vendeur', 'superadmin')
+    WHERE (
+        p.role = 'superadmin' 
+        OR (p.role = 'vendeur' AND p.subscription_expires_at IS NOT NULL AND p.subscription_expires_at > NOW())
+    )
     GROUP BY p.id;
 $$;
 

@@ -1,15 +1,15 @@
 /**
- * Modale interactive : Classement Officiel Inter-Vendeurs (Leaderboard UIDT)
- * Affiche le podium des meilleurs marchands du campus, les points cumulés,
- * la position relative et le filtre par pavillon universitaire.
+ * Modale interactive : Classement Officiel de la Plateforme (Leaderboard UIDT)
+ * Affiche le podium et la liste de tous les marchands payants de la plateforme (Packs Pro & Business),
+ * les points cumulés et la position du vendeur connecté.
  */
 
 import { escapeHTML } from '../../utils/security.js';
 
 /**
- * Crée et affiche la modale de classement inter-vendeurs.
+ * Crée et affiche la modale de classement de la plateforme.
  * @param {Object} props
- * @param {Array} props.leaderboard - Liste ordonnée des vendeurs avec rank, points, tier, stats
+ * @param {Array} props.leaderboard - Liste ordonnée des vendeurs payants avec rank, points, tier, stats
  * @param {string} props.currentSellerId - ID du vendeur connecté
  * @param {Function} [props.onClose] - Callback à la fermeture
  */
@@ -17,15 +17,9 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
     const existing = document.getElementById('seller-leaderboard-modal');
     if (existing) existing.remove();
 
-    const currentSellerInfo = leaderboard.find((s) => s.id === currentSellerId);
-    let selectedPavillon = 'all';
-
-    // Extraction des pavillons uniques
-    const pavillonsSet = new Set();
-    leaderboard.forEach((s) => {
-        if (s.pavillon) pavillonsSet.add(s.pavillon.trim());
-    });
-    const uniquePavillons = Array.from(pavillonsSet).sort();
+    // Récupération des informations du vendeur connecté
+    const currentSellerInfo = leaderboard.find((s) => s.id === currentSellerId) || leaderboard.currentSellerInfo || null;
+    const isCurrentSellerRanked = Boolean(currentSellerInfo && currentSellerInfo.rank !== null && currentSellerInfo.rank !== undefined);
 
     const overlay = document.createElement('div');
     overlay.id = 'seller-leaderboard-modal';
@@ -33,11 +27,11 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
 
     const topThree = leaderboard.slice(0, 3);
 
-    // Calcul de l'écart avec le vendeur précédent
+    // Calcul de l'écart avec le vendeur précédent si classé
     let gapMessage = '';
-    if (currentSellerInfo) {
+    if (isCurrentSellerRanked) {
         if (currentSellerInfo.rank === 1) {
-            gapMessage = '👑 Félicitations ! Vous occupez la 1ère place du campus UIDT !';
+            gapMessage = '👑 Félicitations ! Vous occupez la 1ère place de la plateforme Campus Market !';
         } else {
             const sellerAbove = leaderboard[currentSellerInfo.rank - 2];
             if (sellerAbove) {
@@ -62,7 +56,7 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
 
                 <div class="flex items-center gap-2 mb-1">
                     <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-white/20 text-amber-300">
-                        🏆 Classement Inter-Vendeurs
+                        🏆 Classement Plateforme
                     </span>
                     <span class="text-xs text-white/80">Campus UIDT</span>
                 </div>
@@ -70,11 +64,12 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                     Classement Officiel des Vendeurs
                 </h3>
                 <p class="text-xs text-white/80 mt-1 max-w-md">
-                    Comparez vos performances avec tous les commerces étudiants de l'UIDT et montez sur le podium !
+                    Classement méritocratique de tous les marchands de la plateforme inscrits en formule Pro ou Business.
                 </p>
 
-                <!-- Carte récapitulative du vendeur connecté -->
-                ${currentSellerInfo ? `
+                <!-- Carte du vendeur connecté -->
+                ${isCurrentSellerRanked ? `
+                    <!-- Vendeur avec Pack Payant Actif : Position Officielle -->
                     <div class="mt-4 p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/20 flex flex-col gap-2">
                         <div class="flex items-center justify-between gap-3 flex-wrap">
                             <div class="flex items-center gap-3">
@@ -82,7 +77,7 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                                     #${currentSellerInfo.rank}
                                 </div>
                                 <div>
-                                    <span class="text-xs text-white/80 font-medium block">Votre Rang Général (${currentSellerInfo.rank}e sur ${leaderboard.length})</span>
+                                    <span class="text-xs text-white/80 font-medium block">Votre Rang Plateforme (${currentSellerInfo.rank}e sur ${leaderboard.length})</span>
                                     <span class="font-heading font-black text-sm sm:text-base text-white">
                                         ${escapeHTML(currentSellerInfo.shopName)}
                                     </span>
@@ -104,7 +99,38 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                             </div>
                         ` : ''}
                     </div>
-                ` : ''}
+                ` : `
+                    <!-- Vendeur en Pack Découverte ou non classé : Invitation incitative -->
+                    <div class="mt-4 p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-amber-300/40 flex flex-col gap-2.5">
+                        <div class="flex items-center justify-between gap-3 flex-wrap">
+                            <div class="flex items-center gap-3">
+                                <div class="w-11 h-11 rounded-xl bg-amber-400 text-slate-950 font-heading font-black text-sm flex items-center justify-center shadow-md">
+                                    ⭐
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-xs text-amber-300 font-bold block">Pack Découverte</span>
+                                        <span class="px-2 py-0.2 rounded-full text-[9px] font-black uppercase bg-white/20 text-white">Non classé</span>
+                                    </div>
+                                    <span class="font-heading font-black text-sm sm:text-base text-white">
+                                        ${escapeHTML(currentSellerInfo?.shopName || 'Votre Boutique')}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-heading font-black text-sm text-amber-300 tabular-nums">
+                                    ${currentSellerInfo?.points || 0} pts calculés
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-[11px] text-amber-100 bg-black/25 p-2.5 rounded-xl border border-white/10 flex items-start gap-2">
+                            <i class="fa-solid fa-crown text-amber-400 text-xs mt-0.5 shrink-0"></i>
+                            <span>
+                                Le classement officiel de la plateforme est réservé aux vendeurs en <strong>Pack Pro (1 000 F)</strong> ou <strong>Business (2 000 F)</strong>. Activez un pack pour y figurer et booster votre visibilité auprès des étudiants !
+                            </span>
+                        </div>
+                    </div>
+                `}
             </div>
 
             <!-- Corps défilant du classement -->
@@ -133,7 +159,7 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                 ${topThree.length > 0 ? `
                     <div>
                         <h4 class="font-heading font-bold text-xs uppercase text-slate-400 tracking-wider mb-3">
-                            Podium du Campus 🥇🥈🥉
+                            Podium de la Plateforme 🥇🥈🥉
                         </h4>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             ${topThree.map((seller) => {
@@ -166,36 +192,54 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                     </div>
                 ` : ''}
 
-                <!-- Liste complète de tous les vendeurs avec filtre Pavillon -->
+                <!-- Liste unique et globale de tous les vendeurs classés sur la plateforme -->
                 <div>
-                    <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                    <div class="flex items-center justify-between gap-3 mb-3">
                         <h4 class="font-heading font-bold text-xs uppercase text-slate-400 tracking-wider">
-                            Toutes les Boutiques Classées (${leaderboard.length})
+                            Tous les Marchands Classés (${leaderboard.length})
                         </h4>
-
-                        <!-- Filtre par Pavillon -->
-                        <div class="flex items-center gap-1.5 overflow-x-auto py-0.5" id="leaderboard-pavillon-filters">
-                            <button 
-                                type="button" 
-                                data-pavillon="all" 
-                                class="btn-filter-pavillon px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer bg-primary text-white shadow-2xs"
-                            >
-                                Tous
-                            </button>
-                            ${uniquePavillons.map((pav) => `
-                                <button 
-                                    type="button" 
-                                    data-pavillon="${escapeHTML(pav)}" 
-                                    class="btn-filter-pavillon px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700"
-                                >
-                                    ${escapeHTML(pav)}
-                                </button>
-                            `).join('')}
-                        </div>
+                        <span class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                            Packs Pro & Business
+                        </span>
                     </div>
 
                     <div id="leaderboard-sellers-container" class="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
-                        <!-- Rendu dynamique des vendeurs -->
+                        ${leaderboard.length === 0 ? `
+                            <div class="p-6 text-center text-xs text-slate-400 font-medium">
+                                Aucun marchand avec pack payant actif actuellement.
+                            </div>
+                        ` : leaderboard.map((seller) => {
+                            const isCurrent = seller.id === currentSellerId;
+
+                            return `
+                                <div class="p-3 sm:p-3.5 flex items-center justify-between gap-3 ${isCurrent ? 'bg-primary/5 font-semibold ring-1 ring-primary/20' : 'hover:bg-white'} transition-colors">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <span class="w-7 h-7 rounded-lg ${seller.rank <= 3 ? 'bg-amber-100 text-amber-900 font-black' : 'bg-slate-200 text-slate-700 font-bold'} flex items-center justify-center text-xs tabular-nums shrink-0">
+                                            #${seller.rank}
+                                        </span>
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                                                    ${escapeHTML(seller.shopName)}
+                                                </span>
+                                                ${isCurrent ? `<span class="px-1.5 py-0.2 rounded-md bg-primary text-white text-[9px] font-bold">Vous</span>` : ''}
+                                            </div>
+                                            <span class="text-[10px] text-slate-400 block truncate">
+                                                ${seller.pavillon ? `Pavillon ${escapeHTML(seller.pavillon)}` : 'Campus UIDT'} • ${seller.deliveredCount} commande${seller.deliveredCount > 1 ? 's' : ''} livrée${seller.deliveredCount > 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${seller.tier.badgeClass} border hidden sm:inline-flex items-center gap-1">
+                                            ${seller.tier.icon} ${seller.tier.name}
+                                        </span>
+                                        <span class="font-heading font-black text-xs sm:text-sm text-slate-900 tabular-nums">
+                                            ${seller.points} pts
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             </div>
@@ -203,7 +247,7 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
             <!-- Pied de page avec bouton fermer -->
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
                 <span class="text-[11px] text-slate-400">
-                    Mise à jour en temps réel des performances du campus
+                    Mise à jour en temps réel • Campus UIDT
                 </span>
                 <button 
                     type="button" 
@@ -217,80 +261,6 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
     `;
 
     document.body.appendChild(overlay);
-
-    // Fonction de rendu de la liste avec filtrage
-    const renderSellersList = (pavillonFilter = 'all') => {
-        const container = overlay.querySelector('#leaderboard-sellers-container');
-        if (!container) return;
-
-        let filtered = leaderboard;
-        if (pavillonFilter !== 'all') {
-            filtered = leaderboard.filter((s) => s.pavillon && s.pavillon.trim() === pavillonFilter);
-        }
-
-        if (filtered.length === 0) {
-            container.innerHTML = `
-                <div class="p-6 text-center text-xs text-slate-400 font-medium">
-                    Aucun vendeur enregistré pour ce pavillon.
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = filtered.map((seller, index) => {
-            const isCurrent = seller.id === currentSellerId;
-            const displayRank = pavillonFilter === 'all' ? seller.rank : (index + 1);
-
-            return `
-                <div class="p-3 sm:p-3.5 flex items-center justify-between gap-3 ${isCurrent ? 'bg-primary/5 font-semibold ring-1 ring-primary/20' : 'hover:bg-white'} transition-colors">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <span class="w-7 h-7 rounded-lg ${displayRank <= 3 ? 'bg-amber-100 text-amber-900 font-black' : 'bg-slate-200 text-slate-700 font-bold'} flex items-center justify-center text-xs tabular-nums shrink-0">
-                            #${displayRank}
-                        </span>
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-1.5">
-                                <span class="font-heading font-extrabold text-xs sm:text-sm text-slate-900 truncate">
-                                    ${escapeHTML(seller.shopName)}
-                                </span>
-                                ${isCurrent ? `<span class="px-1.5 py-0.2 rounded-md bg-primary text-white text-[9px] font-bold">Vous</span>` : ''}
-                            </div>
-                            <span class="text-[10px] text-slate-400 block truncate">
-                                ${seller.pavillon ? `Pavillon ${escapeHTML(seller.pavillon)}` : 'Campus UIDT'} • ${seller.deliveredCount} commande${seller.deliveredCount > 1 ? 's' : ''} livrée${seller.deliveredCount > 1 ? 's' : ''}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${seller.tier.badgeClass} border hidden sm:inline-flex items-center gap-1">
-                            ${seller.tier.icon} ${seller.tier.name}
-                        </span>
-                        <span class="font-heading font-black text-xs sm:text-sm text-slate-900 tabular-nums">
-                            ${seller.points} pts
-                        </span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    };
-
-    // Rendu initial de la liste
-    renderSellersList('all');
-
-    // Écouteurs pour les boutons de filtre pavillon
-    overlay.querySelectorAll('.btn-filter-pavillon').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const pav = btn.getAttribute('data-pavillon') || 'all';
-            selectedPavillon = pav;
-
-            overlay.querySelectorAll('.btn-filter-pavillon').forEach((b) => {
-                const isActive = b.getAttribute('data-pavillon') === pav;
-                b.className = `btn-filter-pavillon px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                    isActive ? 'bg-primary text-white shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`;
-            });
-
-            renderSellersList(pav);
-        });
-    });
 
     const closeModal = () => {
         overlay.classList.add('animate-fade-out');

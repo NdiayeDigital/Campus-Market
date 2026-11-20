@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase.js';
+import { computeSubscriptionStatus } from '../config/subscription.js';
 
 export const POINTS_RULES = {
     DELIVERED_ORDER: 10,       // +10 pts par commande livrée avec succès (le maximum autorisé)
@@ -182,13 +183,22 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
 export function buildSellersLeaderboard(sellers = [], allOrders = [], allReviews = [], productCountsMap = {}) {
     if (!Array.isArray(sellers) || sellers.length === 0) return [];
 
+    // Règle stricte : Seuls les marchands détenant un pack payant actif (Pack Pro, Pack Business ou rôle SuperAdmin)
+    // peuvent figurer sur le classement officiel de la plateforme. Le Pack Découverte (gratuit) en est exclu.
+    const eligibleSellers = sellers.filter((s) => {
+        const sub = computeSubscriptionStatus(s);
+        return Boolean(sub.isPaid || sub.isSuperAdmin);
+    });
+
+    if (eligibleSellers.length === 0) return [];
+
     const getProdCount = (sId) => {
         if (!sId) return 0;
         if (productCountsMap instanceof Map) return productCountsMap.get(sId) || 0;
         return Number(productCountsMap[sId]) || 0;
     };
 
-    const computedList = sellers.map((s) => {
+    const computedList = eligibleSellers.map((s) => {
         const prodCount = getProdCount(s.id);
         const pointsData = computeSellerPoints({
             seller: s,
@@ -251,33 +261,47 @@ export function buildSellersLeaderboard(sellers = [], allOrders = [], allReviews
  * @returns {Object}
  */
 export function getSellerRankInfo(sellerId, leaderboard = []) {
-    if (!sellerId || !Array.isArray(leaderboard) || leaderboard.length === 0) {
+    if (!sellerId || !Array.isArray(leaderboard)) {
         return {
             rank: null,
             totalSellers: 0,
             seller: null,
             tier: getSellerTier(0),
             points: 0,
+            isPaid: false,
         };
     }
 
     const found = leaderboard.find((s) => s.id === sellerId);
-    if (!found) {
+    if (found) {
+        return {
+            rank: found.rank,
+            totalSellers: leaderboard.length,
+            seller: found,
+            tier: found.tier,
+            points: found.points,
+            isPaid: true,
+        };
+    }
+
+    if (leaderboard.currentSellerInfo && leaderboard.currentSellerInfo.id === sellerId) {
         return {
             rank: null,
             totalSellers: leaderboard.length,
-            seller: null,
-            tier: getSellerTier(0),
-            points: 0,
+            seller: leaderboard.currentSellerInfo,
+            tier: leaderboard.currentSellerInfo.tier,
+            points: leaderboard.currentSellerInfo.points,
+            isPaid: false,
         };
     }
 
     return {
-        rank: found.rank,
+        rank: null,
         totalSellers: leaderboard.length,
-        seller: found,
-        tier: found.tier,
-        points: found.points,
+        seller: null,
+        tier: getSellerTier(0),
+        points: 0,
+        isPaid: false,
     };
 }
 
@@ -293,7 +317,7 @@ export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
         // 1. Profils de tous les marchands actifs et superadmins marchands
         const { data: profiles, error: errProf } = await supabase
             .from('profiles')
-            .select('id, role, shop_name, prenom, nom, pavillon, chambre, telephone, phone, is_open, avatar_url, logo_url')
+            .select('id, role, shop_name, prenom, nom, pavillon, chambre, telephone, phone, is_open, avatar_url, logo_url, subscription_plan, subscription_expires_at, subscription_status')
             .in('role', ['vendeur', 'superadmin']);
 
         if (errProf) throw errProf;
@@ -360,8 +384,40 @@ export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
 
         const ordersToUse = statsMap.size > 0 ? syntheticOrders : directOrders;
 
-        // 6. Construction du classement avec buildSellersLeaderboard
+        // 6. Construction du classement avec buildSellersLeaderboard (réservé aux packs payants)
         const leaderboard = buildSellersLeaderboard(allProfiles, ordersToUse, reviewsList, productCountsMap);
+
+        // 7. Enrichissement des informations du vendeur connecté (même s'il est en Pack Découverte)
+        if (currentSellerId) {
+            const currentSellerProfile = allProfiles.find((p) => p.id === currentSellerId);
+            if (currentSellerProfile) {
+                const isPaidSeller = leaderboard.find((s) => s.id === currentSellerId);
+                if (isPaidSeller) {
+                    leaderboard.currentSellerInfo = isPaidSeller;
+                } else {
+                    const prodCount = productCountsMap.get(currentSellerId) || 0;
+                    const pointsData = computeSellerPoints({
+                        seller: currentSellerProfile,
+                        orders: ordersToUse,
+                        reviews: reviewsList,
+                        activeProductsCount: prodCount,
+                    });
+                    leaderboard.currentSellerInfo = {
+                        ...currentSellerProfile,
+                        rank: null,
+                        points: pointsData.totalPoints,
+                        tier: pointsData.tier,
+                        breakdown: pointsData.breakdown,
+                        deliveredCount: pointsData.deliveredCount,
+                        cancelledCount: pointsData.cancelledCount,
+                        shopName: currentSellerProfile.shop_name || (currentSellerProfile.prenom ? `Boutique ${currentSellerProfile.prenom}` : 'Boutique Marchand'),
+                        isPaid: false,
+                        subStatus: computeSubscriptionStatus(currentSellerProfile),
+                    };
+                }
+            }
+        }
+
         return leaderboard;
     } catch (err) {
         console.error('[Leaderboard] Échec récupération leaderboard:', err);
