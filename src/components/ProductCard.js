@@ -117,21 +117,29 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
 
         <!-- Informations Produit -->
         <div class="p-3.5 flex flex-col flex-1 justify-between gap-3">
-            <div class="flex flex-col gap-1">
-                <button 
-                    type="button" 
-                    id="card-seller-btn"
-                    title="Voir la vitrine de ${escapeHTML(sellerName)}"
-                    class="text-[11px] font-medium text-slate-500 hover:text-primary line-clamp-1 flex items-center gap-1.5 transition-colors cursor-pointer text-left focus:outline-none w-fit"
-                >
-                    <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold overflow-hidden shrink-0">
-                        ${sellerAvatar 
-                            ? `<img src="${escapeHTML(sellerAvatar)}" ${rawSellerAvatar && rawSellerAvatar !== sellerAvatar ? `data-fallback-url="${escapeHTML(rawSellerAvatar)}"` : ''} alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.parentElement.textContent='${(sellerName[0] || 'V').toUpperCase()}'; }">`
-                            : (sellerName[0] || 'V').toUpperCase()
-                        }
-                    </span>
-                    <span class="truncate hover:underline">${escapeHTML(sellerName)}</span>
-                </button>
+            <div class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between gap-1 flex-wrap">
+                    <button 
+                        type="button" 
+                        id="card-seller-btn"
+                        title="Voir la vitrine de ${escapeHTML(sellerName)}"
+                        class="text-[11px] font-medium text-slate-500 hover:text-primary line-clamp-1 flex items-center gap-1.5 transition-colors cursor-pointer text-left focus:outline-none min-w-0"
+                    >
+                        <span class="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold overflow-hidden shrink-0">
+                            ${sellerAvatar 
+                                ? `<img src="${escapeHTML(sellerAvatar)}" ${rawSellerAvatar && rawSellerAvatar !== sellerAvatar ? `data-fallback-url="${escapeHTML(rawSellerAvatar)}"` : ''} alt="${escapeHTML(sellerName)}" class="w-full h-full object-cover" onerror="if (this.dataset.fallbackUrl && this.src !== this.dataset.fallbackUrl) { this.src = this.dataset.fallbackUrl; } else if (this.dataset.fallbackTried !== 'true' && this.src.includes('pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev')) { this.dataset.fallbackTried = 'true'; this.src = this.src.replace('https://pub-2f882764059641cba8e6c2a55d1bdefe.r2.dev/', 'https://fqulqgdjusfzhcjpvyay.supabase.co/storage/v1/object/public/'); } else { this.onerror = null; this.parentElement.textContent='${(sellerName[0] || 'V').toUpperCase()}'; }">`
+                                : (sellerName[0] || 'V').toUpperCase()
+                            }
+                        </span>
+                        <span class="truncate hover:underline">${escapeHTML(sellerName)}</span>
+                    </button>
+                    ${product.seller?.pavillon ? `
+                        <span class="text-[10px] text-slate-600 font-semibold bg-slate-100/90 border border-slate-200/60 px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0" title="Localisation du vendeur">
+                            <i class="fa-solid fa-location-dot text-rose-500 text-[8px]"></i>
+                            <span class="truncate max-w-[95px]">${escapeHTML(product.seller.pavillon)}${product.seller.chambre ? ` • Ch.${escapeHTML(product.seller.chambre)}` : ''}</span>
+                        </span>
+                    ` : ''}
+                </div>
                 <h3 class="font-heading font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                     ${escapeHTML(product.title)}
                 </h3>

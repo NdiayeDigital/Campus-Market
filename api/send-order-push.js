@@ -16,7 +16,7 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 let vapidConfigured = false;
 function ensureVapidConfigured() {
     if (vapidConfigured) return true;
-    const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
+    const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || 'BHqBPmVryy2hCYhoRicHjMK-mKP7d211SBwUOVaVxnXBU52ljxIAPCNGuw9fMJjqqC9O_iaBvhNgpoyALrci3w4';
     const privateKey = process.env.VAPID_PRIVATE_KEY;
     const subject = process.env.VAPID_SUBJECT || 'mailto:contact@campusmarket-uidt.com';
 
@@ -67,18 +67,33 @@ export default async function handler(req, res) {
             auth: { persistSession: false },
         });
 
-        // 1. Récupérer les abonnements push enregistrés pour ce marchand
-        const { data: subs, error: subErr } = await supabase
-            .from('seller_push_subscriptions')
-            .select('id, endpoint, p256dh, auth')
-            .eq('seller_id', sellerId);
+        // 1. Récupérer les abonnements push enregistrés pour ce marchand (tables seller_push_subscriptions et push_subscriptions)
+        const [resSellerSubs, resGlobalSubs] = await Promise.all([
+            supabase
+                .from('seller_push_subscriptions')
+                .select('id, endpoint, p256dh, auth')
+                .eq('seller_id', sellerId),
+            supabase
+                .from('push_subscriptions')
+                .select('id, endpoint, p256dh, auth')
+                .eq('user_id', sellerId),
+        ]);
 
-        if (subErr) {
-            console.error('[PushAPI] Erreur lecture abonnements:', subErr);
-            return res.status(500).json({ error: 'Erreur lors de la lecture des abonnements marchands.' });
+        const sellerSubsList = resSellerSubs.data || [];
+        const globalSubsList = resGlobalSubs.data || [];
+
+        // Déduplication stricte par endpoint
+        const endpointsSeen = new Set();
+        const subs = [];
+
+        for (const s of [...sellerSubsList, ...globalSubsList]) {
+            if (s && s.endpoint && s.p256dh && s.auth && !endpointsSeen.has(s.endpoint)) {
+                endpointsSeen.add(s.endpoint);
+                subs.push(s);
+            }
         }
 
-        if (!subs || subs.length === 0) {
+        if (subs.length === 0) {
             return res.status(200).json({
                 success: true,
                 sentCount: 0,
@@ -100,7 +115,8 @@ export default async function handler(req, res) {
             timestamp: Date.now(),
         });
 
-        const staleSubscriptionIds = [];
+        const staleSellerSubIds = [];
+        const staleGlobalSubIds = [];
         let successCount = 0;
 
         // 2. Envoyer la notification push à tous les terminaux enregistrés
@@ -123,7 +139,8 @@ export default async function handler(req, res) {
                 console.warn('[PushAPI] Échec envoi push:', sub.endpoint, err.statusCode);
                 // Si l'endpoint a expiré (404 ou 410 GCM/Apple), marquer pour suppression
                 if (err.statusCode === 404 || err.statusCode === 410) {
-                    staleSubscriptionIds.push(sub.id);
+                    staleSellerSubIds.push(sub.id);
+                    staleGlobalSubIds.push(sub.id);
                 }
             }
         });
@@ -131,18 +148,18 @@ export default async function handler(req, res) {
         await Promise.all(sendPromises);
 
         // 3. Nettoyer les abonnements obsolètes en arrière-plan
-        if (staleSubscriptionIds.length > 0) {
-            await supabase
-                .from('seller_push_subscriptions')
-                .delete()
-                .in('id', staleSubscriptionIds);
+        if (staleSellerSubIds.length > 0) {
+            await Promise.allSettled([
+                supabase.from('seller_push_subscriptions').delete().in('id', staleSellerSubIds),
+                supabase.from('push_subscriptions').delete().in('id', staleGlobalSubIds),
+            ]);
         }
 
         return res.status(200).json({
             success: true,
             totalDevices: subs.length,
             sentCount: successCount,
-            cleanedStaleCount: staleSubscriptionIds.length,
+            cleanedStaleCount: staleSellerSubIds.length,
         });
     } catch (err) {
         console.error('[PushAPI] Exception globale push:', err);

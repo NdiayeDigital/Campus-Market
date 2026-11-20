@@ -366,6 +366,9 @@ export async function createOrder({
         const firstItem = items[0] || {};
         const sellerName = firstItem.seller_name || (firstItem.seller ? `${firstItem.seller.prenom} ${firstItem.seller.nom}`.trim() : 'Vendeur UIDT');
         const sellerPhone = firstItem.seller_phone || firstItem.seller?.telephone || '';
+        const sellerPavillon = firstItem.seller_pavillon || firstItem.seller?.pavillon || '';
+        const sellerChambre = firstItem.seller_chambre || firstItem.seller?.chambre || '';
+        const sellerShopName = firstItem.seller_shop_name || firstItem.seller?.shop_name || '';
 
         return {
             success: true,
@@ -375,6 +378,9 @@ export async function createOrder({
             orderId: reference,
             sellerName,
             sellerPhone,
+            sellerPavillon,
+            sellerChambre,
+            sellerShopName,
         };
     } catch (err) {
         console.error('[OrderService] Erreur lors de l’insertion de la commande:', err);
@@ -410,7 +416,7 @@ export async function fetchLiveOrderStatus({ orderId, reference, phone } = {}) {
         if (orderId) {
             const { data, error } = await supabase
                 .from('orders')
-                .select('id, status, price, quantity, delivery_address, created_at, seller_id, seller:seller_id(id, prenom, nom, telephone)')
+                .select('id, status, price, quantity, delivery_address, created_at, seller_id, seller:seller_id(id, prenom, nom, telephone, pavillon, chambre, shop_name)')
                 .eq('id', orderId)
                 .maybeSingle();
 
@@ -419,6 +425,9 @@ export async function fetchLiveOrderStatus({ orderId, reference, phone } = {}) {
                     ...data,
                     seller_name: data.seller ? `${data.seller.prenom} ${data.seller.nom}`.trim() : 'Vendeur UIDT',
                     seller_phone: data.seller?.telephone || '',
+                    seller_pavillon: data.seller?.pavillon || '',
+                    seller_chambre: data.seller?.chambre || '',
+                    seller_shop_name: data.seller?.shop_name || '',
                 };
             }
         }

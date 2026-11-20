@@ -96,6 +96,9 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                         recentOrders[i].status = live.status;
                         if (live.seller_name) recentOrders[i].seller_name = live.seller_name;
                         if (live.seller_phone) recentOrders[i].seller_phone = live.seller_phone;
+                        if (live.seller_pavillon) recentOrders[i].seller_pavillon = live.seller_pavillon;
+                        if (live.seller_chambre) recentOrders[i].seller_chambre = live.seller_chambre;
+                        if (live.seller_shop_name) recentOrders[i].seller_shop_name = live.seller_shop_name;
                         hasUpdates = true;
                     }
                 }
@@ -178,7 +181,7 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                     // Règle métier : l'annulation par le client n'est plus faisable dès que la commande est en livraison ('shipped') ou livrée ('delivered')
                     const canCancel = ['pending', 'confirmed', 'processing'].includes(currentStatus);
 
-                    // Message WhatsApp enrichi Option A pour le suivi de commande
+                    // Message WhatsApp enrichi pour le suivi de commande
                     const orderRef = order.reference || `#CMD-${idx + 1}`;
                     const itemTitle = firstItem?.title || 'votre article';
                     const itemQty = firstItem?.quantity ? ` (x${firstItem.quantity})` : '';
@@ -186,7 +189,12 @@ export function createOrderStatusView({ onBackToCatalog, onShowToast } = {}) {
                     const deliveryPlace = [order.pavillon, order.chambre ? `Chambre ${order.chambre}` : ''].filter(Boolean).join(', ') || 'Campus UIDT';
                     const buyerInfo = order.buyer_name ? `\n👤 Client : ${order.buyer_name}` : '';
 
-                    const waMessage = `Bonjour ! Je vous contacte concernant ma commande ${orderRef} sur Campus Market :
+                    const sPavillon = order.sellerPavillon || order.seller_pavillon || order.seller?.pavillon || '';
+                    const sChambre = order.sellerChambre || order.seller_chambre || order.seller?.chambre || '';
+                    const sShop = order.sellerShopName || order.seller_shop_name || order.seller?.shop_name || sellerName;
+                    const sellerFullAddress = [sPavillon, sChambre ? `Chambre ${sChambre}` : ''].filter(Boolean).join(' • ') || 'Campus UIDT';
+
+                    const waMessage = `Bonjour ! Je vous contacte concernant ma commande ${orderRef} passée auprès de ${sShop} (${sellerFullAddress}) sur Campus Market :
 📦 Article : ${itemTitle}${itemQty}${extraItems}
 📍 Livraison : ${deliveryPlace}${buyerInfo}
 
@@ -277,15 +285,48 @@ Pouvez-vous me donner des nouvelles de la livraison ? Merci !`;
 
                             <!-- Détail article commandé -->
                             <div class="bg-slate-50/80 rounded-2xl p-3.5 flex items-center justify-between text-xs text-slate-700 border border-slate-100">
-                                <div>
-                                    <span class="font-bold text-slate-900 block sm:inline">
+                                <div class="min-w-0 pr-2">
+                                    <span class="font-bold text-slate-900 block truncate">
                                         ${firstItem ? escapeHTML(firstItem.title) : 'Commande Campus Market'}
                                     </span>
-                                    ${totalItemsCount > 1 ? `<span class="text-slate-400 ml-1">(+${totalItemsCount - 1} autre${totalItemsCount > 2 ? 's' : ''})</span>` : ''}
+                                    ${totalItemsCount > 1 ? `<span class="text-slate-400 text-[11px] block mt-0.5">(+${totalItemsCount - 1} autre${totalItemsCount > 2 ? 's' : ''} article${totalItemsCount > 2 ? 's' : ''})</span>` : ''}
                                 </div>
-                                <span class="font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-xl border border-slate-200/60 shadow-sm">
-                                    Chambre : ${escapeHTML(order.chambre || 'N/A')}
+                                <span class="font-heading font-extrabold text-primary text-xs bg-white px-3 py-1 rounded-xl border border-slate-200/60 shadow-2xs shrink-0">
+                                    ${firstItem?.price ? `${Number(firstItem.price).toLocaleString('fr-FR')} FCFA` : ''}
                                 </span>
+                            </div>
+
+                            <!-- Adresses : Boutique Vendeur & Lieu de Livraison Client -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                <!-- 1. Boutique / Vendeur -->
+                                <div class="bg-blue-50/50 p-3 rounded-2xl border border-blue-100/90 flex items-start gap-2.5">
+                                    <div class="w-7 h-7 rounded-lg bg-blue-100 text-primary flex items-center justify-center shrink-0 text-xs shadow-2xs">
+                                        <i class="fa-solid fa-store"></i>
+                                    </div>
+                                    <div class="flex flex-col min-w-0">
+                                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Boutique Vendeur</span>
+                                        <span class="font-bold text-slate-900 truncate">${escapeHTML(sShop)}</span>
+                                        <span class="text-slate-600 text-[11px] flex items-center gap-1 mt-0.5 font-medium">
+                                            <i class="fa-solid fa-location-dot text-rose-500 text-[9px]"></i>
+                                            <span class="truncate">${escapeHTML(sellerFullAddress)}</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Livraison Client -->
+                                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex items-start gap-2.5">
+                                    <div class="w-7 h-7 rounded-lg bg-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 text-xs shadow-2xs">
+                                        <i class="fa-solid fa-truck"></i>
+                                    </div>
+                                    <div class="flex flex-col min-w-0">
+                                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Votre Livraison</span>
+                                        <span class="font-bold text-slate-900 truncate">${escapeHTML(order.pavillon || 'Campus UIDT')}</span>
+                                        <span class="text-slate-600 text-[11px] flex items-center gap-1 mt-0.5 font-medium">
+                                            <i class="fa-solid fa-door-open text-primary text-[9px]"></i>
+                                            <span>Chambre : ${escapeHTML(order.chambre || 'N/A')}</span>
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Actions vendeur directes -->

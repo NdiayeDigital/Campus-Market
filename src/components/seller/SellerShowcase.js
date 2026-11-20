@@ -213,6 +213,13 @@ export function createSellerShowcase({
                                 Marchand étudiant • ${escapeHTML(sellerName)}
                             </p>
 
+                            ${seller.pavillon ? `
+                                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-slate-700 text-xs font-semibold border border-slate-200/80 mt-1.5 w-fit">
+                                    <i class="fa-solid fa-location-dot text-rose-500 text-xs"></i>
+                                    <span>${escapeHTML(seller.pavillon)}${seller.chambre ? ` • Chambre ${escapeHTML(seller.chambre)}` : ''}</span>
+                                </div>
+                            ` : ''}
+
                             <!-- Note et résumé avis -->
                             <div class="flex items-center gap-3 mt-2 flex-wrap">
                                 <div class="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl">

@@ -1137,7 +1137,7 @@ if (
         window.location.hostname === 'localhost' ||
         window.location.hostname === '127.0.0.1')
 ) {
-    window.addEventListener('load', () => {
+    const registerServiceWorker = () => {
         navigator.serviceWorker
             .register('/sw.js')
             .then((reg) => {
@@ -1155,7 +1155,13 @@ if (
                 });
             })
             .catch((err) => console.warn('[SW] Ignoré:', err.message));
-        
+
         initPushNotificationPrompt();
-    });
+    };
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        registerServiceWorker();
+    } else {
+        window.addEventListener('load', registerServiceWorker);
+    }
 }

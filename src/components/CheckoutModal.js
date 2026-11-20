@@ -213,6 +213,15 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
                         <span id="payment-notice-text">Règlement Wave direct au vendeur ou lors de la remise en main propre en chambre.</span>
                     </div>
 
+                    <!-- Origine et localisation du vendeur -->
+                    <div id="checkout-seller-origin" class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs text-slate-700 flex items-start gap-2.5">
+                        <i class="fa-solid fa-store text-primary text-sm mt-0.5"></i>
+                        <div class="flex flex-col min-w-0">
+                            <span class="font-bold text-slate-900">Origine des articles</span>
+                            <span id="checkout-seller-location-text" class="text-slate-600 mt-0.5">Campus UIDT</span>
+                        </div>
+                    </div>
+
                     <div id="multi-vendor-notice" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2">
                         <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5"></i>
                         <span><strong>Panier multi-vendeurs :</strong> Vos articles proviennent de plusieurs marchands étudiants. Ils vous contacteront individuellement.</span>
@@ -273,6 +282,17 @@ export function createCheckoutModal({ onOrderSuccess } = {}) {
         const multiVendorEl = modalEl.querySelector('#multi-vendor-notice');
         if (multiVendorEl) {
             multiVendorEl.classList.toggle('hidden', uniqueSellers.size <= 1);
+        }
+
+        const originEl = modalEl.querySelector('#checkout-seller-location-text');
+        if (originEl) {
+            const locations = currentItems.map((i) => {
+                const name = i.seller_shop_name || i.seller_name || 'Vendeur';
+                const loc = [i.seller_pavillon, i.seller_chambre ? `Chambre ${i.seller_chambre}` : ''].filter(Boolean).join(' • ');
+                return loc ? `${name} (${loc})` : `${name} (Campus UIDT)`;
+            });
+            const uniqueLocs = [...new Set(locations)];
+            originEl.textContent = uniqueLocs.join(', ') || 'Campus UIDT';
         }
 
         modalEl.classList.remove('opacity-0', 'pointer-events-none');

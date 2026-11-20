@@ -205,7 +205,7 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
     try {
         let query = supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, subscription_plan, subscription_status, subscription_expires_at, trial_started_at, trial_ends_at, created_at, avatar_url, shop_name)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, pavillon, chambre, shop_name, subscription_plan, subscription_status, subscription_expires_at, trial_started_at, trial_ends_at, created_at, avatar_url)')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)
             .abortSignal(controller.signal);
@@ -518,7 +518,7 @@ export async function fetchSellerProfile(sellerId) {
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, prenom, nom, telephone, is_open, role, created_at, shop_name, shop_category, avatar_url')
+            .select('id, prenom, nom, telephone, pavillon, chambre, is_open, role, created_at, shop_name, shop_category, avatar_url')
             .eq('id', sellerId)
             .single();
 
@@ -549,7 +549,7 @@ export async function fetchSellerProducts(sellerId) {
     try {
         const { data, error } = await supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, shop_name, shop_category, avatar_url)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, pavillon, chambre, shop_name, shop_category, avatar_url)')
             .eq('seller_id', sellerId)
             .order('created_at', { ascending: false });
 
@@ -585,7 +585,7 @@ export async function fetchProductById(productId) {
     try {
         const { data, error } = await supabase
             .from('products')
-            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, shop_name, avatar_url)')
+            .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, pavillon, chambre, shop_name, avatar_url)')
             .eq('id', productId)
             .single();
 

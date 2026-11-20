@@ -200,9 +200,9 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
                                 <span class="text-[11px] text-slate-400 block">Vendu par</span>
                                 <span class="font-heading font-bold text-slate-900 text-xs sm:text-sm leading-tight">${escapeHTML(sellerName)}</span>
                                 ${p.seller?.pavillon ? `
-                                    <span class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                                        <i class="fa-solid fa-location-dot text-amber-500 text-[10px]"></i>
-                                        <span>${escapeHTML(p.seller.pavillon)}${p.seller.chambre ? ` • Ch. ${escapeHTML(p.seller.chambre)}` : ''}</span>
+                                    <span class="text-[11px] text-slate-600 font-semibold flex items-center gap-1.5 mt-0.5 bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded-lg w-fit">
+                                        <i class="fa-solid fa-location-dot text-rose-500 text-[10px]"></i>
+                                        <span>${escapeHTML(p.seller.pavillon)}${p.seller.chambre ? ` • Chambre ${escapeHTML(p.seller.chambre)}` : ''}</span>
                                     </span>
                                 ` : ''}
                                 ${p.seller ? `
