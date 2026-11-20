@@ -10,7 +10,7 @@ import { updateSellerProfile, changeSellerPassword, uploadSellerLogo, removeSell
 import { computeSubscriptionStatus } from '../../config/subscription.js';
 import { SUPPORT_CONFIG } from '../../config/support.js';
 import { supabase } from '../../services/supabase.js';
-import { buildSellersLeaderboard } from '../../services/seller-ranking-service.js';
+import { buildSellersLeaderboard, fetchCampusLeaderboard } from '../../services/seller-ranking-service.js';
 import { openSellerLeaderboardModal } from './SellerLeaderboardModal.js';
 
 export const PAVILLONS_UIDT = [
@@ -528,7 +528,7 @@ export function createSellerProfileView({
             if (typeof onOpenDashboard === 'function') onOpenDashboard();
         });
 
-        // Ouvrir la modale du Classement officiel des vendeurs
+        // Ouvrir la modale du Classement officiel inter-vendeurs
         containerEl.querySelector('#btn-open-leaderboard-from-profile')?.addEventListener('click', async () => {
             const btn = containerEl.querySelector('#btn-open-leaderboard-from-profile');
             const originalHTML = btn ? btn.innerHTML : '';
@@ -537,31 +537,14 @@ export function createSellerProfileView({
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Chargement...</span>';
             }
             try {
-                const [sellersRes, ordersRes, reviewsRes, prodsRes] = await Promise.all([
-                    supabase.from('profiles').select('*').in('role', ['vendeur', 'superadmin']),
-                    supabase.from('orders').select('*'),
-                    supabase.from('reviews').select('*').catch(() => ({ data: [] })),
-                    supabase.from('products').select('seller_id').eq('is_active', true),
-                ]);
-
-                const productCounts = new Map();
-                (prodsRes.data || []).forEach((p) => {
-                    productCounts.set(p.seller_id, (productCounts.get(p.seller_id) || 0) + 1);
-                });
-
-                const leaderboard = buildSellersLeaderboard(
-                    sellersRes.data || [currentSeller],
-                    ordersRes.data || [],
-                    reviewsRes.data || [],
-                    productCounts
-                );
+                const leaderboard = await fetchCampusLeaderboard({ currentSellerId: currentSeller.id });
 
                 openSellerLeaderboardModal({
                     leaderboard,
                     currentSellerId: currentSeller.id,
                 });
             } catch (err) {
-                console.warn('[SellerProfileView] Erreur ouverture classement:', err);
+                console.warn('[SellerProfileView] Erreur ouverture classement inter-vendeurs:', err);
                 const leaderboard = buildSellersLeaderboard([currentSeller], [], []);
                 openSellerLeaderboardModal({
                     leaderboard,

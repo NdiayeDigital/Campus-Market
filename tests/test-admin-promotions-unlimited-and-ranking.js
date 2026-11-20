@@ -20,6 +20,7 @@ import {
     computeSellerPoints,
     buildSellersLeaderboard,
     getSellerRankInfo,
+    fetchCampusLeaderboard,
 } from '../src/services/seller-ranking-service.js';
 import {
     computeSellerOrderStats,
@@ -274,6 +275,39 @@ const productManagerFile = fs.readFileSync(path.resolve('src/components/seller/P
 assert.ok(productManagerFile.includes('isSuperAdminSeller'), 'ProductManager doit vérifier si le vendeur est superadmin');
 assert.ok(productManagerFile.includes('!isSuperAdminSeller'), 'Le masquage de quota doit être contourné pour les superadmins');
 console.log('✅ [5.3] Maintien des 10 articles actifs sans masquage quota pour superadmin validé !');
+
+// =========================================================================
+// 6. Tests du Classement Inter-Vendeurs (Accès Dashboard, Modale, Filtre Pavillon & RPC)
+// =========================================================================
+
+// 6.1 Fonction de service fetchCampusLeaderboard
+assert.equal(typeof fetchCampusLeaderboard, 'function', 'fetchCampusLeaderboard doit être exportée');
+console.log('✅ [6.1] Fonction fetchCampusLeaderboard prête pour l\'agrégation inter-vendeurs !');
+
+// 6.2 Intégration dans SellerDashboard.js
+const sellerDashboardFile = fs.readFileSync(path.resolve('src/components/seller/SellerDashboard.js'), 'utf8');
+assert.ok(sellerDashboardFile.includes('id="subtab-leaderboard"'), 'Bouton Classement présent dans la sidebar desktop');
+assert.ok(sellerDashboardFile.includes('id="drawer-btn-leaderboard"'), 'Bouton Classement présent dans le tiroir mobile');
+assert.ok(sellerDashboardFile.includes('id="card-seller-leaderboard"'), 'Bannière interactive Classement présente sur l\'accueil Dashboard');
+assert.ok(sellerDashboardFile.includes('id="btn-open-leaderboard-dashboard"'), 'Bouton direct Voir le classement présent sur la bannière');
+assert.ok(sellerDashboardFile.includes('fetchCampusLeaderboard'), 'SellerDashboard doit faire appel à fetchCampusLeaderboard');
+console.log('✅ [6.2] Intégration complète de l\'accès au classement dans SellerDashboard (Sidebar, Drawer, Accueil) validée !');
+
+// 6.3 Modale SellerLeaderboardModal.js enrichie
+const modalFile = fs.readFileSync(path.resolve('src/components/seller/SellerLeaderboardModal.js'), 'utf8');
+assert.ok(modalFile.includes('Classement Inter-Vendeurs'), 'Titre officiel Classement Inter-Vendeurs présent');
+assert.ok(modalFile.includes('btn-filter-pavillon'), 'Boutons de filtrage par pavillon présents');
+assert.ok(modalFile.includes('leaderboard-pavillon-filters'), 'Conteneur des filtres pavillon présent');
+assert.ok(modalFile.includes('renderSellersList'), 'Rendu dynamique filtrable par pavillon présent');
+console.log('✅ [6.3] Modale de classement avec filtre par Pavillon et comparaison relative validée !');
+
+// 6.4 Migration SQL Additive pour l'agrégation inter-vendeurs
+const migrationFile = fs.readFileSync(path.resolve('database/migration_sellers_inter_ranking.sql'), 'utf8');
+assert.ok(migrationFile.includes('CREATE OR REPLACE FUNCTION public.get_seller_ranking_stats()'), 'Fonction RPC get_seller_ranking_stats définie');
+assert.ok(migrationFile.includes('SECURITY DEFINER'), 'La fonction doit être SECURITY DEFINER pour contourner l\'isolation des commandes sans fuite de données');
+assert.ok(migrationFile.includes('cancelled_by_seller_count'), 'La fonction doit compter les annulations vendeur');
+assert.ok(migrationFile.includes('delivered_orders_count'), 'La fonction doit compter les livraisons');
+console.log('✅ [6.4] Script de migration SQL additive get_seller_ranking_stats validé !');
 
 console.log('🎉 TOUS LES TESTS DES PROMOTIONS ADMIN ET DU CLASSEMENT ONT RÉUSSI AVEC SUCCÈS !');
 process.exit(0);

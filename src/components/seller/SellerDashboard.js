@@ -30,6 +30,8 @@ import { createSellerAnnounceModal } from './SellerAnnounceModal.js';
 import { getSellerQuotaConsumption } from '../../services/quota-service.js';
 import { createDevQuotaSandbox } from '../dev/DevQuotaSandbox.js';
 import { computeSubscriptionStatus, SUBSCRIPTION_PLANS, FEATURE_FLAGS } from '../../config/subscription.js';
+import { fetchCampusLeaderboard } from '../../services/seller-ranking-service.js';
+import { openSellerLeaderboardModal } from './SellerLeaderboardModal.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -677,6 +679,22 @@ export function createSellerDashboard({
                             <i class="fa-solid fa-circle-user text-xs w-4 text-center ${activeSubTab === 'profile' ? 'text-white' : 'text-slate-400 group-hover:text-primary'}"></i>
                             <span>Mon Profil</span>
                         </button>
+
+                        <!-- Classement Inter-Vendeurs -->
+                        <button 
+                            type="button" 
+                            id="subtab-leaderboard" 
+                            class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all min-h-[44px] cursor-pointer group active:scale-95 text-slate-600 hover:text-slate-900 hover:bg-amber-50/70 border border-transparent hover:border-amber-200 font-semibold"
+                            title="Consulter le classement officiel inter-vendeurs du campus"
+                        >
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-trophy text-xs w-4 text-center text-amber-500 group-hover:scale-110 transition-transform"></i>
+                                <span>Classement Vendeurs</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
+                                🏆 Top
+                            </span>
+                        </button>
                     </div>
                 </div>
 
@@ -873,6 +891,15 @@ export function createSellerDashboard({
                         <button type="button" id="drawer-btn-profile" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer border border-amber-200">
                             <i class="fa-solid fa-circle-user text-sm text-amber-700 w-5 text-center"></i>
                             <span>Mon Profil (Coordonnées, Pavillon, Chambre)</span>
+                        </button>
+
+                        <!-- Classement Inter-Vendeurs -->
+                        <button type="button" id="drawer-btn-leaderboard" class="flex items-center justify-between px-4 py-3 rounded-2xl bg-amber-50/80 hover:bg-amber-100 text-amber-950 font-bold text-xs transition-colors cursor-pointer border border-amber-300 shadow-2xs">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-trophy text-sm text-amber-600 w-5 text-center"></i>
+                                <span>Classement Inter-Vendeurs (Top Campus)</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">🏆 Voir</span>
                         </button>
 
                         <!-- Partager ma boutique -->
@@ -1562,6 +1589,43 @@ export function createSellerDashboard({
                     </div>
                 </div>
 
+                <!-- Carte Interactive : Classement Inter-Vendeurs du Campus -->
+                <div 
+                    id="card-seller-leaderboard" 
+                    class="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-primary/5 p-4 sm:p-5 rounded-3xl border border-amber-300 shadow-xs flex items-center justify-between gap-4 flex-wrap cursor-pointer hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99] group"
+                    title="Cliquer pour voir le classement officiel inter-vendeurs"
+                >
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black flex items-center justify-center text-xl shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                            🏆
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-heading font-black text-sm sm:text-base text-slate-900">
+                                    Classement Inter-Vendeurs
+                                </span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 shadow-2xs">
+                                    Campus UIDT
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-600 mt-0.5 truncate max-w-md">
+                                Comparez votre boutique avec tous les vendeurs du campus et visez la 1ère place du podium !
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 shrink-0 w-full sm:w-auto justify-end">
+                        <button 
+                            type="button" 
+                            id="btn-open-leaderboard-dashboard" 
+                            class="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+                        >
+                            <i class="fa-solid fa-ranking-star text-xs"></i>
+                            <span>Voir le classement</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 4. Raccourcis d'action rapide -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     <button 
@@ -2182,6 +2246,44 @@ export function createSellerDashboard({
         });
         containerEl.querySelector('#subtab-profile')?.addEventListener('click', handleOpenProfile);
         containerEl.querySelector('#bnav-seller-profile')?.addEventListener('click', handleOpenProfile);
+
+        // Ouverture de la modale du Classement Inter-Vendeurs
+        const handleOpenLeaderboard = async () => {
+            const btnDashboard = containerEl.querySelector('#btn-open-leaderboard-dashboard');
+            const originalHTML = btnDashboard ? btnDashboard.innerHTML : '';
+            if (btnDashboard) {
+                btnDashboard.disabled = true;
+                btnDashboard.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Chargement...</span>';
+            }
+            try {
+                const leaderboard = await fetchCampusLeaderboard({ currentSellerId: seller.id });
+                openSellerLeaderboardModal({
+                    leaderboard,
+                    currentSellerId: seller.id,
+                });
+            } catch (err) {
+                console.warn('[SellerDashboard] Erreur ouverture classement inter-vendeurs:', err);
+                if (typeof onShowToast === 'function') {
+                    onShowToast('Impossible de charger le classement pour le moment.', 'error');
+                }
+            } finally {
+                if (btnDashboard) {
+                    btnDashboard.disabled = false;
+                    btnDashboard.innerHTML = originalHTML;
+                }
+            }
+        };
+
+        containerEl.querySelector('#subtab-leaderboard')?.addEventListener('click', handleOpenLeaderboard);
+        containerEl.querySelector('#drawer-btn-leaderboard')?.addEventListener('click', () => {
+            closeDrawer();
+            handleOpenLeaderboard();
+        });
+        containerEl.querySelector('#card-seller-leaderboard')?.addEventListener('click', handleOpenLeaderboard);
+        containerEl.querySelector('#btn-open-leaderboard-dashboard')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleOpenLeaderboard();
+        });
 
         // Cartes Bento KPI interactives [data-seller-kpi]
         containerEl.querySelectorAll('[data-seller-kpi]').forEach((kpiCard) => {

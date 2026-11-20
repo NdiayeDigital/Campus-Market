@@ -5,6 +5,8 @@
  * Règle stricte : Les gains ou pénalités de points sont strictement calibrés entre 5 et 10 points (jamais plus de 10).
  */
 
+import { supabase } from './supabase.js';
+
 export const POINTS_RULES = {
     DELIVERED_ORDER: 10,       // +10 pts par commande livrée avec succès (le maximum autorisé)
     REVIEW_5_STAR: 8,          // +8 pts pour un avis client 5 étoiles
@@ -279,6 +281,94 @@ export function getSellerRankInfo(sellerId, leaderboard = []) {
     };
 }
 
+/**
+ * Récupère le classement officiel inter-vendeurs de manière fiable et sécurisée.
+ * Résout le cloisonnement RLS sur les commandes en interrogeant la RPC Postgres SECURITY DEFINER.
+ * @param {Object} [params]
+ * @param {string} [params.currentSellerId]
+ * @returns {Promise<Array>} Liste ordonnée de tous les marchands classés avec rank, points, tier, stats
+ */
+export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
+    try {
+        // 1. Profils de tous les marchands actifs et superadmins marchands
+        const { data: profiles, error: errProf } = await supabase
+            .from('profiles')
+            .select('id, role, shop_name, prenom, nom, pavillon, chambre, telephone, phone, is_open, avatar_url, logo_url')
+            .in('role', ['vendeur', 'superadmin']);
+
+        if (errProf) throw errProf;
+        const allProfiles = profiles || [];
+
+        // 2. Statistiques agrégées de commandes et d'articles (contourne l'isolation RLS des commandes)
+        let statsRpc = [];
+        try {
+            const { data: rpcData, error: rpcErr } = await supabase.rpc('get_seller_ranking_stats');
+            if (!rpcErr && Array.isArray(rpcData)) {
+                statsRpc = rpcData;
+            } else {
+                // Repli vers get_seller_stats si la fonction ranking n'est pas encore déployée
+                const { data: fallbackData } = await supabase.rpc('get_seller_stats');
+                if (Array.isArray(fallbackData)) statsRpc = fallbackData;
+            }
+        } catch (e) {
+            console.warn('[Leaderboard] Erreur RPC stats, tentative de repli:', e);
+        }
+
+        const statsMap = new Map();
+        statsRpc.forEach((st) => {
+            if (st && st.seller_id) {
+                statsMap.set(st.seller_id, {
+                    deliveredCount: Number(st.delivered_orders_count) || 0,
+                    cancelledBySellerCount: Number(st.cancelled_by_seller_count) || 0,
+                    activeProducts: Number(st.active_products_count) || 0,
+                });
+            }
+        });
+
+        // 3. Avis clients publics
+        let reviewsList = [];
+        try {
+            const { data: revData } = await supabase.from('reviews').select('seller_id, rating');
+            reviewsList = revData || [];
+        } catch (_) {}
+
+        // 4. Si la RPC n'a rien renvoyé (environnement de test / local), repli vers les commandes directes
+        let directOrders = [];
+        if (statsMap.size === 0) {
+            try {
+                const { data: ordData } = await supabase.from('orders').select('id, seller_id, status, cancelled_by, price');
+                directOrders = ordData || [];
+            } catch (_) {}
+        }
+
+        // 5. Synthèse des commandes et nombre de produits actifs par vendeur
+        const syntheticOrders = [];
+        const productCountsMap = new Map();
+
+        allProfiles.forEach((p) => {
+            const st = statsMap.get(p.id);
+            if (st) {
+                productCountsMap.set(p.id, st.activeProducts);
+                for (let i = 0; i < st.deliveredCount; i++) {
+                    syntheticOrders.push({ seller_id: p.id, status: 'delivered', price: 0 });
+                }
+                for (let i = 0; i < st.cancelledBySellerCount; i++) {
+                    syntheticOrders.push({ seller_id: p.id, status: 'cancelled', cancelled_by: 'seller', price: 0 });
+                }
+            }
+        });
+
+        const ordersToUse = statsMap.size > 0 ? syntheticOrders : directOrders;
+
+        // 6. Construction du classement avec buildSellersLeaderboard
+        const leaderboard = buildSellersLeaderboard(allProfiles, ordersToUse, reviewsList, productCountsMap);
+        return leaderboard;
+    } catch (err) {
+        console.error('[Leaderboard] Échec récupération leaderboard:', err);
+        return [];
+    }
+}
+
 export default {
     POINTS_RULES,
     SELLER_TIERS,
@@ -286,4 +376,5 @@ export default {
     computeSellerPoints,
     buildSellersLeaderboard,
     getSellerRankInfo,
+    fetchCampusLeaderboard,
 };
