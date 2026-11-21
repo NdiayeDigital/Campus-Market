@@ -192,11 +192,11 @@ export function interleaveProductsBySeller(products, { shuffle = true } = {}) {
  *
  * @param {Object} [options]
  * @param {string} [options.category='all'] - Catégorie à filtrer
- * @param {number} [options.limit=50] - Nombre maximal de produits
+ * @param {number|null} [options.limit=null] - Nombre maximal de produits (null = aucune limite arbitraire)
  * @param {number} [options.offset=0] - Offset pour pagination
  * @returns {Promise<Array>}
  */
-export async function fetchActiveProducts({ category = 'all', limit = 50, offset = 0, retry = 1 } = {}) {
+export async function fetchActiveProducts({ category = 'all', limit = null, offset = 0, retry = 1 } = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
@@ -207,8 +207,12 @@ export async function fetchActiveProducts({ category = 'all', limit = 50, offset
             .from('products')
             .select('*, seller:seller_id(id, prenom, nom, telephone, is_open, role, pavillon, chambre, shop_name, subscription_plan, subscription_status, subscription_expires_at, trial_started_at, trial_ends_at, created_at, avatar_url)')
             .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1)
             .abortSignal(controller.signal);
+
+        // N'applique la pagination range QUE si une limite numérique strictement positive est demandée
+        if (typeof limit === 'number' && limit > 0) {
+            query = query.range(offset, offset + limit - 1);
+        }
 
         if (category && category !== 'all') {
             const catObj = CATEGORIES.find((c) => c.id === category || c.label === category);

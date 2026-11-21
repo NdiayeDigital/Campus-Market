@@ -9,6 +9,7 @@ import { shareProduct } from '../utils/share.js';
 import { showToast } from '../utils/notifications.js';
 import { setProductSEO, resetDefaultSEO } from '../utils/seo.js';
 import { resolveMediaUrl } from '../utils/image-compressor.js';
+import { FEATURE_FLAGS } from '../config/subscription.js';
 
 /**
  * Crée le modal de détails d'un produit.
@@ -39,7 +40,7 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
             : false;
         const isOpen = p.seller ? (p.seller.is_open !== false && !isSuspended) : true;
         const isOutOfStock = p.stock === 0;
-        const isMaskedQuota = p.quota_status === 'masqué_quota' || p.is_active === false;
+        const isMaskedQuota = FEATURE_FLAGS.QUOTAS_ENABLED && (p.quota_status === 'masqué_quota' || p.is_active === false);
         const isUnavailable = !isOpen || isOutOfStock || isSuspended || isMaskedQuota;
 
         const sellerName = p.seller

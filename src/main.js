@@ -60,6 +60,7 @@ const appState = {
     currentView: 'catalog', // 'catalog' | 'orders' | 'seller' | 'admin'
     currentSeller: initialCachedSeller,
     products: [],
+    allProducts: [],
     topShops: [],
     isLoading: true,
 };
@@ -963,9 +964,13 @@ async function initApp() {
     }
 
     function updateCategoryCounters(items) {
-        if (!items || !categoryChipsComponent?.setCategoryCounts) return;
-        const counts = { all: items.length };
-        items.forEach((p) => {
+        if (!categoryChipsComponent?.setCategoryCounts) return;
+        const source = (appState.allProducts && appState.allProducts.length > 0)
+            ? appState.allProducts
+            : (items || []);
+        if (!source || source.length === 0) return;
+        const counts = { all: source.length };
+        source.forEach((p) => {
             if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
         });
         categoryChipsComponent.setCategoryCounts(counts);
@@ -988,6 +993,9 @@ async function initApp() {
                 });
                 if (fetched && fetched.length > 0) {
                     appState.products = fetched;
+                    if (appState.currentCategory === 'all') {
+                        appState.allProducts = fetched;
+                    }
                 } else if (!appState.products || appState.products.length === 0) {
                     appState.products = [];
                 }
@@ -1091,6 +1099,7 @@ async function initApp() {
         const products = await fetchActiveProducts({ category: 'all' });
         if (products && products.length > 0) {
             appState.products = products;
+            appState.allProducts = products;
             updateCategoryCounters(appState.products);
             hideLoading();
             if (appState.currentView === 'catalog') {
