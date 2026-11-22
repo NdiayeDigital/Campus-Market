@@ -50,7 +50,7 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
                     </div>
                     <div class="flex flex-col items-center text-center">
                         <h3 class="font-heading font-black text-slate-900 text-base">Chargement du Classement Officiel...</h3>
-                        <p class="text-xs text-slate-500 mt-1">Calcul des scores méritocratiques et vérification des packs payants en cours.</p>
+                        <p class="text-xs text-slate-500 mt-1">Interrogation de l'autorité SuperAdmin et calcul des scores méritocratiques.</p>
                     </div>
                 </div>
             `;
@@ -128,8 +128,9 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
-                        Packs Pro & Business
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs flex items-center gap-1">
+                        <i class="fa-solid fa-shield-halved text-amber-600"></i>
+                        <span>Certifié SuperAdmin</span>
                     </span>
                     <button 
                         type="button" 

@@ -2044,6 +2044,114 @@ export async function fetchPushSubscribersCount() {
     };
 }
 
+/**
+ * Récupère le classement officiel des vendeurs depuis l'autorité SuperAdmin.
+ * Tente d'abord la RPC SECURITY DEFINER serveur 'get_superadmin_seller_ranking'.
+ * En cas d'indisponibilité, utilise le calcul SuperAdmin local direct (activeSellers + sellerStatsMap).
+ * @returns {Promise<Array>}
+ */
+export async function fetchSuperAdminLeaderboard() {
+    try {
+        // 1. Appel de la RPC d'autorité SuperAdmin
+        const { data, error } = await supabase.rpc('get_superadmin_seller_ranking');
+        if (!error && Array.isArray(data) && data.length > 0) {
+            return data.map((s, idx) => ({
+                id: s.id,
+                rank: Number(s.rank) || (idx + 1),
+                shopName: s.shop_name || `Boutique ${s.prenom || 'Marchand'}`,
+                shop_name: s.shop_name,
+                prenom: s.prenom,
+                nom: s.nom,
+                avatar_url: s.avatar_url,
+                logo_url: s.logo_url,
+                pavillon: s.pavillon,
+                chambre: s.chambre,
+                is_open: s.is_open !== false,
+                role: s.role,
+                subscription_plan: s.subscription_plan,
+                deliveredCount: Number(s.delivered_count) || 0,
+                cancelledBySellerCount: Number(s.cancelled_by_seller_count) || 0,
+                activeProducts: Number(s.active_products_count) || 0,
+                points: Number(s.points) || 0,
+                tier: {
+                    id: s.tier_id || 'bronze',
+                    name: s.tier_name || 'Bronze',
+                    icon: s.tier_icon || '🥉',
+                    color: s.tier_color || '#c2410c',
+                    badgeClass: s.tier_id === 'diamant' ? 'bg-cyan-50 text-cyan-800 border-cyan-300' :
+                                s.tier_id === 'or' ? 'bg-amber-50 text-amber-800 border-amber-300' :
+                                s.tier_id === 'argent' ? 'bg-slate-100 text-slate-800 border-slate-300' :
+                                'bg-orange-50 text-orange-900 border-orange-300',
+                },
+            }));
+        }
+    } catch (rpcErr) {
+        console.warn('[AdminService] RPC get_superadmin_seller_ranking non disponible, repli local:', rpcErr);
+    }
+
+    // 2. Repli résilient : Calcul via la supervision SuperAdmin
+    try {
+        const [sellers, orders] = await Promise.all([
+            fetchActiveSellers().catch(() => []),
+            fetchAllOrdersAdmin().catch(() => []),
+        ]);
+
+        const statsMap = buildAllSellersStatsMap(orders);
+        const activeSellersList = (sellers || []).filter(s => s.role === 'vendeur' || s.role === 'superadmin');
+
+        const rankedList = activeSellersList.map((s) => {
+            const stat = statsMap[s.id] || { deliveredCount: 0, cancelledCount: 0, cancelledBySellerCount: 0 };
+            const delivered = stat.deliveredCount || 0;
+            const cancelledBySeller = stat.cancelledBySellerCount || 0;
+            const profileBonus = (s.shop_name && s.pavillon && s.chambre) ? 5 : 0;
+            const shopBonus = (s.is_open !== false) ? 5 : 0;
+            const pts = Math.max(0, (delivered * 10) - (cancelledBySeller * 5) + profileBonus + shopBonus);
+
+            let tier = { id: 'bronze', name: 'Bronze', icon: '🥉', color: '#c2410c', badgeClass: 'bg-orange-50 text-orange-900 border-orange-300' };
+            if (pts >= 300) {
+                tier = { id: 'diamant', name: 'Diamant', icon: '💎', color: '#06b6d4', badgeClass: 'bg-cyan-50 text-cyan-800 border-cyan-300' };
+            } else if (pts >= 150) {
+                tier = { id: 'or', name: 'Or', icon: '🥇', color: '#f59e0b', badgeClass: 'bg-amber-50 text-amber-800 border-amber-300' };
+            } else if (pts >= 50) {
+                tier = { id: 'argent', name: 'Argent', icon: '🥈', color: '#64748b', badgeClass: 'bg-slate-100 text-slate-800 border-slate-300' };
+            }
+
+            return {
+                id: s.id,
+                shopName: s.shop_name || `Boutique ${s.prenom || 'Marchand'}`,
+                shop_name: s.shop_name,
+                prenom: s.prenom,
+                nom: s.nom,
+                avatar_url: s.avatar_url,
+                logo_url: s.logo_url,
+                pavillon: s.pavillon,
+                chambre: s.chambre,
+                is_open: s.is_open !== false,
+                role: s.role,
+                subscription_plan: s.subscription_plan,
+                deliveredCount: delivered,
+                cancelledBySellerCount,
+                activeProducts: 0,
+                points: pts,
+                tier,
+            };
+        });
+
+        rankedList.sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            return b.deliveredCount - a.deliveredCount;
+        });
+
+        return rankedList.map((s, index) => ({
+            ...s,
+            rank: index + 1,
+        }));
+    } catch (fallbackErr) {
+        console.error('[AdminService] Échec complet calcul leaderboard SuperAdmin:', fallbackErr);
+        return [];
+    }
+}
+
 export default {
     ensureAdminSellerProfile,
     verifyAdminRole,
@@ -2090,5 +2198,6 @@ export default {
     fetchPushSubscribersCount,
     computeSellerOrderStats,
     buildAllSellersStatsMap,
+    fetchSuperAdminLeaderboard,
 };
 
