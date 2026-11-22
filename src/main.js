@@ -1147,6 +1147,15 @@ if (
         window.location.hostname === '127.0.0.1')
 ) {
     const registerServiceWorker = () => {
+        let isRefreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!isRefreshing) {
+                isRefreshing = true;
+                console.log('[SW] Nouveau contrôleur actif, rechargement automatique...');
+                window.location.reload();
+            }
+        });
+
         navigator.serviceWorker
             .register('/sw.js')
             .then((reg) => {

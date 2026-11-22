@@ -133,6 +133,68 @@ async function runTests() {
         failed++;
     }
 
+    // Test 6 : Vérification de l'incrémentation du cache Service Worker PWA (v27) et de l'écoute controllerchange
+    try {
+        console.log('\nTest 6 : Vérification de la purge du cache Service Worker (v27) et auto-reload');
+        const swPath = path.join(rootDir, 'public', 'sw.js');
+        const mainPath = path.join(rootDir, 'src', 'main.js');
+        assert.ok(fs.existsSync(swPath), 'public/sw.js doit exister');
+        assert.ok(fs.existsSync(mainPath), 'src/main.js doit exister');
+
+        const swContent = fs.readFileSync(swPath, 'utf8');
+        const mainContent = fs.readFileSync(mainPath, 'utf8');
+
+        assert.ok(
+            swContent.includes("CACHE_NAME = 'campus-market-v27'"),
+            "public/sw.js doit définir CACHE_NAME = 'campus-market-v27' pour invalider l'ancien cache v26"
+        );
+        assert.ok(
+            mainContent.includes("controllerchange"),
+            "src/main.js doit écouter 'controllerchange' pour recharger la page dès qu'un nouveau Service Worker s'active"
+        );
+
+        console.log('  ✅ Test 6 validé : Service Worker v27 et auto-actualisation controllerchange configurés.');
+        passed++;
+    } catch (err) {
+        console.error('  ❌ Échec Test 6 :', err.message);
+        failed++;
+    }
+
+    // Test 7 : Vérification de l'hydratation immédiate avec initialProducts
+    try {
+        console.log('\nTest 7 : Vérification de l\'hydratation immédiate avec initialProducts sans skeleton flash');
+        const dashboardPath = path.join(rootDir, 'src', 'components', 'seller', 'SellerDashboard.js');
+        const pmPath = path.join(rootDir, 'src', 'components', 'seller', 'ProductManager.js');
+        const sellerServicePath = path.join(rootDir, 'src', 'services', 'seller-service.js');
+
+        const dashboardContent = fs.readFileSync(dashboardPath, 'utf8');
+        const pmContent = fs.readFileSync(pmPath, 'utf8');
+        const sellerServiceContent = fs.readFileSync(sellerServicePath, 'utf8');
+
+        assert.ok(
+            sellerServiceContent.includes('allProducts: productsList'),
+            'getSellerDashboardData doit exposer allProducts'
+        );
+        assert.ok(
+            dashboardContent.includes('initialProducts: dashboardData?.allProducts || dashboardData?.recentProducts'),
+            'SellerDashboard.js doit injecter initialProducts dans createProductManager'
+        );
+        assert.ok(
+            pmContent.includes('initialProducts = []'),
+            'createProductManager doit accepter initialProducts'
+        );
+        assert.ok(
+            pmContent.includes('isLoading = products.length === 0'),
+            'isLoading doit être faux dès le montage si initialProducts est renseigné'
+        );
+
+        console.log('  ✅ Test 7 validé : Chaîne d\'hydratation immédiate initialProducts conforme et sans blocage.');
+        passed++;
+    } catch (err) {
+        console.error('  ❌ Échec Test 7 :', err.message);
+        failed++;
+    }
+
     console.log(`\n========================================`);
     console.log(`Résultats : ${passed} validé(s), ${failed} échec(s)`);
     console.log(`========================================\n`);

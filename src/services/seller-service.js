@@ -615,6 +615,7 @@ export async function getSellerDashboardData(sellerId) {
             maxAllowed,
             recentOrders: ordersList.slice(0, 20),
             recentProducts: productsList.slice(0, 10),
+            allProducts: productsList,
         };
     } catch (err) {
         console.error('[SellerService] Erreur chargement dashboard:', err);

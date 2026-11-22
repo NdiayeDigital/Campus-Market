@@ -44,6 +44,7 @@ export function createProductManager({
     sellerProfile = null,
     isSuspended = false,
     initialTab = 'list',
+    initialProducts = [],
     onProductChanged,
     onTabChange,
     onOpenSubscription,
@@ -51,8 +52,8 @@ export function createProductManager({
     const containerEl = document.createElement('div');
     containerEl.className = 'w-full flex flex-col gap-5 view-transition-enter';
 
-    let products = [];
-    let isLoading = true;
+    let products = Array.isArray(initialProducts) ? [...initialProducts] : [];
+    let isLoading = products.length === 0;
     let activeTab = initialTab; // 'list' | 'add'
     let articleFilter = 'all'; // 'all' | 'active' | 'sold' | 'paused'
     let editingProduct = null;
@@ -447,13 +448,20 @@ export function createProductManager({
     };
 
     async function loadData() {
-        isLoading = true;
-        render();
+        if (products.length === 0) {
+            isLoading = true;
+            render();
+        }
         try {
-            products = await getSellerProducts(sellerId);
+            const fresh = await getSellerProducts(sellerId);
+            if (Array.isArray(fresh)) {
+                products = fresh;
+            }
         } catch (err) {
             console.error('[ProductManager] Erreur chargement produits:', err);
-            products = [];
+            if (products.length === 0) {
+                products = [];
+            }
         } finally {
             isLoading = false;
             render();

@@ -1343,6 +1343,7 @@ export function createSellerDashboard({
                 sellerProfile: currentProfile,
                 isSuspended,
                 initialTab: activeSubTab === 'add-product' ? 'add' : 'list',
+                initialProducts: dashboardData?.allProducts || dashboardData?.recentProducts || [],
                 onTabChange: (tab) => {
                     switchSubTab(tab);
                 },
