@@ -68,6 +68,20 @@ export function resolveRoute(rawHash = '', search = '') {
         return { view: 'orders', params: {} };
     }
 
+    // 5.b. Classement Officiel de la Plateforme (#leaderboard ou #classement)
+    if (hash === '#leaderboard' || hash.startsWith('#leaderboard?') || hash === '#classement' || hash.startsWith('#classement?')) {
+        return { view: 'leaderboard', params: {} };
+    }
+
+    // 5.c. Publication d'annonce étudiante (#passer-annonce ou #nouvelle-annonce ou #annonce)
+    if (
+        hash === '#passer-annonce' || hash.startsWith('#passer-annonce?') ||
+        hash === '#nouvelle-annonce' || hash.startsWith('#nouvelle-annonce?') ||
+        hash === '#annonce' || hash.startsWith('#annonce?')
+    ) {
+        return { view: 'student-ad', params: {} };
+    }
+
     // 6. Pages institutionnelles & légales (#about, #terms, #privacy)
     if (hash === '#about' || hash.startsWith('#about?') || hash === '#a-propos' || hash.startsWith('#a-propos?')) {
         return { view: 'about', params: {} };

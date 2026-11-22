@@ -198,6 +198,20 @@ export function createBottomNav({
                             <i class="fa-solid fa-box text-base ${currentTab === 'orders' ? 'text-accent' : 'text-slate-400 group-hover:text-slate-700'}"></i>
                             <span>Mes Commandes</span>
                         </button>
+
+                        <!-- Lien 5 : Classement Plateforme -->
+                        <button 
+                            type="button" 
+                            id="sidebar-tab-leaderboard" 
+                            class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all min-h-[46px] cursor-pointer group ${
+                                currentTab === 'leaderboard'
+                                    ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }"
+                        >
+                            <i class="fa-solid fa-trophy text-base ${currentTab === 'leaderboard' ? 'text-accent' : 'text-amber-500 group-hover:text-amber-600'}"></i>
+                            <span>Classement</span>
+                        </button>
                     </div>
                 </div>
 
@@ -311,6 +325,12 @@ export function createBottomNav({
             currentTab = 'orders';
             render();
             if (typeof onNavigate === 'function') onNavigate('orders');
+        });
+
+        navContainer.querySelector('#sidebar-tab-leaderboard')?.addEventListener('click', () => {
+            currentTab = 'leaderboard';
+            render();
+            if (typeof onNavigate === 'function') onNavigate('leaderboard');
         });
 
         navContainer.querySelector('#sidebar-tab-seller')?.addEventListener('click', () => {

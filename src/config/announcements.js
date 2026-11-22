@@ -16,6 +16,15 @@ export const ANNONCE_CONFIG = {
     paymentLink: 'https://link.saspay.me/1aio4avhabm', // Lien SasPay officiel 250 FCFA
 };
 
+export const STUDENT_AD_CONFIG = {
+    price: 250,
+    currency: 'XOF',
+    priceDisplay: '250 FCFA',
+    durationDays: 5,
+    paymentLink: 'https://link.saspay.me/1aio4avhabm', // Lien SasPay officiel 250 FCFA (5 jours)
+    aspectRatio: '16:9',
+};
+
 export const CAROUSEL_TYPES = {
     annonce: {
         id: 'annonce',

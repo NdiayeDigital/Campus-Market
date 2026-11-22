@@ -17,6 +17,8 @@ import { createAnnouncementCarousel } from './components/AnnouncementCarousel.js
 import { createPartnersSection } from './components/PartnersSection.js';
 import { createSponsoredAnnouncements } from './components/SponsoredAnnouncements.js';
 import { createLegalView } from './components/LegalView.js';
+import { createSellerLeaderboardView } from './components/seller/SellerLeaderboardView.js';
+import { createStudentAdView, createStudentAdCtaBanner } from './components/StudentAdView.js';
 import { fetchCarouselSlides, fetchPartners } from './services/admin-service.js';
 import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
 import { createForcePasswordChangeModal } from './components/seller/ForcePasswordChangeModal.js';
@@ -299,7 +301,12 @@ async function initApp() {
         },
     });
 
-    // 4b. Section Nos Partenaires :
+    // 4b. Appel à l'action pour les annonces étudiantes (sous le carrousel)
+    const studentAdCtaBannerComponent = createStudentAdCtaBanner({
+        onPostAd: () => navigateToView('student-ad'),
+    });
+
+    // 4c. Section Nos Partenaires :
     // - partnersTickerComponent : SEULE la bande défilante pure en haut (après quelques lignes de produits)
     // - partnersSectionComponent : Le bloc complet officiel répété tout en bas de page
     const partnersTickerComponent = createPartnersSection({ variant: 'ticker' });
@@ -542,6 +549,34 @@ async function initApp() {
             };
             updateSEO({ title: titles[viewName], description: descs[viewName] });
             renderLegalPageView(viewName);
+        } else if (viewName === 'leaderboard') {
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            if (headerComponent.setMode) headerComponent.setMode('catalog');
+            categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.remove('hidden');
+            if (bottomNavComponent) {
+                bottomNavComponent.setHidden(false);
+                bottomNavComponent.setActiveTab('leaderboard');
+            }
+            updateSEO({
+                title: 'Classement Officiel des Marchands — Campus Market UIDT',
+                description: 'Classement méritocratique de tous les marchands actifs du campus de l’Université Iba Der Thiam de Thiès.'
+            });
+            renderLeaderboardView();
+        } else if (viewName === 'student-ad') {
+            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
+            if (headerComponent.setMode) headerComponent.setMode('catalog');
+            categoryChipsComponent.classList.add('hidden');
+            footerEl.classList.remove('hidden');
+            if (bottomNavComponent) {
+                bottomNavComponent.setHidden(false);
+                bottomNavComponent.setActiveTab('catalog');
+            }
+            updateSEO({
+                title: 'Faire Passer une Annonce — Campus Market UIDT',
+                description: 'Publiez votre affiche ou annonce sur le carrousel 16:9 de Campus Market pour 250 FCFA pendant 5 jours.'
+            });
+            renderStudentAdView();
         } else {
             mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
@@ -592,6 +627,29 @@ async function initApp() {
             },
         });
         mainContentEl.appendChild(legalEl);
+    }
+
+    // Rendu de la vue Classement officiel public
+    function renderLeaderboardView() {
+        mainContentEl.innerHTML = '';
+        const leaderboardViewEl = createSellerLeaderboardView({
+            currentSellerId: appState.currentSeller?.id || null,
+            onBack: () => navigateToView('catalog'),
+            onOpenSubscription: () => {
+                subscriptionModalController?.open?.(appState.currentSeller);
+            },
+        });
+        mainContentEl.appendChild(leaderboardViewEl);
+    }
+
+    // Rendu de la vue de publication d'annonce étudiante
+    function renderStudentAdView() {
+        mainContentEl.innerHTML = '';
+        const studentAdEl = createStudentAdView({
+            onBackToCatalog: () => navigateToView('catalog'),
+            onShowToast: showToast,
+        });
+        mainContentEl.appendChild(studentAdEl);
     }
 
     // Rendu du Profil Vendeur (redirigé vers l'espace vendeur unifié avec le sous-onglet profil)
@@ -753,6 +811,7 @@ async function initApp() {
         if (!appState.searchQuery && appState.currentCategory === 'all') {
             mainContentEl.appendChild(sponsoredAnnouncementsComponent);
             mainContentEl.appendChild(announcementCarouselComponent);
+            mainContentEl.appendChild(studentAdCtaBannerComponent);
         }
 
         // 2. Section Top Shops (Vendeurs populaires certifiés)
@@ -765,7 +824,10 @@ async function initApp() {
                         <i class="fa-solid fa-trophy text-accent text-sm"></i>
                         Top Shops du Campus
                     </h2>
-                    <span class="text-xs text-slate-400 font-medium">Vendeurs certifiés</span>
+                    <a href="#leaderboard" id="link-view-leaderboard-top" class="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer">
+                        <span>Classement complet</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
                 </div>
                 <div class="flex items-center gap-3 overflow-x-auto no-scrollbar py-1" style="scrollbar-width: none;">
                     ${appState.topShops.map((shop) => {
@@ -816,6 +878,11 @@ async function initApp() {
                     }).join('')}
                 </div>
             `;
+
+            topShopsSection.querySelector('#link-view-leaderboard-top')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                navigateToView('leaderboard');
+            });
 
             topShopsSection.querySelectorAll('[data-shop-id]').forEach((shopCard) => {
                 shopCard.addEventListener('click', () => {

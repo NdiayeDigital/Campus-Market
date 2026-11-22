@@ -137,11 +137,36 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         try {
             const fetchAds = async () => {
                 try {
-                    const { data, error } = await supabase
-                        .from('advertisements')
-                        .select('*, seller:seller_id(prenom, nom, telephone, business_name)')
-                        .order('created_at', { ascending: false });
-                    return error ? [] : (data || []);
+                    const [resAds, resStudent] = await Promise.all([
+                        supabase
+                            .from('advertisements')
+                            .select('*, seller:seller_id(prenom, nom, telephone, business_name)')
+                            .order('created_at', { ascending: false }),
+                        supabase
+                            .from('student_announcements')
+                            .select('*')
+                            .order('created_at', { ascending: false })
+                            .catch(() => ({ data: [] })),
+                    ]);
+
+                    const adsList = resAds?.data || [];
+                    const studentAdsList = (resStudent?.data || []).map(sa => ({
+                        id: sa.id,
+                        title: sa.title || `Annonce ${sa.prenom || ''} ${sa.nom || ''}`.trim(),
+                        content: `Annonce étudiante de ${sa.prenom || ''} ${sa.nom || ''} (${sa.student_email})`,
+                        image_url: sa.image_url,
+                        amount: sa.amount || 250,
+                        status: (sa.status === 'paiement_en_attente' || !sa.status) ? 'a_valider' : sa.status,
+                        is_student_ad: true,
+                        student_nom: sa.nom,
+                        student_prenom: sa.prenom,
+                        student_email: sa.student_email,
+                        duration_days: sa.duration_days || 5,
+                        payment_link: sa.payment_link,
+                        created_at: sa.created_at,
+                    }));
+
+                    return [...studentAdsList, ...adsList];
                 } catch {
                     return [];
                 }
@@ -4011,13 +4036,23 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                                             <!-- Infos Paiement & Vendeur -->
                                             <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                                                <span><strong>Vendeur :</strong> ${escapeHTML(sellerName)} ${sellerShop ? `(${escapeHTML(sellerShop)})` : ''}</span>
-                                                ${sellerPhone ? `
-                                                    <span><strong>Tél :</strong> <a href="tel:${escapeHTML(sellerPhone)}" class="text-primary hover:underline">${escapeHTML(sellerPhone)}</a></span>
-                                                ` : ''}
-                                                <span class="px-2 py-0.5 rounded bg-slate-100 font-mono text-[11px] font-bold">
-                                                    Réf : ${escapeHTML(ad.txn_ref || 'Non renseignée')} (${escapeHTML(ad.payment_operator || 'Wave/OM')})
-                                                </span>
+                                                ${ad.is_student_ad || ad.student_nom ? `
+                                                    <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px]">
+                                                        🎓 Annonce Étudiante (5 jours)
+                                                    </span>
+                                                    <span><strong>Étudiant :</strong> ${escapeHTML(((ad.student_prenom || '') + ' ' + (ad.student_nom || '')).trim() || 'Étudiant UIDT')}</span>
+                                                    ${ad.student_email ? `
+                                                        <span><strong>Email :</strong> <a href="mailto:${escapeHTML(ad.student_email)}" class="text-primary hover:underline">${escapeHTML(ad.student_email)}</a></span>
+                                                    ` : ''}
+                                                ` : `
+                                                    <span><strong>Vendeur :</strong> ${escapeHTML(sellerName)} ${sellerShop ? `(${escapeHTML(sellerShop)})` : ''}</span>
+                                                    ${sellerPhone ? `
+                                                        <span><strong>Tél :</strong> <a href="tel:${escapeHTML(sellerPhone)}" class="text-primary hover:underline">${escapeHTML(sellerPhone)}</a></span>
+                                                    ` : ''}
+                                                    <span class="px-2 py-0.5 rounded bg-slate-100 font-mono text-[11px] font-bold">
+                                                        Réf : ${escapeHTML(ad.txn_ref || 'Non renseignée')} (${escapeHTML(ad.payment_operator || 'Wave/OM')})
+                                                    </span>
+                                                `}
                                                 <span class="font-bold text-emerald-700">250 FCFA</span>
                                             </div>
 

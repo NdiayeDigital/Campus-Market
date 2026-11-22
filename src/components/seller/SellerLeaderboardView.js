@@ -102,7 +102,7 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
         }
 
         containerEl.innerHTML = `
-            <!-- 1. BARRE DE NAVIGATION SUPÉRIEURE DU CLASSEMENT -->
+            <!-- 1. EN-TÊTE DU CLASSEMENT OFFICIEL -->
             <div class="flex items-center justify-between gap-3 flex-wrap bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
                 <div class="flex items-center gap-3">
                     ${typeof onBack === 'function' ? `
@@ -110,17 +110,20 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
                             type="button" 
                             id="btn-leaderboard-back-dashboard" 
                             class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer active:scale-95"
-                            title="Retour au tableau de bord"
+                            title="Retour"
                         >
                             <i class="fa-solid fa-arrow-left text-xs"></i>
-                            <span>Tableau de bord</span>
+                            <span>${currentSellerId ? 'Tableau de bord' : 'Retour aux offres'}</span>
                         </button>
                     ` : ''}
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2.5">
                         <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-                        <h2 class="font-heading font-black text-slate-900 text-sm sm:text-base">
-                            Classement Officiel Plateforme
-                        </h2>
+                        <div>
+                            <h2 class="font-heading font-black text-slate-900 text-sm sm:text-base leading-tight">
+                                Classement Officiel de la Plateforme
+                            </h2>
+                            <span class="text-[11px] text-slate-500 hidden sm:inline">Méritocratie des marchands certifiés • Campus UIDT</span>
+                        </div>
                     </div>
                 </div>
 
@@ -139,115 +142,15 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
                 </div>
             </div>
 
-            <!-- 2. CARTE D'EN-TÊTE IMMERSIVE & RANG PERSONNEL -->
-            <div class="bg-gradient-to-r from-primary via-blue-700 to-indigo-800 text-white rounded-3xl p-5 sm:p-7 shadow-lg relative overflow-hidden">
-                <div class="absolute -right-8 -bottom-8 w-40 h-40 bg-white/5 rounded-full blur-xl pointer-events-none"></div>
-
-                <div class="relative z-10 flex flex-col gap-4">
-                    <div class="flex items-center justify-between gap-3 flex-wrap">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-white/20 text-amber-300">
-                                🏆 Campus UIDT
-                            </span>
-                            <span class="text-xs text-white/80">Ligue des Marchands</span>
-                        </div>
-                        <span class="text-xs text-white/70">Mise à jour automatique en continu</span>
-                    </div>
-
-                    <div>
-                        <h1 class="font-heading font-black text-xl sm:text-2xl text-white">
-                            Classement Général de la Plateforme
-                        </h1>
-                        <p class="text-xs sm:text-sm text-white/85 mt-1 max-w-xl leading-relaxed">
-                            Classement méritocratique officiel de tous les marchands du campus ayant un pack payant actif (Pro à 1 000 F & Business à 2 000 F).
-                        </p>
-                    </div>
-
-                    <!-- Carte de la boutique connectée (Vous) -->
-                    ${isCurrentSellerRanked ? `
-                        <!-- Marchand classé : Position officielle -->
-                        <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/25 flex flex-col gap-3 shadow-inner">
-                            <div class="flex items-center justify-between gap-3 flex-wrap">
-                                <div class="flex items-center gap-3.5">
-                                    <div class="w-12 h-12 rounded-2xl bg-white text-slate-950 font-heading font-black text-base flex items-center justify-center shadow-md">
-                                        #${currentSellerInfo.rank}
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-xs text-white/80 font-medium">Votre Rang Officiel</span>
-                                            <span class="px-2 py-0.2 rounded-full text-[9px] font-black uppercase bg-emerald-400 text-slate-950">Classé</span>
-                                        </div>
-                                        <h3 class="font-heading font-black text-base sm:text-lg text-white">
-                                            ${escapeHTML(currentSellerInfo.shopName)}
-                                        </h3>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2.5">
-                                    <span class="px-3 py-1 rounded-full text-xs font-black ${currentSellerInfo.tier.badgeClass} border flex items-center gap-1.5 shadow-xs">
-                                        <span>${currentSellerInfo.tier.icon}</span>
-                                        <span>${currentSellerInfo.tier.name}</span>
-                                    </span>
-                                    <span class="font-heading font-black text-xl text-amber-300 tabular-nums">
-                                        ${currentSellerInfo.points} pts
-                                    </span>
-                                </div>
-                            </div>
-                            ${gapMessage ? `
-                                <div class="text-xs text-amber-200/95 bg-black/20 py-1.5 px-3 rounded-xl border border-white/10">
-                                    ${gapMessage}
-                                </div>
-                            ` : ''}
-                        </div>
-                    ` : `
-                        <!-- Marchand en Pack Découverte : Prévisualisation & Invitation -->
-                        <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-amber-300/40 flex flex-col gap-3 shadow-inner">
-                            <div class="flex items-center justify-between gap-3 flex-wrap">
-                                <div class="flex items-center gap-3.5">
-                                    <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 font-heading font-black text-lg flex items-center justify-center shadow-md">
-                                        ⭐
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-xs text-amber-300 font-bold">Pack Découverte</span>
-                                            <span class="px-2 py-0.2 rounded-full text-[9px] font-black uppercase bg-white/20 text-white">Non classé</span>
-                                        </div>
-                                        <h3 class="font-heading font-black text-base sm:text-lg text-white">
-                                            ${escapeHTML(currentSellerInfo?.shopName || 'Votre Boutique')}
-                                        </h3>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="font-heading font-black text-base text-amber-300 tabular-nums">
-                                        ${currentSellerInfo?.points || 0} pts calculés
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="text-xs text-amber-100 bg-black/30 p-3 rounded-xl border border-white/15 flex items-start justify-between gap-3 flex-wrap">
-                                <div class="flex items-start gap-2.5 max-w-xl">
-                                    <i class="fa-solid fa-crown text-amber-400 text-sm mt-0.5 shrink-0"></i>
-                                    <span class="leading-relaxed">
-                                        Le classement officiel de la plateforme est réservé aux vendeurs en <strong>Pack Pro (1 000 F)</strong> ou <strong>Business (2 000 F)</strong>. Activez un pack pour y figurer et booster votre visibilité auprès des étudiants !
-                                    </span>
-                                </div>
-                                <button 
-                                    type="button" 
-                                    id="btn-upgrade-from-leaderboard-view" 
-                                    class="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs transition-all shadow-sm cursor-pointer whitespace-nowrap self-end sm:self-center"
-                                >
-                                    Découvrir les offres 🚀
-                                </button>
-                            </div>
-                        </div>
-                    `}
-                </div>
-            </div>
-
-            <!-- 3. BARÈME MÉDITOCRATIQUE OFFICIEL (5 à 10 points) -->
+            <!-- 2. BARÈME MÉDITOCRATIQUE OFFICIEL (5 à 10 points) -->
             <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
-                <h4 class="font-heading font-extrabold text-xs uppercase text-slate-500 tracking-wider mb-3 flex items-center gap-1.5">
-                    <i class="fa-solid fa-calculator text-primary"></i>
-                    <span>Barème Officiel des Points (Entre 5 et 10 points)</span>
-                </h4>
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h4 class="font-heading font-extrabold text-xs uppercase text-slate-600 tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-calculator text-primary"></i>
+                        <span>Barème Officiel des Points (Entre 5 et 10 points)</span>
+                    </h4>
+                    <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">Calcul automatique et équitable</span>
+                </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
                     <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
                         <span class="text-sm font-black text-emerald-700 block">+10 pts</span>
@@ -268,7 +171,7 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
                 </div>
             </div>
 
-            <!-- 4. PODIUM DE LA PLATEFORME (TOP 3 🥇🥈🥉) -->
+            <!-- 3. PODIUM DE LA PLATEFORME (TOP 3 🥇🥈🥉) -->
             ${topThree.length > 0 ? `
                 <div class="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col gap-4">
                     <div class="flex items-center justify-between gap-3">
