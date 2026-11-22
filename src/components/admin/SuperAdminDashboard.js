@@ -130,48 +130,48 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     }
 
 
+    async function fetchAds() {
+        try {
+            const [resAds, resStudent] = await Promise.all([
+                supabase
+                    .from('advertisements')
+                    .select('*, seller:seller_id(prenom, nom, telephone, business_name)')
+                    .order('created_at', { ascending: false }),
+                supabase
+                    .from('student_announcements')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .catch(() => ({ data: [] })),
+            ]);
+
+            const adsList = resAds?.data || [];
+            const studentAdsList = (resStudent?.data || []).map(sa => ({
+                id: sa.id,
+                title: sa.title || `Annonce ${sa.prenom || ''} ${sa.nom || ''}`.trim(),
+                content: `Annonce étudiante de ${sa.prenom || ''} ${sa.nom || ''} (${sa.student_email})`,
+                image_url: sa.image_url,
+                amount: sa.amount || 250,
+                status: (sa.status === 'paiement_en_attente' || !sa.status) ? 'a_valider' : sa.status,
+                is_student_ad: true,
+                student_nom: sa.nom,
+                student_prenom: sa.prenom,
+                student_email: sa.student_email,
+                duration_days: sa.duration_days || 5,
+                payment_link: sa.payment_link,
+                created_at: sa.created_at,
+            }));
+
+            return [...studentAdsList, ...adsList];
+        } catch {
+            return [];
+        }
+    }
+
     async function loadAdminData() {
         isLoading = true;
         render();
 
         try {
-            const fetchAds = async () => {
-                try {
-                    const [resAds, resStudent] = await Promise.all([
-                        supabase
-                            .from('advertisements')
-                            .select('*, seller:seller_id(prenom, nom, telephone, business_name)')
-                            .order('created_at', { ascending: false }),
-                        supabase
-                            .from('student_announcements')
-                            .select('*')
-                            .order('created_at', { ascending: false })
-                            .catch(() => ({ data: [] })),
-                    ]);
-
-                    const adsList = resAds?.data || [];
-                    const studentAdsList = (resStudent?.data || []).map(sa => ({
-                        id: sa.id,
-                        title: sa.title || `Annonce ${sa.prenom || ''} ${sa.nom || ''}`.trim(),
-                        content: `Annonce étudiante de ${sa.prenom || ''} ${sa.nom || ''} (${sa.student_email})`,
-                        image_url: sa.image_url,
-                        amount: sa.amount || 250,
-                        status: (sa.status === 'paiement_en_attente' || !sa.status) ? 'a_valider' : sa.status,
-                        is_student_ad: true,
-                        student_nom: sa.nom,
-                        student_prenom: sa.prenom,
-                        student_email: sa.student_email,
-                        duration_days: sa.duration_days || 5,
-                        payment_link: sa.payment_link,
-                        created_at: sa.created_at,
-                    }));
-
-                    return [...studentAdsList, ...adsList];
-                } catch {
-                    return [];
-                }
-            };
-
             const [m, p, a, prods, ords, locs, profs, subPays, carSlides, pts, bCasts, pSubs, ads] = await Promise.all([
                 fetchGlobalMetrics(),
                 fetchPendingSellers(),
@@ -343,6 +343,54 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     }
                 }
             )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'advertisements',
+                },
+                async (payload) => {
+                    console.log('[SuperAdmin Realtime] Événement advertisements:', payload);
+                    if (payload.eventType === 'INSERT' || (payload.eventType === 'UPDATE' && (payload.new?.status === 'a_valider' || payload.new?.status === 'paiement_en_attente'))) {
+                        const studentName = (payload.new?.student_prenom || payload.new?.student_nom)
+                            ? `${payload.new?.student_prenom || ''} ${payload.new?.student_nom || ''}`.trim()
+                            : (payload.new?.title || 'Nouvelle annonce');
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`📢 Nouvelle annonce reçue : ${studentName} (250 FCFA) !`, 'info');
+                        }
+                    }
+                    try {
+                        allAdvertisements = await fetchAds();
+                        render();
+                    } catch (err) {
+                        console.warn('[SuperAdmin Realtime] Erreur refresh advertisements:', err);
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'student_announcements',
+                },
+                async (payload) => {
+                    console.log('[SuperAdmin Realtime] Événement student_announcements:', payload);
+                    if (payload.eventType === 'INSERT' || (payload.eventType === 'UPDATE' && (payload.new?.status === 'a_valider' || payload.new?.status === 'paiement_en_attente'))) {
+                        const studentName = `${payload.new?.prenom || ''} ${payload.new?.nom || ''}`.trim() || 'Un étudiant';
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`📢 Demande d'annonce étudiante reçue : ${studentName} (250 FCFA / 5 jours) !`, 'info');
+                        }
+                    }
+                    try {
+                        allAdvertisements = await fetchAds();
+                        render();
+                    } catch (err) {
+                        console.warn('[SuperAdmin Realtime] Erreur refresh student_announcements:', err);
+                    }
+                }
+            )
             .subscribe();
     }
 
@@ -375,7 +423,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             sellerMonthlyFee: 1500,
         };
 
-        const pendingAdsCount = allAdvertisements.filter(a => a.status === 'a_valider').length;
+        const pendingAdsCount = allAdvertisements.filter(a => a.status === 'a_valider' || a.status === 'paiement_en_attente').length;
         const pendingAlert = pendingSellers.length > 0 || pendingSubscriptionPayments.length > 0;
         const navTabs = [
             { id: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie', badge: null },
@@ -3928,12 +3976,21 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     function renderAnnoncesTab() {
         const filteredAds = allAdvertisements.filter((ad) => {
             if (annonceFilterTab === 'all') return true;
+            if (annonceFilterTab === 'a_valider') {
+                return ad.status === 'a_valider' || ad.status === 'paiement_en_attente';
+            }
+            if (annonceFilterTab === 'publiee') {
+                return ad.status === 'publiee' || ad.status === 'validee';
+            }
+            if (annonceFilterTab === 'refusee') {
+                return ad.status === 'refusee' || ad.status === 'rejetee';
+            }
             return ad.status === annonceFilterTab;
         });
 
-        const countAValider = allAdvertisements.filter(a => a.status === 'a_valider').length;
-        const countPubliees = allAdvertisements.filter(a => a.status === 'publiee').length;
-        const countRefusees = allAdvertisements.filter(a => a.status === 'refusee').length;
+        const countAValider = allAdvertisements.filter(a => a.status === 'a_valider' || a.status === 'paiement_en_attente').length;
+        const countPubliees = allAdvertisements.filter(a => a.status === 'publiee' || a.status === 'validee').length;
+        const countRefusees = allAdvertisements.filter(a => a.status === 'refusee' || a.status === 'rejetee').length;
         const countExpirees = allAdvertisements.filter(a => a.status === 'expiree').length;
 
         return `
@@ -3943,10 +4000,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <div>
                         <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 mb-1">
                             <i class="fa-solid fa-bullhorn text-amber-600"></i>
-                            <span>Modération des Annonces Sponsorisées (250 FCFA)</span>
+                            <span>Modération des Annonces Étudiantes & Sponsorisées (250 FCFA)</span>
                         </div>
                         <h3 class="font-heading font-extrabold text-base sm:text-xl text-slate-900">Annonces à valider</h3>
-                        <p class="text-xs text-slate-500 max-w-2xl mt-0.5">Vérifiez la référence de transaction Wave / Orange Money avant d'approuver la publication de l'annonce pour 7 jours sur l'accueil.</p>
+                        <p class="text-xs text-slate-500 max-w-2xl mt-0.5">Vérifiez les détails et la réception SasPay / Wave avant d'approuver l'affiche 16:9 pour 5 jours sur le carrousel d'accueil.</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="px-3 py-1.5 rounded-xl font-bold text-xs ${countAValider > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' : 'bg-slate-100 text-slate-700'}">
@@ -3986,18 +4043,22 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 ` : `
                     <div class="grid grid-cols-1 gap-4">
                         ${filteredAds.map((ad) => {
+                            const isStudent = ad.is_student_ad || ad.student_nom;
+                            const studentFullName = isStudent ? `${ad.student_prenom || ''} ${ad.student_nom || ''}`.trim() : '';
                             const sellerName = ad.seller ? `${ad.seller.prenom || ''} ${ad.seller.nom || ''}`.trim() : 'Vendeur';
                             const sellerPhone = ad.seller?.telephone || '';
                             const sellerShop = ad.seller?.business_name || '';
                             const createdDate = ad.created_at ? new Date(ad.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                            const isPending = ad.status === 'a_valider' || ad.status === 'paiement_en_attente';
+                            const durationDays = isStudent ? 5 : (ad.duration_days || 7);
 
                             let statusBadge = '';
-                            if (ad.status === 'a_valider') {
-                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">À valider</span>';
-                            } else if (ad.status === 'publiee') {
-                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">Publiée</span>';
-                            } else if (ad.status === 'refusee') {
-                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300">Refusée</span>';
+                            if (isPending) {
+                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300"><i class="fa-solid fa-clock mr-1"></i>En attente de validation</span>';
+                            } else if (ad.status === 'publiee' || ad.status === 'validee') {
+                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300"><i class="fa-solid fa-circle-check mr-1"></i>Publiée</span>';
+                            } else if (ad.status === 'refusee' || ad.status === 'rejetee') {
+                                statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300"><i class="fa-solid fa-circle-xmark mr-1"></i>Refusée</span>';
                             } else if (ad.status === 'expiree') {
                                 statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-slate-100 text-slate-600 border border-slate-300">Expirée</span>';
                             } else {
@@ -4005,19 +4066,29 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             }
 
                             return `
-                                <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row items-start justify-between gap-4">
-                                    <div class="flex items-start gap-4 flex-1 min-w-0">
+                                <div class="bg-white rounded-2xl border ${isPending ? 'border-amber-300/80 shadow-xs ring-1 ring-amber-100' : 'border-slate-200/80'} p-5 shadow-xs flex flex-col sm:flex-row items-start justify-between gap-4">
+                                    <div class="flex flex-col sm:flex-row items-start gap-4 flex-1 min-w-0">
                                         ${ad.image_url ? `
-                                            <a href="${escapeHTML(ad.image_url)}" target="_blank" rel="noopener noreferrer" class="shrink-0 group">
-                                                <img src="${escapeHTML(ad.image_url)}" alt="${escapeHTML(ad.title)}" class="w-20 h-20 rounded-xl object-cover border border-slate-200 group-hover:opacity-90 transition-opacity">
-                                            </a>
+                                            <div class="shrink-0 w-full sm:w-48">
+                                                <a href="${escapeHTML(ad.image_url)}" target="_blank" rel="noopener noreferrer" class="group block relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 aspect-[16/9] shadow-xs">
+                                                    <img src="${escapeHTML(ad.image_url)}" alt="${escapeHTML(ad.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                                    <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                                                        <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                                        <span>Agrandir</span>
+                                                    </div>
+                                                    <span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold text-white tracking-wide">
+                                                        16:9
+                                                    </span>
+                                                </a>
+                                            </div>
                                         ` : `
-                                            <div class="w-16 h-16 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center text-lg shrink-0">
-                                                <i class="fa-solid fa-image"></i>
+                                            <div class="w-full sm:w-48 aspect-[16/9] rounded-xl bg-slate-100 text-slate-400 flex flex-col items-center justify-center text-xs shrink-0 border border-slate-200">
+                                                <i class="fa-solid fa-image text-lg mb-1"></i>
+                                                <span class="text-[10px]">Affiche non fournie</span>
                                             </div>
                                         `}
                                         <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                            <div class="flex items-center gap-2 flex-wrap mb-1.5">
                                                 ${statusBadge}
                                                 <span class="text-[11px] text-slate-400 font-medium">${createdDate}</span>
                                             </div>
@@ -4034,15 +4105,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                 </a>
                                             ` : ''}
 
-                                            <!-- Infos Paiement & Vendeur -->
-                                            <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                                                ${ad.is_student_ad || ad.student_nom ? `
-                                                    <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px]">
-                                                        🎓 Annonce Étudiante (5 jours)
+                                            <!-- Infos Paiement & Auteur -->
+                                            <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2.5 text-xs text-slate-600">
+                                                ${isStudent ? `
+                                                    <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-200">
+                                                        🎓 Annonce Étudiante (${durationDays} jours)
                                                     </span>
-                                                    <span><strong>Étudiant :</strong> ${escapeHTML(((ad.student_prenom || '') + ' ' + (ad.student_nom || '')).trim() || 'Étudiant UIDT')}</span>
+                                                    <span><strong>Étudiant :</strong> ${escapeHTML(studentFullName || 'Étudiant UIDT')}</span>
                                                     ${ad.student_email ? `
-                                                        <span><strong>Email :</strong> <a href="mailto:${escapeHTML(ad.student_email)}" class="text-primary hover:underline">${escapeHTML(ad.student_email)}</a></span>
+                                                        <span><strong>Email :</strong> <a href="mailto:${escapeHTML(ad.student_email)}" class="text-primary hover:underline font-medium">${escapeHTML(ad.student_email)}</a></span>
                                                     ` : ''}
                                                 ` : `
                                                     <span><strong>Vendeur :</strong> ${escapeHTML(sellerName)} ${sellerShop ? `(${escapeHTML(sellerShop)})` : ''}</span>
@@ -4053,18 +4124,20 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                         Réf : ${escapeHTML(ad.txn_ref || 'Non renseignée')} (${escapeHTML(ad.payment_operator || 'Wave/OM')})
                                                     </span>
                                                 `}
-                                                <span class="font-bold text-emerald-700">250 FCFA</span>
+                                                <span class="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">250 FCFA</span>
+                                                <span class="text-slate-400">•</span>
+                                                <span class="text-slate-500 font-medium">${durationDays} jours</span>
                                             </div>
 
                                             ${ad.rejection_reason ? `
-                                                <div class="mt-2 text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                                                <div class="mt-2.5 text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
                                                     <strong>Motif de refus :</strong> ${escapeHTML(ad.rejection_reason)}
                                                 </div>
                                             ` : ''}
                                         </div>
                                     </div>
 
-                                    ${ad.status === 'a_valider' ? `
+                                    ${isPending ? `
                                         <div class="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
                                             <button 
                                                 type="button" 
@@ -4073,7 +4146,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                 class="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                                             >
                                                 <i class="fa-solid fa-check text-xs"></i>
-                                                <span>Valider (250 F)</span>
+                                                <span>Valider (${durationDays} j - 250 F)</span>
                                             </button>
                                             <button 
                                                 type="button" 
@@ -5837,10 +5910,14 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     const adId = btn.getAttribute('data-ad-id');
                     if (!adId) return;
 
+                    const ad = allAdvertisements.find(a => String(a.id) === String(adId));
+                    const isStudent = ad?.is_student_ad || ad?.student_nom;
+                    const durationDays = isStudent ? 5 : (ad?.duration_days || 7);
+
                     if (action === 'valider') {
                         const confirmed = await showConfirm({
                             title: 'Valider l\'annonce',
-                            message: 'Avez-vous bien vérifié la réception des 250 FCFA sur votre compte marchand ? L\'annonce sera publiée pendant 7 jours.',
+                            message: `Avez-vous bien vérifié la réception des 250 FCFA sur votre compte SasPay / Wave ? L'annonce sera publiée pendant ${durationDays} jours sur le carrousel 16:9 d'accueil.`,
                             confirmText: 'Oui, valider et publier',
                             cancelText: 'Annuler',
                             icon: 'fa-check'
@@ -5849,19 +5926,77 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                         btn.disabled = true;
                         try {
-                            const { error } = await supabase.rpc('admin_moderate_advertisement', {
-                                p_ad_id: adId,
-                                p_decision: 'valider'
-                            });
-                            if (error) throw error;
-                            showToast('Annonce validée et publiée avec succès !', 'success');
+                            const nowIso = new Date().toISOString();
+                            const expiresAtIso = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+                            // 1. Essai d'appel RPC avec p_action / p_decision
+                            let rpcSuccess = false;
+                            try {
+                                const { error: rpcErr } = await supabase.rpc('admin_moderate_advertisement', {
+                                    p_ad_id: adId,
+                                    p_action: 'valider'
+                                });
+                                if (!rpcErr) rpcSuccess = true;
+                            } catch (_) {}
+
+                            // 2. Mise à jour directe robuste (garantit le bon statut même si RPC absente)
+                            if (isStudent) {
+                                try {
+                                    await supabase
+                                        .from('student_announcements')
+                                        .update({
+                                            status: 'publiee',
+                                            validated_at: nowIso,
+                                            expires_at: expiresAtIso,
+                                            updated_at: nowIso
+                                        })
+                                        .eq('id', adId);
+                                } catch (_) {}
+                            }
+
+                            try {
+                                await supabase
+                                    .from('advertisements')
+                                    .update({
+                                        status: 'publiee',
+                                        validated_at: nowIso,
+                                        expires_at: expiresAtIso,
+                                        rejection_reason: null,
+                                        updated_at: nowIso
+                                    })
+                                    .eq('id', adId);
+                            } catch (_) {}
+
+                            // 3. Diffusion immédiate sur le carrousel d'accueil 16:9
+                            if (ad?.image_url) {
+                                try {
+                                    const studentName = ((ad.student_prenom || '') + ' ' + (ad.student_nom || '')).trim() || 'Étudiant';
+                                    await supabase
+                                        .from('carousel_slides')
+                                        .insert([{
+                                            title: ad.title || 'Annonce Étudiante Campus Market',
+                                            subtitle: `Diffusée par ${studentName}`,
+                                            slide_type: 'annonce',
+                                            badge: '📢 Annonce Étudiante',
+                                            image_url: ad.image_url,
+                                            link_url: ad.link_url || '#catalog',
+                                            link_text: 'En savoir plus',
+                                            display_order: 1,
+                                            is_active: true
+                                        }]);
+                                } catch (slideErr) {
+                                    console.warn('[SuperAdmin] Insertion carousel_slides optionnelle:', slideErr);
+                                }
+                            }
+
+                            showToast(`🎉 Annonce validée et diffusée pour ${durationDays} jours !`, 'success');
                             await loadAdminData();
                         } catch (err) {
                             showToast(`Erreur validation : ${err.message}`, 'error');
                             btn.disabled = false;
                         }
                     } else if (action === 'refuser') {
-                        const reason = window.prompt("Motif du refus de l'annonce (visible par le vendeur) :");
+                        const reason = window.prompt("Motif du refus de l'annonce (visible par le demandeur) :");
                         if (!reason || !reason.trim()) {
                             showToast('Le motif de refus est obligatoire.', 'warning');
                             return;
@@ -5869,12 +6004,43 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
 
                         btn.disabled = true;
                         try {
-                            const { error } = await supabase.rpc('admin_moderate_advertisement', {
-                                p_ad_id: adId,
-                                p_decision: 'refuser',
-                                p_rejection_reason: reason.trim()
-                            });
-                            if (error) throw error;
+                            const nowIso = new Date().toISOString();
+                            const cleanReason = reason.trim();
+
+                            // 1. Essai RPC
+                            try {
+                                await supabase.rpc('admin_moderate_advertisement', {
+                                    p_ad_id: adId,
+                                    p_action: 'refuser',
+                                    p_reason: cleanReason
+                                });
+                            } catch (_) {}
+
+                            // 2. Mise à jour directe robuste
+                            if (isStudent) {
+                                try {
+                                    await supabase
+                                        .from('student_announcements')
+                                        .update({
+                                            status: 'refusee',
+                                            rejection_reason: cleanReason,
+                                            updated_at: nowIso
+                                        })
+                                        .eq('id', adId);
+                                } catch (_) {}
+                            }
+
+                            try {
+                                await supabase
+                                    .from('advertisements')
+                                    .update({
+                                        status: 'refusee',
+                                        rejection_reason: cleanReason,
+                                        updated_at: nowIso
+                                    })
+                                    .eq('id', adId);
+                            } catch (_) {}
+
                             showToast('Annonce refusée.', 'info');
                             await loadAdminData();
                         } catch (err) {

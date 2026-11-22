@@ -1727,7 +1727,8 @@ export async function addPartner(partnerData) {
         throw new Error('Le nom du partenaire est obligatoire.');
     }
 
-    const category = partnerData.category || 'autre';
+    const ALLOWED_CATEGORIES = new Set(['amicale', 'payment', 'local_business', 'sponsor', 'autre']);
+    const category = ALLOWED_CATEGORIES.has(partnerData.category) ? partnerData.category : 'autre';
     const catConfig = PARTNER_CATEGORIES[category] || PARTNER_CATEGORIES.autre;
 
     const payload = {
@@ -1744,11 +1745,24 @@ export async function addPartner(partnerData) {
         is_active: partnerData.is_active !== false,
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from('partners')
         .insert([payload])
         .select()
         .single();
+
+    // Repli résilient si la colonne whatsapp_phone n'a pas encore été migrée sur Supabase
+    if (error && (error.message?.includes('whatsapp_phone') || error.code === 'PGRST204')) {
+        console.warn('[AdminService] Colonne whatsapp_phone non détectée, repli sans ce champ:', error.message);
+        const { whatsapp_phone, ...fallbackPayload } = payload;
+        const retry = await supabase
+            .from('partners')
+            .insert([fallbackPayload])
+            .select()
+            .single();
+        data = retry.data;
+        error = retry.error;
+    }
 
     if (error) {
         throw new Error(`Échec d'ajout du partenaire : ${error.message}`);
@@ -1772,12 +1786,26 @@ export async function updatePartner(id, updates) {
     if (payload.whatsapp_phone !== undefined) payload.whatsapp_phone = String(payload.whatsapp_phone || '').trim();
     if (payload.display_order !== undefined) payload.display_order = parseInt(payload.display_order, 10) || 0;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from('partners')
         .update(payload)
         .eq('id', id)
         .select()
         .single();
+
+    // Repli résilient si la colonne whatsapp_phone n'est pas encore présente
+    if (error && (error.message?.includes('whatsapp_phone') || error.code === 'PGRST204')) {
+        console.warn('[AdminService] Colonne whatsapp_phone non détectée, repli update sans ce champ:', error.message);
+        const { whatsapp_phone, ...fallbackPayload } = payload;
+        const retry = await supabase
+            .from('partners')
+            .update(fallbackPayload)
+            .eq('id', id)
+            .select()
+            .single();
+        data = retry.data;
+        error = retry.error;
+    }
 
     if (error) {
         throw new Error(`Échec de mise à jour du partenaire : ${error.message}`);
