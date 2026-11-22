@@ -128,14 +128,9 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
                 </div>
 
                 <div class="flex items-center gap-2">
-<<<<<<< HEAD
-                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
-                        Tous les Vendeurs
-=======
                     <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs flex items-center gap-1">
                         <i class="fa-solid fa-shield-halved text-amber-600"></i>
                         <span>Certifié SuperAdmin</span>
->>>>>>> d4999a4dbea407a69a545ecfdc033883bf802173
                     </span>
                     <button 
                         type="button" 
@@ -250,7 +245,7 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
                 <div id="leaderboard-sellers-list" class="divide-y divide-slate-100 border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50/40">
                     ${leaderboard.length === 0 ? `
                         <div class="p-8 text-center text-xs sm:text-sm text-slate-500 font-medium">
-                            Aucun marchand enregistré sur la plateforme pour le moment.
+                            Aucun marchand avec pack payant actif sur la plateforme pour le moment.
                         </div>
                     ` : leaderboard.map((seller) => {
                         const isCurrent = seller.id === currentSellerId;

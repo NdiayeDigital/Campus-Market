@@ -81,10 +81,12 @@ console.log('--- 1. Contrôle du Routeur (router.js) ---');
 import { resolveRoute } from '../src/utils/router.js';
 
 const routeLeaderboard = resolveRoute('#leaderboard');
-assert.strictEqual(routeLeaderboard.view, 'leaderboard', "La route #leaderboard doit résoudre view: 'leaderboard'");
+assert.strictEqual(routeLeaderboard.view, 'seller', "La route #leaderboard doit rediriger vers l'espace vendeur");
+assert.strictEqual(routeLeaderboard.params?.subTab, 'leaderboard', "La route #leaderboard doit ouvrir subTab: 'leaderboard'");
 
 const routeClassement = resolveRoute('#classement');
-assert.strictEqual(routeClassement.view, 'leaderboard', "La route #classement doit résoudre view: 'leaderboard'");
+assert.strictEqual(routeClassement.view, 'seller', "La route #classement doit rediriger vers l'espace vendeur");
+assert.strictEqual(routeClassement.params?.subTab, 'leaderboard', "La route #classement doit ouvrir subTab: 'leaderboard'");
 
 const routePasserAnnonce = resolveRoute('#passer-annonce');
 assert.strictEqual(routePasserAnnonce.view, 'student-ad', "La route #passer-annonce doit résoudre view: 'student-ad'");
@@ -92,7 +94,7 @@ assert.strictEqual(routePasserAnnonce.view, 'student-ad', "La route #passer-anno
 const routeAnnonce = resolveRoute('#annonce');
 assert.strictEqual(routeAnnonce.view, 'student-ad', "La route #annonce doit résoudre view: 'student-ad'");
 
-console.log('✅ [Router] Résolution parfaite des routes #leaderboard, #classement et #passer-annonce !');
+console.log('✅ [Router] Résolution parfaite des routes (#leaderboard, #classement redirigés vendeur & #passer-annonce) !');
 
 // ==============================================================================
 // 2. Contrôle statique et dynamique de SellerLeaderboardView.js
@@ -163,21 +165,17 @@ assert.ok(bannerEl.innerHTML.includes('5 jours'), 'Le banner doit mentionner la 
 console.log('✅ [StudentAdView] Formulaire nom/prénom/mail/16:9 et bandeau sous carrousel validés !');
 
 // ==============================================================================
-// 5. Contrôle de BottomNav.js & Navigation desktop
+// 5. Contrôle de BottomNav.js & Navigation desktop : Retrait du bouton Classement
 // ==============================================================================
-console.log('\n--- 5. Contrôle de la Navigation (BottomNav.js) ---');
+console.log('\n--- 5. Contrôle de la Navigation (BottomNav.js) : Retrait du bouton Classement ---');
 const bottomNavCode = fs.readFileSync(path.join(rootDir, 'src/components/BottomNav.js'), 'utf-8');
 
 assert.ok(
-    bottomNavCode.includes('sidebar-tab-leaderboard'),
-    'La sidebar Desktop doit comporter le bouton vers le classement (#sidebar-tab-leaderboard)'
-);
-assert.ok(
-    bottomNavCode.includes('Classement'),
-    'Le libellé "Classement" doit figurer dans la navigation desktop'
+    !bottomNavCode.includes('sidebar-tab-leaderboard'),
+    'La sidebar Desktop ne doit PLUS comporter le bouton vers le classement (#sidebar-tab-leaderboard)'
 );
 
-console.log('✅ [BottomNav] Lien vers le Classement public disponible dans la navigation desktop !');
+console.log('✅ [BottomNav] Bouton Classement bien retiré de la navigation d\'accueil !');
 
 // ==============================================================================
 // 6. Contrôle de l'intégration dans main.js
@@ -188,9 +186,12 @@ const mainCode = fs.readFileSync(path.join(rootDir, 'src/main.js'), 'utf-8');
 assert.ok(mainCode.includes("viewName === 'leaderboard'"), 'main.js doit gérer la vue leaderboard');
 assert.ok(mainCode.includes("viewName === 'student-ad'"), 'main.js doit gérer la vue student-ad');
 assert.ok(mainCode.includes("studentAdCtaBannerComponent"), 'main.js doit intégrer le bouton d\'annonce sous le carrousel');
-assert.ok(mainCode.includes("#leaderboard"), 'main.js doit comporter le lien direct vers le classement dans Top Shops');
+assert.ok(
+    !mainCode.includes('link-view-leaderboard-top'),
+    'Top Shops ne doit PLUS comporter le lien/bouton Classement complet sur l\'accueil'
+);
 
-console.log('✅ [main.js] Vues leaderboard et student-ad, injection sous carrousel et deep-links validés !');
+console.log('✅ [main.js] Vues leaderboard et student-ad gérées, et bouton classement retiré de Top Shops avec succès !');
 
 // ==============================================================================
 // 7. Contrôle de la migration SQL additive

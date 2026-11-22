@@ -6,7 +6,6 @@
  */
 
 import { supabase } from './supabase.js';
-import { getCurrentSeller } from './seller-service.js';
 import { computeSubscriptionStatus } from '../config/subscription.js';
 import { fetchSuperAdminLeaderboard } from './admin-service.js';
 
@@ -176,7 +175,6 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
 
 /**
  * Construit le classement global officiel de tous les vendeurs du campus (Leaderboard).
- * Accessible à TOUS les vendeurs sans distinction d'abonnement (y compris Pack Découverte gratuit).
  * @param {Array} sellers - Liste de tous les vendeurs
  * @param {Array} [allOrders=[]] - Liste de toutes les commandes
  * @param {Array} [allReviews=[]] - Liste de tous les avis
@@ -186,11 +184,6 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
 export function buildSellersLeaderboard(sellers = [], allOrders = [], allReviews = [], productCountsMap = {}, { allowAllActive = false } = {}) {
     if (!Array.isArray(sellers) || sellers.length === 0) return [];
 
-<<<<<<< HEAD
-    // Tous les vendeurs vérifiés (vendeurs ou superadmins marchands) sont éligibles au classement
-    const eligibleSellers = sellers.filter((s) => {
-        return Boolean(s && (s.role === 'vendeur' || s.role === 'superadmin'));
-=======
     // Seuls les marchands détenant un pack payant actif ou superadmin (ou tous si allowAllActive = true)
     const eligibleSellers = sellers.filter((s) => {
         if (allowAllActive) {
@@ -198,7 +191,6 @@ export function buildSellersLeaderboard(sellers = [], allOrders = [], allReviews
         }
         const sub = computeSubscriptionStatus(s);
         return Boolean(sub.isPaid || sub.isSuperAdmin);
->>>>>>> d4999a4dbea407a69a545ecfdc033883bf802173
     });
 
     if (eligibleSellers.length === 0) return [];
@@ -332,20 +324,6 @@ export function getSellerRankInfo(sellerId, leaderboard = []) {
  */
 export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
     try {
-<<<<<<< HEAD
-        // CONTRÔLE DE SÉCURITÉ STRICT : Le classement est strictement réservé aux vendeurs
-        const currentSellerData = await getCurrentSeller();
-        const sellerProfile = currentSellerData?.profile;
-        if (!sellerProfile || (sellerProfile.role !== 'vendeur' && sellerProfile.role !== 'superadmin')) {
-            console.warn('[Leaderboard] Accès refusé : fonctionnalité strictement réservée aux vendeurs certifiés.');
-            return [];
-        }
-
-        const effectiveSellerId = currentSellerId || sellerProfile.id;
-
-        // 1. Profils de tous les marchands actifs et superadmins marchands
-        const { data: profiles, error: errProf } = await supabase
-=======
         // 1. Interrogation prioritaire de l'autorité SuperAdmin (RPC serveur ou supervision en mémoire)
         const superAdminLeaderboard = await fetchSuperAdminLeaderboard();
         if (Array.isArray(superAdminLeaderboard) && superAdminLeaderboard.length > 0) {
@@ -360,7 +338,6 @@ export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
 
         // 2. Repli résilient : profils des marchands avec calcul sans exclusion
         const { data: profiles } = await supabase
->>>>>>> d4999a4dbea407a69a545ecfdc033883bf802173
             .from('profiles')
             .select('id, role, shop_name, prenom, nom, pavillon, chambre, telephone, phone, is_open, avatar_url, logo_url, subscription_plan, subscription_expires_at, subscription_status')
             .in('role', ['vendeur', 'superadmin']);
@@ -368,104 +345,10 @@ export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
         const allProfiles = profiles || [];
         const leaderboard = buildSellersLeaderboard(allProfiles, [], [], {});
 
-<<<<<<< HEAD
-        // 2. Statistiques agrégées de commandes et d'articles (contourne l'isolation RLS des commandes)
-        let statsRpc = [];
-        try {
-            const { data: rpcData, error: rpcErr } = await supabase.rpc('get_seller_ranking_stats');
-            if (!rpcErr && Array.isArray(rpcData)) {
-                statsRpc = rpcData;
-            } else {
-                // Repli vers get_seller_stats si la fonction ranking n'est pas encore déployée
-                const { data: fallbackData } = await supabase.rpc('get_seller_stats');
-                if (Array.isArray(fallbackData)) statsRpc = fallbackData;
-            }
-        } catch (e) {
-            console.warn('[Leaderboard] Erreur RPC stats, tentative de repli:', e);
-        }
-
-        const statsMap = new Map();
-        statsRpc.forEach((st) => {
-            if (st && st.seller_id) {
-                statsMap.set(st.seller_id, {
-                    deliveredCount: Number(st.delivered_orders_count) || 0,
-                    cancelledBySellerCount: Number(st.cancelled_by_seller_count) || 0,
-                    activeProducts: Number(st.active_products_count) || 0,
-                });
-            }
-        });
-
-        // 3. Avis clients publics
-        let reviewsList = [];
-        try {
-            const { data: revData } = await supabase.from('reviews').select('seller_id, rating');
-            reviewsList = revData || [];
-        } catch (_) {}
-
-        // 4. Si la RPC n'a rien renvoyé (environnement de test / local), repli vers les commandes directes
-        let directOrders = [];
-        if (statsMap.size === 0) {
-            try {
-                const { data: ordData } = await supabase.from('orders').select('id, seller_id, status, cancelled_by, price');
-                directOrders = ordData || [];
-            } catch (_) {}
-        }
-
-        // 5. Synthèse des commandes et nombre de produits actifs par vendeur
-        const syntheticOrders = [];
-        const productCountsMap = new Map();
-
-        allProfiles.forEach((p) => {
-            const st = statsMap.get(p.id);
-            if (st) {
-                productCountsMap.set(p.id, st.activeProducts);
-                for (let i = 0; i < st.deliveredCount; i++) {
-                    syntheticOrders.push({ seller_id: p.id, status: 'delivered', price: 0 });
-                }
-                for (let i = 0; i < st.cancelledBySellerCount; i++) {
-                    syntheticOrders.push({ seller_id: p.id, status: 'cancelled', cancelled_by: 'seller', price: 0 });
-                }
-            }
-        });
-
-        const ordersToUse = statsMap.size > 0 ? syntheticOrders : directOrders;
-
-        // 6. Construction du classement global avec buildSellersLeaderboard (accessible à tous les vendeurs)
-        const leaderboard = buildSellersLeaderboard(allProfiles, ordersToUse, reviewsList, productCountsMap);
-
-        // 7. Enrichissement des informations du vendeur connecté
-        if (effectiveSellerId) {
-            const currentSellerProfile = allProfiles.find((p) => p.id === effectiveSellerId);
-            if (currentSellerProfile) {
-                const foundInLeaderboard = leaderboard.find((s) => s.id === effectiveSellerId);
-                if (foundInLeaderboard) {
-                    leaderboard.currentSellerInfo = foundInLeaderboard;
-                } else {
-                    const prodCount = productCountsMap.get(effectiveSellerId) || 0;
-                    const pointsData = computeSellerPoints({
-                        seller: currentSellerProfile,
-                        orders: ordersToUse,
-                        reviews: reviewsList,
-                        activeProductsCount: prodCount,
-                    });
-                    leaderboard.currentSellerInfo = {
-                        ...currentSellerProfile,
-                        rank: leaderboard.length + 1,
-                        points: pointsData.totalPoints,
-                        tier: pointsData.tier,
-                        breakdown: pointsData.breakdown,
-                        deliveredCount: pointsData.deliveredCount,
-                        cancelledCount: pointsData.cancelledCount,
-                        shopName: currentSellerProfile.shop_name || (currentSellerProfile.prenom ? `Boutique ${currentSellerProfile.prenom}` : 'Boutique Marchand'),
-                        subStatus: computeSubscriptionStatus(currentSellerProfile),
-                    };
-                }
-=======
         if (currentSellerId) {
             const found = leaderboard.find((s) => s.id === currentSellerId);
             if (found) {
                 leaderboard.currentSellerInfo = found;
->>>>>>> d4999a4dbea407a69a545ecfdc033883bf802173
             }
         }
 
