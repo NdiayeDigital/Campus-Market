@@ -441,6 +441,40 @@ export async function getCurrentSeller() {
             } catch {}
         }
 
+        // Auto-réparation résiliente : Si l'utilisateur est authentifié et possède déjà des produits au catalogue,
+        // reconstituer son profil vendeur afin qu'il ne soit pas bloqué ou déconnecté.
+        if (!profile) {
+            try {
+                const { count } = await supabase
+                    .from('products')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('seller_id', session.user.id);
+
+                if (count && count > 0) {
+                    console.log('[SellerService] Vendeur détecté via catalogue existant:', session.user.id);
+                    profile = {
+                        id: session.user.id,
+                        prenom: session.user.user_metadata?.prenom || 'Vendeur',
+                        nom: session.user.user_metadata?.nom || 'UIDT',
+                        email: session.user.email,
+                        role: 'vendeur',
+                        subscription_plan: session.user.user_metadata?.subscription_plan || 'decouverte',
+                        max_products: 10,
+                        is_open: true,
+                        created_at: session.user.created_at || new Date().toISOString(),
+                    };
+                    // Tenter de persister ce profil en base pour réparer définitivement
+                    supabase
+                        .from('profiles')
+                        .upsert(profile, { onConflict: 'id' })
+                        .then(() => {})
+                        .catch(() => {});
+                }
+            } catch (orphanErr) {
+                console.warn('[SellerService] Vérification catalogue orphelin échouée:', orphanErr);
+            }
+        }
+
         if (profile) {
             profile.subscription_plan = profile.subscription_plan || session.user.user_metadata?.subscription_plan || 'decouverte';
             profile.shop_name = profile.shop_name || session.user.user_metadata?.shop_name || `${profile.prenom || 'Boutique'} Shop`;
@@ -489,12 +523,29 @@ export async function getSellerDashboardData(sellerId) {
     if (!sellerId) throw new Error('ID vendeur requis.');
 
     try {
-        // 1. Profil vendeur (statut boutique)
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', sellerId)
-            .single();
+        // 1. Profil vendeur (statut boutique) avec repli gracieux sans lever d'exception si 0 ligne
+        let profile = null;
+        try {
+            const { data } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', sellerId)
+                .maybeSingle();
+            profile = data;
+        } catch (profErr) {
+            console.warn('[SellerService] Erreur lecture profil distant pour dashboard:', profErr);
+        }
+
+        // Profil actif par défaut si le profil distant est manquant (ex: compte orphelin en cours de migration)
+        const activeProfile = profile || {
+            id: sellerId,
+            prenom: 'Vendeur',
+            nom: 'UIDT',
+            role: 'vendeur',
+            subscription_plan: 'decouverte',
+            max_products: 10,
+            is_open: true,
+        };
 
         // 2. Commandes associées (avec repli gracieux sans jointure si le cache PostgREST diffère)
         let ordersList = [];
@@ -522,13 +573,14 @@ export async function getSellerDashboardData(sellerId) {
             ordersList = rawOrders || [];
         }
 
-        // 3. Produits du vendeur
+        // 3. Produits du vendeur avec détails complets pour l'aperçu du Dashboard
         let productsList = [];
         try {
             const { data: products, error: prodsErr } = await supabase
                 .from('products')
-                .select('id, stock')
-                .eq('seller_id', sellerId);
+                .select('id, title, price, stock, is_active, quota_status, image_url, images, created_at, category')
+                .eq('seller_id', sellerId)
+                .order('created_at', { ascending: false });
 
             if (!prodsErr && products) {
                 productsList = products;
@@ -548,13 +600,13 @@ export async function getSellerDashboardData(sellerId) {
             (o) => o.status === 'pending' || o.status === 'processing' || o.status === 'confirmed'
         );
 
-        const activeProducts = productsList.filter((p) => p.stock !== 0);
-        const subCalc = computeSubscriptionStatus(profile);
-        const maxAllowed = subCalc.maxProducts || (Number(profile?.max_products) || getMaxProductsForPlan(profile?.subscription_plan));
+        const activeProducts = productsList.filter((p) => p.stock !== 0 && p.is_active !== false);
+        const subCalc = computeSubscriptionStatus(activeProfile);
+        const maxAllowed = subCalc.maxProducts || (Number(activeProfile?.max_products) || getMaxProductsForPlan(activeProfile?.subscription_plan));
 
         return {
-            profile: profile || {},
-            isOpen: profile ? profile.is_open !== false : true,
+            profile: activeProfile,
+            isOpen: activeProfile ? activeProfile.is_open !== false : true,
             totalRevenue,
             deliveredCount: deliveredOrders.length,
             pendingCount: pendingOrders.length,
@@ -562,6 +614,7 @@ export async function getSellerDashboardData(sellerId) {
             activeProductsCount: activeProducts.length,
             maxAllowed,
             recentOrders: ordersList.slice(0, 20),
+            recentProducts: productsList.slice(0, 10),
         };
     } catch (err) {
         console.error('[SellerService] Erreur chargement dashboard:', err);

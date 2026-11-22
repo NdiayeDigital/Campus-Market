@@ -1787,6 +1787,114 @@ export function createSellerDashboard({
                         </div>
                     `}
                 </div>
+
+                <!-- 6. Aperçu de mes articles récents -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-6 flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-heading font-extrabold text-sm sm:text-base text-slate-900">Mes articles récents</h3>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary/10 text-primary border border-primary/20">
+                                ${data.totalProductsCount || 0} article(s)
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${!isSuspended ? `
+                                <button 
+                                    type="button" 
+                                    id="btn-dashboard-home-add-product" 
+                                    class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover active:scale-95 transition-all cursor-pointer shadow-xs"
+                                >
+                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                    <span>Ajouter</span>
+                                </button>
+                            ` : ''}
+                            <button 
+                                type="button" 
+                                id="btn-dashboard-view-all-products" 
+                                class="text-xs font-bold text-primary hover:text-primary-hover inline-flex items-center gap-1 cursor-pointer"
+                            >
+                                <span>Gérer tout (${data.totalProductsCount || 0})</span>
+                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    ${(!data.recentProducts || data.recentProducts.length === 0) ? `
+                        <div class="py-8 text-center flex flex-col items-center justify-center gap-2">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                            </div>
+                            <p class="text-xs text-slate-500 font-medium max-w-sm">
+                                Aucun article publié pour le moment. Ajoutez votre premier produit pour commencer à recevoir des commandes !
+                            </p>
+                            ${!isSuspended ? `
+                                <button 
+                                    type="button" 
+                                    id="btn-dashboard-empty-add-product" 
+                                    class="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover active:scale-95 transition-all cursor-pointer shadow-xs"
+                                >
+                                    <i class="fa-solid fa-plus text-xs"></i>
+                                    <span>Ajouter mon premier article</span>
+                                </button>
+                            ` : ''}
+                        </div>
+                    ` : `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                            ${data.recentProducts.slice(0, 8).map((prod) => {
+                                const title = escapeHTML(prod.title || 'Sans titre');
+                                const price = Number(prod.price || 0).toLocaleString('fr-FR');
+                                const imgUrl = prod.image_url || (Array.isArray(prod.images) && prod.images[0]) || null;
+                                const isOutOfStock = prod.stock === 0;
+                                const isPaused = prod.is_paused === true || prod.stock === -2 || prod.is_active === false;
+                                
+                                let stockBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">En vente</span>';
+                                if (isOutOfStock) {
+                                    stockBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">Épuisé</span>';
+                                } else if (isPaused) {
+                                    stockBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">Pause</span>';
+                                }
+
+                                return `
+                                    <div 
+                                        data-home-prod-id="${prod.id}"
+                                        class="dashboard-home-product-card group relative bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-primary/40 rounded-2xl p-3 flex items-center gap-3 transition-all hover:shadow-md cursor-pointer active:scale-[0.99]"
+                                        title="Cliquer pour gérer cet article"
+                                    >
+                                        <div class="w-14 h-14 rounded-xl bg-slate-200/70 overflow-hidden shrink-0 relative flex items-center justify-center">
+                                            ${imgUrl ? `
+                                                <img 
+                                                    src="${imgUrl}" 
+                                                    alt="${title}" 
+                                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                    onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML='<i class=\\'fa-solid fa-box text-slate-400 text-base\\'></i>';"
+                                                    loading="lazy"
+                                                >
+                                            ` : `
+                                                <i class="fa-solid fa-box text-slate-400 text-base"></i>
+                                            `}
+                                        </div>
+                                        <div class="min-w-0 flex-1 flex flex-col justify-between h-full">
+                                            <div>
+                                                <h4 class="font-bold text-xs text-slate-900 truncate group-hover:text-primary transition-colors">
+                                                    ${title}
+                                                </h4>
+                                                <div class="font-extrabold text-xs text-slate-900 mt-0.5">
+                                                    ${price} <span class="text-[10px] text-slate-500 font-bold">FCFA</span>
+                                                </div>
+                                            </div>
+                                            <div class="mt-1 flex items-center justify-between">
+                                                ${stockBadge}
+                                                <span class="text-[10px] text-slate-400 group-hover:text-primary font-bold flex items-center gap-0.5">
+                                                    Gérer <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
             </div>
         `;
     }
@@ -2376,6 +2484,22 @@ export function createSellerDashboard({
 
         containerEl.querySelector('#btn-dashboard-view-all-orders')?.addEventListener('click', () => {
             switchSubTab('orders');
+        });
+
+        // Raccourcis et boutons de la section "Mes Articles Récents"
+        containerEl.querySelector('#btn-dashboard-view-all-products')?.addEventListener('click', () => {
+            switchSubTab('products');
+        });
+        containerEl.querySelector('#btn-dashboard-home-add-product')?.addEventListener('click', () => {
+            switchSubTab('add-product');
+        });
+        containerEl.querySelector('#btn-dashboard-empty-add-product')?.addEventListener('click', () => {
+            switchSubTab('add-product');
+        });
+        containerEl.querySelectorAll('.dashboard-home-product-card').forEach((card) => {
+            card.addEventListener('click', () => {
+                switchSubTab('products');
+            });
         });
 
         // Recherche textuelle commandes
