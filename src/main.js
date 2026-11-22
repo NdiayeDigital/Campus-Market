@@ -22,7 +22,7 @@ import { createSellerAuthModal } from './components/seller/SellerAuthModal.js';
 import { createForcePasswordChangeModal } from './components/seller/ForcePasswordChangeModal.js';
 import { createSellerShowcase } from './components/seller/SellerShowcase.js';
 import { createSellerProfileView } from './components/seller/SellerProfileView.js';
-import { getCurrentSeller, confirmSubscriptionPayment } from './services/seller-service.js';
+import { getCurrentSeller, confirmSubscriptionPayment, registerPendingSubscriptionReturn } from './services/seller-service.js';
 import { supabase } from './services/supabase.js';
 import { cartStore } from './services/cart-store.js';
 import {
@@ -1031,6 +1031,8 @@ async function initApp() {
         const urlParams = new URLSearchParams(window.location.search);
         let payment = urlParams.get('payment');
         let sessionId = urlParams.get('session_id');
+        let plan = urlParams.get('plan');
+        let operator = urlParams.get('op') || urlParams.get('operator');
 
         const rawHash = window.location.hash || '';
         const qIndex = rawHash.indexOf('?');
@@ -1038,30 +1040,55 @@ async function initApp() {
             const hashParams = new URLSearchParams(rawHash.slice(qIndex + 1));
             if (!payment) payment = hashParams.get('payment');
             if (!sessionId) sessionId = hashParams.get('session_id');
+            if (!plan) plan = hashParams.get('plan');
+            if (!operator) operator = hashParams.get('op') || hashParams.get('operator');
         }
 
-        if (payment === 'success' && sessionId) {
-            showToast('⏳ Vérification du paiement de votre abonnement auprès de SasPay...', 'info');
+        if (payment === 'success' || (sessionId && payment !== 'cancelled')) {
+            const planLabel = (plan === 'pro' || plan === 'business') ? 'Pack Business (2 000 FCFA)' : 'Pack Pro (1 000 FCFA)';
+            showToast(`⏳ Enregistrement et vérification de votre adhésion / abonnement (${planLabel})...`, 'info');
+
+            let verified = false;
             try {
-                const res = await confirmSubscriptionPayment({ sessionId });
-                if (res?.success) {
-                    showToast('🎉 Félicitations ! Votre abonnement 30 jours est validé et actif !', 'success');
-                    if (res.profile) {
-                        appState.currentSeller = res.profile;
-                        headerComponent?.updateSellerState?.(res.profile);
-                        bottomNavComponent?.setSeller?.(res.profile);
-                        try {
-                            localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(res.profile));
-                        } catch {}
+                if (sessionId && !sessionId.startsWith('saspay_link_')) {
+                    const res = await confirmSubscriptionPayment({ sessionId, plan, operator });
+                    if (res?.success) {
+                        verified = true;
+                        showToast('🎉 Félicitations ! Votre abonnement 30 jours est validé et actif !', 'success');
+                        if (res.profile) {
+                            appState.currentSeller = res.profile;
+                            headerComponent?.updateSellerState?.(res.profile);
+                            bottomNavComponent?.setSeller?.(res.profile);
+                            try {
+                                localStorage.setItem(LOCAL_SELLER_KEY, JSON.stringify(res.profile));
+                            } catch {}
+                        }
                     }
                 }
             } catch (err) {
-                console.warn('[PaymentReturn] Vérification automatique:', err);
-                showToast(`Paiement en attente de validation: ${err.message}`, 'warning');
-            } finally {
-                const cleanHash = rawHash.startsWith('#seller') ? '#seller' : (rawHash.split('?')[0] || '');
-                history.replaceState(null, '', cleanHash || window.location.pathname);
+                console.warn('[PaymentReturn] Vérification automatique directe:', err?.message || err);
             }
+
+            // Si non validé immédiatement par l'API (ex: délai passerelle Mobile Money), inscrire systématiquement la demande en attente
+            if (!verified) {
+                try {
+                    await registerPendingSubscriptionReturn({
+                        sellerId: appState.currentSeller?.id,
+                        plan: plan || 'starter',
+                        operator: operator || 'wave',
+                        sessionId,
+                    });
+                    showToast(
+                        `🔔 Votre demande pour le ${planLabel} a bien été enregistrée et transmise aux administrateurs. Votre compte sera activé dès confirmation !`,
+                        'success'
+                    );
+                } catch (regErr) {
+                    console.warn('[PaymentReturn] Erreur enregistrement attente:', regErr);
+                }
+            }
+
+            const cleanHash = rawHash.startsWith('#seller') ? '#seller' : (rawHash.split('?')[0] || '');
+            history.replaceState(null, '', cleanHash || window.location.pathname);
         } else if (payment === 'cancelled') {
             showToast('Paiement annulé. Vous pouvez réessayer quand vous le souhaitez.', 'info');
             const cleanHash = rawHash.startsWith('#seller') ? '#seller' : (rawHash.split('?')[0] || '');

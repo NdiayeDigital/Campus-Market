@@ -119,6 +119,28 @@ export async function fetchGlobalMetrics() {
         const pendingSellersCount = allProfiles.filter((p) => p.role === 'vendeur_pending').length;
         const suspendedSellersCount = allProfiles.filter((p) => p.role === 'vendeur_desactive' || p.role === 'suspendu' || suspendedIds.includes(p.id)).length;
 
+        // 1.b. Paiements d'abonnements et packs SasPay en attente de validation
+        let pendingSubscriptionPaymentsCount = 0;
+        try {
+            const { count, error: countErr } = await supabase
+                .from('seller_payments')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pending');
+            if (!countErr && typeof count === 'number') {
+                pendingSubscriptionPaymentsCount = count;
+            } else {
+                const { data: pPays } = await supabase
+                    .from('seller_payments')
+                    .select('id')
+                    .eq('status', 'pending');
+                pendingSubscriptionPaymentsCount = pPays ? pPays.length : 0;
+            }
+        } catch (e) {
+            console.warn('[AdminService] Comptage seller_payments pending:', e);
+        }
+
+        const totalPendingApplicants = pendingSellersCount + pendingSubscriptionPaymentsCount;
+
         // 2. Commandes globales et CA réel
         let allOrders = [];
         let totalOrdersCount = 0;
@@ -192,6 +214,8 @@ export async function fetchGlobalMetrics() {
         return {
             activeSellersCount,
             pendingSellersCount,
+            pendingSubscriptionPaymentsCount,
+            totalPendingApplicants,
             suspendedSellersCount,
             totalOrdersCount,
             totalDeliveredRevenue,
@@ -1367,13 +1391,14 @@ export async function adminResetSellerPassword(sellerId) {
 
 /**
  * Récupère l'ensemble des demandes de paiement d'abonnements en attente de vérification.
+ * Inclut les informations complètes du vendeur (nom, prénom, rôle, téléphone, boutique).
  * @returns {Promise<Array>}
  */
 export async function fetchPendingSubscriptionPayments() {
     try {
         const { data, error } = await supabase
             .from('seller_payments')
-            .select('*, seller:seller_id(id, prenom, nom, email, telephone, subscription_plan, subscription_status, shop_name)')
+            .select('*, seller:seller_id(id, prenom, nom, email, telephone, role, subscription_plan, subscription_status, shop_name)')
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
 
@@ -1381,7 +1406,32 @@ export async function fetchPendingSubscriptionPayments() {
             console.warn('[AdminService] Note fetchPendingSubscriptionPayments:', error.message);
             return [];
         }
-        return data || [];
+
+        const payments = data || [];
+        // Résolution résiliente des informations vendeurs si la relation seller n'est pas jointe
+        const missingSellerPayments = payments.filter((p) => !p.seller && p.seller_id);
+        if (missingSellerPayments.length > 0) {
+            try {
+                const missingIds = [...new Set(missingSellerPayments.map((p) => p.seller_id))];
+                const { data: profs } = await supabase
+                    .from('profiles')
+                    .select('id, prenom, nom, email, telephone, role, subscription_plan, subscription_status, shop_name')
+                    .in('id', missingIds);
+
+                if (profs && profs.length > 0) {
+                    const profMap = new Map(profs.map((pr) => [pr.id, pr]));
+                    payments.forEach((p) => {
+                        if (!p.seller && p.seller_id && profMap.has(p.seller_id)) {
+                            p.seller = profMap.get(p.seller_id);
+                        }
+                    });
+                }
+            } catch (fallbackErr) {
+                console.warn('[AdminService] Fallback profils manquants seller_payments:', fallbackErr);
+            }
+        }
+
+        return payments;
     } catch (err) {
         console.error('[AdminService] Erreur fetchPendingSubscriptionPayments:', err);
         return [];
@@ -1390,6 +1440,9 @@ export async function fetchPendingSubscriptionPayments() {
 
 /**
  * Approuve un paiement d'abonnement et active la boutique du vendeur pour 30 jours.
+ * Si le vendeur était un nouveau candidat ('vendeur_pending'), son compte est automatiquement
+ * promu au statut 'vendeur' certifié avec boutique ouverte.
+ *
  * @param {string} paymentId - UUID de la transaction dans seller_payments
  * @returns {Promise<Object>}
  */
@@ -1408,23 +1461,45 @@ export async function approveSubscriptionPayment(paymentId) {
         }
     } catch {}
 
-    if (rpcSuccess) {
-        return { success: true };
-    }
-
-    // 2. Repli côté service avec session SuperAdmin active
+    // 2. Récupérer la transaction seller_payments
     const { data: payment, error: pErr } = await supabase
         .from('seller_payments')
         .select('*')
         .eq('id', paymentId)
         .single();
 
-    if (pErr || !payment) throw new Error('Paiement introuvable.');
+    if (pErr || !payment) {
+        if (rpcSuccess) return { success: true };
+        throw new Error('Paiement introuvable.');
+    }
 
-    // Activer l'abonnement du vendeur pour 30 jours
+    // 3. Activer l'abonnement du vendeur pour 30 jours
     await manuallyActivateSubscription(payment.seller_id, payment.plan || 'starter', 30);
 
-    // Mettre à jour le statut du paiement
+    // 4. Si le compte vendeur était en attente d'adhésion ('vendeur_pending'), valider son statut
+    try {
+        const { data: currentProf } = await supabase
+            .from('profiles')
+            .select('id, role')
+            .eq('id', payment.seller_id)
+            .maybeSingle();
+
+        if (currentProf && currentProf.role === 'vendeur_pending') {
+            await supabase
+                .from('profiles')
+                .update({ role: 'vendeur', is_open: true })
+                .eq('id', payment.seller_id);
+        }
+    } catch (roleErr) {
+        console.warn('[AdminService] Note promotion vendeur_pending vers vendeur:', roleErr);
+    }
+
+    // 5. Nettoyer le cache local de candidature si présent
+    try {
+        removePendingSellerCache(payment.seller_id);
+    } catch {}
+
+    // 6. Mettre à jour le statut du paiement à 'success'
     const { data: updatedPay, error: uErr } = await supabase
         .from('seller_payments')
         .update({
@@ -1444,7 +1519,7 @@ export async function approveSubscriptionPayment(paymentId) {
         console.warn('[AdminService] Note mise à jour statut paiement:', uErr.message);
     }
 
-    return { success: true, payment: updatedPay };
+    return { success: true, payment: updatedPay || payment };
 }
 
 /**

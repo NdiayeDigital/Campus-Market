@@ -881,6 +881,119 @@ export async function submitSubscriptionPaymentProof({ sellerId, plan, operator,
 }
 
 /**
+ * Enregistre ou met à jour une demande de paiement d'adhésion / pack en attente
+ * lors du retour du vendeur depuis la passerelle SasPay (Wave ou Orange Money).
+ * Permet au SuperAdmin d'être notifié immédiatement et de valider en 1 clic.
+ *
+ * @param {Object} params
+ * @param {string} [params.sellerId]
+ * @param {string} [params.plan='starter']
+ * @param {string} [params.operator='wave']
+ * @param {string} [params.sessionId]
+ * @param {number} [params.amount]
+ * @param {string} [params.transactionRef]
+ * @returns {Promise<Object>}
+ */
+export async function registerPendingSubscriptionReturn({
+    sellerId,
+    plan = 'starter',
+    operator = 'wave',
+    sessionId = null,
+    amount = null,
+    transactionRef = null,
+} = {}) {
+    let targetSellerId = sellerId;
+    if (!targetSellerId) {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            targetSellerId = session?.user?.id;
+        } catch {}
+    }
+    if (!targetSellerId) {
+        console.warn('[SellerService] registerPendingSubscriptionReturn: ID vendeur introuvable.');
+        return { success: false, error: 'Identifiant vendeur introuvable.' };
+    }
+
+    let cleanPlan = String(plan || '').trim().toLowerCase();
+    if (cleanPlan === 'pro' || cleanPlan === 'business' || cleanPlan === 'pack_business' || cleanPlan === '2000') {
+        cleanPlan = 'pro';
+    } else {
+        cleanPlan = 'starter';
+    }
+    const planConfig = SUBSCRIPTION_PLANS[cleanPlan] || SUBSCRIPTION_PLANS.starter;
+    const validOperator = operator === 'om' ? 'om' : 'wave';
+    const finalAmount = amount || planConfig.price;
+    const finalSessionId = sessionId || transactionRef || `saspay_return_${Date.now()}`;
+
+    try {
+        // 1. Vérifier si un enregistrement existe déjà pour cette session
+        let existingPayment = null;
+        if (sessionId) {
+            const { data } = await supabase
+                .from('seller_payments')
+                .select('id, status, metadata')
+                .eq('provider_session_id', sessionId)
+                .maybeSingle();
+            existingPayment = data;
+        }
+
+        if (existingPayment) {
+            if (existingPayment.status === 'pending') {
+                await supabase
+                    .from('seller_payments')
+                    .update({
+                        metadata: {
+                            ...(existingPayment.metadata || {}),
+                            last_return_at: new Date().toISOString(),
+                            return_flow: true,
+                        },
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', existingPayment.id);
+            }
+            return { success: true, paymentId: existingPayment.id, status: existingPayment.status };
+        }
+
+        // 2. Insérer une nouvelle trace en attente de validation SuperAdmin
+        const { data: inserted, error: insErr } = await supabase
+            .from('seller_payments')
+            .insert({
+                seller_id: targetSellerId,
+                amount: finalAmount,
+                currency: 'XOF',
+                plan: cleanPlan,
+                operator: validOperator,
+                provider: 'saspay',
+                provider_session_id: finalSessionId,
+                status: 'pending',
+                metadata: {
+                    transaction_ref: transactionRef || sessionId || '',
+                    return_flow: true,
+                    return_at: new Date().toISOString(),
+                    source: 'saspay_return_flow',
+                },
+            })
+            .select('id')
+            .single();
+
+        if (insErr) {
+            console.warn('[SellerService] Note insertion seller_payments return:', insErr.message);
+            return { success: false, error: insErr.message };
+        }
+
+        return {
+            success: true,
+            paymentId: inserted?.id,
+            status: 'pending',
+            message: 'Demande d\'adhésion / pack enregistrée avec succès.',
+        };
+    } catch (err) {
+        console.warn('[SellerService] Erreur registerPendingSubscriptionReturn:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
  * Récupère les paiements en attente de vérification pour un vendeur donné.
  * @param {string} sellerId
  * @returns {Promise<Array>}
@@ -1131,6 +1244,7 @@ export default {
     getSellerSubscription,
     initiateSubscriptionPayment,
     confirmSubscriptionPayment,
+    registerPendingSubscriptionReturn,
     submitSubscriptionPaymentProof,
     fetchSellerPendingPayments,
     changeSellerPassword,

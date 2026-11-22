@@ -261,6 +261,63 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     }
                 }
             )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'seller_payments',
+                },
+                async (payload) => {
+                    console.log('[SuperAdmin Realtime] Événement seller_payments:', payload);
+                    if (payload.eventType === 'INSERT' || (payload.eventType === 'UPDATE' && payload.new?.status === 'pending')) {
+                        const planLabel = payload.new?.plan === 'pro' ? 'Pack Business (2 000 FCFA)' : 'Pack Pro (1 000 FCFA)';
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`🔔 Nouvelle demande d'adhésion (${planLabel} SasPay) reçue !`, 'info');
+                        }
+                    }
+                    try {
+                        const [freshPendingPayments, freshMetrics, freshPendingSellers] = await Promise.all([
+                            fetchPendingSubscriptionPayments().catch(() => pendingSubscriptionPayments),
+                            fetchGlobalMetrics().catch(() => metrics),
+                            fetchPendingSellers().catch(() => pendingSellers),
+                        ]);
+                        pendingSubscriptionPayments = freshPendingPayments;
+                        metrics = freshMetrics;
+                        pendingSellers = freshPendingSellers;
+
+                        render();
+                    } catch (err) {
+                        console.warn('[SuperAdmin] Erreur mise à jour temps réel paiements:', err);
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'profiles',
+                },
+                async (payload) => {
+                    if (payload.eventType === 'INSERT' && payload.new?.role === 'vendeur_pending') {
+                        if (typeof onShowToast === 'function') {
+                            onShowToast(`🔔 Nouvelle candidature d'adhésion vendeur reçue !`, 'info');
+                        }
+                        try {
+                            const [freshPendingSellers, freshMetrics] = await Promise.all([
+                                fetchPendingSellers().catch(() => pendingSellers),
+                                fetchGlobalMetrics().catch(() => metrics),
+                            ]);
+                            pendingSellers = freshPendingSellers;
+                            metrics = freshMetrics;
+                            render();
+                        } catch (e) {
+                            console.warn('[SuperAdmin Realtime] Erreur refresh profiles:', e);
+                        }
+                    }
+                }
+            )
             .subscribe();
     }
 
@@ -686,6 +743,11 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         const sortedLocations = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]);
         const maxLocationCount = sortedLocations.length > 0 ? sortedLocations[0][1] : 1;
 
+        const totalPendingPayments = (pendingSubscriptionPayments || []).length;
+        const totalPendingApplicants = m.totalPendingApplicants !== undefined
+            ? m.totalPendingApplicants
+            : ((m.pendingSellersCount || 0) + totalPendingPayments);
+
         return `
             <div class="flex flex-col gap-5 sm:gap-6">
                 <!-- Grille Bento KPI réelles (4 Métriques Clés : 2 col mobile / 4 col desktop) -->
@@ -712,7 +774,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     <!-- Demandes en attente -->
                     <div 
                         data-stat-target="sellers-pending" 
-                        title="Cliquer pour afficher et modérer les candidatures en attente"
+                        title="Cliquer pour afficher et modérer les candidatures et demandes de packs en attente"
                         class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.99]"
                     >
                         <div class="flex items-center justify-between text-slate-500 mb-2">
@@ -722,15 +784,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${m.pendingSellersCount}</span>
-                            ${m.pendingSellersCount > 0 ? `
+                            <span class="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">${totalPendingApplicants}</span>
+                            ${totalPendingApplicants > 0 ? `
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 animate-pulse">
-                                    Action
+                                    Action requise
                                 </span>
                             ` : ''}
                         </div>
                         <div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-1">
-                            <span>Candidatures</span>
+                            <span>${totalPendingPayments > 0 ? `${totalPendingPayments} pack${totalPendingPayments > 1 ? 's' : ''} SasPay en attente` : 'Candidatures & Packs'}</span>
                             <span class="text-[10px] font-bold text-slate-400 group-hover:text-amber-600 flex items-center gap-0.5 transition-colors">Détail <i class="fa-solid fa-chevron-right text-[8px]"></i></span>
                         </div>
                     </div>
@@ -1297,13 +1359,15 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         const filteredPending = pendingSellers.filter(matchesQuery);
         const filteredPendingPayments = pendingSubscriptionPayments.filter((p) => {
             if (!query) return true;
-            const prof = p.profiles || {};
+            const prof = p.seller || p.profiles || {};
+            const ref = p.transaction_reference || p.provider_session_id || p.metadata?.transaction_ref || '';
+            const phone = p.customer_phone || p.metadata?.payer_phone || prof.telephone || '';
             return (
                 (prof.prenom || '').toLowerCase().includes(query) ||
                 (prof.nom || '').toLowerCase().includes(query) ||
                 (prof.shop_name || '').toLowerCase().includes(query) ||
-                (p.transaction_reference || '').toLowerCase().includes(query) ||
-                (p.customer_phone || '').toLowerCase().includes(query)
+                ref.toLowerCase().includes(query) ||
+                phone.toLowerCase().includes(query)
             );
         });
         const sellerStatsMap = buildAllSellersStatsMap(allOrders);
@@ -1350,7 +1414,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             return new Date(b.created_at || 0) - new Date(a.created_at || 0);
         });
 
-        const showPaymentsSection = (sellerFilterTab === 'all' || sellerFilterTab === 'payments') && (filteredPendingPayments.length > 0 || sellerFilterTab === 'payments');
+        const showPaymentsSection = (sellerFilterTab === 'all' || sellerFilterTab === 'payments' || sellerFilterTab === 'pending') && (filteredPendingPayments.length > 0 || sellerFilterTab === 'payments');
         const showPendingSection = sellerFilterTab !== 'payments' && (sellerFilterTab === 'all' || sellerFilterTab === 'pending') && (filteredPending.length > 0 || sellerFilterTab === 'pending');
         const showActiveSection = sellerFilterTab !== 'payments' && (sellerFilterTab === 'all' || sellerFilterTab === 'active' || sellerFilterTab === 'suspended');
 
@@ -1402,7 +1466,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             </button>
                             <button type="button" data-seller-filter="pending" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'pending' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
                                 <span>En attente</span>
-                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'}">${totalPending}</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${sellerFilterTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'}">${totalPending + totalPendingPayments}</span>
                             </button>
                             <button type="button" data-seller-filter="active" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${sellerFilterTab === 'active' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
                                 <span>Actifs</span>
@@ -1533,8 +1597,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${list.map((pay) => {
-                            const prof = pay.profiles || {};
+                            const prof = pay.seller || pay.profiles || {};
                             const planLabel = pay.amount >= 2000 ? `${SUBSCRIPTION_PLANS.pro.name} (10 arts)` : `${SUBSCRIPTION_PLANS.starter.name} (5 arts)`;
+                            const txnRef = pay.transaction_reference || pay.provider_session_id || pay.metadata?.transaction_ref || 'SasPay Web';
+                            const phone = pay.customer_phone || pay.metadata?.payer_phone || prof.telephone || 'Non renseigné';
                             const dateStr = pay.created_at ? new Date(pay.created_at).toLocaleDateString('fr-FR', {
                                 day: 'numeric',
                                 month: 'short',
@@ -1567,12 +1633,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                                 <i class="fa-solid fa-mobile-screen text-[10px] text-slate-400"></i>
                                                 ${escapeHTML(pay.operator || 'SasPay')}
                                             </span>
-                                            <span class="font-mono text-[10px] text-slate-500 select-all">${escapeHTML(pay.transaction_reference || 'N/A')}</span>
+                                            <span class="font-mono text-[10px] text-slate-500 select-all">${escapeHTML(txnRef)}</span>
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex flex-col text-[11px]">
-                                            <span class="text-slate-700">${escapeHTML(pay.customer_phone || prof.telephone || 'Non renseigné')}</span>
+                                            <span class="text-slate-700">${escapeHTML(phone)}</span>
                                             ${prof.email ? `<span class="text-slate-400 text-[10px] truncate">${escapeHTML(prof.email)}</span>` : ''}
                                         </div>
                                     </td>
@@ -1615,8 +1681,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             <!-- Version Mobile (Cartes) -->
             <div class="md:hidden flex flex-col gap-3">
                 ${list.map((pay) => {
-                    const prof = pay.profiles || {};
+                    const prof = pay.seller || pay.profiles || {};
                     const planLabel = pay.amount >= 2000 ? `${SUBSCRIPTION_PLANS.pro.name} (10 arts)` : `${SUBSCRIPTION_PLANS.starter.name} (5 arts)`;
+                    const txnRef = pay.transaction_reference || pay.provider_session_id || pay.metadata?.transaction_ref || 'SasPay Web';
+                    const phone = pay.customer_phone || pay.metadata?.payer_phone || prof.telephone || 'Non renseigné';
                     const dateStr = pay.created_at ? new Date(pay.created_at).toLocaleDateString('fr-FR', {
                         day: 'numeric',
                         month: 'short',
@@ -1646,11 +1714,11 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-slate-500">Réf / Trans ID :</span>
-                                    <span class="font-mono text-[11px] font-bold text-slate-900 select-all">${escapeHTML(pay.transaction_reference || 'N/A')}</span>
+                                    <span class="font-mono text-[11px] font-bold text-slate-900 select-all">${escapeHTML(txnRef)}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-slate-500">Téléphone :</span>
-                                    <span class="font-semibold text-slate-700">${escapeHTML(pay.customer_phone || prof.telephone || 'Non renseigné')}</span>
+                                    <span class="font-semibold text-slate-700">${escapeHTML(phone)}</span>
                                 </div>
                                 <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
                                     <span>Date :</span>
@@ -5348,6 +5416,22 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     try {
                         await approveSubscriptionPayment(paymentId);
                         pendingSubscriptionPayments = pendingSubscriptionPayments.filter((p) => p.id !== paymentId);
+
+                        // Si le marchand était un nouveau candidat (vendeur_pending), le promouvoir dans activeSellers
+                        const pendingIdx = pendingSellers.findIndex((s) => s.id === sellerId);
+                        if (pendingIdx >= 0) {
+                            const promoted = pendingSellers.splice(pendingIdx, 1)[0];
+                            promoted.role = 'vendeur';
+                            promoted.subscription_status = 'active';
+                            const now = new Date();
+                            now.setDate(now.getDate() + 30);
+                            promoted.subscription_expires_at = now.toISOString();
+                            promoted.is_open = true;
+                            if (!activeSellers.some((s) => s.id === sellerId)) {
+                                activeSellers.unshift(promoted);
+                            }
+                        }
+
                         const targetSeller = activeSellers.find((s) => s.id === sellerId);
                         if (targetSeller) {
                             targetSeller.subscription_status = 'active';
@@ -5356,6 +5440,12 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             targetSeller.subscription_expires_at = now.toISOString();
                             targetSeller.is_open = true;
                         }
+
+                        // Rafraîchir les métriques globales en mémoire
+                        try {
+                            metrics = await fetchGlobalMetrics();
+                        } catch {}
+
                         showToast(`Paiement validé ! Abonnement activé 30 jours pour "${shop}". 💳`, 'success');
                         const contentEl = containerEl.querySelector('#admin-tab-content');
                         if (contentEl && activeTab === 'sellers') {
