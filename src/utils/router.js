@@ -39,6 +39,15 @@ export function resolveRoute(rawHash = '', search = '') {
         }
     }
 
+    // 3.b. Fiche Partenaire en deep-link (#partner/UUID)
+    if (hash.startsWith('#partner/')) {
+        const rawId = raw.slice(9);
+        const partnerId = rawId.split('?')[0].replace(/\/+$/, '').trim();
+        if (partnerId) {
+            return { view: 'catalog', params: { partnerId } };
+        }
+    }
+
     // 4. Espace SuperAdmin (#admin)
     if (hash === '#admin' || hash.startsWith('#admin?')) {
         return { view: 'admin', params: {} };

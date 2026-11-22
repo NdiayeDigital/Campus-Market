@@ -1739,6 +1739,7 @@ export async function addPartner(partnerData) {
         perk: partnerData.perk?.trim() || '',
         badge: partnerData.badge?.trim() || 'Partenaire Officiel',
         website_url: partnerData.website_url?.trim() || '',
+        whatsapp_phone: partnerData.whatsapp_phone?.trim() || '',
         display_order: parseInt(partnerData.display_order, 10) || 0,
         is_active: partnerData.is_active !== false,
     };
@@ -1768,6 +1769,7 @@ export async function updatePartner(id, updates) {
     if (payload.name) payload.name = payload.name.trim();
     if (payload.description) payload.description = payload.description.trim();
     if (payload.perk) payload.perk = payload.perk.trim();
+    if (payload.whatsapp_phone !== undefined) payload.whatsapp_phone = String(payload.whatsapp_phone || '').trim();
     if (payload.display_order !== undefined) payload.display_order = parseInt(payload.display_order, 10) || 0;
 
     const { data, error } = await supabase

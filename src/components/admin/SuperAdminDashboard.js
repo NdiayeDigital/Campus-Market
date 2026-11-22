@@ -3397,9 +3397,20 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                             </div>
                         </div>
 
-                        <!-- Lien Web / WhatsApp -->
+                        <!-- Numéro WhatsApp Direct du Partenaire -->
                         <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-slate-700" for="partner-link-url-input">Lien Web ou Contact WhatsApp</label>
+                            <label class="text-xs font-bold text-slate-700" for="partner-whatsapp-phone-input">Numéro WhatsApp direct (Optionnel)</label>
+                            <input 
+                                type="tel" 
+                                id="partner-whatsapp-phone-input" 
+                                placeholder="Ex: 77 123 45 67 ou 221771234567" 
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[44px]"
+                            >
+                        </div>
+
+                        <!-- Lien Web / Site officiel -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-slate-700" for="partner-link-url-input">Site Web officiel (Optionnel)</label>
                             <input 
                                 type="text" 
                                 id="partner-link-url-input" 
@@ -3483,6 +3494,13 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                                         ${partner.perk ? `
                                             <div class="p-1.5 rounded-lg bg-emerald-50/70 border border-emerald-200/70 text-[10px] text-emerald-800 font-semibold line-clamp-1">
                                                 🎁 ${escapeHTML(partner.perk)}
+                                            </div>
+                                        ` : ''}
+
+                                        ${partner.whatsapp_phone ? `
+                                            <div class="flex items-center gap-1.5 text-[11px] text-emerald-700 font-semibold">
+                                                <i class="fa-brands fa-whatsapp text-xs"></i>
+                                                <span class="font-mono">${escapeHTML(partner.whatsapp_phone)}</span>
                                             </div>
                                         ` : ''}
 
@@ -5106,6 +5124,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 const badge = formAddPartner.querySelector('#partner-badge-input')?.value?.trim();
                 const perk = formAddPartner.querySelector('#partner-perk-input')?.value?.trim();
                 const description = formAddPartner.querySelector('#partner-desc-input')?.value?.trim();
+                const whatsappPhone = formAddPartner.querySelector('#partner-whatsapp-phone-input')?.value?.trim();
                 const websiteUrl = formAddPartner.querySelector('#partner-link-url-input')?.value?.trim();
                 const displayOrder = parseInt(formAddPartner.querySelector('#partner-order-input')?.value, 10) || 0;
                 const fileInput = formAddPartner.querySelector('#partner-logo-file');
@@ -5134,6 +5153,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                         description,
                         logo_url: logoUrl,
                         website_url: websiteUrl,
+                        whatsapp_phone: whatsappPhone,
                         display_order: displayOrder,
                         is_active: true,
                     });

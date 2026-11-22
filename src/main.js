@@ -1109,6 +1109,9 @@ async function initApp() {
             handleProductDeepLink(route.params.productId);
         } else {
             navigateToView(route.view, route.params);
+            if (route.params?.partnerId) {
+                partnersSectionComponent?.openPartnerModal?.(route.params.partnerId);
+            }
         }
     }
 

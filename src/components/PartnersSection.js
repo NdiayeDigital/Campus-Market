@@ -5,7 +5,7 @@
  */
 
 import { escapeHTML } from '../utils/security.js';
-import { PARTNER_CATEGORIES, DEFAULT_PARTNERS, getBecomePartnerWhatsappUrl } from '../config/partners.js';
+import { PARTNER_CATEGORIES, DEFAULT_PARTNERS, getBecomePartnerWhatsappUrl, getPartnerContactWhatsappUrl } from '../config/partners.js';
 import { resolveMediaUrl } from '../utils/image-compressor.js';
 
 /**
@@ -86,6 +86,10 @@ export function createPartnersSection({
                             <span>Partenaire</span>
                         </span>
                     `}
+                    <div class="mt-1 flex items-center gap-1 text-[10px] font-extrabold text-primary group-hover:text-primary-hover transition-colors">
+                        <span>Voir le partenaire</span>
+                        <i class="fa-solid fa-chevron-right text-[8px] group-hover:translate-x-0.5 transition-transform"></i>
+                    </div>
                 </div>
             </div>
         `;
@@ -99,7 +103,7 @@ export function createPartnersSection({
         const resolvedLogoUrl = resolveMediaUrl(partner.logo_url);
         const hasLogo = Boolean(resolvedLogoUrl && resolvedLogoUrl.trim());
         const initial = (partner.name?.[0] || 'P').toUpperCase();
-        const whatsappUrl = getBecomePartnerWhatsappUrl();
+        const whatsappContactUrl = getPartnerContactWhatsappUrl(partner);
 
         const modal = document.createElement('div');
         modal.id = 'partner-detail-modal';
@@ -150,17 +154,21 @@ export function createPartnersSection({
                     </div>
                 </div>
 
-                <!-- Description -->
-                ${partner.description ? `
-                    <div class="text-xs sm:text-sm text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                        ${escapeHTML(partner.description)}
-                    </div>
-                ` : ''}
+                <!-- Section Présentation du Partenaire -->
+                <div class="flex flex-col gap-1.5 bg-slate-50/90 p-3.5 sm:p-4 rounded-2xl border border-slate-100">
+                    <span class="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info text-primary text-xs"></i>
+                        <span>Présentation & Activité</span>
+                    </span>
+                    <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                        ${escapeHTML(partner.description || "Partenaire officiel engagé auprès de la communauté étudiante de l'Université Iba Der Thiam de Thiès (UIDT).")}
+                    </p>
+                </div>
 
                 <!-- Avantage Réservé aux Étudiants UIDT -->
                 ${partner.perk ? `
-                    <div class="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <div class="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start gap-3 shadow-2xs">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
                             <i class="fa-solid fa-gift text-sm"></i>
                         </div>
                         <div class="flex flex-col min-w-0">
@@ -172,30 +180,36 @@ export function createPartnersSection({
 
                 <!-- Actions / Liens -->
                 <div class="flex flex-col gap-2 pt-1">
-                    ${partner.website_url ? `
+                    <!-- Bouton Écrire sur WhatsApp (traçable via Campus Market) -->
+                    <a 
+                        href="${escapeHTML(whatsappContactUrl)}" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        id="btn-partner-whatsapp"
+                        class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all"
+                    >
+                        <i class="fa-brands fa-whatsapp text-base"></i>
+                        <span>Écrire sur WhatsApp</span>
+                        <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-md font-semibold ml-1">Via Campus Market</span>
+                    </a>
+
+                    ${partner.website_url && !partner.website_url.includes('wa.me') ? `
                         <a 
                             href="${escapeHTML(partner.website_url)}" 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            class="w-full py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95"
+                            class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs transition-all active:scale-95"
                         >
+                            <i class="fa-solid fa-globe text-xs text-primary"></i>
                             <span>Visiter le site web officiel</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-slate-400"></i>
                         </a>
                     ` : ''}
-                    <a 
-                        href="${whatsappUrl}" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
-                    >
-                        <i class="fa-brands fa-whatsapp text-sm"></i>
-                        <span>Écrire sur WhatsApp</span>
-                    </a>
+
                     <button 
                         type="button" 
                         id="btn-close-partner-modal-alt"
-                        class="w-full py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all active:scale-95 cursor-pointer mt-1"
+                        class="w-full py-2 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold transition-all active:scale-95 cursor-pointer mt-0.5 border border-slate-200/60"
                     >
                         Fermer
                     </button>
@@ -375,6 +389,12 @@ export function createPartnersSection({
             currentPartners = newPartners.filter((p) => p.is_active !== false);
             render();
         }
+    };
+
+    // Méthode publique d'ouverture directe de la présentation d'un partenaire
+    containerEl.openPartnerModal = function (partnerId) {
+        const p = currentPartners.find((item) => String(item.id) === String(partnerId));
+        if (p) openPartnerDetailModal(p);
     };
 
     return containerEl;
