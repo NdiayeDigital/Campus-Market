@@ -107,7 +107,7 @@ export default async function handler(req, res) {
                     try {
                         const { createClient } = await import('@supabase/supabase-js');
                         const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://fqulqgdjusfzhcjpvyay.supabase.co';
-                        const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+                        const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7';
                         if (!SUPABASE_KEY) {
                             throw new Error('SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_ANON_KEY manquant.');
                         }

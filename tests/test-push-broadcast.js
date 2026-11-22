@@ -154,6 +154,13 @@ assert.ok(apiBroadcastFile.includes('broadcast: savedBroadcast'), 'L\'API doit r
 assert.ok(!apiBroadcastFile.includes('if (activeSubscriptions.length === 0) {\n            return res.status(200)'), 'L\'API ne doit plus faire de return prématuré bloquant l\'enregistrement');
 console.log('✅ [Serverless API History Sync] Persistance systématique dans push_broadcasts validée !');
 
+// Test 5.4: Résilience des clés Supabase en environnement Serverless Vercel (zéro erreur 'supabaseKey is required.')
+assert.ok(
+    apiBroadcastFile.includes("'sb_publishable_QiS6HTBjjJo423rgUxdQ5A_A5NySDl7'"),
+    "api/admin-broadcast-push.js doit intégrer le repli publishable pour ne jamais planter sur 'supabaseKey is required.'"
+);
+console.log('✅ [Serverless API Key Resilience] Résilience des clés Supabase en environnement Node.js validée !');
+
 // =========================================================================
 // 6. Intégrité du Script SQL de Migration
 // =========================================================================
