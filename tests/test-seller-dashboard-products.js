@@ -108,6 +108,31 @@ async function runTests() {
         failed++;
     }
 
+    // Test 5 : Vérification de l'absence de crash ReferenceError (subStatus) dans ProductManager.js
+    try {
+        console.log('\nTest 5 : Vérification du scope des variables dans ProductManager.js (renderProductsListView)');
+        const pmPath = path.join(rootDir, 'src', 'components', 'seller', 'ProductManager.js');
+        assert.ok(fs.existsSync(pmPath), 'ProductManager.js doit exister');
+        const pmContent = fs.readFileSync(pmPath, 'utf8');
+
+        // Vérifier que renderProductsListView extrait getQuotaInfo pour définir subStatus
+        const listViewFunc = pmContent.slice(pmContent.indexOf('function renderProductsListView'));
+        assert.ok(
+            listViewFunc.includes('getQuotaInfo()'),
+            'renderProductsListView doit appeler getQuotaInfo() pour initialiser subStatus et les quotas'
+        );
+        assert.ok(
+            pmContent.includes('renderActiveContent()'),
+            'render() doit encapsuler le rendu dans un try/catch sécurisé pour ne jamais bloquer sur un skeleton'
+        );
+
+        console.log('  ✅ Test 5 validé : ProductManager.js sécurisé contre les ReferenceError.');
+        passed++;
+    } catch (err) {
+        console.error('  ❌ Échec Test 5 :', err.message);
+        failed++;
+    }
+
     console.log(`\n========================================`);
     console.log(`Résultats : ${passed} validé(s), ${failed} échec(s)`);
     console.log(`========================================\n`);

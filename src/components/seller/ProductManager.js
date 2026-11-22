@@ -466,6 +466,24 @@ export function createProductManager({
         const pausedCount = products.filter((p) => p.is_paused === true || p.stock === -2).length;
         const { plan, planObj, maxAllowed, count, isLimitReached, percent, subStatus } = getQuotaInfo();
 
+        function renderActiveContent() {
+            if (isLoading) return renderSkeleton();
+            try {
+                return activeTab === 'add'
+                    ? renderAddProductView()
+                    : renderProductsListView(forSaleCount, soldCount, pausedCount);
+            } catch (renderErr) {
+                console.error('[ProductManager] Erreur rendu contenu:', renderErr);
+                return `
+                    <div class="p-6 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs flex flex-col gap-2">
+                        <div class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> Une anomalie d'affichage est survenue.</div>
+                        <p class="text-rose-700">Détails : ${escapeHTML(renderErr.message || String(renderErr))}</p>
+                        <button type="button" onclick="window.location.reload()" class="self-start px-3 py-1.5 bg-rose-600 text-white rounded-lg font-bold hover:bg-rose-700">Actualiser</button>
+                    </div>
+                `;
+            }
+        }
+
         containerEl.innerHTML = `
             <!-- Barre de sous-navigation interne du catalogue avec jauge d'abonnement -->
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 sm:p-4 flex items-center justify-between gap-3 flex-wrap">
@@ -540,7 +558,7 @@ export function createProductManager({
             </div>
 
             <!-- Contenu dynamique selon l'onglet actif -->
-            ${isLoading ? renderSkeleton() : (activeTab === 'add' ? renderAddProductView() : renderProductsListView(forSaleCount, soldCount, pausedCount))}
+            ${renderActiveContent()}
         `;
 
         bindEvents();
@@ -861,7 +879,8 @@ export function createProductManager({
             `;
         }
 
-        const promoQuota = computePromotionQuota(sellerProfile);
+        const { plan, planObj, maxAllowed, count, isLimitReached, percent, subStatus } = getQuotaInfo();
+        const promoQuota = computePromotionQuota(sellerProfile || subStatus?.plan);
         const filtered = products.filter((prod) => {
             const isSold = prod.stock === 0;
             const isPaused = prod.is_paused === true || prod.stock === -2;
@@ -1494,7 +1513,8 @@ export function createProductManager({
                     const prod = products.find((p) => p.id === id);
                     if (!prod) return;
 
-                    const promoQuota = computePromotionQuota(sellerProfile);
+                    const { plan, planObj, maxAllowed, count, isLimitReached, percent, subStatus } = getQuotaInfo();
+                    const promoQuota = computePromotionQuota(sellerProfile || subStatus?.plan);
                     if (!promoQuota.allowed) {
                         showToast("La mise en avant de produit est réservée aux formules Pro (1/mois) et Business (1/semaine).", 'warning');
                         if (typeof onOpenSubscription === 'function') {
