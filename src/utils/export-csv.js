@@ -145,9 +145,47 @@ export function exportAccountsToCSV(profiles = [], filename = 'utilisateurs-camp
     downloadCSV(filename, rows, headers);
 }
 
+/**
+ * Exporte le classement officiel des marchands en CSV.
+ * @param {Array<Object>} ranking - Liste des marchands classés
+ * @param {string} [filename='classement-marchands-uidt.csv']
+ */
+export function exportLeaderboardToCSV(ranking = [], filename = 'classement-marchands-uidt.csv') {
+    const headers = [
+        'Rang',
+        'Boutique',
+        'Vendeur',
+        'Points',
+        'Palier',
+        'Commandes Livrées',
+        'Annulations Vendeur',
+        'Articles Actifs',
+        'Pavillon',
+        'Chambre',
+        'Statut Boutique',
+    ];
+
+    const rows = ranking.map((s, idx) => [
+        s.rank || (idx + 1),
+        s.shopName || s.shop_name || '',
+        `${s.prenom || ''} ${s.nom || ''}`.trim(),
+        s.points !== undefined ? s.points : 0,
+        s.tier?.name || 'Bronze',
+        s.deliveredCount !== undefined ? s.deliveredCount : 0,
+        s.cancelledBySellerCount !== undefined ? s.cancelledBySellerCount : 0,
+        s.activeProducts !== undefined ? s.activeProducts : 0,
+        s.pavillon || '',
+        s.chambre || '',
+        s.is_open === false ? 'Fermée' : 'Ouverte',
+    ]);
+
+    downloadCSV(filename, rows, headers);
+}
+
 export default {
     downloadCSV,
     exportOrdersToCSV,
     exportSellersToCSV,
     exportAccountsToCSV,
+    exportLeaderboardToCSV,
 };

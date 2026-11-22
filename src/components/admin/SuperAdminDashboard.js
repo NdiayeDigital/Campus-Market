@@ -49,6 +49,7 @@ import {
     fetchPushSubscribersCount,
     computeSellerOrderStats,
     buildAllSellersStatsMap,
+    fetchSuperAdminLeaderboard,
 } from '../../services/admin-service.js';
 import { CAROUSEL_TYPES } from '../../config/announcements.js';
 import { PARTNER_CATEGORIES } from '../../config/partners.js';
@@ -57,7 +58,7 @@ import { getSellerTier } from '../../services/seller-ranking-service.js';
 import { supabase } from '../../services/supabase.js';
 import { escapeHTML } from '../../utils/security.js';
 import { showToast, showConfirm } from '../../utils/notifications.js';
-import { exportOrdersToCSV, exportSellersToCSV, exportAccountsToCSV } from '../../utils/export-csv.js';
+import { exportOrdersToCSV, exportSellersToCSV, exportAccountsToCSV, exportLeaderboardToCSV } from '../../utils/export-csv.js';
 import logoUrl from '../../assets/logo.webp';
 
 /**
@@ -88,7 +89,10 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
     let pushSubscribersCount = { total: 0, sellers: 0, buyers: 0 };
     let allAdvertisements = [];
     let annonceFilterTab = 'a_valider'; // 'a_valider' | 'all' | 'publiee' | 'refusee' | 'expiree'
-    let activeTab = 'overview'; // 'overview' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations' | 'carousels' | 'partners' | 'broadcast' | 'annonces'
+    let activeTab = 'overview'; // 'overview' | 'classement' | 'annonces' | 'sellers' | 'accounts' | 'products' | 'orders' | 'locations' | 'carousels' | 'partners' | 'broadcast'
+    let rankingSearchQuery = '';
+    let rankingTierFilter = 'all'; // 'all' | 'diamant' | 'or' | 'argent' | 'bronze'
+    let adminLeaderboardData = [];
     let productSearchQuery = '';
     let sellerSearchQuery = '';
     let sellerFilterTab = 'all'; // 'all' | 'pending' | 'active' | 'suspended' | 'payments'
@@ -172,7 +176,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         render();
 
         try {
-            const [m, p, a, prods, ords, locs, profs, subPays, carSlides, pts, bCasts, pSubs, ads] = await Promise.all([
+            const [m, p, a, prods, ords, locs, profs, subPays, carSlides, pts, bCasts, pSubs, ads, lboard] = await Promise.all([
                 fetchGlobalMetrics(),
                 fetchPendingSellers(),
                 fetchActiveSellers(),
@@ -186,6 +190,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 fetchPushBroadcasts().catch(() => []),
                 fetchPushSubscribersCount().catch(() => ({ total: 0, sellers: 0, buyers: 0 })),
                 fetchAds(),
+                fetchSuperAdminLeaderboard().catch(() => []),
             ]);
             metrics = m;
             pendingSellers = p || [];
@@ -200,6 +205,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             pushBroadcasts = bCasts || [];
             pushSubscribersCount = pSubs || { total: 0, sellers: 0, buyers: 0 };
             allAdvertisements = ads || [];
+            adminLeaderboardData = lboard || [];
         } catch (err) {
             console.error('[SuperAdmin] Erreur chargement données:', err);
             if (typeof onShowToast === 'function') {
@@ -427,6 +433,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         const pendingAlert = pendingSellers.length > 0 || pendingSubscriptionPayments.length > 0;
         const navTabs = [
             { id: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie', badge: null },
+            { id: 'classement', label: "Classement", icon: 'fa-trophy', badge: adminLeaderboardData.length || 'Top', badgeAlert: false },
             { id: 'annonces', label: "Annonces", icon: 'fa-bullhorn', badge: pendingAdsCount || null, badgeAlert: pendingAdsCount > 0 },
             { id: 'sellers', label: "Marchands", icon: 'fa-users-gear', badge: pendingSellers.length + activeSellers.length + pendingSubscriptionPayments.length, badgeAlert: pendingAlert },
             { id: 'accounts', label: "Comptes", icon: 'fa-id-card-clip', badge: allProfiles.length || (pendingSellers.length + activeSellers.length + 1) },
@@ -734,6 +741,7 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex-1">
                     <div id="admin-tab-content" class="w-full">
                         ${activeTab === 'overview' ? renderOverviewTab() : ''}
+                        ${activeTab === 'classement' ? renderClassementTab() : ''}
                         ${activeTab === 'annonces' ? renderAnnoncesTab() : ''}
                         ${activeTab === 'sellers' ? renderSellersTab() : ''}
                         ${activeTab === 'accounts' ? renderAccountsTab() : ''}
@@ -1046,6 +1054,62 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                     </div>
                 </div>
 
+                <!-- Bento Card : Podium Top 3 Classement Vendeurs -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col gap-4">
+                    <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0">
+                                <i class="fa-solid fa-trophy"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-sm text-slate-900">Podium & Classement Marchands</h3>
+                                <p class="text-xs text-slate-500">Autorité méritocratique calculée par le SuperAdmin (Livraisons, Fiabilité, Qualité)</p>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            data-jump-tab="classement" 
+                            class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                        >
+                            <span>Voir le classement complet</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+
+                    ${adminLeaderboardData.length === 0 ? `
+                        <div class="py-6 text-center text-slate-400 text-xs">
+                            <i class="fa-solid fa-trophy text-2xl text-slate-300 mb-1.5 block"></i>
+                            Aucun marchand classé pour le moment.
+                        </div>
+                    ` : `
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            ${adminLeaderboardData.slice(0, 3).map((s, idx) => {
+                                const medals = ['🥇', '🥈', '🥉'];
+                                const borderColors = ['border-amber-200 bg-amber-50/40', 'border-slate-200 bg-slate-50/40', 'border-orange-200 bg-orange-50/40'];
+                                const medal = medals[idx] || `#${idx + 1}`;
+                                return `
+                                    <div class="p-3.5 rounded-xl border ${borderColors[idx] || 'border-slate-100 bg-slate-50/30'} flex flex-col justify-between gap-3">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-lg font-black">${medal}</span>
+                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${s.tier?.badgeClass || 'bg-slate-100 text-slate-700'}">
+                                                ${escapeHTML(s.tier?.name || 'Bronze')}
+                                            </span>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <span class="font-bold text-xs text-slate-900 block truncate">${escapeHTML(s.shopName)}</span>
+                                            <span class="text-[11px] text-slate-500 block truncate">${escapeHTML(s.prenom || '')} ${escapeHTML(s.nom || '')}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                                            <span class="font-extrabold text-amber-700 tabular-nums">${s.points} pts</span>
+                                            <span class="text-[10px] text-slate-500 font-medium">${s.deliveredCount} livrée${s.deliveredCount > 1 ? 's' : ''}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
+
                 <!-- Répartition Géographique des Commandes (Pavillons & Campus UIDT) -->
                 <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col gap-4">
                     <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
@@ -1103,7 +1167,18 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
                 </div>
 
                 <!-- Raccourcis Opérationnels et Actions Rapides -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button data-jump-tab="classement" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-amber-400 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <span class="font-heading font-bold text-xs sm:text-sm text-slate-900 block truncate group-hover:text-amber-700 transition-colors">Classement Vendeurs</span>
+                            <span class="text-[11px] text-slate-500 block truncate">${adminLeaderboardData.length} marchands classés</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-amber-600 transition-colors"></i>
+                    </button>
+
                     <button data-jump-tab="sellers" class="p-3.5 bg-white rounded-2xl border border-slate-200/80 hover:border-primary/40 hover:shadow-card transition-all text-left flex items-center gap-3 group active:scale-95 cursor-pointer min-h-[44px]">
                         <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-xs shrink-0 group-hover:scale-105 transition-transform">
                             <i class="fa-solid fa-user-plus"></i>
@@ -3973,6 +4048,362 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
         });
     }
 
+    function renderClassementTab() {
+        const query = (rankingSearchQuery || '').toLowerCase().trim();
+        const matchesQuery = (s) => {
+            if (!query) return true;
+            return (
+                (s.shopName || '').toLowerCase().includes(query) ||
+                (s.prenom || '').toLowerCase().includes(query) ||
+                (s.nom || '').toLowerCase().includes(query) ||
+                (s.pavillon || '').toLowerCase().includes(query) ||
+                (s.chambre || '').toLowerCase().includes(query)
+            );
+        };
+
+        const filtered = adminLeaderboardData.filter((s) => {
+            if (!matchesQuery(s)) return false;
+            if (rankingTierFilter === 'diamant') return s.tier?.id === 'diamant';
+            if (rankingTierFilter === 'or') return s.tier?.id === 'or';
+            if (rankingTierFilter === 'argent') return s.tier?.id === 'argent';
+            if (rankingTierFilter === 'bronze') return s.tier?.id === 'bronze';
+            return true;
+        });
+
+        const top3 = adminLeaderboardData.slice(0, 3);
+        const first = top3[0] || null;
+        const second = top3[1] || null;
+        const third = top3[2] || null;
+
+        const countDiamant = adminLeaderboardData.filter(s => s.tier?.id === 'diamant').length;
+        const countOr = adminLeaderboardData.filter(s => s.tier?.id === 'or').length;
+        const countArgent = adminLeaderboardData.filter(s => s.tier?.id === 'argent').length;
+        const countBronze = adminLeaderboardData.filter(s => s.tier?.id === 'bronze').length;
+
+        return `
+            <div class="flex flex-col gap-6">
+                <!-- En-tête Classement SuperAdmin -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/80 flex items-center justify-center text-lg shrink-0 shadow-xs">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="font-heading font-extrabold text-lg sm:text-xl text-slate-900">Classement Officiel des Marchands</h1>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <i class="fa-solid fa-circle-check text-[9px] mr-1"></i>Autorité SuperAdmin
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-0.5">Barème méritocratique certifié : +10 pts / livraison, -15 pts / annulation vendeur, paliers Bronze à Diamant</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button 
+                            type="button" 
+                            id="btn-refresh-admin-ranking" 
+                            title="Actualiser les scores et le classement en direct"
+                            class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 min-h-[38px]"
+                        >
+                            <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                            <span>Actualiser</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            id="btn-export-ranking-csv" 
+                            title="Télécharger la liste au format CSV"
+                            class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 min-h-[38px]"
+                        >
+                            <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
+                            <span>Exporter CSV</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            id="btn-open-public-ranking" 
+                            title="Voir la vitrine publique du classement"
+                            class="px-3.5 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary-hover text-white transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 min-h-[38px] shadow-xs"
+                        >
+                            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                            <span>Vitrine publique</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Podium Top 3 Visuel -->
+                ${adminLeaderboardData.length >= 1 ? `
+                    <div class="bg-gradient-to-b from-amber-50/70 via-white to-white rounded-2xl border border-amber-200/70 p-5 sm:p-6 shadow-xs">
+                        <div class="text-center max-w-md mx-auto mb-6">
+                            <span class="text-[10px] font-extrabold uppercase tracking-widest text-amber-600 bg-amber-100/70 px-3 py-1 rounded-full">Podium d'Honneur UIDT</span>
+                            <h2 class="text-base sm:text-lg font-heading font-extrabold text-slate-900 mt-1">Les 3 Meilleurs Vendeurs du Campus</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end max-w-4xl mx-auto pt-2">
+                            <!-- 2ème Place (Argent) -->
+                            <div class="order-2 md:order-1 flex flex-col items-center">
+                                ${second ? `
+                                    <div class="w-full bg-white rounded-2xl border border-slate-200 p-4 text-center shadow-xs flex flex-col items-center gap-2 relative">
+                                        <span class="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 text-slate-700 font-black text-sm flex items-center justify-center absolute -top-4 shadow-xs">🥈</span>
+                                        <div class="w-14 h-14 rounded-full bg-slate-100 border-2 border-slate-300 overflow-hidden flex items-center justify-center mt-2 shrink-0">
+                                            ${second.logo_url || second.avatar_url ? `
+                                                <img src="${escapeHTML(second.logo_url || second.avatar_url)}" alt="${escapeHTML(second.shopName)}" class="w-full h-full object-cover">
+                                            ` : `
+                                                <i class="fa-solid fa-store text-xl text-slate-400"></i>
+                                            `}
+                                        </div>
+                                        <div class="min-w-0 w-full">
+                                            <span class="font-heading font-extrabold text-sm text-slate-900 block truncate">${escapeHTML(second.shopName)}</span>
+                                            <span class="text-[11px] text-slate-500 block truncate">${escapeHTML(second.prenom || '')} ${escapeHTML(second.nom || '')}</span>
+                                        </div>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${second.tier?.badgeClass || 'bg-slate-100 text-slate-700'}">
+                                            ${escapeHTML(second.tier?.name || 'Argent')}
+                                        </span>
+                                        <div class="w-full bg-slate-50 rounded-xl p-2 mt-1 border border-slate-100">
+                                            <span class="text-base font-black text-slate-800 tabular-nums">${second.points} pts</span>
+                                            <span class="text-[10px] text-slate-500 block">${second.deliveredCount} commande${second.deliveredCount > 1 ? 's' : ''} livrée${second.deliveredCount > 1 ? 's' : ''}</span>
+                                        </div>
+                                        <a href="#shop/${second.id}" class="text-xs font-bold text-primary hover:underline mt-1 flex items-center gap-1">
+                                            <span>Boutique</span>
+                                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                        </a>
+                                    </div>
+                                    <div class="w-full bg-slate-200/70 h-12 rounded-b-xl hidden md:flex items-center justify-center font-bold text-slate-600 text-xs">2ème</div>
+                                ` : `
+                                    <div class="w-full h-40 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 text-xs">Place libre</div>
+                                `}
+                            </div>
+
+                            <!-- 1ère Place (Or) - Au Centre -->
+                            <div class="order-1 md:order-2 flex flex-col items-center">
+                                ${first ? `
+                                    <div class="w-full bg-gradient-to-b from-amber-50/90 to-white rounded-2xl border-2 border-amber-300 p-5 text-center shadow-md flex flex-col items-center gap-2 relative ring-4 ring-amber-100">
+                                        <span class="w-10 h-10 rounded-full bg-amber-400 text-amber-950 font-black text-lg flex items-center justify-center absolute -top-5 shadow-sm">👑</span>
+                                        <div class="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 overflow-hidden flex items-center justify-center mt-2 shrink-0">
+                                            ${first.logo_url || first.avatar_url ? `
+                                                <img src="${escapeHTML(first.logo_url || first.avatar_url)}" alt="${escapeHTML(first.shopName)}" class="w-full h-full object-cover">
+                                            ` : `
+                                                <i class="fa-solid fa-crown text-2xl text-amber-600"></i>
+                                            `}
+                                        </div>
+                                        <div class="min-w-0 w-full">
+                                            <span class="font-heading font-black text-base text-slate-900 block truncate">${escapeHTML(first.shopName)}</span>
+                                            <span class="text-xs text-slate-600 block truncate">${escapeHTML(first.prenom || '')} ${escapeHTML(first.nom || '')}</span>
+                                        </div>
+                                        <span class="px-3 py-1 rounded-full text-xs font-black ${first.tier?.badgeClass || 'bg-amber-100 text-amber-900 border border-amber-300'}">
+                                            ${escapeHTML(first.tier?.name || 'Or')}
+                                        </span>
+                                        <div class="w-full bg-amber-100/60 rounded-xl p-2.5 mt-1 border border-amber-200/80">
+                                            <span class="text-xl font-black text-amber-950 tabular-nums">${first.points} pts</span>
+                                            <span class="text-xs text-amber-800 font-medium block">${first.deliveredCount} commande${first.deliveredCount > 1 ? 's' : ''} livrée${first.deliveredCount > 1 ? 's' : ''}</span>
+                                        </div>
+                                        <a href="#shop/${first.id}" class="text-xs font-bold text-amber-900 hover:underline mt-1 flex items-center gap-1">
+                                            <span>Visiter la boutique championne</span>
+                                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                        </a>
+                                    </div>
+                                    <div class="w-full bg-amber-300/80 h-16 rounded-b-xl hidden md:flex items-center justify-center font-black text-amber-950 text-sm">1er Champion</div>
+                                ` : ''}
+                            </div>
+
+                            <!-- 3ème Place (Bronze) -->
+                            <div class="order-3 flex flex-col items-center">
+                                ${third ? `
+                                    <div class="w-full bg-white rounded-2xl border border-orange-200 p-4 text-center shadow-xs flex flex-col items-center gap-2 relative">
+                                        <span class="w-8 h-8 rounded-full bg-orange-100 border border-orange-300 text-orange-800 font-black text-sm flex items-center justify-center absolute -top-4 shadow-xs">🥉</span>
+                                        <div class="w-14 h-14 rounded-full bg-orange-50 border-2 border-orange-300 overflow-hidden flex items-center justify-center mt-2 shrink-0">
+                                            ${third.logo_url || third.avatar_url ? `
+                                                <img src="${escapeHTML(third.logo_url || third.avatar_url)}" alt="${escapeHTML(third.shopName)}" class="w-full h-full object-cover">
+                                            ` : `
+                                                <i class="fa-solid fa-store text-xl text-orange-400"></i>
+                                            `}
+                                        </div>
+                                        <div class="min-w-0 w-full">
+                                            <span class="font-heading font-extrabold text-sm text-slate-900 block truncate">${escapeHTML(third.shopName)}</span>
+                                            <span class="text-[11px] text-slate-500 block truncate">${escapeHTML(third.prenom || '')} ${escapeHTML(third.nom || '')}</span>
+                                        </div>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${third.tier?.badgeClass || 'bg-orange-50 text-orange-900'}">
+                                            ${escapeHTML(third.tier?.name || 'Bronze')}
+                                        </span>
+                                        <div class="w-full bg-slate-50 rounded-xl p-2 mt-1 border border-slate-100">
+                                            <span class="text-base font-black text-slate-800 tabular-nums">${third.points} pts</span>
+                                            <span class="text-[10px] text-slate-500 block">${third.deliveredCount} commande${third.deliveredCount > 1 ? 's' : ''} livrée${third.deliveredCount > 1 ? 's' : ''}</span>
+                                        </div>
+                                        <a href="#shop/${third.id}" class="text-xs font-bold text-primary hover:underline mt-1 flex items-center gap-1">
+                                            <span>Boutique</span>
+                                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                        </a>
+                                    </div>
+                                    <div class="w-full bg-orange-200/70 h-8 rounded-b-xl hidden md:flex items-center justify-center font-bold text-orange-800 text-xs">3ème</div>
+                                ` : `
+                                    <div class="w-full h-40 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 text-xs">Place libre</div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Barre d'outils et Filtres par Palier -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div class="relative flex-1 max-w-md">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input 
+                            type="text" 
+                            id="admin-ranking-search" 
+                            placeholder="Rechercher une boutique, un vendeur, un pavillon..." 
+                            value="${escapeHTML(rankingSearchQuery)}"
+                            class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[40px]"
+                        >
+                        ${rankingSearchQuery ? `
+                            <button id="btn-clear-ranking-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                                <i class="fa-solid fa-circle-xmark text-xs"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <!-- Filtres Paliers -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                        <button type="button" data-ranking-tier="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${rankingTierFilter === 'all' ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            Tous (${adminLeaderboardData.length})
+                        </button>
+                        <button type="button" data-ranking-tier="diamant" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${rankingTierFilter === 'diamant' ? 'bg-cyan-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            💎 Diamant (${countDiamant})
+                        </button>
+                        <button type="button" data-ranking-tier="or" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${rankingTierFilter === 'or' ? 'bg-amber-500 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            🥇 Or (${countOr})
+                        </button>
+                        <button type="button" data-ranking-tier="argent" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${rankingTierFilter === 'argent' ? 'bg-slate-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            🥈 Argent (${countArgent})
+                        </button>
+                        <button type="button" data-ranking-tier="bronze" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 cursor-pointer min-h-[36px] ${rankingTierFilter === 'bronze' ? 'bg-orange-700 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                            🥉 Bronze (${countBronze})
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tableau et Liste des Marchands Classés -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-heading font-extrabold text-base text-slate-900">Tableau d'Honneur des Vendeurs</h3>
+                            <p class="text-xs text-slate-500">Classés par ordre méritocratique décroissant certifié</p>
+                        </div>
+                        <span class="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-full">${filtered.length} affiché${filtered.length > 1 ? 's' : ''}</span>
+                    </div>
+
+                    ${filtered.length === 0 ? `
+                        <div class="py-12 text-center text-slate-400 text-xs">
+                            <i class="fa-solid fa-user-slash text-3xl text-slate-300 mb-2 block"></i>
+                            Aucun marchand ne correspond à ces critères.
+                        </div>
+                    ` : `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 text-[11px] uppercase tracking-wider">
+                                        <th class="py-3.5 px-4 text-center w-16">Rang</th>
+                                        <th class="py-3.5 px-4">Marchand & Boutique</th>
+                                        <th class="py-3.5 px-4">Palier</th>
+                                        <th class="py-3.5 px-4 text-center">Score Mérite</th>
+                                        <th class="py-3.5 px-4 text-center">Livraisons</th>
+                                        <th class="py-3.5 px-4 text-center">Annulations</th>
+                                        <th class="py-3.5 px-4 text-center">Articles</th>
+                                        <th class="py-3.5 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filtered.map((s) => {
+                                        const rank = s.rank || 1;
+                                        const rankDisplay = rank === 1 ? '🥇 #1' :
+                                                            rank === 2 ? '🥈 #2' :
+                                                            rank === 3 ? '🥉 #3' :
+                                                            `#${rank}`;
+                                        const rankColor = rank === 1 ? 'text-amber-700 font-black' :
+                                                          rank === 2 ? 'text-slate-700 font-black' :
+                                                          rank === 3 ? 'text-orange-700 font-black' :
+                                                          'text-slate-500 font-bold';
+
+                                        const isAdminSeller = s.role === 'superadmin';
+
+                                        return `
+                                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="${rankColor} text-sm">${rankDisplay}</span>
+                                                </td>
+                                                <td class="py-3 px-4">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                                                            ${s.logo_url || s.avatar_url ? `
+                                                                <img src="${escapeHTML(s.logo_url || s.avatar_url)}" alt="${escapeHTML(s.shopName)}" class="w-full h-full object-cover">
+                                                            ` : `
+                                                                <i class="fa-solid fa-store text-slate-400 text-xs"></i>
+                                                            `}
+                                                        </div>
+                                                        <div class="min-w-0">
+                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                <span class="font-bold text-slate-900 block truncate">${escapeHTML(s.shopName)}</span>
+                                                                ${isAdminSeller ? `
+                                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                                        Admin Marchand ♾️
+                                                                    </span>
+                                                                ` : ''}
+                                                            </div>
+                                                            <span class="text-[11px] text-slate-500 block truncate">
+                                                                ${escapeHTML(s.prenom || '')} ${escapeHTML(s.nom || '')}
+                                                                ${s.pavillon ? ` • <i class="fa-solid fa-location-dot text-[9px]"></i> ${escapeHTML(s.pavillon)}` : ''}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="py-3 px-4">
+                                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${s.tier?.badgeClass || 'bg-slate-100 text-slate-700'}">
+                                                        <span>${s.tier?.icon || '🥉'}</span>
+                                                        <span>${escapeHTML(s.tier?.name || 'Bronze')}</span>
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="font-heading font-black text-sm text-slate-900 tabular-nums">${s.points}</span>
+                                                    <span class="text-[10px] text-slate-400 block">points</span>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="font-bold text-emerald-700 tabular-nums">${s.deliveredCount}</span>
+                                                    <span class="text-[10px] text-slate-400 block">(+${s.deliveredCount * 10} pts)</span>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="font-bold text-rose-600 tabular-nums">${s.cancelledBySellerCount}</span>
+                                                    ${s.cancelledBySellerCount > 0 ? `
+                                                        <span class="text-[10px] text-rose-500 block">(-${s.cancelledBySellerCount * 15} pts)</span>
+                                                    ` : `
+                                                        <span class="text-[10px] text-slate-400 block">0 pénalité</span>
+                                                    `}
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="font-semibold text-slate-700 tabular-nums">${s.activeProducts}</span>
+                                                    <span class="text-[10px] text-slate-400 block">en vente</span>
+                                                </td>
+                                                <td class="py-3 px-4 text-right">
+                                                    <div class="flex items-center justify-end gap-1.5">
+                                                        <a 
+                                                            href="#shop/${s.id}" 
+                                                            target="_blank" 
+                                                            title="Visiter la boutique publique"
+                                                            class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-primary hover:text-white text-slate-600 flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                                        >
+                                                            <i class="fa-solid fa-store text-xs"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
     function renderAnnoncesTab() {
         const filteredAds = allAdvertisements.filter((ad) => {
             if (annonceFilterTab === 'all') return true;
@@ -6052,7 +6483,97 @@ export function createSuperAdminDashboard({ onExit, onBackToCatalog, onOpenSelle
             });
         }
 
+        function bindClassementEvents() {
+            // Recherche en direct
+            const searchInput = containerEl.querySelector('#admin-ranking-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    rankingSearchQuery = e.target.value;
+                    const contentEl = containerEl.querySelector('#admin-tab-content');
+                    if (contentEl && activeTab === 'classement') {
+                        contentEl.innerHTML = renderClassementTab();
+                        bindClassementEvents();
+                        const newSearch = containerEl.querySelector('#admin-ranking-search');
+                        if (newSearch) {
+                            newSearch.focus();
+                            newSearch.setSelectionRange(rankingSearchQuery.length, rankingSearchQuery.length);
+                        }
+                    }
+                });
+            }
+
+            // Bouton clear recherche
+            const clearSearchBtn = containerEl.querySelector('#btn-clear-ranking-search');
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', () => {
+                    rankingSearchQuery = '';
+                    const contentEl = containerEl.querySelector('#admin-tab-content');
+                    if (contentEl && activeTab === 'classement') {
+                        contentEl.innerHTML = renderClassementTab();
+                        bindClassementEvents();
+                    }
+                });
+            }
+
+            // Filtres par Palier
+            containerEl.querySelectorAll('[data-ranking-tier]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    rankingTierFilter = btn.getAttribute('data-ranking-tier');
+                    const contentEl = containerEl.querySelector('#admin-tab-content');
+                    if (contentEl && activeTab === 'classement') {
+                        contentEl.innerHTML = renderClassementTab();
+                        bindClassementEvents();
+                    }
+                });
+            });
+
+            // Bouton Actualiser le classement
+            const refreshBtn = containerEl.querySelector('#btn-refresh-admin-ranking');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', async () => {
+                    refreshBtn.disabled = true;
+                    refreshBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Actualisation...</span>`;
+                    try {
+                        adminLeaderboardData = await fetchSuperAdminLeaderboard().catch(() => []);
+                        showToast('Classement officiel actualisé avec succès ! 🏆', 'success');
+                        const contentEl = containerEl.querySelector('#admin-tab-content');
+                        if (contentEl && activeTab === 'classement') {
+                            contentEl.innerHTML = renderClassementTab();
+                            bindClassementEvents();
+                        }
+                    } catch (err) {
+                        showToast(`Erreur d'actualisation : ${err.message}`, 'error');
+                    } finally {
+                        refreshBtn.disabled = false;
+                        refreshBtn.innerHTML = `<i class="fa-solid fa-arrows-rotate text-xs"></i><span>Actualiser</span>`;
+                    }
+                });
+            }
+
+            // Bouton Export CSV
+            const exportBtn = containerEl.querySelector('#btn-export-ranking-csv');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    try {
+                        exportLeaderboardToCSV(adminLeaderboardData);
+                        showToast('Export du classement téléchargé avec succès !', 'success');
+                    } catch (err) {
+                        showToast(`Erreur export CSV : ${err.message}`, 'error');
+                    }
+                });
+            }
+
+            // Bouton Ouvrir la vitrine publique
+            const publicBtn = containerEl.querySelector('#btn-open-public-ranking');
+            if (publicBtn) {
+                publicBtn.addEventListener('click', () => {
+                    window.location.hash = '#ranking';
+                });
+            }
+        }
+
         // Lier les événements de l'onglet actif
+        if (activeTab === 'classement') bindClassementEvents();
         if (activeTab === 'annonces') bindAnnoncesEvents();
         if (activeTab === 'sellers') bindSellersEvents();
         if (activeTab === 'accounts') bindAccountsEvents();
