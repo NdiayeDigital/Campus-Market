@@ -460,7 +460,7 @@ export function createStudentAdView({ onBackToCatalog, onShowToast } = {}) {
                 duration_days: STUDENT_AD_CONFIG.durationDays,
                 amount: STUDENT_AD_CONFIG.price,
                 payment_link: STUDENT_AD_CONFIG.paymentLink,
-                status: 'paiement_en_attente',
+                status: 'a_valider',
             };
 
             // Essai d'insertion dans student_announcements
@@ -484,7 +484,7 @@ export function createStudentAdView({ onBackToCatalog, onShowToast } = {}) {
                         content: `Annonce déposée par ${cleanPrenom} ${cleanNom} (${cleanEmail})`,
                         image_url: uploadedImageUrl || '',
                         amount: STUDENT_AD_CONFIG.price,
-                        status: 'paiement_en_attente',
+                        status: 'a_valider',
                         student_nom: cleanNom,
                         student_prenom: cleanPrenom,
                         student_email: cleanEmail,

@@ -8,6 +8,7 @@
 import { supabase } from './supabase.js';
 import { getCurrentSeller } from './seller-service.js';
 import { computeSubscriptionStatus } from '../config/subscription.js';
+import { fetchSuperAdminLeaderboard } from './admin-service.js';
 
 export const POINTS_RULES = {
     DELIVERED_ORDER: 10,       // +10 pts par commande livrée avec succès (le maximum autorisé)
@@ -182,12 +183,22 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
  * @param {Map|Record} [productCountsMap={}] - Nombre de produits actifs par vendeur
  * @returns {Array} Liste triée des vendeurs avec rang (rank: 1, 2, ...)
  */
-export function buildSellersLeaderboard(sellers = [], allOrders = [], allReviews = [], productCountsMap = {}) {
+export function buildSellersLeaderboard(sellers = [], allOrders = [], allReviews = [], productCountsMap = {}, { allowAllActive = false } = {}) {
     if (!Array.isArray(sellers) || sellers.length === 0) return [];
 
+<<<<<<< HEAD
     // Tous les vendeurs vérifiés (vendeurs ou superadmins marchands) sont éligibles au classement
     const eligibleSellers = sellers.filter((s) => {
         return Boolean(s && (s.role === 'vendeur' || s.role === 'superadmin'));
+=======
+    // Seuls les marchands détenant un pack payant actif ou superadmin (ou tous si allowAllActive = true)
+    const eligibleSellers = sellers.filter((s) => {
+        if (allowAllActive) {
+            return s.role === 'vendeur' || s.role === 'superadmin';
+        }
+        const sub = computeSubscriptionStatus(s);
+        return Boolean(sub.isPaid || sub.isSuperAdmin);
+>>>>>>> d4999a4dbea407a69a545ecfdc033883bf802173
     });
 
     if (eligibleSellers.length === 0) return [];
@@ -312,8 +323,16 @@ export function getSellerRankInfo(sellerId, leaderboard = []) {
  * @param {string} [params.currentSellerId]
  * @returns {Promise<Array>} Liste ordonnée de tous les marchands classés avec rank, points, tier, stats
  */
+/**
+ * Récupère le classement officiel des marchands en interrogeant l'autorité SuperAdmin.
+ * Évite les requêtes manuelles éparpillées en base et les blocages RLS.
+ * @param {Object} [params]
+ * @param {string} [params.currentSellerId]
+ * @returns {Promise<Array>} Liste ordonnée de tous les marchands classés avec rank, points, tier, stats
+ */
 export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
     try {
+<<<<<<< HEAD
         // CONTRÔLE DE SÉCURITÉ STRICT : Le classement est strictement réservé aux vendeurs
         const currentSellerData = await getCurrentSeller();
         const sellerProfile = currentSellerData?.profile;
@@ -326,13 +345,30 @@ export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
 
         // 1. Profils de tous les marchands actifs et superadmins marchands
         const { data: profiles, error: errProf } = await supabase
+=======
+        // 1. Interrogation prioritaire de l'autorité SuperAdmin (RPC serveur ou supervision en mémoire)
+        const superAdminLeaderboard = await fetchSuperAdminLeaderboard();
+        if (Array.isArray(superAdminLeaderboard) && superAdminLeaderboard.length > 0) {
+            if (currentSellerId) {
+                const found = superAdminLeaderboard.find((s) => s.id === currentSellerId);
+                if (found) {
+                    superAdminLeaderboard.currentSellerInfo = found;
+                }
+            }
+            return superAdminLeaderboard;
+        }
+
+        // 2. Repli résilient : profils des marchands avec calcul sans exclusion
+        const { data: profiles } = await supabase
+>>>>>>> d4999a4dbea407a69a545ecfdc033883bf802173
             .from('profiles')
             .select('id, role, shop_name, prenom, nom, pavillon, chambre, telephone, phone, is_open, avatar_url, logo_url, subscription_plan, subscription_expires_at, subscription_status')
             .in('role', ['vendeur', 'superadmin']);
 
-        if (errProf) throw errProf;
         const allProfiles = profiles || [];
+        const leaderboard = buildSellersLeaderboard(allProfiles, [], [], {});
 
+<<<<<<< HEAD
         // 2. Statistiques agrégées de commandes et d'articles (contourne l'isolation RLS des commandes)
         let statsRpc = [];
         try {
@@ -424,12 +460,18 @@ export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
                         subStatus: computeSubscriptionStatus(currentSellerProfile),
                     };
                 }
+=======
+        if (currentSellerId) {
+            const found = leaderboard.find((s) => s.id === currentSellerId);
+            if (found) {
+                leaderboard.currentSellerInfo = found;
+>>>>>>> d4999a4dbea407a69a545ecfdc033883bf802173
             }
         }
 
         return leaderboard;
     } catch (err) {
-        console.error('[Leaderboard] Échec récupération leaderboard:', err);
+        console.error('[Leaderboard] Échec récupération leaderboard SuperAdmin:', err);
         return [];
     }
 }

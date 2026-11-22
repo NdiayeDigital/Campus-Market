@@ -261,7 +261,6 @@ export async function useProductPromotion(productId) {
                         promoted_until: promotedUntil,
                         is_active: true,
                         quota_status: 'actif',
-                        updated_at: new Date().toISOString(),
                     })
                     .eq('id', productId)
                     .eq('seller_id', user.id);
@@ -334,7 +333,6 @@ export async function useProductPromotion(productId) {
         .update({
             is_promoted: true,
             promoted_until: promotedUntil,
-            updated_at: new Date().toISOString(),
         })
         .eq('id', productId)
         .eq('seller_id', user.id);
