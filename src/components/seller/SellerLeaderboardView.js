@@ -129,7 +129,7 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
 
                 <div class="flex items-center gap-2">
                     <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
-                        Packs Pro & Business
+                        Tous les Vendeurs
                     </span>
                     <button 
                         type="button" 
@@ -244,7 +244,7 @@ export function createSellerLeaderboardView({ currentSellerId, onBack, onOpenSub
                 <div id="leaderboard-sellers-list" class="divide-y divide-slate-100 border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50/40">
                     ${leaderboard.length === 0 ? `
                         <div class="p-8 text-center text-xs sm:text-sm text-slate-500 font-medium">
-                            Aucun marchand avec pack payant actif sur la plateforme pour le moment.
+                            Aucun marchand enregistré sur la plateforme pour le moment.
                         </div>
                     ` : leaderboard.map((seller) => {
                         const isCurrent = seller.id === currentSellerId;

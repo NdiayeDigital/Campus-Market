@@ -690,7 +690,7 @@ export function createSellerDashboard({
                                     ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold border border-amber-600'
                                     : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50/70 border border-transparent hover:border-amber-200 font-semibold'
                             }"
-                            title="Consulter le classement officiel de la plateforme (réservé aux packs payants)"
+                            title="Consulter le classement officiel de la plateforme"
                         >
                             <div class="flex items-center gap-3">
                                 <i class="fa-solid fa-trophy text-xs w-4 text-center ${
@@ -906,7 +906,7 @@ export function createSellerDashboard({
                         <button type="button" id="drawer-btn-leaderboard" class="flex items-center justify-between px-4 py-3 rounded-2xl bg-amber-50/80 hover:bg-amber-100 text-amber-950 font-bold text-xs transition-colors cursor-pointer border border-amber-300 shadow-2xs">
                             <div class="flex items-center gap-3">
                                 <i class="fa-solid fa-trophy text-sm text-amber-600 w-5 text-center"></i>
-                                <span>Classement Plateforme (Packs Payants)</span>
+                                <span>Classement Plateforme</span>
                             </div>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">🏆 Voir</span>
                         </button>
@@ -1642,7 +1642,7 @@ export function createSellerDashboard({
                                 </span>
                             </div>
                             <p class="text-xs text-slate-600 mt-0.5 truncate max-w-md">
-                                Classement officiel de tous les marchands du campus ayant un pack payant actif (Pro & Business).
+                                Classement officiel de tous les marchands actifs du campus de l'UIDT Thiès.
                             </p>
                         </div>
                     </div>

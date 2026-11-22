@@ -68,9 +68,9 @@ export function resolveRoute(rawHash = '', search = '') {
         return { view: 'orders', params: {} };
     }
 
-    // 5.b. Classement Officiel de la Plateforme (#leaderboard ou #classement)
+    // 5.b. Classement Officiel des Vendeurs (#leaderboard ou #classement -> redirige vers l'Espace Vendeur)
     if (hash === '#leaderboard' || hash.startsWith('#leaderboard?') || hash === '#classement' || hash.startsWith('#classement?')) {
-        return { view: 'leaderboard', params: {} };
+        return { view: 'seller', params: { subTab: 'leaderboard' } };
     }
 
     // 5.c. Publication d'annonce étudiante (#passer-annonce ou #nouvelle-annonce ou #annonce)

@@ -64,12 +64,12 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                     Classement Officiel des Vendeurs
                 </h3>
                 <p class="text-xs text-white/80 mt-1 max-w-md">
-                    Classement méritocratique de tous les marchands de la plateforme inscrits en formule Pro ou Business.
+                    Classement méritocratique de tous les marchands actifs du campus de l’Université Iba Der Thiam de Thiès.
                 </p>
 
                 <!-- Carte du vendeur connecté -->
                 ${isCurrentSellerRanked ? `
-                    <!-- Vendeur avec Pack Payant Actif : Position Officielle -->
+                    <!-- Position Officielle du Vendeur -->
                     <div class="mt-4 p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/20 flex flex-col gap-2">
                         <div class="flex items-center justify-between gap-3 flex-wrap">
                             <div class="flex items-center gap-3">
@@ -84,12 +84,12 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="px-3 py-1 rounded-full text-xs font-black ${currentSellerInfo.tier.badgeClass} border flex items-center gap-1.5 shadow-xs">
-                                    <span>${currentSellerInfo.tier.icon}</span>
-                                    <span>${currentSellerInfo.tier.name}</span>
+                                <span class="px-3 py-1 rounded-full text-xs font-black ${currentSellerInfo.tier?.badgeClass || 'bg-slate-100 text-slate-700'} border flex items-center gap-1.5 shadow-xs">
+                                    <span>${currentSellerInfo.tier?.icon || '🌱'}</span>
+                                    <span>${currentSellerInfo.tier?.name || 'Débutant'}</span>
                                 </span>
                                 <span class="font-heading font-black text-lg text-amber-300 tabular-nums">
-                                    ${currentSellerInfo.points} pts
+                                    ${currentSellerInfo.points || 0} pts
                                 </span>
                             </div>
                         </div>
@@ -99,38 +99,7 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                             </div>
                         ` : ''}
                     </div>
-                ` : `
-                    <!-- Vendeur en Pack Découverte ou non classé : Invitation incitative -->
-                    <div class="mt-4 p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-amber-300/40 flex flex-col gap-2.5">
-                        <div class="flex items-center justify-between gap-3 flex-wrap">
-                            <div class="flex items-center gap-3">
-                                <div class="w-11 h-11 rounded-xl bg-amber-400 text-slate-950 font-heading font-black text-sm flex items-center justify-center shadow-md">
-                                    ⭐
-                                </div>
-                                <div>
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="text-xs text-amber-300 font-bold block">Pack Découverte</span>
-                                        <span class="px-2 py-0.2 rounded-full text-[9px] font-black uppercase bg-white/20 text-white">Non classé</span>
-                                    </div>
-                                    <span class="font-heading font-black text-sm sm:text-base text-white">
-                                        ${escapeHTML(currentSellerInfo?.shopName || 'Votre Boutique')}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="font-heading font-black text-sm text-amber-300 tabular-nums">
-                                    ${currentSellerInfo?.points || 0} pts calculés
-                                </span>
-                            </div>
-                        </div>
-                        <div class="text-[11px] text-amber-100 bg-black/25 p-2.5 rounded-xl border border-white/10 flex items-start gap-2">
-                            <i class="fa-solid fa-crown text-amber-400 text-xs mt-0.5 shrink-0"></i>
-                            <span>
-                                Le classement officiel de la plateforme est réservé aux vendeurs en <strong>Pack Pro (1 000 F)</strong> ou <strong>Business (2 000 F)</strong>. Activez un pack pour y figurer et booster votre visibilité auprès des étudiants !
-                            </span>
-                        </div>
-                    </div>
-                `}
+                ` : ''}
             </div>
 
             <!-- Corps défilant du classement -->
@@ -199,14 +168,14 @@ export function openSellerLeaderboardModal({ leaderboard = [], currentSellerId =
                             Tous les Marchands Classés (${leaderboard.length})
                         </h4>
                         <span class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                            Packs Pro & Business
+                            Tous les Marchands
                         </span>
                     </div>
 
                     <div id="leaderboard-sellers-container" class="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
                         ${leaderboard.length === 0 ? `
                             <div class="p-6 text-center text-xs text-slate-400 font-medium">
-                                Aucun marchand avec pack payant actif actuellement.
+                                Aucun marchand enregistré actuellement.
                             </div>
                         ` : leaderboard.map((seller) => {
                             const isCurrent = seller.id === currentSellerId;

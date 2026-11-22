@@ -50,16 +50,16 @@ export function createProductDetailModal({ onAddToCart, onOpenSeller, onClose } 
         const sellerPhone = p.seller?.telephone || p.seller_phone || '';
         const cleanPhone = formatSenegalPhone(sellerPhone);
 
-        // Calcul réduction éventuelle
+        // Calcul réduction éventuelle (Sale tag avec pourcentage)
         const isPromoted = Boolean(p.is_promoted && (!p.promoted_until || new Date(p.promoted_until) > new Date()));
         const promoBadge = isPromoted 
             ? `<span class="bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-heading font-black text-xs px-2.5 py-1 rounded-full shadow-md flex items-center gap-1"><i class="fa-solid fa-fire text-slate-950 text-[10px]"></i> Promo</span>`
             : '';
-        let discountBadge = '';
-        if (p.old_price && Number(p.old_price) > Number(p.price)) {
-            const pct = Math.round(((p.old_price - p.price) / p.old_price) * 100);
-            discountBadge = `<span class="bg-accent text-slate-900 font-extrabold text-xs px-2.5 py-1 rounded-full shadow-sm">-${pct}%</span>`;
-        }
+        const hasDiscount = Boolean(p.old_price && Number(p.old_price) > Number(p.price));
+        const pct = hasDiscount ? Math.round(((Number(p.old_price) - Number(p.price)) / Number(p.old_price)) * 100) : 0;
+        const discountBadge = hasDiscount && pct > 0
+            ? `<span class="bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white font-heading font-black text-xs px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 animate-pulse"><i class="fa-solid fa-tag text-[10px]"></i> -${pct}%</span>`
+            : '';
 
         // Galerie multi-photos (jusqu'à 3 images)
         const rawImages = Array.isArray(p.images) && p.images.length > 0 

@@ -550,19 +550,13 @@ async function initApp() {
             updateSEO({ title: titles[viewName], description: descs[viewName] });
             renderLegalPageView(viewName);
         } else if (viewName === 'leaderboard') {
-            mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
-            if (headerComponent.setMode) headerComponent.setMode('catalog');
-            categoryChipsComponent.classList.add('hidden');
-            footerEl.classList.remove('hidden');
-            if (bottomNavComponent) {
-                bottomNavComponent.setHidden(false);
-                bottomNavComponent.setActiveTab('leaderboard');
+            // Le classement est strictement réservé aux vendeurs
+            if (!appState.currentSeller || (appState.currentSeller.role !== 'vendeur' && appState.currentSeller.role !== 'superadmin')) {
+                navigateToView('seller', { subTab: 'leaderboard' });
+                return;
             }
-            updateSEO({
-                title: 'Classement Officiel des Marchands — Campus Market UIDT',
-                description: 'Classement méritocratique de tous les marchands actifs du campus de l’Université Iba Der Thiam de Thiès.'
-            });
-            renderLeaderboardView();
+            navigateToView('seller', { subTab: 'leaderboard' });
+            return;
         } else if (viewName === 'student-ad') {
             mainContentEl.className = 'flex-1 w-full lg:ml-64 lg:w-[calc(100%-16rem)] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 pb-safe-content sm:pb-8 flex flex-col gap-6 view-transition-enter';
             if (headerComponent.setMode) headerComponent.setMode('catalog');
@@ -629,17 +623,13 @@ async function initApp() {
         mainContentEl.appendChild(legalEl);
     }
 
-    // Rendu de la vue Classement officiel public
+    // Rendu de la vue Classement officiel (réservé aux vendeurs authentifiés)
     function renderLeaderboardView() {
-        mainContentEl.innerHTML = '';
-        const leaderboardViewEl = createSellerLeaderboardView({
-            currentSellerId: appState.currentSeller?.id || null,
-            onBack: () => navigateToView('catalog'),
-            onOpenSubscription: () => {
-                subscriptionModalController?.open?.(appState.currentSeller);
-            },
-        });
-        mainContentEl.appendChild(leaderboardViewEl);
+        if (!appState.currentSeller || (appState.currentSeller.role !== 'vendeur' && appState.currentSeller.role !== 'superadmin')) {
+            openSellerFlow();
+            return;
+        }
+        navigateToView('seller', { subTab: 'leaderboard' });
     }
 
     // Rendu de la vue de publication d'annonce étudiante
@@ -824,10 +814,6 @@ async function initApp() {
                         <i class="fa-solid fa-trophy text-accent text-sm"></i>
                         Top Shops du Campus
                     </h2>
-                    <a href="#leaderboard" id="link-view-leaderboard-top" class="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer">
-                        <span>Classement complet</span>
-                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                    </a>
                 </div>
                 <div class="flex items-center gap-3 overflow-x-auto no-scrollbar py-1" style="scrollbar-width: none;">
                     ${appState.topShops.map((shop) => {
@@ -878,11 +864,6 @@ async function initApp() {
                     }).join('')}
                 </div>
             `;
-
-            topShopsSection.querySelector('#link-view-leaderboard-top')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                navigateToView('leaderboard');
-            });
 
             topShopsSection.querySelectorAll('[data-shop-id]').forEach((shopCard) => {
                 shopCard.addEventListener('click', () => {

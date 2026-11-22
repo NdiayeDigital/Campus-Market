@@ -100,18 +100,28 @@ export function createProductManager({
                         <input type="text" id="edit-prod-title" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
                     </div>
 
-                    <!-- Prix avec mention FCFA & Stock -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Prix avec mention FCFA, Ancien Prix (Promo) & Stock -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-price">Prix *</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-price">Prix vente *</label>
                             <div class="relative">
-                                <input type="number" id="edit-prod-price" required min="50" step="50" class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
-                                <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 select-none pointer-events-none">FCFA</span>
+                                <input type="number" id="edit-prod-price" required min="50" step="50" class="w-full pl-3 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-extrabold text-slate-400 select-none pointer-events-none">FCFA</span>
                             </div>
                         </div>
                         <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-old-price">
+                                Prix barré <span class="text-rose-500 font-normal text-[10px]">(Promo)</span>
+                            </label>
+                            <div class="relative">
+                                <input type="number" id="edit-prod-old-price" min="50" step="50" placeholder="Ex: 2000" class="w-full pl-3 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-extrabold text-slate-400 select-none pointer-events-none">FCFA</span>
+                            </div>
+                            <span id="edit-prod-discount-badge" class="hidden text-[10px] font-bold text-rose-600 mt-1 block"></span>
+                        </div>
+                        <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1" for="edit-prod-stock">Stock restant</label>
-                            <input type="number" id="edit-prod-stock" min="-1" placeholder="-1 = illimité" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
+                            <input type="number" id="edit-prod-stock" min="-1" placeholder="-1 = illimité" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]">
                         </div>
                     </div>
 
@@ -288,6 +298,26 @@ export function createProductManager({
 
         editModal.querySelector('#edit-prod-title').value = prod.title || '';
         editModal.querySelector('#edit-prod-price').value = prod.price || '';
+        const oldPriceInput = editModal.querySelector('#edit-prod-old-price');
+        const discountBadgeEl = editModal.querySelector('#edit-prod-discount-badge');
+        if (oldPriceInput) {
+            oldPriceInput.value = prod.old_price || '';
+            const updateDiscountBadge = () => {
+                const currentPrice = Number(editModal.querySelector('#edit-prod-price')?.value || 0);
+                const oldPrice = Number(oldPriceInput.value || 0);
+                if (oldPrice > currentPrice && currentPrice > 0) {
+                    const discount = Math.round(((oldPrice - currentPrice) / oldPrice) * 100);
+                    discountBadgeEl.textContent = `🔥 Promo active : -${discount}% (Sale tag)`;
+                    discountBadgeEl.classList.remove('hidden');
+                } else {
+                    discountBadgeEl.textContent = '';
+                    discountBadgeEl.classList.add('hidden');
+                }
+            };
+            oldPriceInput.oninput = updateDiscountBadge;
+            editModal.querySelector('#edit-prod-price').oninput = updateDiscountBadge;
+            updateDiscountBadge();
+        }
         editModal.querySelector('#edit-prod-stock').value = prod.stock !== undefined ? prod.stock : -1;
         editModal.querySelector('#edit-prod-category').value = prod.category || 'autres';
         editModal.querySelector('#edit-prod-desc').value = prod.description || '';
@@ -357,6 +387,7 @@ export function createProductManager({
 
             const title = editModal.querySelector('#edit-prod-title').value.trim();
             const price = editModal.querySelector('#edit-prod-price').value;
+            const oldPrice = editModal.querySelector('#edit-prod-old-price')?.value;
             const stock = editModal.querySelector('#edit-prod-stock').value;
             const category = editModal.querySelector('#edit-prod-category').value;
             const description = editModal.querySelector('#edit-prod-desc').value.trim();
@@ -374,6 +405,7 @@ export function createProductManager({
                     sellerId,
                     title,
                     price,
+                    old_price: oldPrice,
                     stock,
                     category,
                     description,
@@ -416,6 +448,7 @@ export function createProductManager({
     let addFormData = {
         title: '',
         price: '',
+        old_price: '',
         stock: '10',
         category: 'restauration',
         description: '',
@@ -707,8 +740,8 @@ export function createProductManager({
                             >
                         </div>
 
-                        <!-- 3. Prix avec mention 'FCFA' intégrée & Stock initial -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <!-- 3. Prix avec mention 'FCFA' intégrée, Ancien Prix (Promo) & Stock initial -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1" for="new-prod-price">
                                     Prix unitaire *
@@ -723,6 +756,26 @@ export function createProductManager({
                                         value="${addFormData.price}"
                                         placeholder="1500" 
                                         class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]"
+                                    >
+                                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 select-none pointer-events-none">
+                                        FCFA
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1" for="new-prod-old-price">
+                                    Prix barré <span class="text-rose-500 font-normal text-[10px]">(Promo)</span>
+                                </label>
+                                <div class="relative">
+                                    <input 
+                                        type="number" 
+                                        id="new-prod-old-price" 
+                                        min="50" 
+                                        step="50" 
+                                        value="${addFormData.old_price || ''}"
+                                        placeholder="Ex: 2000" 
+                                        class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all min-h-[42px]"
                                     >
                                     <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400 select-none pointer-events-none">
                                         FCFA
@@ -816,10 +869,18 @@ export function createProductManager({
                                         <span>${addFormData.photos.length} photos</span>
                                     </span>
                                 ` : ''}
-                                <span id="live-preview-price" class="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-xs font-black bg-white/95 text-primary backdrop-blur-md shadow-sm border border-slate-200/80 tabular-nums">
-                                    ${previewPrice} F
+                                <span id="live-preview-sale-tag" class="hidden absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white shadow-md flex items-center gap-1 animate-pulse z-10">
+                                    <i class="fa-solid fa-tag text-[9px]"></i>
+                                    <span id="live-preview-sale-percent">-0%</span>
                                 </span>
-                                <span id="live-preview-category" class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-slate-800 backdrop-blur-md shadow-xs">
+                                <div class="absolute top-2.5 right-2.5 flex flex-col items-end gap-0.5">
+                                    <span id="live-preview-price" class="px-3 py-1 rounded-full text-xs font-black bg-white/95 text-primary backdrop-blur-md shadow-sm border border-slate-200/80 tabular-nums">
+                                        ${previewPrice} F
+                                    </span>
+                                    <span id="live-preview-old-price" class="hidden text-[10px] text-slate-400 font-bold line-through px-1.5 py-0.2 bg-white/80 rounded backdrop-blur-xs">
+                                    </span>
+                                </div>
+                                <span id="live-preview-category" class="absolute bottom-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-slate-800 backdrop-blur-md shadow-xs">
                                     ${escapeHTML(selectedCat.label)}
                                 </span>
                             </div>
@@ -1020,6 +1081,14 @@ export function createProductManager({
                                 promoBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-2xs flex items-center gap-1"><i class="fa-solid fa-fire text-[9px] text-amber-200"></i> Promo (7j)</span>`;
                             }
 
+                            let saleTagBadge = '';
+                            if (prod.old_price && Number(prod.old_price) > Number(prod.price)) {
+                                const discount = Math.round(((Number(prod.old_price) - Number(prod.price)) / Number(prod.old_price)) * 100);
+                                if (discount > 0) {
+                                    saleTagBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white shadow-2xs flex items-center gap-1 animate-pulse"><i class="fa-solid fa-tag text-[9px]"></i> -${discount}%</span>`;
+                                }
+                            }
+
                             let stockAlertBadge = '';
                             if (prod.stock === 0) {
                                 stockAlertBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation text-[9px]"></i> Épuisé</span>`;
@@ -1055,6 +1124,7 @@ export function createProductManager({
                                                     ${escapeHTML(prod.title)}
                                                 </h4>
                                                 ${statusBadge}
+                                                ${saleTagBadge}
                                                 ${promoBadge}
                                                 ${stockAlertBadge}
                                             </div>
@@ -1063,6 +1133,11 @@ export function createProductManager({
                                                 <span class="font-heading font-extrabold text-sm sm:text-base text-primary tabular-nums">
                                                     ${Number(prod.price).toLocaleString('fr-FR')} FCFA
                                                 </span>
+                                                ${prod.old_price && Number(prod.old_price) > Number(prod.price) ? `
+                                                    <span class="text-xs text-slate-400 line-through tabular-nums">
+                                                        ${Number(prod.old_price).toLocaleString('fr-FR')} F
+                                                    </span>
+                                                ` : ''}
                                                 <span class="text-slate-300">•</span>
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
                                                     ${escapeHTML(prod.category || 'Général')}
@@ -1217,6 +1292,7 @@ export function createProductManager({
             const addPhotosCountBadge = containerEl.querySelector('#add-photos-count-badge');
             const titleInput = containerEl.querySelector('#new-prod-title');
             const priceInput = containerEl.querySelector('#new-prod-price');
+            const oldPriceInput = containerEl.querySelector('#new-prod-old-price');
             const stockInput = containerEl.querySelector('#new-prod-stock');
             const catSelect = containerEl.querySelector('#new-prod-category');
             const descInput = containerEl.querySelector('#new-prod-desc');
@@ -1226,6 +1302,9 @@ export function createProductManager({
 
             const liveTitle = containerEl.querySelector('#live-preview-title');
             const livePrice = containerEl.querySelector('#live-preview-price');
+            const liveOldPrice = containerEl.querySelector('#live-preview-old-price');
+            const liveSaleTag = containerEl.querySelector('#live-preview-sale-tag');
+            const liveSalePercent = containerEl.querySelector('#live-preview-sale-percent');
             const liveCategory = containerEl.querySelector('#live-preview-category');
             const liveImg = containerEl.querySelector('#live-preview-img');
             const livePreviewContainer = liveImg?.parentElement;
@@ -1235,10 +1314,28 @@ export function createProductManager({
                 if (liveTitle && titleInput) {
                     liveTitle.textContent = titleInput.value.trim() || 'Nom de votre article';
                 }
+                const numPrice = Number(priceInput?.value || 0);
+                const numOldPrice = Number(oldPriceInput?.value || 0);
+
                 if (livePrice && priceInput) {
-                    const num = Number(priceInput.value || 0);
-                    livePrice.textContent = `${num.toLocaleString('fr-FR')} F`;
+                    livePrice.textContent = `${numPrice.toLocaleString('fr-FR')} F`;
                 }
+
+                if (numOldPrice > numPrice && numPrice > 0) {
+                    const discount = Math.round(((numOldPrice - numPrice) / numOldPrice) * 100);
+                    if (liveSaleTag && liveSalePercent) {
+                        liveSalePercent.textContent = `-${discount}%`;
+                        liveSaleTag.classList.remove('hidden');
+                    }
+                    if (liveOldPrice) {
+                        liveOldPrice.textContent = `${numOldPrice.toLocaleString('fr-FR')} F`;
+                        liveOldPrice.classList.remove('hidden');
+                    }
+                } else {
+                    if (liveSaleTag) liveSaleTag.classList.add('hidden');
+                    if (liveOldPrice) liveOldPrice.classList.add('hidden');
+                }
+
                 if (liveCategory && catSelect) {
                     const selOpt = catSelect.options[catSelect.selectedIndex];
                     if (selOpt) liveCategory.textContent = selOpt.text;
@@ -1252,6 +1349,11 @@ export function createProductManager({
 
             priceInput?.addEventListener('input', (e) => {
                 addFormData.price = e.target.value;
+                updateLivePreview();
+            });
+
+            oldPriceInput?.addEventListener('input', (e) => {
+                addFormData.old_price = e.target.value;
                 updateLivePreview();
             });
 
@@ -1426,6 +1528,7 @@ export function createProductManager({
 
                 const title = titleInput?.value.trim();
                 const price = priceInput?.value;
+                const oldPrice = oldPriceInput?.value;
                 const stock = stockInput?.value;
                 const category = catSelect?.value;
                 const description = descInput?.value.trim();
@@ -1450,6 +1553,7 @@ export function createProductManager({
                         sellerId,
                         title,
                         price,
+                        old_price: oldPrice,
                         stock,
                         category,
                         description,
@@ -1467,6 +1571,7 @@ export function createProductManager({
                     addFormData = {
                         title: '',
                         price: '',
+                        old_price: '',
                         stock: '10',
                         category: 'restauration',
                         description: '',

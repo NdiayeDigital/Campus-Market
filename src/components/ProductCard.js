@@ -36,20 +36,28 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
     const photoCount = productImages.length;
     const primaryImg = productImages[0] || resolveMediaUrl(product.image_url);
 
-    // Badges statut
+    // Badges statut et promotion / discount
     const isPromoted = Boolean(product.is_promoted && (!product.promoted_until || new Date(product.promoted_until) > new Date()));
+    const hasDiscount = Boolean(product.old_price && Number(product.old_price) > Number(product.price));
+    const discountPercent = hasDiscount ? Math.round(((Number(product.old_price) - Number(product.price)) / Number(product.old_price)) * 100) : 0;
+
+    // Badge de réduction / Sale tag avec pourcentage
+    const saleTagBadge = hasDiscount && discountPercent > 0
+        ? `<span class="bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white font-heading font-black text-[11px] px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1 animate-pulse">
+            <i class="fa-solid fa-tag text-[10px]"></i> -${discountPercent}%
+           </span>`
+        : '';
+
+    // Badges de disponibilité / statut boutique
     let statusBadge = '';
     if (isSuspended) {
-        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white"></span>Boutique Suspendue</span>`;
+        statusBadge = `<span class="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white"></span>Boutique Suspendue</span>`;
     } else if (!isOpen) {
-        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-slate-900/85 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Fermé</span>`;
+        statusBadge = `<span class="bg-slate-900/85 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Fermé</span>`;
     } else if (isOutOfStock) {
-        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white"></span>Rupture</span>`;
+        statusBadge = `<span class="bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white"></span>Rupture</span>`;
     } else if (isPromoted) {
-        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-heading font-black text-[11px] px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1"><i class="fa-solid fa-fire text-slate-950 text-[10px]"></i> Promo</span>`;
-    } else if (product.old_price && Number(product.old_price) > Number(product.price)) {
-        const discount = Math.round(((product.old_price - product.price) / product.old_price) * 100);
-        statusBadge = `<span class="absolute top-2.5 left-2.5 z-10 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-extrabold text-[11px] px-2.5 py-0.5 rounded-full shadow-sm">-${discount}%</span>`;
+        statusBadge = `<span class="bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-heading font-black text-[11px] px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1"><i class="fa-solid fa-fire text-slate-950 text-[10px]"></i> Promo</span>`;
     }
 
     // Gestion de l'image ou icône
@@ -92,7 +100,11 @@ export function createProductCard({ product, onAddToCart, onClickCard, onOpenSel
     cardEl.innerHTML = `
         <!-- Image Container -->
         <div class="relative w-full aspect-square bg-slate-100/80 overflow-hidden">
-            ${statusBadge}
+            <!-- Badges flottants en haut à gauche -->
+            <div class="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1 items-start pointer-events-none">
+                ${saleTagBadge}
+                ${statusBadge}
+            </div>
             ${imageContent}
             ${photoCount > 1 ? `
                 <!-- Badge Multi-Photos -->

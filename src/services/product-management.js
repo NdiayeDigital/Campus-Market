@@ -53,6 +53,7 @@ async function processAndUploadProductPhoto(item, sellerId, index = 0) {
  * @param {string} data.sellerId - Identifiant UUID du vendeur
  * @param {string} data.title - Titre du produit
  * @param {number|string} data.price - Prix unitaire en FCFA
+ * @param {number|string} [data.old_price] - Ancien prix barré en FCFA (pour promotion avec sale tag)
  * @param {string} data.category - Catégorie du produit
  * @param {number|string} [data.stock=-1] - Quantité en stock (-1 = illimité)
  * @param {File|Blob|string} [data.imageFile] - Photo unique historique (rétrocompatibilité)
@@ -65,6 +66,7 @@ export async function createProduct({
     sellerId,
     title,
     price,
+    old_price = null,
     category = 'autres',
     stock = -1,
     imageFile = null,
@@ -80,6 +82,15 @@ export async function createProduct({
     const parsedPrice = parseFloat(cleanPriceStr);
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
         throw new Error('Le prix doit être un nombre positif supérieur à zéro.');
+    }
+
+    let parsedOldPrice = null;
+    if (old_price !== null && old_price !== undefined && String(old_price).trim() !== '') {
+        const cleanOld = String(old_price).replace(/\s+/g, '').replace(/fcfa/gi, '').replace(/f$/i, '');
+        const val = parseFloat(cleanOld);
+        if (!isNaN(val) && val > 0) {
+            parsedOldPrice = val;
+        }
     }
 
     const parsedStock = stock === '' || stock === undefined ? -1 : parseInt(stock, 10);
@@ -234,6 +245,10 @@ export async function createProduct({
         icon,
     };
 
+    if (parsedOldPrice !== null) {
+        productPayload.old_price = parsedOldPrice;
+    }
+
     if (description) {
         productPayload.description = description.trim();
     }
@@ -286,6 +301,7 @@ export async function updateProduct({
     sellerId,
     title,
     price,
+    old_price = null,
     category,
     stock,
     description = '',
@@ -308,6 +324,16 @@ export async function updateProduct({
         category: category || 'autres',
         stock: parsedStock,
     };
+
+    if (old_price !== undefined) {
+        if (old_price === null || String(old_price).trim() === '') {
+            updates.old_price = null;
+        } else {
+            const cleanOld = String(old_price).replace(/\s+/g, '').replace(/fcfa/gi, '').replace(/f$/i, '');
+            const val = parseFloat(cleanOld);
+            updates.old_price = (!isNaN(val) && val > 0) ? val : null;
+        }
+    }
 
     // Gestion multi-photos lors de la modification (jusqu'à 3)
     if (Array.isArray(imageFiles)) {

@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase.js';
+import { getCurrentSeller } from './seller-service.js';
 import { computeSubscriptionStatus } from '../config/subscription.js';
 
 export const POINTS_RULES = {
@@ -174,6 +175,7 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
 
 /**
  * Construit le classement global officiel de tous les vendeurs du campus (Leaderboard).
+ * Accessible à TOUS les vendeurs sans distinction d'abonnement (y compris Pack Découverte gratuit).
  * @param {Array} sellers - Liste de tous les vendeurs
  * @param {Array} [allOrders=[]] - Liste de toutes les commandes
  * @param {Array} [allReviews=[]] - Liste de tous les avis
@@ -183,11 +185,9 @@ export function computeSellerPoints({ seller = {}, orders = [], reviews = [], ac
 export function buildSellersLeaderboard(sellers = [], allOrders = [], allReviews = [], productCountsMap = {}) {
     if (!Array.isArray(sellers) || sellers.length === 0) return [];
 
-    // Règle stricte : Seuls les marchands détenant un pack payant actif (Pack Pro, Pack Business ou rôle SuperAdmin)
-    // peuvent figurer sur le classement officiel de la plateforme. Le Pack Découverte (gratuit) en est exclu.
+    // Tous les vendeurs vérifiés (vendeurs ou superadmins marchands) sont éligibles au classement
     const eligibleSellers = sellers.filter((s) => {
-        const sub = computeSubscriptionStatus(s);
-        return Boolean(sub.isPaid || sub.isSuperAdmin);
+        return Boolean(s && (s.role === 'vendeur' || s.role === 'superadmin'));
     });
 
     if (eligibleSellers.length === 0) return [];
@@ -314,6 +314,16 @@ export function getSellerRankInfo(sellerId, leaderboard = []) {
  */
 export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
     try {
+        // CONTRÔLE DE SÉCURITÉ STRICT : Le classement est strictement réservé aux vendeurs
+        const currentSellerData = await getCurrentSeller();
+        const sellerProfile = currentSellerData?.profile;
+        if (!sellerProfile || (sellerProfile.role !== 'vendeur' && sellerProfile.role !== 'superadmin')) {
+            console.warn('[Leaderboard] Accès refusé : fonctionnalité strictement réservée aux vendeurs certifiés.');
+            return [];
+        }
+
+        const effectiveSellerId = currentSellerId || sellerProfile.id;
+
         // 1. Profils de tous les marchands actifs et superadmins marchands
         const { data: profiles, error: errProf } = await supabase
             .from('profiles')
@@ -384,18 +394,18 @@ export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
 
         const ordersToUse = statsMap.size > 0 ? syntheticOrders : directOrders;
 
-        // 6. Construction du classement avec buildSellersLeaderboard (réservé aux packs payants)
+        // 6. Construction du classement global avec buildSellersLeaderboard (accessible à tous les vendeurs)
         const leaderboard = buildSellersLeaderboard(allProfiles, ordersToUse, reviewsList, productCountsMap);
 
-        // 7. Enrichissement des informations du vendeur connecté (même s'il est en Pack Découverte)
-        if (currentSellerId) {
-            const currentSellerProfile = allProfiles.find((p) => p.id === currentSellerId);
+        // 7. Enrichissement des informations du vendeur connecté
+        if (effectiveSellerId) {
+            const currentSellerProfile = allProfiles.find((p) => p.id === effectiveSellerId);
             if (currentSellerProfile) {
-                const isPaidSeller = leaderboard.find((s) => s.id === currentSellerId);
-                if (isPaidSeller) {
-                    leaderboard.currentSellerInfo = isPaidSeller;
+                const foundInLeaderboard = leaderboard.find((s) => s.id === effectiveSellerId);
+                if (foundInLeaderboard) {
+                    leaderboard.currentSellerInfo = foundInLeaderboard;
                 } else {
-                    const prodCount = productCountsMap.get(currentSellerId) || 0;
+                    const prodCount = productCountsMap.get(effectiveSellerId) || 0;
                     const pointsData = computeSellerPoints({
                         seller: currentSellerProfile,
                         orders: ordersToUse,
@@ -404,14 +414,13 @@ export async function fetchCampusLeaderboard({ currentSellerId = null } = {}) {
                     });
                     leaderboard.currentSellerInfo = {
                         ...currentSellerProfile,
-                        rank: null,
+                        rank: leaderboard.length + 1,
                         points: pointsData.totalPoints,
                         tier: pointsData.tier,
                         breakdown: pointsData.breakdown,
                         deliveredCount: pointsData.deliveredCount,
                         cancelledCount: pointsData.cancelledCount,
                         shopName: currentSellerProfile.shop_name || (currentSellerProfile.prenom ? `Boutique ${currentSellerProfile.prenom}` : 'Boutique Marchand'),
-                        isPaid: false,
                         subStatus: computeSubscriptionStatus(currentSellerProfile),
                     };
                 }
